@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import Image from "next/image";
 import { usePathname } from "next/navigation";
 import { useSession } from "next-auth/react";
 import { cn } from "@/lib/utils";
@@ -58,9 +59,10 @@ export function Sidebar() {
     <>
       {/* Desktop Sidebar */}
       <aside className="w-[240px] border-r border-[var(--border)] bg-white min-h-screen hidden md:flex flex-col shrink-0">
-        <div className="h-14 flex items-center px-5 border-b border-[var(--border)]">
+        <div className="h-14 flex items-center gap-2.5 px-5 border-b border-[var(--border)]">
+          <Image src="/logo.png" alt="Rankved" width={28} height={28} className="rounded-md" />
           <span className="font-semibold text-[15px] text-[var(--text-primary)] tracking-[-0.01em]">
-            Rankved GMB Manager
+            Rankved GMB
           </span>
         </div>
         

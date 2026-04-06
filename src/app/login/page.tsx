@@ -2,6 +2,7 @@
 
 import { signIn } from "next-auth/react";
 import { useState } from "react";
+import Image from "next/image";
 import { Loader2, AlertCircle } from "lucide-react";
 
 export default function LoginPage() {
@@ -27,6 +28,7 @@ export default function LoginPage() {
     <div className="min-h-screen bg-[var(--bg-secondary)] flex items-center justify-center px-4">
       <div className="w-full max-w-[400px]">
         <div className="text-center mb-8">
+          <Image src="/logo.png" alt="Rankved" width={56} height={56} className="mx-auto mb-4 rounded-xl" />
           <h1 className="text-[20px] font-semibold text-[var(--text-primary)] mb-1">Rankved GMB Manager</h1>
           <p className="text-[13px] text-[var(--text-secondary)]">Sign in to your account</p>
         </div>

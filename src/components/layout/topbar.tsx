@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import { useSession, signOut } from "next-auth/react";
 import { Search, User, LogOut } from "lucide-react";
 
@@ -10,9 +11,12 @@ export function Topbar() {
     <header className="h-14 border-b border-[var(--border)] bg-white px-4 sm:px-6 flex items-center justify-between sticky top-0 z-10">
       <div className="flex items-center flex-1 gap-3">
         {/* Show app name on mobile since sidebar is hidden */}
-        <span className="md:hidden font-semibold text-[14px] text-[var(--text-primary)] tracking-[-0.01em] whitespace-nowrap">
-          Rankved GMB
-        </span>
+        <div className="md:hidden flex items-center gap-2">
+          <Image src="/logo.png" alt="Rankved" width={24} height={24} className="rounded" />
+          <span className="font-semibold text-[14px] text-[var(--text-primary)] tracking-[-0.01em] whitespace-nowrap">
+            Rankved GMB
+          </span>
+        </div>
         <div className="relative w-72 hidden sm:block">
           <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-[var(--text-tertiary)]" />
           <input 
