@@ -1,23 +1,24 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { use, useEffect, useState } from "react";
 import { format } from "date-fns";
 import { ArrowLeft, MapPin, RefreshCw, Loader2, Megaphone, MoreVertical } from "lucide-react";
 import Link from "next/link";
 
-export default function ClientDetail({ params }: { params: { id: string } }) {
+export default function ClientDetail({ params }: { params: Promise<{ id: string }> }) {
+  const { id } = use(params);
   const [client, setClient] = useState<any>(null);
   const [syncing, setSyncing] = useState(false);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     fetchClient();
-  }, [params.id]);
+  }, [id]);
 
   const fetchClient = async () => {
     setLoading(true);
     try {
-      const res = await fetch(`/api/clients/${params.id}`);
+      const res = await fetch(`/api/clients/${id}`);
       if (res.ok) {
         const data = await res.json();
         setClient(data.data);
@@ -33,7 +34,7 @@ export default function ClientDetail({ params }: { params: { id: string } }) {
       const res = await fetch(`/api/locations/sync`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ clientId: params.id })
+        body: JSON.stringify({ clientId: id })
       });
       if (res.ok) {
         // Refresh client data to see new locations

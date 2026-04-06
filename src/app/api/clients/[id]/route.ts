@@ -6,15 +6,16 @@ import { updateClientSchema } from "@/lib/validators";
 
 const prisma = new PrismaClient();
 
-export async function GET(req: Request, { params }: { params: { id: string } }) {
+export async function GET(req: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
+    const { id } = await params;
     const session = await getServerSession(authOptions);
     if (!session || !session.user?.id) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
     const client = await prisma.client.findUnique({
-      where: { id: params.id, userId: session.user.id },
+      where: { id, userId: session.user.id },
       include: { locations: true }
     });
 
@@ -28,8 +29,9 @@ export async function GET(req: Request, { params }: { params: { id: string } }) 
   }
 }
 
-export async function PATCH(req: Request, { params }: { params: { id: string } }) {
+export async function PATCH(req: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
+    const { id } = await params;
     const session = await getServerSession(authOptions);
     if (!session || !session.user?.id) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -37,7 +39,7 @@ export async function PATCH(req: Request, { params }: { params: { id: string } }
 
     // Verify ownership
     const existingClient = await prisma.client.findUnique({
-      where: { id: params.id, userId: session.user.id },
+      where: { id, userId: session.user.id },
     });
 
     if (!existingClient) {
@@ -52,7 +54,7 @@ export async function PATCH(req: Request, { params }: { params: { id: string } }
     }
 
     const client = await prisma.client.update({
-      where: { id: params.id },
+      where: { id },
       data: result.data,
     });
 
@@ -62,8 +64,9 @@ export async function PATCH(req: Request, { params }: { params: { id: string } }
   }
 }
 
-export async function DELETE(req: Request, { params }: { params: { id: string } }) {
+export async function DELETE(req: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
+    const { id } = await params;
     const session = await getServerSession(authOptions);
     if (!session || !session.user?.id) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -71,7 +74,7 @@ export async function DELETE(req: Request, { params }: { params: { id: string } 
 
     // Verify ownership
     const existingClient = await prisma.client.findUnique({
-      where: { id: params.id, userId: session.user.id },
+      where: { id, userId: session.user.id },
     });
 
     if (!existingClient) {
@@ -79,7 +82,7 @@ export async function DELETE(req: Request, { params }: { params: { id: string } 
     }
 
     await prisma.client.delete({
-      where: { id: params.id },
+      where: { id },
     });
 
     return NextResponse.json({ success: true }, { status: 200 });

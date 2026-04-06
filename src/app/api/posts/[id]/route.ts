@@ -4,24 +4,26 @@ import { authOptions } from "@/lib/auth";
 import { getPostById, updatePost } from "@/lib/post-store";
 
 // GET /api/posts/[id] — get a single post
-export async function GET(req: NextRequest, { params }: { params: { id: string } }) {
+export async function GET(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params;
   const session = await getServerSession(authOptions);
   if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-  const post = getPostById(params.id);
+  const post = getPostById(id);
   if (!post) return NextResponse.json({ error: "Post not found" }, { status: 404 });
 
   return NextResponse.json({ data: post });
 }
 
 // PUT /api/posts/[id] — update a post
-export async function PUT(req: NextRequest, { params }: { params: { id: string } }) {
+export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params;
   const session = await getServerSession(authOptions);
   if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   try {
     const body = await req.json();
-    const updated = updatePost(params.id, {
+    const updated = updatePost(id, {
       profileId: body.profileId,
       profileName: body.profileName,
       clientName: body.clientName,

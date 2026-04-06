@@ -1,19 +1,20 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { use, useState, useEffect } from "react";
 import Link from "next/link";
 import { ArrowLeft, Loader2 } from "lucide-react";
 import { PostTimeline } from "@/components/posts/post-timeline";
 import { PostEditor } from "@/components/posts/post-editor";
 
-export default function EditPostPage({ params }: { params: { id: string } }) {
+export default function EditPostPage({ params }: { params: Promise<{ id: string }> }) {
+  const { id } = use(params);
   const [sharedDate, setSharedDate] = useState("");
   const [post, setPost] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
   useEffect(() => {
-    fetch(`/api/posts/${params.id}`)
+    fetch(`/api/posts/${id}`)
       .then(r => {
         if (!r.ok) throw new Error("Post not found");
         return r.json();
@@ -26,7 +27,7 @@ export default function EditPostPage({ params }: { params: { id: string } }) {
         setError(err.message);
         setLoading(false);
       });
-  }, [params.id]);
+  }, [id]);
 
   if (loading) {
     return (
