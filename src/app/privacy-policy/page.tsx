@@ -8,7 +8,7 @@ export default function PrivacyPolicy() {
         <section>
           <h2 className="text-xl font-semibold mb-3">1. Introduction</h2>
           <p>
-            Welcome to Rankved GMB Manager ("we", "our", or "us"). We are committed to protecting your personal information and your right to privacy. If you have any questions or concerns about this privacy notice or our practices with regard to your personal information, please contact us.
+            Welcome to Rankved GMB Manager ("we", "our", or "us"), a service owned and operated by <a href="https://rankved.com" target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline font-medium">Rankved Healthcare Martech Agency</a>. We are committed to protecting your personal information and your right to privacy. If you have any questions or concerns about this privacy notice or our practices with regard to your personal information, please contact us.
           </p>
         </section>
 
@@ -46,8 +46,25 @@ export default function PrivacyPolicy() {
         <section>
           <h2 className="text-xl font-semibold mb-3">6. Contact Us</h2>
           <p>
-            If you have questions or comments about this notice, you may email us at your designated support email address.
+            If you have questions or comments about this notice, you may contact us at:
           </p>
+          <div className="mt-4 p-4 bg-gray-50 rounded-lg border border-gray-100">
+            <p className="font-medium text-gray-900">Rankved Healthcare Martech Agency</p>
+            <p className="text-gray-600 mt-1">
+              Q-13 Shatabdipuram, Gwalior<br />
+              M.P 477005, India
+            </p>
+            <div className="mt-4 space-y-2">
+              <p className="text-gray-600">
+                <span className="font-medium mr-2">Email:</span> 
+                <a href="mailto:info@rankved.com" className="text-blue-600 hover:underline">info@rankved.com</a>
+              </p>
+              <p className="text-gray-600">
+                <span className="font-medium mr-2">Website:</span> 
+                <a href="https://rankved.com" target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline">rankved.com</a>
+              </p>
+            </div>
+          </div>
         </section>
       </div>
     </div>

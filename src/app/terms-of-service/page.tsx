@@ -8,7 +8,7 @@ export default function TermsOfService() {
         <section>
           <h2 className="text-xl font-semibold mb-3">1. Agreement to Terms</h2>
           <p>
-            By accessing or using Rankved GMB Manager ("the Service"), you agree to be bound by these Terms of Service. If you disagree with any part of the terms, you may not access the Service.
+            By accessing or using Rankved GMB Manager ("the Service"), operated by <a href="https://rankved.com" target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline font-medium">Rankved Healthcare Martech Agency</a>, you agree to be bound by these Terms of Service. If you disagree with any part of the terms, you may not access the Service.
           </p>
         </section>
 
@@ -48,7 +48,7 @@ export default function TermsOfService() {
         <section>
           <h2 className="text-xl font-semibold mb-3">6. Limitation of Liability</h2>
           <p>
-            In no event shall Rankved, nor its directors, employees, partners, agents, suppliers, or affiliates, be liable for any indirect, incidental, special, consequential or punitive damages, including without limitation, loss of profits, data, use, goodwill, or other intangible losses, resulting from your access to or use of or inability to access or use the Service.
+            In no event shall Rankved Healthcare Martech Agency, nor its directors, employees, partners, agents, suppliers, or affiliates, be liable for any indirect, incidental, special, consequential or punitive damages, including without limitation, loss of profits, data, use, goodwill, or other intangible losses, resulting from your access to or use of or inability to access or use the Service.
           </p>
         </section>
 
@@ -57,6 +57,30 @@ export default function TermsOfService() {
           <p>
             We reserve the right, at our sole discretion, to modify or replace these Terms at any time. By continuing to access or use our Service after those revisions become effective, you agree to be bound by the revised terms.
           </p>
+        </section>
+
+        <section>
+          <h2 className="text-xl font-semibold mb-3">8. Contact Information</h2>
+          <p>
+            If you have any questions about these Terms, please contact us at:
+          </p>
+          <div className="mt-4 p-4 bg-gray-50 rounded-lg border border-gray-100">
+            <p className="font-medium text-gray-900">Rankved Healthcare Martech Agency</p>
+            <p className="text-gray-600 mt-1">
+              Q-13 Shatabdipuram, Gwalior<br />
+              M.P 477005, India
+            </p>
+            <div className="mt-4 space-y-2">
+              <p className="text-gray-600">
+                <span className="font-medium mr-2">Email:</span> 
+                <a href="mailto:info@rankved.com" className="text-blue-600 hover:underline">info@rankved.com</a>
+              </p>
+              <p className="text-gray-600">
+                <span className="font-medium mr-2">Website:</span> 
+                <a href="https://rankved.com" target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline">rankved.com</a>
+              </p>
+            </div>
+          </div>
         </section>
       </div>
     </div>
