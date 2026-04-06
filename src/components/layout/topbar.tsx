@@ -7,8 +7,12 @@ export function Topbar() {
   const { data: session } = useSession();
 
   return (
-    <header className="h-14 border-b border-[var(--border)] bg-white px-6 flex items-center justify-between sticky top-0 z-10">
-      <div className="flex items-center flex-1">
+    <header className="h-14 border-b border-[var(--border)] bg-white px-4 sm:px-6 flex items-center justify-between sticky top-0 z-10">
+      <div className="flex items-center flex-1 gap-3">
+        {/* Show app name on mobile since sidebar is hidden */}
+        <span className="md:hidden font-semibold text-[14px] text-[var(--text-primary)] tracking-[-0.01em] whitespace-nowrap">
+          Rankved GMB
+        </span>
         <div className="relative w-72 hidden sm:block">
           <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-[var(--text-tertiary)]" />
           <input 
