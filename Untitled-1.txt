@@ -1,0 +1,2 @@
+cd C:\Users\prave\.gemini\antigravity\scratch\gbp-scheduler
+npx prisma db push
