@@ -87,48 +87,86 @@ export default function PostsPage() {
             </p>
           </div>
         ) : (
-          <table className="w-full text-[13px]">
-            <thead>
-              <tr className="border-b border-[var(--border-light)] bg-[var(--bg-secondary)] text-[11px] text-[var(--text-tertiary)] uppercase tracking-wide text-left">
-                <th className="px-5 py-2.5 font-medium">Status</th>
-                <th className="px-5 py-2.5 font-medium">Post</th>
-                <th className="px-5 py-2.5 font-medium">Profile</th>
-                <th className="px-5 py-2.5 font-medium hidden md:table-cell">Type</th>
-                <th className="px-5 py-2.5 font-medium hidden sm:table-cell">Scheduled</th>
-                <th className="px-5 py-2.5 font-medium text-right">Actions</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-[var(--border-light)]">
-              {filtered.map(post => (
-                <tr key={post.id} className="hover:bg-[var(--bg-secondary)] transition-colors">
-                  <td className="px-5 py-3.5"><StatusLabel status={post.status} /></td>
-                  <td className="px-5 py-3.5 max-w-[300px]">
-                    <p className="text-[var(--text-primary)] truncate">{post.summary}</p>
-                    <p className="text-[11px] text-[var(--text-tertiary)] mt-0.5">by {post.createdBy}</p>
-                  </td>
-                  <td className="px-5 py-3.5"><span className="text-[12px] text-[var(--text-secondary)]">{post.clientName} — {post.profileName}</span></td>
-                  <td className="px-5 py-3.5 text-[var(--text-tertiary)] hidden md:table-cell">{post.topicType}</td>
-                  <td className="px-5 py-3.5 text-[12px] text-[var(--text-tertiary)] hidden sm:table-cell">
-                    {post.scheduledAt ? format(new Date(post.scheduledAt), "MMM d, h:mm a") : "—"}
-                  </td>
-                  <td className="px-5 py-3.5 text-right">
-                    <div className="flex items-center justify-end gap-2">
-                      <Link href={`/posts/${post.id}`}
-                        className="px-3 py-1.5 text-[12px] font-medium text-[var(--text-secondary)] hover:text-[var(--text-primary)] border border-[var(--border)] rounded-md hover:bg-[var(--bg-secondary)] transition-colors">
-                        View
-                      </Link>
-                      {isAdmin && (
-                        <button onClick={() => handleDelete(post.id)}
-                          className="p-1.5 text-[var(--text-tertiary)] hover:text-[var(--error)] hover:bg-[var(--error-bg)] rounded-md transition-colors">
-                          <Trash2 className="w-3.5 h-3.5" />
-                        </button>
-                      )}
-                    </div>
-                  </td>
+          <>
+          {/* Desktop Table — hidden on mobile */}
+          <div className="hidden sm:block">
+            <table className="w-full text-[13px]">
+              <thead>
+                <tr className="border-b border-[var(--border-light)] bg-[var(--bg-secondary)] text-[11px] text-[var(--text-tertiary)] uppercase tracking-wide text-left">
+                  <th className="px-5 py-2.5 font-medium">Status</th>
+                  <th className="px-5 py-2.5 font-medium">Post</th>
+                  <th className="px-5 py-2.5 font-medium hidden lg:table-cell">Profile</th>
+                  <th className="px-5 py-2.5 font-medium hidden md:table-cell">Type</th>
+                  <th className="px-5 py-2.5 font-medium hidden md:table-cell">Scheduled</th>
+                  <th className="px-5 py-2.5 font-medium text-right">Actions</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody className="divide-y divide-[var(--border-light)]">
+                {filtered.map(post => (
+                  <tr key={post.id} className="hover:bg-[var(--bg-secondary)] transition-colors">
+                    <td className="px-5 py-3.5"><StatusLabel status={post.status} /></td>
+                    <td className="px-5 py-3.5 max-w-[300px]">
+                      <p className="text-[var(--text-primary)] truncate">{post.summary}</p>
+                      <p className="text-[11px] text-[var(--text-tertiary)] mt-0.5">by {post.createdBy}</p>
+                    </td>
+                    <td className="px-5 py-3.5 hidden lg:table-cell"><span className="text-[12px] text-[var(--text-secondary)]">{post.clientName} — {post.profileName}</span></td>
+                    <td className="px-5 py-3.5 text-[var(--text-tertiary)] hidden md:table-cell">{post.topicType}</td>
+                    <td className="px-5 py-3.5 text-[12px] text-[var(--text-tertiary)] hidden md:table-cell">
+                      {post.scheduledAt ? format(new Date(post.scheduledAt), "MMM d, h:mm a") : "—"}
+                    </td>
+                    <td className="px-5 py-3.5 text-right">
+                      <div className="flex items-center justify-end gap-2">
+                        <Link href={`/posts/${post.id}`}
+                          className="px-3 py-1.5 text-[12px] font-medium text-[var(--text-secondary)] hover:text-[var(--text-primary)] border border-[var(--border)] rounded-md hover:bg-[var(--bg-secondary)] transition-colors">
+                          View
+                        </Link>
+                        {isAdmin && (
+                          <button onClick={() => handleDelete(post.id)}
+                            className="p-1.5 text-[var(--text-tertiary)] hover:text-[var(--error)] hover:bg-[var(--error-bg)] rounded-md transition-colors">
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
+                        )}
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+
+          {/* Mobile Cards — shown only on small screens */}
+          <div className="sm:hidden divide-y divide-[var(--border-light)]">
+            {filtered.map(post => (
+              <div key={post.id} className="p-4 space-y-2.5">
+                <div className="flex items-start justify-between gap-3">
+                  <div className="min-w-0 flex-1">
+                    <p className="text-[13px] text-[var(--text-primary)] font-medium line-clamp-2">{post.summary}</p>
+                    <p className="text-[11px] text-[var(--text-tertiary)] mt-1">{post.clientName} · {post.profileName}</p>
+                  </div>
+                  <StatusLabel status={post.status} />
+                </div>
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3 text-[11px] text-[var(--text-tertiary)]">
+                    <span className="bg-[var(--bg-secondary)] px-2 py-0.5 rounded">{post.topicType}</span>
+                    <span>{post.scheduledAt ? format(new Date(post.scheduledAt), "MMM d, h:mm a") : "No schedule"}</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Link href={`/posts/${post.id}`}
+                      className="px-3 py-1.5 text-[12px] font-medium text-[var(--accent)] hover:bg-[var(--accent-light)] rounded-md transition-colors">
+                      Edit
+                    </Link>
+                    {isAdmin && (
+                      <button onClick={() => handleDelete(post.id)}
+                        className="p-1.5 text-[var(--text-tertiary)] hover:text-[var(--error)] hover:bg-[var(--error-bg)] rounded-md transition-colors">
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </button>
+                    )}
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+          </>
         )}
       </div>
     </div>
