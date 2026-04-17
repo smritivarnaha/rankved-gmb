@@ -191,7 +191,12 @@ export async function publishToGBP(opts: PublishOptions): Promise<PublishResult>
       return { success: false, error: message };
     }
 
-    console.log("[GBP] Published successfully:", data.name);
+    if (data.state === "REJECTED") {
+      console.error("[GBP] Post was created but instantly REJECTED by Google:", JSON.stringify(data));
+      return { success: false, error: "Google instantly rejected this post. This usually happens if your image violates policy, or if your Supabase 'post-images' bucket is not set to Public (so Google couldn't download the image)." };
+    }
+
+    console.log("[GBP] Published successfully:", data.name, data.state);
     return { success: true, gbpPostName: data.name };
   } catch (err: any) {
     console.error("[GBP] Publish exception:", err);

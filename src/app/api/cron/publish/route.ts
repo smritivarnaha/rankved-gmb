@@ -112,5 +112,47 @@ export async function GET(req: NextRequest) {
     await new Promise(r => setTimeout(r, 500));
   }
 
+  // --- Auto-cleanup: Delete images from Supabase to save 50MB free quota ---
+  // We delete images that have been published for more than 24 hours.
+  // Google has already downloaded them, so we no longer need to host them.
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  if (supabaseUrl && supabaseKey) {
+    try {
+      const yesterday = new Date(Date.now() - 24 * 60 * 60 * 1000);
+      const stalePosts = await prisma.post.findMany({
+        where: {
+          status: "PUBLISHED",
+          publishedAt: { lte: yesterday },
+          mediaUrl: { contains: "supabase.co" }
+        }
+      });
+      
+      let deletedImages = 0;
+      for (const sp of stalePosts) {
+        if (!sp.mediaUrl) continue;
+        const urlParts = sp.mediaUrl.split("/object/public/");
+        if (urlParts.length === 2) {
+          const filePath = urlParts[1]; // e.g. "post-images/gbp-posts/1713386000000.jpg"
+          // Call Supabase API to delete the object using Service Role key
+          const delRes = await fetch(`${supabaseUrl}/storage/v1/object/${filePath}`, {
+            method: "DELETE",
+            headers: { Authorization: `Bearer ${supabaseKey}` }
+          });
+          if (delRes.ok) {
+            await prisma.post.update({
+              where: { id: sp.id },
+              data: { mediaUrl: null }
+            });
+            deletedImages++;
+          }
+        }
+      }
+      console.log(`[CRON] Cleaned up ${deletedImages} stale images from Supabase.`);
+    } catch (e) {
+      console.error("[CRON] Storage cleanup failed", e);
+    }
+  }
+
   return NextResponse.json({ processed: results.length, results });
 }
