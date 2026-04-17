@@ -6,6 +6,7 @@
  */
 
 import { PostData } from "./post-store";
+import prisma from "@/lib/prisma";
 
 const GBP_BASE = "https://mybusiness.googleapis.com/v4";
 
@@ -106,8 +107,6 @@ export async function publishToGBP(opts: PublishOptions): Promise<PublishResult>
     locationName = post.profileId;
   } else {
     // Look up the actual location in the DB to get the gbpName
-    const { PrismaClient } = require('@prisma/client');
-    const prisma = new PrismaClient();
     try {
       const loc = await prisma.location.findUnique({
         where: { id: post.profileId },
