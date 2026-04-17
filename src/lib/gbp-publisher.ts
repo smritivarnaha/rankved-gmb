@@ -113,7 +113,9 @@ export async function publishToGBP(opts: PublishOptions): Promise<PublishResult>
         select: { gbpAccountId: true, gbpLocationId: true }
       });
       if (loc && loc.gbpAccountId && loc.gbpLocationId) {
-        locationName = `accounts/${loc.gbpAccountId}/locations/${loc.gbpLocationId}`;
+        const accId = loc.gbpAccountId.replace("accounts/", "");
+        const locId = loc.gbpLocationId.replace("locations/", "");
+        locationName = `accounts/${accId}/locations/${locId}`;
       }
     } catch (err) {
       console.error("[GBP] Failed to resolve location UUID:", err);
