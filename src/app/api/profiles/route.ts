@@ -30,6 +30,9 @@ async function fetchWithRetry(url: string, options: RequestInit, maxRetries = 3)
 export async function GET(req: NextRequest) {
   const session = await getServerSession(authOptions);
   if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  if (!(session as any).user.isApproved) {
+    return NextResponse.json({ error: "Your account is pending approval by rankved.business@gmail.com." }, { status: 403 });
+  }
 
   const profiles = await getAllProfiles();
   return NextResponse.json({ data: profiles });
@@ -39,6 +42,9 @@ export async function GET(req: NextRequest) {
 export async function POST(req: NextRequest) {
   const session = await getServerSession(authOptions);
   if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  if (!(session as any).user.isApproved) {
+    return NextResponse.json({ error: "Your account is pending approval by rankved.business@gmail.com." }, { status: 403 });
+  }
 
   const accessToken = (session as any)?.accessToken;
   if (!accessToken) {
@@ -139,6 +145,9 @@ export async function POST(req: NextRequest) {
 export async function PUT(req: NextRequest) {
   const session = await getServerSession(authOptions);
   if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  if (!(session as any).user.isApproved) {
+    return NextResponse.json({ error: "Your account is pending approval by rankved.business@gmail.com." }, { status: 403 });
+  }
 
   const userId = (session as any)?.user?.id;
   if (!userId) return NextResponse.json({ error: "Could not determine user ID." }, { status: 401 });
@@ -176,6 +185,9 @@ export async function PUT(req: NextRequest) {
 export async function DELETE(req: NextRequest) {
   const session = await getServerSession(authOptions);
   if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  if (!(session as any).user.isApproved) {
+    return NextResponse.json({ error: "Your account is pending approval by rankved.business@gmail.com." }, { status: 403 });
+  }
 
   const { searchParams } = new URL(req.url);
   const id = searchParams.get("id");

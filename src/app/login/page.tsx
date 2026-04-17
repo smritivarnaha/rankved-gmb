@@ -1,15 +1,17 @@
 "use client";
 
 import { signIn } from "next-auth/react";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
-import { Loader2, AlertCircle, MapPin, BarChart3, Calendar, Zap } from "lucide-react";
+import { Loader2, AlertCircle } from "lucide-react";
+
+const RECAPTCHA_SITE_KEY = "6Lf1lrwsAAAAAMSCfj2I-Hrusva3fWQ0mfGE8V3b";
 
 const features = [
-  { icon: MapPin, text: "Manage all your Google Business locations" },
-  { icon: Calendar, text: "Schedule posts across multiple profiles" },
-  { icon: BarChart3, text: "Track performance in one place" },
-  { icon: Zap, text: "Auto-publish with smart scheduling" },
+  "Manage multiple business profiles from one login",
+  "Plan and schedule posts in advance",
+  "Optimize images automatically for posting",
+  "Maintain consistent activity across listings",
 ];
 
 export default function LoginPage() {
@@ -18,221 +20,262 @@ export default function LoginPage() {
   const [loading, setLoading] = useState(false);
   const [googleLoading, setGoogleLoading] = useState(false);
   const [error, setError] = useState("");
+  const [captchaToken, setCaptchaToken] = useState<string | null>(null);
+
+  useEffect(() => {
+    const render = () => {
+      const el = document.getElementById("g-recaptcha");
+      if (!el || el.childElementCount > 0) return;
+      try {
+        (window as any).grecaptcha.render("g-recaptcha", {
+          sitekey: RECAPTCHA_SITE_KEY,
+          callback: (t: string) => setCaptchaToken(t),
+          "expired-callback": () => setCaptchaToken(null),
+          theme: "light",
+          size: "normal",
+        });
+      } catch {}
+    };
+    if ((window as any).grecaptcha?.render) {
+      render();
+    } else {
+      const s = document.createElement("script");
+      s.src = "https://www.google.com/recaptcha/api.js?render=explicit";
+      s.async = true;
+      s.onload = () => (window as any).grecaptcha?.ready(render);
+      document.head.appendChild(s);
+    }
+  }, []);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!captchaToken) { setError("Please complete the captcha first."); return; }
     setLoading(true);
     setError("");
     const result = await signIn("credentials", { email, password, redirect: false });
-    if (result?.error) {
-      setError("Invalid email or password.");
-      setLoading(false);
-    } else {
-      window.location.href = "/dashboard";
-    }
+    if (result?.error) { setError("Invalid email or password."); setLoading(false); }
+    else window.location.href = "/dashboard";
   };
 
   const handleGoogle = async () => {
+    if (!captchaToken) { setError("Please complete the captcha first."); return; }
     setGoogleLoading(true);
     await signIn("google", { callbackUrl: "/dashboard" });
   };
 
   return (
-    <div className="min-h-screen flex">
-      {/* ── Left Panel (branding) ── */}
-      <div
-        className="hidden lg:flex lg:w-1/2 xl:w-[55%] flex-col justify-between p-12 relative overflow-hidden"
-        style={{ background: "linear-gradient(135deg, #0f172a 0%, #1e3a5f 50%, #0f4c81 100%)" }}
-      >
-        {/* Decorative blobs */}
-        <div style={{
-          position: "absolute", top: "-80px", right: "-80px",
-          width: "360px", height: "360px", borderRadius: "50%",
-          background: "rgba(59,130,246,0.18)", filter: "blur(60px)", pointerEvents: "none"
-        }} />
-        <div style={{
-          position: "absolute", bottom: "-60px", left: "-60px",
-          width: "280px", height: "280px", borderRadius: "50%",
-          background: "rgba(99,102,241,0.15)", filter: "blur(50px)", pointerEvents: "none"
-        }} />
+    <>
+      <style>{`
+        @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body { font-family: 'Plus Jakarta Sans', -apple-system, sans-serif; }
+        @keyframes spin { to { transform: rotate(360deg); } }
+        .spin { animation: spin 0.9s linear infinite; }
 
-        {/* Logo */}
-        <div className="flex items-center gap-3 relative z-10">
-          <div style={{
-            width: 44, height: 44, borderRadius: 12,
-            background: "linear-gradient(135deg,#3b82f6,#6366f1)",
-            display: "flex", alignItems: "center", justifyContent: "center",
-            boxShadow: "0 4px 20px rgba(59,130,246,0.4)"
-          }}>
-            <span style={{ color: "#fff", fontWeight: 800, fontSize: 20 }}>R</span>
-          </div>
-          <div>
-            <p style={{ color: "#fff", fontWeight: 700, fontSize: 16, lineHeight: 1.2 }}>Rankved</p>
-            <p style={{ color: "rgba(255,255,255,0.55)", fontSize: 12 }}>GMB Manager</p>
-          </div>
-        </div>
+        .login-root {
+          min-height: 100vh;
+          display: flex;
+        }
 
-        {/* Hero text */}
-        <div className="relative z-10">
-          <h1 style={{ color: "#fff", fontSize: 36, fontWeight: 800, lineHeight: 1.2, marginBottom: 16 }}>
-            Your Google Business<br />
-            <span style={{ color: "#60a5fa" }}>Command Center</span>
-          </h1>
-          <p style={{ color: "rgba(255,255,255,0.65)", fontSize: 15, lineHeight: 1.7, marginBottom: 40, maxWidth: 380 }}>
-            Schedule posts, manage locations, and grow your local presence — all from one clean dashboard.
-          </p>
+        /* LEFT — background image panel */
+        .left-panel {
+          width: 55%;
+          flex-shrink: 0;
+          position: relative;
+          overflow: hidden;
+          display: flex;
+          flex-direction: column;
+          justify-content: space-between;
+          padding: 40px 52px 40px 48px;
+          background: linear-gradient(160deg, #0b1e3d 0%, #1a3a6e 45%, #2055b5 75%, #3b82f6 100%);
+          background-repeat: no-repeat;
+        }
 
-          <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
-            {features.map(({ icon: Icon, text }) => (
-              <div key={text} style={{ display: "flex", alignItems: "center", gap: 14 }}>
-                <div style={{
-                  width: 36, height: 36, borderRadius: 10, flexShrink: 0,
-                  background: "rgba(255,255,255,0.1)",
-                  display: "flex", alignItems: "center", justifyContent: "center",
-                  border: "1px solid rgba(255,255,255,0.15)"
-                }}>
-                  <Icon size={16} color="rgba(255,255,255,0.85)" />
-                </div>
-                <span style={{ color: "rgba(255,255,255,0.8)", fontSize: 14 }}>{text}</span>
-              </div>
-            ))}
-          </div>
-        </div>
+        .left-inner { position: relative; z-index: 1; }
 
-        {/* Footer */}
-        <p style={{ color: "rgba(255,255,255,0.3)", fontSize: 12, position: "relative", zIndex: 10 }}>
-          © {new Date().getFullYear()} Rankved. All rights reserved.
-        </p>
-      </div>
 
-      {/* ── Right Panel (form) ── */}
-      <div className="flex-1 flex flex-col items-center justify-center px-6 py-12 bg-white">
-        {/* Mobile logo */}
-        <div className="lg:hidden flex items-center gap-3 mb-10">
-          <div style={{
-            width: 40, height: 40, borderRadius: 10,
-            background: "linear-gradient(135deg,#3b82f6,#6366f1)",
-            display: "flex", alignItems: "center", justifyContent: "center"
-          }}>
-            <span style={{ color: "#fff", fontWeight: 800, fontSize: 18 }}>R</span>
-          </div>
-          <span style={{ fontWeight: 700, fontSize: 16, color: "#0f172a" }}>Rankved GMB Manager</span>
-        </div>
+        /* RIGHT panel */
+        .right-panel {
+          flex: 1;
+          background: #fff;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          padding: 48px 32px;
+        }
+        .form-card { width: 100%; max-width: 380px; }
 
-        <div style={{ width: "100%", maxWidth: 380 }}>
-          <div style={{ marginBottom: 32 }}>
-            <h2 style={{ fontSize: 26, fontWeight: 800, color: "#0f172a", marginBottom: 6 }}>Welcome back</h2>
-            <p style={{ fontSize: 14, color: "#64748b" }}>Sign in to manage your Google Business profiles</p>
-          </div>
+        .field-label { display: block; font-size: 13px; font-weight: 600; color: #374151; margin-bottom: 6px; }
+        .field-input {
+          width: 100%; padding: 11px 14px; border-radius: 10px;
+          border: 1.5px solid #e2e8f0; font-size: 14px;
+          font-family: inherit; outline: none; color: #0f172a;
+          transition: border-color 0.15s;
+        }
+        .field-input:focus { border-color: #6366f1; box-shadow: 0 0 0 3px rgba(99,102,241,0.12); }
 
-          {/* Google Button */}
-          <button
-            onClick={handleGoogle}
-            disabled={googleLoading}
-            style={{
-              width: "100%", display: "flex", alignItems: "center", justifyContent: "center",
-              gap: 12, padding: "11px 16px", borderRadius: 10,
-              border: "1.5px solid #e2e8f0", background: googleLoading ? "#f8fafc" : "#fff",
-              cursor: googleLoading ? "not-allowed" : "pointer",
-              fontSize: 14, fontWeight: 600, color: "#0f172a",
-              boxShadow: "0 1px 3px rgba(0,0,0,0.06)",
-              transition: "all 0.15s", marginBottom: 24
-            }}
-            onMouseOver={e => { if (!googleLoading) (e.currentTarget as HTMLButtonElement).style.background = "#f8fafc"; }}
-            onMouseOut={e => { if (!googleLoading) (e.currentTarget as HTMLButtonElement).style.background = "#fff"; }}
-          >
-            {googleLoading ? (
-              <Loader2 size={18} style={{ animation: "spin 1s linear infinite" }} />
-            ) : (
-              <svg width="18" height="18" viewBox="0 0 18 18">
-                <path fill="#4285F4" d="M16.51 8H8.98v3h4.3c-.18 1-.74 1.48-1.6 2.04v2.01h2.6a7.8 7.8 0 0 0 2.38-5.88c0-.57-.05-.66-.15-1.18z"/>
-                <path fill="#34A853" d="M8.98 17c2.16 0 3.97-.72 5.3-1.94l-2.6-2.01c-.72.48-1.63.76-2.7.76-2.08 0-3.84-1.4-4.47-3.29H1.85v2.07A8 8 0 0 0 8.98 17z"/>
-                <path fill="#FBBC05" d="M4.51 10.52A4.8 4.8 0 0 1 4.26 9c0-.53.09-1.04.25-1.52V5.41H1.85A8 8 0 0 0 .98 9c0 1.29.31 2.51.87 3.59l2.66-2.07z"/>
-                <path fill="#EA4335" d="M8.98 3.58c1.17 0 2.23.4 3.06 1.2l2.3-2.3A8 8 0 0 0 .98 9l2.87 2.07C4.14 4.98 6.23 3.58 8.98 3.58z"/>
-              </svg>
-            )}
-            {googleLoading ? "Redirecting…" : "Continue with Google"}
-          </button>
+        .btn-signin {
+          width: 100%; padding: 13px; border-radius: 12px; border: none;
+          background: linear-gradient(135deg, #4f46e5, #6366f1);
+          color: #fff; font-size: 15px; font-weight: 700;
+          cursor: pointer; font-family: inherit;
+          display: flex; align-items: center; justify-content: center; gap: 8px;
+          box-shadow: 0 4px 16px rgba(79,70,229,0.3);
+          transition: opacity 0.15s, transform 0.1s;
+        }
+        .btn-signin:hover:not(:disabled) { opacity: 0.92; transform: translateY(-1px); }
+        .btn-signin:disabled { opacity: 0.55; cursor: not-allowed; }
 
-          {/* Divider */}
-          <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 24 }}>
-            <div style={{ flex: 1, height: 1, background: "#e2e8f0" }} />
-            <span style={{ fontSize: 12, color: "#94a3b8", whiteSpace: "nowrap" }}>or continue with email</span>
-            <div style={{ flex: 1, height: 1, background: "#e2e8f0" }} />
+        .btn-google {
+          width: 100%; padding: 12px; border-radius: 12px;
+          border: 1.5px solid #e2e8f0; background: #fff;
+          cursor: pointer; font-family: inherit; font-size: 14px; font-weight: 600;
+          color: #0f172a; display: flex; align-items: center; justify-content: center; gap: 10px;
+          box-shadow: 0 1px 4px rgba(0,0,0,0.06);
+          transition: background 0.15s, border-color 0.15s, transform 0.1s;
+        }
+        .btn-google:hover:not(:disabled) { background: #f8fafc; border-color: #c7d2fe; transform: translateY(-1px); }
+        .btn-google:disabled { opacity: 0.5; cursor: not-allowed; }
+
+        .divider { display: flex; align-items: center; gap: 12; margin: 20px 0; }
+        .divider-line { flex: 1; height: 1px; background: #f1f5f9; }
+        .divider-text { font-size: 11px; color: #cbd5e1; font-weight: 600; letter-spacing: 0.07em; text-transform: uppercase; white-space: nowrap; }
+
+        @media (max-width: 900px) {
+          .left-panel { display: none; }
+          .right-panel { padding: 32px 20px; }
+        }
+      `}</style>
+
+      <div className="login-root">
+        {/* ── LEFT PANEL ── */}
+        <div className="left-panel">
+          {/* Logo — only here, only once */}
+          <div className="left-inner" style={{ display: "flex", alignItems: "center", gap: 12 }}>
+            <img
+              src="/rankved-logo.png"
+              alt="RankVed"
+              width={44}
+              height={44}
+              style={{ borderRadius: 12, boxShadow: "0 2px 12px rgba(0,0,0,0.25)" }}
+            />
+            <div>
+              <p style={{ color: "#fff", fontWeight: 800, fontSize: 17, lineHeight: 1.2, letterSpacing: "-0.02em" }}>RankVed</p>
+              <p style={{ color: "rgba(200,225,255,0.7)", fontSize: 12, fontWeight: 500 }}>GMB Manager</p>
+            </div>
           </div>
 
-          {/* Error */}
-          {error && (
-            <div style={{
-              display: "flex", alignItems: "center", gap: 8, marginBottom: 16,
-              background: "#fef2f2", border: "1px solid #fecaca",
-              borderRadius: 8, padding: "10px 12px", fontSize: 13, color: "#dc2626"
+          {/* Hero */}
+          <div className="left-inner">
+            <h1 style={{
+              color: "#fff", fontWeight: 800, lineHeight: 1.18,
+              letterSpacing: "-0.03em", marginBottom: 16,
+              fontSize: "clamp(26px, 2.6vw, 38px)",
             }}>
-              <AlertCircle size={15} />
-              {error}
+              Your Google Business,{" "}
+              <span style={{ background: "linear-gradient(90deg, #93c5fd, #a5b4fc)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" }}>
+                Managed in One Place.
+              </span>
+            </h1>
+            <p style={{ color: "rgba(210,230,255,0.65)", fontSize: 14.5, lineHeight: 1.75, maxWidth: 420, marginBottom: 36 }}>
+              Connect your Google account and manage all your business profiles from a single dashboard. Plan posts, schedule updates, and keep every listing active without switching accounts.
+            </p>
+            <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+              {features.map((f) => (
+                <div key={f} style={{ display: "flex", alignItems: "center", gap: 12 }}>
+                  <div style={{
+                    width: 22, height: 22, borderRadius: 6, flexShrink: 0,
+                    border: "1.5px solid rgba(147,197,253,0.5)",
+                    display: "flex", alignItems: "center", justifyContent: "center",
+                  }}>
+                    <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
+                      <path d="M2 6l3 3 5-5" stroke="#93c5fd" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+                    </svg>
+                  </div>
+                  <span style={{ color: "rgba(210,230,255,0.85)", fontSize: 14, fontWeight: 500 }}>{f}</span>
+                </div>
+              ))}
             </div>
-          )}
+          </div>
 
-          {/* Credentials form */}
-          <form onSubmit={handleLogin} style={{ display: "flex", flexDirection: "column", gap: 16 }}>
-            <div>
-              <label style={{ display: "block", fontSize: 13, fontWeight: 600, color: "#374151", marginBottom: 6 }}>
-                Email address
-              </label>
-              <input
-                type="email" value={email} onChange={e => setEmail(e.target.value)} required
-                placeholder="you@company.com"
-                style={{
-                  width: "100%", padding: "10px 12px", borderRadius: 8, fontSize: 14,
-                  border: "1.5px solid #e2e8f0", outline: "none", color: "#0f172a",
-                  boxSizing: "border-box", transition: "border-color 0.15s"
-                }}
-                onFocus={e => { e.target.style.borderColor = "#3b82f6"; }}
-                onBlur={e => { e.target.style.borderColor = "#e2e8f0"; }}
-              />
-            </div>
-            <div>
-              <label style={{ display: "block", fontSize: 13, fontWeight: 600, color: "#374151", marginBottom: 6 }}>
-                Password
-              </label>
-              <input
-                type="password" value={password} onChange={e => setPassword(e.target.value)} required
-                placeholder="Enter your password"
-                style={{
-                  width: "100%", padding: "10px 12px", borderRadius: 8, fontSize: 14,
-                  border: "1.5px solid #e2e8f0", outline: "none", color: "#0f172a",
-                  boxSizing: "border-box", transition: "border-color 0.15s"
-                }}
-                onFocus={e => { e.target.style.borderColor = "#3b82f6"; }}
-                onBlur={e => { e.target.style.borderColor = "#e2e8f0"; }}
-              />
-            </div>
-
-            <button
-              type="submit" disabled={loading}
-              style={{
-                width: "100%", padding: "11px 16px", borderRadius: 10, border: "none",
-                background: loading ? "#93c5fd" : "linear-gradient(135deg,#3b82f6,#6366f1)",
-                color: "#fff", fontSize: 14, fontWeight: 700, cursor: loading ? "not-allowed" : "pointer",
-                display: "flex", alignItems: "center", justifyContent: "center", gap: 8,
-                boxShadow: "0 2px 12px rgba(59,130,246,0.35)", transition: "opacity 0.15s",
-                marginTop: 4
-              }}
-            >
-              {loading && <Loader2 size={16} style={{ animation: "spin 1s linear infinite" }} />}
-              {loading ? "Signing in…" : "Sign in"}
-            </button>
-          </form>
-
-          {/* Footer */}
-          <p style={{ fontSize: 11.5, color: "#94a3b8", textAlign: "center", marginTop: 28, lineHeight: 1.6 }}>
-            By signing in, you agree to our{" "}
-            <Link href="/terms-of-service" style={{ color: "#3b82f6", textDecoration: "none" }}>Terms of Service</Link>
-            {" "}and{" "}
-            <Link href="/privacy-policy" style={{ color: "#3b82f6", textDecoration: "none" }}>Privacy Policy</Link>
+          <p className="left-inner" style={{ color: "rgba(180,210,255,0.25)", fontSize: 11, fontWeight: 500 }}>
+            © {new Date().getFullYear()} RankVed Technologies. All rights reserved.
           </p>
         </div>
+
+        {/* ── RIGHT PANEL ── */}
+        <div className="right-panel">
+          <div className="form-card">
+            <div style={{ marginBottom: 28 }}>
+              <h2 style={{ fontSize: 26, fontWeight: 800, color: "#0f172a", letterSpacing: "-0.03em", marginBottom: 6 }}>
+                Welcome back
+              </h2>
+              <p style={{ fontSize: 14, color: "#64748b" }}>
+                Sign in to access your business dashboard
+              </p>
+            </div>
+
+            {error && (
+              <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "10px 14px", borderRadius: 10, background: "#fef2f2", border: "1px solid #fecaca", marginBottom: 18 }}>
+                <AlertCircle size={15} color="#dc2626" />
+                <span style={{ fontSize: 13, color: "#dc2626" }}>{error}</span>
+              </div>
+            )}
+
+            <form onSubmit={handleLogin} style={{ display: "flex", flexDirection: "column", gap: 16, marginBottom: 20 }}>
+              <div>
+                <label className="field-label">Email address</label>
+                <input className="field-input" type="email" value={email} onChange={e => setEmail(e.target.value)} required placeholder="you@example.com" />
+              </div>
+              <div>
+                <label className="field-label">Password</label>
+                <input className="field-input" type="password" value={password} onChange={e => setPassword(e.target.value)} required placeholder="••••••••••" />
+              </div>
+
+              {/* reCAPTCHA */}
+              <div style={{ display: "flex", justifyContent: "center" }}>
+                <div id="g-recaptcha" />
+              </div>
+
+              {/* Primary Sign In */}
+              <button type="submit" className="btn-signin" disabled={loading}>
+                {loading && <Loader2 size={16} className="spin" />}
+                {loading ? "Signing in…" : "Sign in"}
+              </button>
+            </form>
+
+            {/* Divider */}
+            <div className="divider">
+              <div className="divider-line" />
+              <span className="divider-text">or continue with Google</span>
+              <div className="divider-line" />
+            </div>
+
+            {/* Google — below the form */}
+            <button className="btn-google" onClick={handleGoogle} disabled={googleLoading} style={{ marginTop: 12 }}>
+              {googleLoading ? (
+                <Loader2 size={18} color="#6366f1" className="spin" />
+              ) : (
+                <svg width="18" height="18" viewBox="0 0 18 18">
+                  <path fill="#4285F4" d="M16.51 8H8.98v3h4.3c-.18 1-.74 1.48-1.6 2.04v2.01h2.6a7.8 7.8 0 0 0 2.38-5.88c0-.57-.05-.66-.15-1.18z"/>
+                  <path fill="#34A853" d="M8.98 17c2.16 0 3.97-.72 5.3-1.94l-2.6-2.01c-.72.48-1.63.76-2.7.76-2.08 0-3.84-1.4-4.47-3.29H1.85v2.07A8 8 0 0 0 8.98 17z"/>
+                  <path fill="#FBBC05" d="M4.51 10.52A4.8 4.8 0 0 1 4.26 9c0-.53.09-1.04.25-1.52V5.41H1.85A8 8 0 0 0 .98 9c0 1.29.31 2.51.87 3.59l2.66-2.07z"/>
+                  <path fill="#EA4335" d="M8.98 3.58c1.17 0 2.23.4 3.06 1.2l2.3-2.3A8 8 0 0 0 .98 9l2.87 2.07C4.14 4.98 6.23 3.58 8.98 3.58z"/>
+                </svg>
+              )}
+              {googleLoading ? "Redirecting…" : "Continue with Google"}
+            </button>
+
+            {/* Legal — only thing at the very bottom */}
+            <p style={{ fontSize: 12, color: "#94a3b8", textAlign: "center", lineHeight: 1.6, marginTop: 28 }}>
+              By signing in, you agree to our{" "}
+              <Link href="/terms-of-service" style={{ color: "#6366f1", textDecoration: "none", fontWeight: 600 }}>Terms of Service</Link>
+              {" "}and{" "}
+              <Link href="/privacy-policy" style={{ color: "#6366f1", textDecoration: "none", fontWeight: 600 }}>Privacy Policy</Link>
+            </p>
+          </div>
+        </div>
       </div>
-    </div>
+    </>
   );
 }

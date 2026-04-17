@@ -19,6 +19,7 @@ export interface AppUser {
   email: string;
   password: string; // hashed — stored in a separate field
   role: UserRole;
+  isApproved: boolean;
   createdAt: string;
 }
 
@@ -50,6 +51,7 @@ export async function findUserByEmail(email: string): Promise<AppUser | undefine
     email: user.email || "",
     password: user.image.replace("pwd:", ""),
     role: (user.role as UserRole) || "TEAM",
+    isApproved: user.isApproved,
     createdAt: user.createdAt.toISOString(),
   };
 }
@@ -63,6 +65,7 @@ export async function findUserById(id: string): Promise<AppUser | undefined> {
     email: user.email || "",
     password: user.image.replace("pwd:", ""),
     role: (user.role as UserRole) || "TEAM",
+    isApproved: user.isApproved,
     createdAt: user.createdAt.toISOString(),
   };
 }
@@ -77,6 +80,7 @@ export async function getAllUsers(): Promise<Omit<AppUser, "password">[]> {
     name: u.name || "User",
     email: u.email || "",
     role: (u.role as UserRole) || "TEAM",
+    isApproved: u.isApproved,
     createdAt: u.createdAt.toISOString(),
   }));
 }
@@ -104,7 +108,8 @@ export async function createUser(data: {
     id: user.id,
     name: user.name || data.name,
     email: user.email || data.email,
-    role: data.role,
+    role: user.role as UserRole,
+    isApproved: user.isApproved,
     createdAt: user.createdAt.toISOString(),
   };
 }

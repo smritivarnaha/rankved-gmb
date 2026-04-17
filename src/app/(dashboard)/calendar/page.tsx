@@ -1,75 +1,144 @@
 "use client";
 
-import { useState } from "react";
-import { ChevronLeft, ChevronRight } from "lucide-react";
+import { useState, useEffect } from "react";
+import { ChevronLeft, ChevronRight, Loader2 } from "lucide-react";
 
-const events = [
-  { day: 2, title: "Spring sale post", status: "published", client: "Sunrise Dental" },
-  { day: 5, title: "Hiring announcement", status: "scheduled", client: "TechWave" },
-  { day: 8, title: "New menu drop", status: "draft", client: "Green Eats" },
-  { day: 10, title: "Client testimonial", status: "scheduled", client: "Sunrise Dental" },
-  { day: 15, title: "Workshop event", status: "scheduled", client: "GrowthHub" },
-  { day: 18, title: "Weekend special", status: "scheduled", client: "Green Eats" },
-  { day: 22, title: "Team spotlight", status: "scheduled", client: "TechWave" },
-  { day: 25, title: "Monthly recap", status: "scheduled", client: "Sunrise Dental" },
-];
+const MONTHS = ["January","February","March","April","May","June","July","August","September","October","November","December"];
+const DAYS = ["Sun","Mon","Tue","Wed","Thu","Fri","Sat"];
 
 export default function CalendarPage() {
-  const [month, setMonth] = useState(3);
-  const [year, setYear] = useState(2026);
-  const months = ["January","February","March","April","May","June","July","August","September","October","November","December"];
-  const days = ["Sun","Mon","Tue","Wed","Thu","Fri","Sat"];
+  const now = new Date();
+  const [month, setMonth] = useState(now.getMonth());
+  const [year, setYear] = useState(now.getFullYear());
+  const [events, setEvents] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const load = async () => {
+      setLoading(true);
+      try {
+        const res = await fetch("/api/posts");
+        if (res.ok) {
+          const d = await res.json();
+          const scheduled = (d.data || []).filter((p: any) => p.scheduledAt);
+          setEvents(scheduled.map((p: any) => ({
+            id: p.id,
+            day: new Date(p.scheduledAt).getDate(),
+            month: new Date(p.scheduledAt).getMonth(),
+            year: new Date(p.scheduledAt).getFullYear(),
+            title: p.summary || "Post",
+            status: p.status?.toLowerCase() || "scheduled",
+            client: p.clientName || "",
+          })));
+        }
+      } catch {}
+      setLoading(false);
+    };
+    load();
+  }, []);
+
   const daysInMonth = new Date(year, month + 1, 0).getDate();
   const firstDay = new Date(year, month, 1).getDay();
+  const today = now.getDate();
 
   const prev = () => { if (month === 0) { setMonth(11); setYear(y=>y-1); } else setMonth(m=>m-1); };
   const next = () => { if (month === 11) { setMonth(0); setYear(y=>y+1); } else setMonth(m=>m+1); };
 
+  const monthEvents = events.filter(e => e.month === month && e.year === year);
+
+  const statusColor: Record<string, { bg: string; color: string }> = {
+    published: { bg: "#ecfdf5", color: "#059669" },
+    scheduled: { bg: "#eef2ff", color: "#4f46e5" },
+    draft: { bg: "#f1f5f9", color: "#64748b" },
+    failed: { bg: "#fef2f2", color: "#dc2626" },
+  };
+
   return (
-    <div className="space-y-6">
+    <div style={{ display: "flex", flexDirection: "column", gap: 24 }}>
       <div>
-        <h1 className="text-[20px] font-semibold text-[var(--text-primary)]">Calendar</h1>
-        <p className="text-[13px] text-[var(--text-secondary)] mt-0.5">Scheduled post timeline.</p>
+        <h1 style={{ fontSize: 22, fontWeight: 800, color: "var(--text-primary)", letterSpacing: "-0.025em", margin: "0 0 4px 0" }}>Calendar</h1>
+        <p style={{ fontSize: 13, color: "var(--text-secondary)", margin: 0 }}>Scheduled post timeline across all profiles.</p>
       </div>
 
-      <div className="bg-white border border-[var(--border)] rounded-lg overflow-hidden">
-        <div className="px-5 py-3.5 border-b border-[var(--border)] flex items-center justify-between bg-[var(--bg-secondary)]">
-          <button onClick={prev} className="p-1.5 hover:bg-[var(--bg-tertiary)] rounded-md transition-colors">
-            <ChevronLeft className="w-4 h-4 text-[var(--text-secondary)]" />
+      <div style={{ background: "#fff", border: "1px solid var(--border-light)", borderRadius: 14, overflow: "hidden" }}>
+        {/* Month nav */}
+        <div style={{ padding: "14px 20px", borderBottom: "1px solid var(--border-light)", display: "flex", alignItems: "center", justifyContent: "space-between", background: "var(--bg-secondary)" }}>
+          <button onClick={prev} style={{ background: "none", border: "none", cursor: "pointer", padding: "4px 8px", borderRadius: 8, display: "flex" }}>
+            <ChevronLeft size={18} color="var(--text-secondary)" />
           </button>
-          <span className="text-[14px] font-semibold text-[var(--text-primary)]">{months[month]} {year}</span>
-          <button onClick={next} className="p-1.5 hover:bg-[var(--bg-tertiary)] rounded-md transition-colors">
-            <ChevronRight className="w-4 h-4 text-[var(--text-secondary)]" />
+          <span style={{ fontSize: 15, fontWeight: 700, color: "var(--text-primary)" }}>{MONTHS[month]} {year}</span>
+          <button onClick={next} style={{ background: "none", border: "none", cursor: "pointer", padding: "4px 8px", borderRadius: 8, display: "flex" }}>
+            <ChevronRight size={18} color="var(--text-secondary)" />
           </button>
         </div>
 
-        <div className="grid grid-cols-7">
-          {days.map(d => (
-            <div key={d} className="px-2 py-2.5 text-center text-[11px] font-medium text-[var(--text-tertiary)] uppercase tracking-wider border-b border-[var(--border-light)] bg-[var(--bg-secondary)]">{d}</div>
+        {/* Day headers */}
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(7, 1fr)" }}>
+          {DAYS.map(d => (
+            <div key={d} style={{ padding: "10px 4px", textAlign: "center", fontSize: 11, fontWeight: 700, color: "var(--text-tertiary)", textTransform: "uppercase", letterSpacing: "0.06em", borderBottom: "1px solid var(--border-light)", background: "var(--bg-secondary)" }}>
+              {d}
+            </div>
           ))}
+
+          {/* Empty cells */}
           {Array.from({ length: firstDay }).map((_, i) => (
-            <div key={`e-${i}`} className="min-h-[90px] border-b border-r border-[var(--border-light)] bg-[var(--bg-secondary)]/30"></div>
+            <div key={`e${i}`} style={{ minHeight: 88, borderBottom: "1px solid var(--border-light)", borderRight: "1px solid var(--border-light)", background: "var(--bg-secondary)", opacity: 0.4 }} />
           ))}
+
+          {/* Day cells */}
           {Array.from({ length: daysInMonth }).map((_, i) => {
             const day = i + 1;
-            const dayEvents = events.filter(e => e.day === day);
-            const isToday = day === 4 && month === 3 && year === 2026;
+            const dayEvts = monthEvents.filter(e => e.day === day);
+            const isToday = day === today && month === now.getMonth() && year === now.getFullYear();
+            const col = (firstDay + i) % 7;
             return (
-              <div key={day} className={`min-h-[90px] border-b border-r border-[var(--border-light)] p-1.5 hover:bg-[var(--bg-secondary)]/50 transition-colors ${isToday ? 'bg-[var(--accent-light)]/30' : ''}`}>
-                <span className={`text-[11px] font-medium inline-flex items-center justify-center w-5 h-5 rounded-full ${isToday ? 'bg-[var(--accent)] text-white' : 'text-[var(--text-secondary)]'}`}>{day}</span>
-                <div className="mt-0.5 space-y-0.5">
-                  {dayEvents.map((ev, idx) => (
-                    <div key={idx} className={`text-[10px] px-1 py-px rounded truncate cursor-pointer ${
-                      ev.status === "published" ? "bg-[var(--success-bg)] text-[var(--success)]" :
-                      ev.status === "scheduled" ? "bg-[var(--accent-light)] text-[var(--accent)]" :
-                      "bg-[var(--bg-tertiary)] text-[var(--text-tertiary)]"
-                    }`} title={`${ev.title} (${ev.client})`}>{ev.title}</div>
-                  ))}
+              <div key={day} style={{
+                minHeight: 88, padding: "6px 8px",
+                borderBottom: "1px solid var(--border-light)",
+                borderRight: col < 6 ? "1px solid var(--border-light)" : "none",
+                background: isToday ? "rgba(79,70,229,0.02)" : "#fff",
+              }}>
+                <span style={{
+                  display: "inline-flex", alignItems: "center", justifyContent: "center",
+                  width: 24, height: 24, borderRadius: "50%", fontSize: 12, fontWeight: 600,
+                  background: isToday ? "var(--accent)" : "transparent",
+                  color: isToday ? "#fff" : "var(--text-secondary)",
+                }}>
+                  {day}
+                </span>
+                <div style={{ marginTop: 4, display: "flex", flexDirection: "column", gap: 2 }}>
+                  {dayEvts.map((ev, idx) => {
+                    const sc = statusColor[ev.status] || statusColor.scheduled;
+                    return (
+                      <div key={idx} title={ev.title} style={{
+                        fontSize: 10, fontWeight: 600, padding: "2px 5px", borderRadius: 4,
+                        background: sc.bg, color: sc.color,
+                        overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
+                        cursor: "pointer",
+                      }}>
+                        {ev.title}
+                      </div>
+                    );
+                  })}
                 </div>
               </div>
             );
           })}
         </div>
+      </div>
+
+      {/* Legend */}
+      <div style={{ display: "flex", gap: 16, flexWrap: "wrap" }}>
+        {Object.entries(statusColor).map(([s, c]) => (
+          <div key={s} style={{ display: "flex", alignItems: "center", gap: 6 }}>
+            <div style={{ width: 10, height: 10, borderRadius: 3, background: c.bg, border: `1px solid ${c.color}33` }} />
+            <span style={{ fontSize: 12, color: "var(--text-tertiary)", textTransform: "capitalize", fontWeight: 500 }}>{s}</span>
+          </div>
+        ))}
+        {loading && <span style={{ fontSize: 12, color: "var(--text-tertiary)" }}>Loading events…</span>}
+        {!loading && monthEvents.length === 0 && (
+          <span style={{ fontSize: 12, color: "var(--text-tertiary)" }}>No scheduled posts this month.</span>
+        )}
       </div>
     </div>
   );

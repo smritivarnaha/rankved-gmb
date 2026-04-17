@@ -1,24 +1,11 @@
 import type { Metadata } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
 import { Providers } from "@/components/providers";
 import "./globals.css";
 
-const geistSans = Geist({
-  variable: "--font-geist-sans",
-  subsets: ["latin"],
-});
-
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
-  subsets: ["latin"],
-});
-
 export const metadata: Metadata = {
-  title: "PostPulse — GBP Post Scheduler",
-  description: "Schedule and manage Google Business Profile posts for all your clients from one dashboard.",
-  verification: {
-    google: process.env.NEXT_PUBLIC_GOOGLE_SITE_VERIFICATION,
-  },
+  title: "RankVed — GMB Manager",
+  description: "Manage, schedule, and publish Google Business Profile posts across all your clients from one beautiful dashboard.",
+  icons: { icon: "/rankved-logo.png" },
 };
 
 export default function RootLayout({
@@ -27,11 +14,8 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html
-      lang="en"
-      className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
-    >
-      <body className="min-h-full flex flex-col">
+    <html lang="en" className="h-full antialiased">
+      <body className="min-h-full flex flex-col" style={{ fontFamily: "'Plus Jakarta Sans', 'DM Sans', -apple-system, BlinkMacSystemFont, sans-serif" }}>
         <Providers>{children}</Providers>
       </body>
     </html>

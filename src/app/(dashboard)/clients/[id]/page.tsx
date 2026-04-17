@@ -1,9 +1,8 @@
 "use client";
 
-import { use, useEffect, useState } from "react";
-import { format } from "date-fns";
-import { ArrowLeft, MapPin, RefreshCw, Loader2, Megaphone, MoreVertical } from "lucide-react";
 import Link from "next/link";
+import { use, useEffect, useState } from "react";
+import { ArrowLeft, MapPin, RefreshCw, Loader2, Plus, Phone, Globe, ExternalLink } from "lucide-react";
 
 export default function ClientDetail({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
@@ -11,153 +10,140 @@ export default function ClientDetail({ params }: { params: Promise<{ id: string 
   const [syncing, setSyncing] = useState(false);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    fetchClient();
-  }, [id]);
-
   const fetchClient = async () => {
     setLoading(true);
     try {
       const res = await fetch(`/api/clients/${id}`);
       if (res.ok) {
-        const data = await res.json();
-        setClient(data.data);
+        const d = await res.json();
+        setClient(d.data);
       }
-    } finally {
-      setLoading(false);
-    }
+    } catch {}
+    setLoading(false);
   };
+
+  useEffect(() => { fetchClient(); }, [id]);
 
   const syncLocations = async () => {
     setSyncing(true);
     try {
-      const res = await fetch(`/api/locations/sync`, {
+      await fetch("/api/locations/sync", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ clientId: id })
+        body: JSON.stringify({ clientId: id }),
       });
-      if (res.ok) {
-        // Refresh client data to see new locations
-        await fetchClient();
-      }
-    } finally {
-      setSyncing(false);
-    }
+      await fetchClient();
+    } catch {}
+    setSyncing(false);
   };
 
-  if (loading) {
-    return <div className="flex justify-center py-20"><Loader2 className="w-8 h-8 text-indigo-500 animate-spin" /></div>;
-  }
+  if (loading) return (
+    <div style={{ display: "flex", justifyContent: "center", padding: "80px 0" }}>
+      <Loader2 size={22} color="var(--text-tertiary)" style={{ animation: "spin 1s linear infinite" }} />
+      <style>{`@keyframes spin{from{transform:rotate(0deg)}to{transform:rotate(360deg)}}`}</style>
+    </div>
+  );
 
-  if (!client) {
-    return <div className="text-center py-20 text-zinc-400">Client not found.</div>;
-  }
+  if (!client) return (
+    <div style={{ textAlign: "center", padding: "80px 24px" }}>
+      <p style={{ fontSize: 16, fontWeight: 700, color: "var(--text-primary)", margin: "0 0 6px 0" }}>Client not found</p>
+      <Link href="/clients" style={{ fontSize: 13, color: "var(--accent)", textDecoration: "none" }}>← Back to clients</Link>
+    </div>
+  );
+
+  const locations = client.locations || [];
 
   return (
-    <div className="space-y-8">
+    <div style={{ display: "flex", flexDirection: "column", gap: 24 }}>
+      {/* Back */}
       <div>
-        <Link href="/clients" className="inline-flex items-center gap-2 text-sm text-zinc-500 hover:text-zinc-300 mb-4 transition">
-          <ArrowLeft className="w-4 h-4" /> Back to Clients
+        <Link href="/clients" style={{ display: "inline-flex", alignItems: "center", gap: 6, fontSize: 13, color: "var(--text-tertiary)", textDecoration: "none", marginBottom: 16, fontWeight: 500 }}>
+          <ArrowLeft size={14} /> Back to clients
         </Link>
-        <div className="flex flex-col md:flex-row md:items-start justify-between gap-4">
-          <div className="flex items-center gap-4">
-            <div className="w-16 h-16 rounded-xl bg-zinc-900 border border-zinc-800 flex items-center justify-center font-bold text-2xl text-indigo-400 shadow-inner">
-              {client.name.charAt(0).toUpperCase()}
+        <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 16, flexWrap: "wrap" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
+            <div style={{ width: 52, height: 52, borderRadius: 14, background: "var(--accent-light)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 22, fontWeight: 800, color: "var(--accent)", flexShrink: 0 }}>
+              {client.name?.charAt(0)?.toUpperCase()}
             </div>
             <div>
-              <h1 className="text-3xl font-bold tracking-tight">{client.name}</h1>
+              <h1 style={{ fontSize: 22, fontWeight: 800, color: "var(--text-primary)", letterSpacing: "-0.025em", margin: "0 0 4px 0" }}>{client.name}</h1>
               {client.website && (
-                <a href={client.website} target="_blank" rel="noreferrer" className="text-zinc-400 hover:text-indigo-400 text-sm mt-1 inline-block">
-                  {client.website}
+                <a href={client.website} target="_blank" rel="noreferrer" style={{ display: "inline-flex", alignItems: "center", gap: 4, fontSize: 12, color: "var(--accent)", textDecoration: "none" }}>
+                  <Globe size={12} />{client.website.replace(/^https?:\/\//, "")}<ExternalLink size={10} />
                 </a>
               )}
             </div>
           </div>
-          <div className="flex gap-2">
-            <button 
-              onClick={syncLocations}
-              disabled={syncing}
-              className="inline-flex items-center justify-center gap-2 px-4 py-2 border border-zinc-700 hover:bg-zinc-800 bg-zinc-900 rounded-md text-sm font-medium transition-colors disabled:opacity-50 min-w-[140px]"
-            >
-              {syncing ? <Loader2 className="w-4 h-4 animate-spin" /> : <RefreshCw className="w-4 h-4" />}
-              {syncing ? "Syncing..." : "Sync Locations"}
+          <div style={{ display: "flex", gap: 10 }}>
+            <button onClick={syncLocations} disabled={syncing} style={{ display: "inline-flex", alignItems: "center", gap: 8, padding: "9px 16px", borderRadius: 10, border: "1.5px solid var(--border)", background: "#fff", fontSize: 13, fontWeight: 600, cursor: "pointer", fontFamily: "inherit", color: "var(--text-secondary)", opacity: syncing ? 0.6 : 1 }}>
+              {syncing ? <Loader2 size={14} style={{ animation: "spin 1s linear infinite" }} /> : <RefreshCw size={14} />}
+              {syncing ? "Syncing…" : "Sync locations"}
             </button>
-            <button className="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-md text-sm font-medium transition-colors shadow-md">
-              Assign Post
-            </button>
+            <Link href="/posts/new" style={{ display: "inline-flex", alignItems: "center", gap: 8, padding: "9px 16px", borderRadius: 10, border: "none", background: "var(--accent)", color: "#fff", fontSize: 13, fontWeight: 700, textDecoration: "none" }}>
+              <Plus size={14} /> New post
+            </Link>
           </div>
         </div>
       </div>
 
-      <div className="grid md:grid-cols-3 gap-8">
-        <div className="md:col-span-2 space-y-6">
-          <div className="bg-zinc-950 border border-zinc-800 rounded-xl overflow-hidden">
-            <div className="px-6 py-4 border-b border-zinc-800 bg-zinc-900/40 flex justify-between items-center">
-              <h3 className="font-semibold text-lg flex items-center gap-2">
-                <MapPin className="w-5 h-5 text-cyan-400" />
-                Managed Locations
-              </h3>
-              <span className="text-xs bg-zinc-800 text-zinc-300 px-2 py-1 rounded-full font-medium">
-                {client.locations?.length || 0} Total
-              </span>
-            </div>
-            
-            <div className="divide-y divide-zinc-800/60">
-              {!client.locations || client.locations.length === 0 ? (
-                <div className="p-8 text-center text-zinc-500">
-                  <p className="mb-4">No locations synced yet.</p>
-                  <button 
-                    onClick={syncLocations}
-                    className="text-indigo-400 font-medium hover:text-indigo-300 transition underline-offset-4 hover:underline"
-                  >
-                    Sync from Google Business Profile
-                  </button>
+      {/* Stats */}
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(140px, 1fr))", gap: 14 }}>
+        {[
+          { label: "Locations", value: locations.length },
+          { label: "Phone", value: client.phone || "—" },
+          { label: "Added", value: new Date(client.createdAt).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" }) },
+        ].map(s => (
+          <div key={s.label} style={{ background: "#fff", border: "1px solid var(--border-light)", borderRadius: 12, padding: "16px 18px" }}>
+            <p style={{ fontSize: 11, fontWeight: 700, color: "var(--text-tertiary)", textTransform: "uppercase", letterSpacing: "0.08em", margin: "0 0 6px 0" }}>{s.label}</p>
+            <p style={{ fontSize: typeof s.value === "number" ? 28 : 14, fontWeight: 700, color: "var(--text-primary)", margin: 0, letterSpacing: typeof s.value === "number" ? "-0.04em" : "normal" }}>{s.value}</p>
+          </div>
+        ))}
+      </div>
+
+      {/* Locations */}
+      <div style={{ background: "#fff", border: "1px solid var(--border-light)", borderRadius: 14, overflow: "hidden" }}>
+        <div style={{ padding: "16px 20px", borderBottom: "1px solid var(--border-light)", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+          <h2 style={{ fontSize: 14, fontWeight: 700, color: "var(--text-primary)", margin: 0 }}>Managed Locations</h2>
+          <span style={{ fontSize: 11, fontWeight: 700, padding: "3px 10px", borderRadius: 100, background: "var(--bg-tertiary)", color: "var(--text-tertiary)" }}>{locations.length}</span>
+        </div>
+        {locations.length === 0 ? (
+          <div style={{ padding: "56px 24px", textAlign: "center" }}>
+            <MapPin size={36} color="var(--border)" style={{ margin: "0 auto 12px" }} />
+            <p style={{ fontSize: 14, color: "var(--text-secondary)", fontWeight: 600, margin: "0 0 4px 0" }}>No locations synced</p>
+            <p style={{ fontSize: 12, color: "var(--text-tertiary)", margin: "0 0 16px 0" }}>Sync from Google Business Profile to see locations here.</p>
+            <button onClick={syncLocations} style={{ display: "inline-flex", alignItems: "center", gap: 8, padding: "8px 16px", borderRadius: 8, border: "none", background: "var(--accent)", color: "#fff", fontSize: 13, fontWeight: 600, cursor: "pointer", fontFamily: "inherit" }}>
+              <RefreshCw size={14} /> Sync now
+            </button>
+          </div>
+        ) : (
+          locations.map((loc: any, i: number) => (
+            <div key={loc.id} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "14px 20px", borderBottom: i < locations.length - 1 ? "1px solid var(--border-light)" : "none" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 12, minWidth: 0 }}>
+                <div style={{ width: 36, height: 36, borderRadius: 10, background: "var(--bg-secondary)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                  <MapPin size={16} color="var(--text-tertiary)" />
                 </div>
-              ) : (
-                client.locations.map((loc: any) => (
-                  <div key={loc.id} className="p-5 flex justify-between items-center hover:bg-zinc-900/30 transition">
-                    <div>
-                      <h4 className="font-semibold text-zinc-100 mb-1">{loc.name}</h4>
-                      <p className="text-xs text-zinc-400 line-clamp-1 max-w-md">
-                        {loc.address || "No address on file"}
-                      </p>
-                    </div>
-                    <div className="flex gap-2">
-                      <Link 
-                        href={`/posts?locationId=${loc.id}`}
-                        className="p-2 border border-zinc-800 bg-zinc-900 rounded hover:bg-zinc-800 hover:text-white text-zinc-400 transition"
-                        title="View Location Posts"
-                      >
-                        <Megaphone className="w-4 h-4" />
-                      </Link>
-                    </div>
-                  </div>
-                ))
+                <div style={{ minWidth: 0 }}>
+                  <p style={{ fontSize: 13, fontWeight: 600, color: "var(--text-primary)", margin: "0 0 2px 0" }}>{loc.name}</p>
+                  <p style={{ fontSize: 11, color: "var(--text-tertiary)", margin: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{loc.address || "No address on file"}</p>
+                </div>
+              </div>
+              {loc.phone && (
+                <span style={{ display: "flex", alignItems: "center", gap: 4, fontSize: 11, color: "var(--text-tertiary)", flexShrink: 0, marginLeft: 12 }}>
+                  <Phone size={11} />{loc.phone}
+                </span>
               )}
             </div>
-          </div>
-        </div>
-
-        <div className="space-y-6">
-          <div className="bg-zinc-950 border border-zinc-800 rounded-xl p-6">
-            <h3 className="font-semibold mb-4 text-zinc-200">About Client</h3>
-            <p className="text-sm text-zinc-400 mb-6 leading-relaxed">
-              {client.description || "No description provided for this client."}
-            </p>
-            
-            <div className="space-y-3">
-              <div className="flex justify-between items-center text-sm border-b border-zinc-800 pb-3">
-                <span className="text-zinc-500">Created On</span>
-                <span className="text-zinc-300 font-medium">{format(new Date(client.createdAt), "MMMM d, yyyy")}</span>
-              </div>
-              <div className="flex justify-between items-center text-sm border-b border-zinc-800 pb-3">
-                <span className="text-zinc-500">Client ID</span>
-                <span className="text-zinc-300 font-mono text-xs">{client.id}</span>
-              </div>
-            </div>
-          </div>
-        </div>
+          ))
+        )}
       </div>
+
+      {/* About */}
+      {client.description && (
+        <div style={{ background: "#fff", border: "1px solid var(--border-light)", borderRadius: 14, padding: "20px 22px" }}>
+          <h2 style={{ fontSize: 14, fontWeight: 700, color: "var(--text-primary)", margin: "0 0 10px 0" }}>About</h2>
+          <p style={{ fontSize: 13, color: "var(--text-secondary)", lineHeight: 1.65, margin: 0 }}>{client.description}</p>
+        </div>
+      )}
     </div>
   );
 }

@@ -5,13 +5,8 @@ import { useRouter } from "next/navigation";
 import { Save, Clock, Loader2, ImagePlus, X, Send, MapPin, Link as LinkIcon, Copy, Check } from "lucide-react";
 import { embedGPSInImage } from "@/lib/geo-exif";
 
-const fallbackLocations = [
-  { id: "1", name: "Downtown Office", client: "Sunrise Dental" },
-  { id: "2", name: "East Branch", client: "Sunrise Dental" },
-  { id: "3", name: "Main Branch", client: "TechWave Solutions" },
-  { id: "4", name: "Training Center", client: "GrowthHub Academy" },
-  { id: "5", name: "Cafe Central", client: "Green Eats" },
-];
+// No fallback sample data — profiles load from /api/profiles only
+const fallbackLocations: {id:string;name:string;client:string}[] = [];
 
 const timeSlots = [
   "06:00", "07:00", "08:00", "09:00", "10:00", "11:00",
@@ -241,8 +236,8 @@ export function PostEditor({ initialData = null, timelineDate, onDateChange }: {
           summary: form.summary,
           topicType: form.topicType,
           ctaType: form.ctaType,
-          ctaUrl: form.ctaUrl,
-          finalUrl: finalUrl || form.ctaUrl,
+          ctaUrl: form.ctaType === "CALL" ? "" : form.ctaUrl,
+          finalUrl: form.ctaType === "CALL" ? "" : (finalUrl || form.ctaUrl),
           imageUrl: imagePreview,
           geoLat: geoLat,
           geoLng: geoLng,
@@ -253,14 +248,18 @@ export function PostEditor({ initialData = null, timelineDate, onDateChange }: {
           scheduledAt: getScheduledAt(),
         }),
       });
-      if (!res.ok) {
-        const err = await res.json();
-        alert(err.error || "Failed to save post");
-      } else {
+      const responseData = await res.json();
+      if (res.status === 201 || res.status === 200) {
         router.push("/posts");
+      } else if (res.status === 207) {
+        // Partial success — saved to DB but GBP publish failed
+        alert(`⚠️ Post saved but could not publish to Google:\n\n${responseData.error}\n\nCheck Settings to reconnect your Google account.`);
+        router.push("/posts");
+      } else {
+        alert(responseData.error || "Failed to save post");
       }
     } catch (err) {
-      alert("Failed to save post");
+      alert("Network error — could not save post.");
     }
     setSaving(false);
     setSavingType("");
@@ -492,7 +491,14 @@ export function PostEditor({ initialData = null, timelineDate, onDateChange }: {
               </div>
             )}
 
-            {form.ctaType && (
+            {form.ctaType === "CALL" && (
+              <div className="flex items-start gap-2 px-3 py-2.5 bg-blue-50 border border-blue-100 rounded-lg text-[12px] text-blue-700">
+                <span className="font-semibold shrink-0">📞 Call Now:</span>
+                <span>Google will use the phone number already on your Business Profile. No URL needed.</span>
+              </div>
+            )}
+
+            {form.ctaType && form.ctaType !== "CALL" && (
               <div className="space-y-4">
                 <div>
                   <label className="block text-[13px] font-medium text-[var(--text-primary)] mb-1.5">Landing page URL</label>

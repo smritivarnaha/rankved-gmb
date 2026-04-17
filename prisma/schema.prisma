@@ -54,6 +54,7 @@ model User {
   emailVerified DateTime?
   image         String?
   role          String    @default("USER")
+  isApproved    Boolean   @default(false)
   accounts      Account[]
   sessions      Session[]
   clients       Client[]
@@ -108,7 +109,9 @@ model Post {
   scheduledAt     DateTime?
   publishedAt     DateTime?
   gbpPostId       String?     // GBP post ID after publishing
+  gbpPostName     String?     // Full GBP resource name: accounts/.../localPosts/...
   errorMessage    String?
+  failureReason   String?     // Human-readable failure reason
   retryCount      Int         @default(0)
   maxRetries      Int         @default(3)
 

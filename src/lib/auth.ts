@@ -56,6 +56,7 @@ export const authOptions: NextAuthOptions = {
           name: user.name,
           email: user.email,
           role: user.role,
+          isApproved: user.isApproved,
         };
       },
     }),
@@ -83,31 +84,46 @@ export const authOptions: NextAuthOptions = {
         token.userId = user.id;
       }
 
-      // First-time Google sign-in — upsert User in DB + store tokens
+      // First-time Google sign-in or routine refresh — ensure we have up-to-date DB state
       if (account?.provider === "google" && user?.email) {
         token.accessToken = account.access_token;
         token.refreshToken = account.refresh_token;
         token.accessTokenExpires = account.expires_at
           ? account.expires_at * 1000
           : Date.now() + 3600 * 1000;
-        token.role = "ADMIN";
+
+        const isSuperAdmin = user.email.toLowerCase() === "rankved.business@gmail.com";
+        const assignedRole = isSuperAdmin ? "SUPER_ADMIN" : "USER";
+        const initialApprovedState = isSuperAdmin ? true : false;
+        token.role = assignedRole;
 
         // Upsert the Google user into our DB so FK constraints work
         try {
           const dbUser = await prisma.user.upsert({
             where: { email: user.email },
-            update: { name: user.name ?? undefined },
+            update: { name: user.name ?? undefined, role: assignedRole },
             create: {
               name: user.name,
               email: user.email,
               image: user.image,
-              role: "ADMIN",
+              role: assignedRole,
+              isApproved: initialApprovedState,
             },
           });
           token.userId = dbUser.id;
+          token.isApproved = dbUser.isApproved;
         } catch (e) {
           console.error("Failed to upsert Google user in DB:", e);
         }
+      } else if (token.userId) {
+        // Just keep the token.isApproved synced if not a fresh Google login
+        try {
+          const dbUser = await prisma.user.findUnique({ where: { id: token.userId as string } });
+          if (dbUser) {
+             token.isApproved = dbUser.isApproved;
+             token.role = dbUser.role;
+          }
+        } catch (e) {}
       }
 
       // If token hasn't expired, return as-is
@@ -127,6 +143,7 @@ export const authOptions: NextAuthOptions = {
         (session as any).accessToken = token.accessToken;
         (session as any).user.role = token.role;
         (session as any).user.id = token.userId;
+        (session as any).user.isApproved = token.isApproved;
         (session as any).tokenError = token.error;
       }
       return session;

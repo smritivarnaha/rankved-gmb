@@ -13,6 +13,7 @@ export const config = {
     "/posts/:path*",
     "/profiles/:path*",
     "/clients/:path*",
+    "/locations/:path*",
     "/calendar/:path*",
     "/team/:path*",
     "/settings/:path*",
