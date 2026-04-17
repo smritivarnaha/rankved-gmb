@@ -1,7 +1,6 @@
 import { NextAuthOptions } from "next-auth";
 import GoogleProvider from "next-auth/providers/google";
 import CredentialsProvider from "next-auth/providers/credentials";
-import { PrismaAdapter } from "@auth/prisma-adapter";
 import prisma from "./prisma";
 import { findUserByEmail, verifyPassword } from "./user-store";
 
@@ -35,7 +34,8 @@ async function refreshAccessToken(token: any) {
 }
 
 export const authOptions: NextAuthOptions = {
-  adapter: PrismaAdapter(prisma) as any,
+  // No PrismaAdapter — we manually upsert users in the JWT callback
+  // to avoid @auth/prisma-adapter v2 incompatibility with next-auth v4
   providers: [
     CredentialsProvider({
       name: "credentials",
@@ -82,12 +82,32 @@ export const authOptions: NextAuthOptions = {
         token.role = (user as any).role || "TEAM";
         token.userId = user.id;
       }
-      // First-time Google sign-in — store tokens + expiry
-      if (account?.provider === "google") {
+
+      // First-time Google sign-in — upsert User in DB + store tokens
+      if (account?.provider === "google" && user?.email) {
         token.accessToken = account.access_token;
         token.refreshToken = account.refresh_token;
-        token.accessTokenExpires = account.expires_at ? account.expires_at * 1000 : Date.now() + 3600 * 1000;
+        token.accessTokenExpires = account.expires_at
+          ? account.expires_at * 1000
+          : Date.now() + 3600 * 1000;
         token.role = "ADMIN";
+
+        // Upsert the Google user into our DB so FK constraints work
+        try {
+          const dbUser = await prisma.user.upsert({
+            where: { email: user.email },
+            update: { name: user.name ?? undefined },
+            create: {
+              name: user.name,
+              email: user.email,
+              image: user.image,
+              role: "ADMIN",
+            },
+          });
+          token.userId = dbUser.id;
+        } catch (e) {
+          console.error("Failed to upsert Google user in DB:", e);
+        }
       }
 
       // If token hasn't expired, return as-is
