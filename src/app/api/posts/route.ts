@@ -11,9 +11,9 @@ export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);
   const profileId = searchParams.get("profileId");
 
-  let posts = getAllPosts();
+  let posts = await getAllPosts();
   if (profileId) {
-    posts = posts.filter(p => p.profileId === profileId);
+    posts = posts.filter((p) => p.profileId === profileId);
   }
 
   return NextResponse.json({ data: posts });
@@ -24,27 +24,33 @@ export async function POST(req: NextRequest) {
   const session = await getServerSession(authOptions);
   if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
+  const userId = (session as any)?.user?.id;
+  if (!userId) return NextResponse.json({ error: "Could not determine user ID." }, { status: 401 });
+
   try {
     const body = await req.json();
-    const post = createPost({
-      profileId: body.profileId,
-      profileName: body.profileName || "",
-      clientName: body.clientName || "",
-      summary: body.summary,
-      topicType: body.topicType || "STANDARD",
-      ctaType: body.ctaType || "",
-      ctaUrl: body.ctaUrl || "",
-      finalUrl: body.finalUrl || "",
-      imageUrl: body.imageUrl || null,
-      geoLat: body.geoLat || "",
-      geoLng: body.geoLng || "",
-      eventTitle: body.eventTitle || "",
-      eventStart: body.eventStart || "",
-      eventEnd: body.eventEnd || "",
-      status: body.status || "DRAFT",
-      scheduledAt: body.scheduledAt || null,
-      createdBy: session.user?.email || "unknown",
-    });
+    const post = await createPost(
+      {
+        profileId: body.profileId,
+        profileName: body.profileName || "",
+        clientName: body.clientName || "",
+        summary: body.summary,
+        topicType: body.topicType || "STANDARD",
+        ctaType: body.ctaType || "",
+        ctaUrl: body.ctaUrl || "",
+        finalUrl: body.finalUrl || "",
+        imageUrl: body.imageUrl || null,
+        geoLat: body.geoLat || "",
+        geoLng: body.geoLng || "",
+        eventTitle: body.eventTitle || "",
+        eventStart: body.eventStart || "",
+        eventEnd: body.eventEnd || "",
+        status: body.status || "DRAFT",
+        scheduledAt: body.scheduledAt || null,
+        createdBy: session.user?.email || "unknown",
+      },
+      userId
+    );
     return NextResponse.json({ data: post }, { status: 201 });
   } catch (err: any) {
     return NextResponse.json({ error: err.message }, { status: 400 });
@@ -63,6 +69,6 @@ export async function DELETE(req: NextRequest) {
   const id = searchParams.get("id");
   if (!id) return NextResponse.json({ error: "Post ID required" }, { status: 400 });
 
-  const success = deletePost(id);
+  const success = await deletePost(id);
   return NextResponse.json({ success });
 }

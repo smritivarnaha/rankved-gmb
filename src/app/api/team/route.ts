@@ -9,7 +9,7 @@ export async function GET() {
   if ((session as any)?.user?.role !== "ADMIN") {
     return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
   }
-  const users = getAllUsers();
+  const users = await getAllUsers();
   return NextResponse.json({ data: users });
 }
 
@@ -28,7 +28,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Name, email, and password are required" }, { status: 400 });
     }
 
-    const user = createUser({
+    const user = await createUser({
       name,
       email,
       password,
@@ -53,7 +53,7 @@ export async function DELETE(req: NextRequest) {
     const id = searchParams.get("id");
     if (!id) return NextResponse.json({ error: "User ID required" }, { status: 400 });
 
-    deleteUser(id);
+    await deleteUser(id);
     return NextResponse.json({ success: true });
   } catch (err: any) {
     return NextResponse.json({ error: err.message }, { status: 400 });

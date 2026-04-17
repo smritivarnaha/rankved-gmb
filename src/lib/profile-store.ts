@@ -1,8 +1,15 @@
-import fs from "fs";
-import path from "path";
+/**
+ * profile-store.ts
+ *
+ * Replaced from file-system JSON to Prisma DB to support
+ * read-only serverless environments (Vercel, etc.)
+ *
+ * We store GBP locations as "Location" rows in the DB.
+ * A synthetic Client record ("default") is used as the owner
+ * so we don't need full client management for single-tenant use.
+ */
 
-const DATA_DIR = path.join(process.cwd(), "data");
-const PROFILES_FILE = path.join(DATA_DIR, "profiles.json");
+import prisma from "./prisma";
 
 export interface ProfileData {
   id: string;
@@ -17,61 +24,108 @@ export interface ProfileData {
   manual?: boolean;     // true if manually added
 }
 
-function ensureDataDir() {
-  if (!fs.existsSync(DATA_DIR)) {
-    fs.mkdirSync(DATA_DIR, { recursive: true });
+// Ensure a default Client row exists (for single-tenant use)
+async function ensureDefaultClient(userId: string): Promise<string> {
+  let client = await prisma.client.findFirst({ where: { userId } });
+  if (!client) {
+    client = await prisma.client.create({
+      data: { name: "Default", userId },
+    });
+  }
+  return client.id;
+}
+
+function locationToProfile(loc: any): ProfileData {
+  return {
+    id: loc.id,
+    name: loc.name,
+    accountId: loc.gbpAccountId,
+    accountName: loc.gbpAccountId, // stored same field
+    address: loc.address || "",
+    phone: loc.phone || "",
+    website: "", // not in Location schema — stored in name comment
+    googleName: loc.gbpLocationId,
+    fetchedAt: loc.cachedAt?.toISOString() || loc.createdAt.toISOString(),
+    manual: loc.gbpAccountId.startsWith("manual-"),
+  };
+}
+
+export async function getAllProfiles(): Promise<ProfileData[]> {
+  const locations = await prisma.location.findMany({
+    orderBy: { createdAt: "desc" },
+  });
+  return locations.map(locationToProfile);
+}
+
+export async function getProfileById(id: string): Promise<ProfileData | undefined> {
+  const loc = await prisma.location.findUnique({ where: { id } });
+  return loc ? locationToProfile(loc) : undefined;
+}
+
+export async function saveProfiles(profiles: ProfileData[], userId: string): Promise<void> {
+  const clientId = await ensureDefaultClient(userId);
+
+  // Delete all non-manual profiles (re-fetched from Google)
+  await prisma.location.deleteMany({
+    where: {
+      clientId,
+      NOT: { gbpAccountId: { startsWith: "manual-" } },
+    },
+  });
+
+  // Re-insert fetched profiles
+  const nonManual = profiles.filter((p) => !p.manual);
+  for (const p of nonManual) {
+    await prisma.location.upsert({
+      where: { gbpAccountId_gbpLocationId: { gbpAccountId: p.accountId, gbpLocationId: p.googleName } },
+      update: {
+        name: p.name,
+        address: p.address || null,
+        phone: p.phone || null,
+        cachedAt: new Date(p.fetchedAt),
+      },
+      create: {
+        id: p.id,
+        name: p.name,
+        address: p.address || null,
+        phone: p.phone || null,
+        gbpAccountId: p.accountId,
+        gbpLocationId: p.googleName || p.id,
+        cachedAt: new Date(p.fetchedAt),
+        clientId,
+      },
+    });
   }
 }
 
-function readProfiles(): ProfileData[] {
-  ensureDataDir();
-  if (!fs.existsSync(PROFILES_FILE)) {
-    fs.writeFileSync(PROFILES_FILE, JSON.stringify([], null, 2));
-    return [];
+export async function addProfile(profile: ProfileData, userId: string): Promise<void> {
+  const clientId = await ensureDefaultClient(userId);
+  await prisma.location.create({
+    data: {
+      id: profile.id,
+      name: profile.name,
+      address: profile.address || null,
+      phone: profile.phone || null,
+      gbpAccountId: profile.accountId,
+      gbpLocationId: profile.googleName || profile.id,
+      cachedAt: new Date(profile.fetchedAt),
+      clientId,
+    },
+  });
+}
+
+export async function deleteProfile(id: string): Promise<boolean> {
+  try {
+    await prisma.location.delete({ where: { id } });
+    return true;
+  } catch {
+    return false;
   }
-  return JSON.parse(fs.readFileSync(PROFILES_FILE, "utf-8"));
 }
 
-function writeProfiles(profiles: ProfileData[]) {
-  ensureDataDir();
-  fs.writeFileSync(PROFILES_FILE, JSON.stringify(profiles, null, 2));
-}
-
-export function getAllProfiles(): ProfileData[] {
-  return readProfiles();
-}
-
-export function getProfileById(id: string): ProfileData | undefined {
-  return readProfiles().find((p) => p.id === id);
-}
-
-export function saveProfiles(profiles: ProfileData[]) {
-  writeProfiles(profiles);
-}
-
-export function addProfile(profile: ProfileData) {
-  const profiles = readProfiles();
-  profiles.push(profile);
-  writeProfiles(profiles);
-}
-
-export function updateProfile(id: string, updates: Partial<ProfileData>) {
-  const profiles = readProfiles();
-  const idx = profiles.findIndex((p) => p.id === id);
-  if (idx === -1) return null;
-  profiles[idx] = { ...profiles[idx], ...updates };
-  writeProfiles(profiles);
-  return profiles[idx];
-}
-
-export function deleteProfile(id: string): boolean {
-  const profiles = readProfiles();
-  const filtered = profiles.filter((p) => p.id !== id);
-  if (filtered.length === profiles.length) return false;
-  writeProfiles(filtered);
-  return true;
-}
-
-export function clearProfiles() {
-  writeProfiles([]);
+export async function clearProfiles(userId: string): Promise<void> {
+  const client = await prisma.client.findFirst({ where: { userId } });
+  if (client) {
+    await prisma.location.deleteMany({ where: { clientId: client.id } });
+  }
 }

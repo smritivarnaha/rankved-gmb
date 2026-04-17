@@ -9,7 +9,7 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
   const session = await getServerSession(authOptions);
   if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-  const post = getPostById(id);
+  const post = await getPostById(id);
   if (!post) return NextResponse.json({ error: "Post not found" }, { status: 404 });
 
   return NextResponse.json({ data: post });
@@ -23,7 +23,7 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
 
   try {
     const body = await req.json();
-    const updated = updatePost(id, {
+    const updated = await updatePost(id, {
       profileId: body.profileId,
       profileName: body.profileName,
       clientName: body.clientName,

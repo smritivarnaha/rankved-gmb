@@ -31,7 +31,7 @@ export async function GET(req: NextRequest) {
   const session = await getServerSession(authOptions);
   if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-  const profiles = getAllProfiles();
+  const profiles = await getAllProfiles();
   return NextResponse.json({ data: profiles });
 }
 
@@ -43,6 +43,11 @@ export async function POST(req: NextRequest) {
   const accessToken = (session as any)?.accessToken;
   if (!accessToken) {
     return NextResponse.json({ error: "Google account not connected. Please connect your Google account in Settings first." }, { status: 400 });
+  }
+
+  const userId = (session as any)?.user?.id;
+  if (!userId) {
+    return NextResponse.json({ error: "Could not determine user ID from session." }, { status: 401 });
   }
 
   try {
@@ -65,7 +70,7 @@ export async function POST(req: NextRequest) {
     }
 
     // Keep manually-added profiles
-    const existing = getAllProfiles();
+    const existing = await getAllProfiles();
     const manualProfiles = existing.filter((p) => p.manual);
 
     // Step 2: For each account, get locations (with delay between each to avoid rate limits)
@@ -122,7 +127,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "No profiles could be fetched and no manual profiles exist." }, { status: 404 });
     }
 
-    saveProfiles(allProfiles);
+    await saveProfiles(allProfiles, userId);
 
     return NextResponse.json({ data: allProfiles, message: `${fetchedProfiles.length} profiles fetched from Google, ${manualProfiles.length} manual profiles kept.` });
   } catch (err: any) {
@@ -134,6 +139,9 @@ export async function POST(req: NextRequest) {
 export async function PUT(req: NextRequest) {
   const session = await getServerSession(authOptions);
   if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+
+  const userId = (session as any)?.user?.id;
+  if (!userId) return NextResponse.json({ error: "Could not determine user ID." }, { status: 401 });
 
   try {
     const body = await req.json();
@@ -156,7 +164,7 @@ export async function PUT(req: NextRequest) {
       manual: true,
     };
 
-    addProfile(profile);
+    await addProfile(profile, userId);
 
     return NextResponse.json({ data: profile, message: `Profile "${profile.name}" added successfully.` });
   } catch (err: any) {
@@ -176,7 +184,7 @@ export async function DELETE(req: NextRequest) {
     return NextResponse.json({ error: "Profile ID is required." }, { status: 400 });
   }
 
-  const deleted = deleteProfile(id);
+  const deleted = await deleteProfile(id);
 
   if (!deleted) {
     return NextResponse.json({ error: "Profile not found." }, { status: 404 });

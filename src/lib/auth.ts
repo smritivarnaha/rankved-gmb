@@ -43,7 +43,7 @@ export const authOptions: NextAuthOptions = {
       async authorize(credentials) {
         if (!credentials?.email || !credentials?.password) return null;
 
-        const user = findUserByEmail(credentials.email);
+        const user = await findUserByEmail(credentials.email);
         if (!user) return null;
 
         if (!verifyPassword(credentials.password, user.password)) return null;
