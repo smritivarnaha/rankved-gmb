@@ -30,6 +30,9 @@ yarn-debug.log*
 yarn-error.log*
 .pnpm-debug.log*
 
+# data files (use DB instead — never deploy these to Vercel)
+/data
+
 # env files (can opt-in for committing if needed)
 .env*
 
