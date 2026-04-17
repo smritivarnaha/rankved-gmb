@@ -98,11 +98,28 @@ export async function publishToGBP(opts: PublishOptions): Promise<PublishResult>
     return { success: false, error: "No profile/location selected for this post." };
   }
 
-  // profileId is the GBP location resource name e.g. "accounts/123/locations/456"
-  // If stored as just the ID, we need to find the full location name from DB
-  const locationName = post.profileId.startsWith("accounts/")
-    ? post.profileId
-    : null;
+  // profileId could be the GBP location resource name e.g. "accounts/123/locations/456"
+  // OR it could be the UUID of our local Prisma 'Location' model.
+  let locationName: string | null = null;
+  
+  if (post.profileId.startsWith("accounts/")) {
+    locationName = post.profileId;
+  } else {
+    // Look up the actual location in the DB to get the gbpName
+    const { PrismaClient } = require('@prisma/client');
+    const prisma = new PrismaClient();
+    try {
+      const loc = await prisma.location.findUnique({
+        where: { id: post.profileId },
+        select: { gbpName: true }
+      });
+      if (loc && loc.gbpName) {
+        locationName = loc.gbpName;
+      }
+    } catch (err) {
+      console.error("[GBP] Failed to resolve location UUID:", err);
+    }
+  }
 
   if (!locationName) {
     return {
