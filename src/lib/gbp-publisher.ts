@@ -110,10 +110,10 @@ export async function publishToGBP(opts: PublishOptions): Promise<PublishResult>
     try {
       const loc = await prisma.location.findUnique({
         where: { id: post.profileId },
-        select: { gbpName: true }
+        select: { gbpAccountId: true, gbpLocationId: true }
       });
-      if (loc && loc.gbpName) {
-        locationName = loc.gbpName;
+      if (loc && loc.gbpAccountId && loc.gbpLocationId) {
+        locationName = `accounts/${loc.gbpAccountId}/locations/${loc.gbpLocationId}`;
       }
     } catch (err) {
       console.error("[GBP] Failed to resolve location UUID:", err);
