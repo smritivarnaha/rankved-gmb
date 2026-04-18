@@ -112,8 +112,41 @@ export const authOptions: NextAuthOptions = {
           });
           token.userId = dbUser.id;
           token.isApproved = dbUser.isApproved;
+
+          // ✅ Persist Google OAuth tokens to Account table so cron job can use them
+          if (account.access_token && account.providerAccountId) {
+            await prisma.account.upsert({
+              where: {
+                provider_providerAccountId: {
+                  provider: "google",
+                  providerAccountId: account.providerAccountId,
+                },
+              },
+              update: {
+                access_token: account.access_token,
+                refresh_token: account.refresh_token ?? undefined,
+                expires_at: account.expires_at ?? undefined,
+                token_type: account.token_type ?? undefined,
+                scope: account.scope ?? undefined,
+                id_token: account.id_token ?? undefined,
+              },
+              create: {
+                userId: dbUser.id,
+                type: account.type,
+                provider: account.provider,
+                providerAccountId: account.providerAccountId,
+                access_token: account.access_token,
+                refresh_token: account.refresh_token ?? undefined,
+                expires_at: account.expires_at ?? undefined,
+                token_type: account.token_type ?? undefined,
+                scope: account.scope ?? undefined,
+                id_token: account.id_token ?? undefined,
+              },
+            });
+            console.log("[Auth] Persisted Google tokens for user:", dbUser.email);
+          }
         } catch (e) {
-          console.error("Failed to upsert Google user in DB:", e);
+          console.error("Failed to upsert Google user/account in DB:", e);
         }
       } else if (token.userId) {
         // Just keep the token.isApproved synced if not a fresh Google login

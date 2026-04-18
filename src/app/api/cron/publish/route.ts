@@ -50,11 +50,67 @@ export async function GET(req: NextRequest) {
         where: { id: dbPost.id },
         data: {
           status: "FAILED",
-          failureReason: "User's Google access token not found. They need to reconnect.",
+          failureReason: "User's Google access token not found. They need to reconnect their Google account.",
         },
       });
       results.push({ id: dbPost.id, status: "FAILED", error: "No access token" });
       continue;
+    }
+
+    let accessToken = userAccount.access_token;
+
+    // ✅ Refresh the token if it's expired
+    const tokenExpiry = userAccount.expires_at ? userAccount.expires_at * 1000 : 0;
+    const isExpired = tokenExpiry > 0 && Date.now() > tokenExpiry - 60_000; // 1 min buffer
+
+    if (isExpired && userAccount.refresh_token) {
+      console.log(`[CRON] Access token expired for user ${dbPost.userId}, refreshing...`);
+      try {
+        const refreshRes = await fetch("https://oauth2.googleapis.com/token", {
+          method: "POST",
+          headers: { "Content-Type": "application/x-www-form-urlencoded" },
+          body: new URLSearchParams({
+            client_id: process.env.GOOGLE_CLIENT_ID || "",
+            client_secret: process.env.GOOGLE_CLIENT_SECRET || "",
+            grant_type: "refresh_token",
+            refresh_token: userAccount.refresh_token,
+          }),
+        });
+        const refreshData = await refreshRes.json();
+        if (refreshRes.ok && refreshData.access_token) {
+          accessToken = refreshData.access_token;
+          const newExpiresAt = Math.floor((Date.now() + refreshData.expires_in * 1000) / 1000);
+          // Persist refreshed token back to DB
+          await prisma.account.update({
+            where: { id: userAccount.id },
+            data: {
+              access_token: refreshData.access_token,
+              expires_at: newExpiresAt,
+              ...(refreshData.refresh_token ? { refresh_token: refreshData.refresh_token } : {}),
+            },
+          });
+          console.log(`[CRON] Token refreshed successfully for user ${dbPost.userId}`);
+        } else {
+          console.error("[CRON] Token refresh failed:", refreshData);
+          await prisma.post.update({
+            where: { id: dbPost.id },
+            data: {
+              status: "FAILED",
+              failureReason: "Google access token expired and refresh failed. User must reconnect their Google account.",
+            },
+          });
+          results.push({ id: dbPost.id, status: "FAILED", error: "Token refresh failed" });
+          continue;
+        }
+      } catch (refreshErr: any) {
+        console.error("[CRON] Token refresh error:", refreshErr);
+        await prisma.post.update({
+          where: { id: dbPost.id },
+          data: { status: "FAILED", failureReason: `Token refresh error: ${refreshErr.message}` },
+        });
+        results.push({ id: dbPost.id, status: "FAILED", error: "Token refresh error" });
+        continue;
+      }
     }
 
     const post = {
@@ -83,7 +139,7 @@ export async function GET(req: NextRequest) {
 
     const result = await publishToGBP({
       post,
-      accessToken: userAccount.access_token,
+      accessToken: accessToken,
       imageDataUri: dbPost.mediaUrl || null,
     });
 
