@@ -6,9 +6,10 @@ import { Loader2, CheckCircle2, ExternalLink, RefreshCw, MapPin, AlertCircle, Sh
 
 export default function SettingsPage() {
   const { data: session } = useSession();
-  const isAdmin = (session as any)?.user?.role === "ADMIN";
+  const role = (session as any)?.user?.role;
+  const isAdmin = role === "ADMIN" || role === "SUPER_ADMIN";
   const userEmail = session?.user?.email || "";
-  const isMainAdmin = userEmail === "rankved.business@gmail.com";
+  const isMainAdmin = userEmail === "rankved.business@gmail.com" || role === "SUPER_ADMIN";
 
   const [connecting, setConnecting] = useState(false);
   const [fetching, setFetching] = useState(false);
