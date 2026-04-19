@@ -1,8 +1,7 @@
 import { NextResponse, NextRequest } from "next/server";
 import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/lib/auth";
-import { getAllProfiles, saveProfiles, addProfile, deleteProfile, ProfileData } from "@/lib/profile-store";
-import crypto from "crypto";
+import { getAllProfiles, saveProfiles, deleteProfile, ProfileData } from "@/lib/profile-store";
 
 // Helper: delay to avoid rate limits
 const delay = (ms: number) => new Promise((r) => setTimeout(r, ms));
@@ -75,10 +74,6 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "No Google Business Profile accounts found for this Google account." }, { status: 404 });
     }
 
-    // Keep manually-added profiles
-    const existing = await getAllProfiles();
-    const manualProfiles = existing.filter((p) => p.manual);
-
     // Step 2: For each account, get locations (with delay between each to avoid rate limits)
     const fetchedProfiles: ProfileData[] = [];
 
@@ -126,81 +121,33 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    // Merge: fetched profiles + keep manual ones
-    const allProfiles = [...fetchedProfiles, ...manualProfiles];
-
-    if (allProfiles.length === 0) {
-      return NextResponse.json({ error: "No profiles could be fetched and no manual profiles exist." }, { status: 404 });
+    if (fetchedProfiles.length === 0) {
+      return NextResponse.json({ error: "No profiles found on this Google account." }, { status: 404 });
     }
 
-    await saveProfiles(allProfiles, userId);
+    await saveProfiles(fetchedProfiles, userId);
 
-    return NextResponse.json({ data: allProfiles, message: `${fetchedProfiles.length} profiles fetched from Google, ${manualProfiles.length} manual profiles kept.` });
+    return NextResponse.json({ data: fetchedProfiles, message: `${fetchedProfiles.length} profiles fetched from Google.` });
   } catch (err: any) {
     return NextResponse.json({ error: err.message || "Failed to fetch profiles from Google" }, { status: 500 });
   }
 }
 
-// PUT /api/profiles — manually add a profile
-export async function PUT(req: NextRequest) {
-  const session = await getServerSession(authOptions);
-  if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  if (!(session as any).user.isApproved) {
-    return NextResponse.json({ error: "Your account is pending approval by rankved.business@gmail.com." }, { status: 403 });
-  }
-
-  const userId = (session as any)?.user?.id;
-  if (!userId) return NextResponse.json({ error: "Could not determine user ID." }, { status: 401 });
-
-  try {
-    const body = await req.json();
-    const { name, accountName, address, phone, website } = body;
-
-    if (!name || !name.trim()) {
-      return NextResponse.json({ error: "Profile name is required." }, { status: 400 });
-    }
-
-    const profile: ProfileData = {
-      id: crypto.randomUUID(),
-      name: name.trim(),
-      accountId: `manual-${Date.now()}`,
-      accountName: (accountName || "Manual Entry").trim(),
-      address: (address || "").trim(),
-      phone: (phone || "").trim(),
-      website: (website || "").trim(),
-      googleName: "",
-      fetchedAt: new Date().toISOString(),
-      manual: true,
-    };
-
-    await addProfile(profile, userId);
-
-    return NextResponse.json({ data: profile, message: `Profile "${profile.name}" added successfully.` });
-  } catch (err: any) {
-    return NextResponse.json({ error: err.message || "Failed to add profile" }, { status: 500 });
-  }
-}
-
-// DELETE /api/profiles — delete a profile by id
+// DELETE /api/profiles?id=xxx — remove a synced profile (admin only)
 export async function DELETE(req: NextRequest) {
   const session = await getServerSession(authOptions);
   if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  if (!(session as any).user.isApproved) {
-    return NextResponse.json({ error: "Your account is pending approval by rankved.business@gmail.com." }, { status: 403 });
+
+  const role = (session as any)?.user?.role;
+  if (role !== "ADMIN") {
+    return NextResponse.json({ error: "Only admins can delete profiles" }, { status: 403 });
   }
 
   const { searchParams } = new URL(req.url);
   const id = searchParams.get("id");
+  if (!id) return NextResponse.json({ error: "Profile ID required" }, { status: 400 });
 
-  if (!id) {
-    return NextResponse.json({ error: "Profile ID is required." }, { status: 400 });
-  }
-
-  const deleted = await deleteProfile(id);
-
-  if (!deleted) {
-    return NextResponse.json({ error: "Profile not found." }, { status: 404 });
-  }
-
-  return NextResponse.json({ message: "Profile deleted." });
+  const success = await deleteProfile(id);
+  if (!success) return NextResponse.json({ error: "Profile not found" }, { status: 404 });
+  return NextResponse.json({ success: true });
 }

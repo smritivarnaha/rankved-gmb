@@ -21,7 +21,6 @@ export interface ProfileData {
   website: string;
   googleName: string;   // full Google resource name e.g. "locations/123"
   fetchedAt: string;
-  manual?: boolean;     // true if manually added
 }
 
 // Ensure a default Client row exists (for single-tenant use)
@@ -40,13 +39,12 @@ function locationToProfile(loc: any): ProfileData {
     id: loc.id,
     name: loc.name,
     accountId: loc.gbpAccountId,
-    accountName: loc.gbpAccountId, // stored same field
+    accountName: loc.gbpAccountId,
     address: loc.address || "",
     phone: loc.phone || "",
-    website: "", // not in Location schema — stored in name comment
+    website: "",
     googleName: loc.gbpLocationId,
     fetchedAt: loc.cachedAt?.toISOString() || loc.createdAt.toISOString(),
-    manual: loc.gbpAccountId.startsWith("manual-"),
   };
 }
 
@@ -65,17 +63,10 @@ export async function getProfileById(id: string): Promise<ProfileData | undefine
 export async function saveProfiles(profiles: ProfileData[], userId: string): Promise<void> {
   const clientId = await ensureDefaultClient(userId);
 
-  // Delete all non-manual profiles (re-fetched from Google)
-  await prisma.location.deleteMany({
-    where: {
-      clientId,
-      NOT: { gbpAccountId: { startsWith: "manual-" } },
-    },
-  });
+  // Delete all existing locations for this client and re-insert fresh from Google
+  await prisma.location.deleteMany({ where: { clientId } });
 
-  // Re-insert fetched profiles
-  const nonManual = profiles.filter((p) => !p.manual);
-  for (const p of nonManual) {
+  for (const p of profiles) {
     await prisma.location.upsert({
       where: { gbpAccountId_gbpLocationId: { gbpAccountId: p.accountId, gbpLocationId: p.googleName } },
       update: {
@@ -98,34 +89,11 @@ export async function saveProfiles(profiles: ProfileData[], userId: string): Pro
   }
 }
 
-export async function addProfile(profile: ProfileData, userId: string): Promise<void> {
-  const clientId = await ensureDefaultClient(userId);
-  await prisma.location.create({
-    data: {
-      id: profile.id,
-      name: profile.name,
-      address: profile.address || null,
-      phone: profile.phone || null,
-      gbpAccountId: profile.accountId,
-      gbpLocationId: profile.googleName || profile.id,
-      cachedAt: new Date(profile.fetchedAt),
-      clientId,
-    },
-  });
-}
-
 export async function deleteProfile(id: string): Promise<boolean> {
   try {
     await prisma.location.delete({ where: { id } });
     return true;
   } catch {
     return false;
-  }
-}
-
-export async function clearProfiles(userId: string): Promise<void> {
-  const client = await prisma.client.findFirst({ where: { userId } });
-  if (client) {
-    await prisma.location.deleteMany({ where: { clientId: client.id } });
   }
 }
