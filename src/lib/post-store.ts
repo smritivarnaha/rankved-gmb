@@ -26,6 +26,8 @@ export interface PostData {
   status: "DRAFT" | "SCHEDULED" | "PUBLISHED" | "FAILED";
   scheduledAt: string | null;
   publishedAt: string | null;
+  gbpPostName?: string | null;
+  failureReason?: string | null;
   createdBy: string;
   createdAt: string;
   updatedAt: string;
@@ -51,6 +53,8 @@ function mapPost(p: any): PostData {
     status: p.status as PostData["status"],
     scheduledAt: p.scheduledAt?.toISOString() || null,
     publishedAt: p.publishedAt?.toISOString() || null,
+    gbpPostName: p.gbpPostName || null,
+    failureReason: p.failureReason || null,
     createdBy: p.user?.email || "",
     createdAt: p.createdAt.toISOString(),
     updatedAt: p.updatedAt.toISOString(),
@@ -122,6 +126,8 @@ export async function updatePost(id: string, data: Partial<PostData>): Promise<P
         ...(data.eventTitle !== undefined && { eventTitle: data.eventTitle || null }),
         ...(data.eventStart !== undefined && { eventStartDate: data.eventStart ? new Date(data.eventStart) : null }),
         ...(data.eventEnd !== undefined && { eventEndDate: data.eventEnd ? new Date(data.eventEnd) : null }),
+        ...(data.gbpPostName !== undefined && { gbpPostName: data.gbpPostName || null }),
+        ...(data.failureReason !== undefined && { failureReason: data.failureReason || null }),
       },
       include: { location: { include: { client: true } }, user: true },
     });
