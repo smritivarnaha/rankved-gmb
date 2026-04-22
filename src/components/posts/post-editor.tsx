@@ -2,6 +2,7 @@
 
 import { useState, useRef, useEffect } from "react";
 import { useRouter } from "next/navigation";
+import { useSession } from "next-auth/react";
 import { Save, Clock, Loader2, ImagePlus, X, Send, MapPin, Link as LinkIcon, Copy, Check } from "lucide-react";
 import { embedGPSInImage } from "@/lib/geo-exif";
 
@@ -24,6 +25,13 @@ const monthNames = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct",
 
 export function PostEditor({ initialData = null, timelineDate, onDateChange }: { initialData?: any; timelineDate?: string; onDateChange?: (d: string) => void }) {
   const router = useRouter();
+  const { data: session } = useSession();
+  const user = (session as any)?.user;
+  const role = user?.role;
+  const canPublishNow = role === "SUPER_ADMIN" || role === "AGENCY_OWNER" || user?.canPublishNow !== false;
+  const canSchedule = role === "SUPER_ADMIN" || role === "AGENCY_OWNER" || user?.canSchedule !== false;
+  const minScheduleDays = role === "TEAM_MEMBER" ? (user?.minScheduleDays || 0) : 0;
+
   const fileRef = useRef<HTMLInputElement>(null);
   const [saving, setSaving] = useState(false);
   const [savingType, setSavingType] = useState("");
@@ -597,13 +605,20 @@ export function PostEditor({ initialData = null, timelineDate, onDateChange }: {
                     const dateStr = `${calYear}-${String(calMonth + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
                     const isSelected = selectedDate === dateStr;
                     const isToday = day === todayDay && calMonth === now.getMonth() && calYear === now.getFullYear();
-                    const isPast = new Date(dateStr) < new Date(todayStr) && !isToday;
+                    
+                    // Min schedule logic
+                    const dateObj = new Date(dateStr);
+                    const todayObj = new Date(todayStr);
+                    const diffTime = dateObj.getTime() - todayObj.getTime();
+                    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+                    const isPast = diffDays < minScheduleDays;
+                    
                     return (
                       <button key={day} onClick={() => !isPast && selectCalDay(day)} disabled={isPast}
                         style={isSelected ? { backgroundColor: "var(--accent)", color: "white" } : {}}
                         className={`w-7 h-7 mx-auto rounded-full text-[11px] font-medium transition-colors ${
                           isSelected ? "" :
-                          isToday ? "border border-[var(--accent)] text-[var(--accent)]" :
+                          isToday && !isPast ? "border border-[var(--accent)] text-[var(--accent)]" :
                           isPast ? "text-[var(--border)] cursor-not-allowed" :
                           "text-[var(--text-secondary)] hover:bg-[var(--bg-tertiary)]"
                         }`}>
@@ -667,17 +682,29 @@ export function PostEditor({ initialData = null, timelineDate, onDateChange }: {
               Save draft
             </button>
             {getScheduledAt() ? (
-              <button onClick={() => handleSave("SCHEDULED")} disabled={saving || !form.locationId || !form.summary}
-                className="px-4 py-2 bg-[var(--accent)] hover:bg-[var(--accent-hover)] text-white text-[13px] font-medium rounded-lg transition-colors disabled:opacity-50 flex items-center gap-2">
-                {saving && savingType === "SCHEDULED" ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Clock className="w-3.5 h-3.5" />}
-                Schedule
-              </button>
+              canSchedule ? (
+                <button onClick={() => handleSave("SCHEDULED")} disabled={saving || !form.locationId || !form.summary}
+                  className="px-4 py-2 bg-[var(--accent)] hover:bg-[var(--accent-hover)] text-white text-[13px] font-medium rounded-lg transition-colors disabled:opacity-50 flex items-center gap-2">
+                  {saving && savingType === "SCHEDULED" ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Clock className="w-3.5 h-3.5" />}
+                  Schedule
+                </button>
+              ) : (
+                <div className="px-4 py-2 bg-gray-100 text-gray-500 text-[13px] font-medium rounded-lg flex items-center gap-2 cursor-not-allowed border border-gray-200" title="You do not have permission to schedule posts.">
+                  <Clock className="w-3.5 h-3.5" /> Schedule (Disabled)
+                </div>
+              )
             ) : (
-              <button onClick={() => handleSave("PUBLISH")} disabled={saving || !form.locationId || !form.summary}
-                className="px-4 py-2 bg-[var(--accent)] hover:bg-[var(--accent-hover)] text-white text-[13px] font-medium rounded-lg transition-colors disabled:opacity-50 flex items-center gap-2">
-                {saving && savingType === "PUBLISH" ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Send className="w-3.5 h-3.5" />}
-                Publish now
-              </button>
+              canPublishNow ? (
+                <button onClick={() => handleSave("PUBLISH")} disabled={saving || !form.locationId || !form.summary}
+                  className="px-4 py-2 bg-[var(--accent)] hover:bg-[var(--accent-hover)] text-white text-[13px] font-medium rounded-lg transition-colors disabled:opacity-50 flex items-center gap-2">
+                  {saving && savingType === "PUBLISH" ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Send className="w-3.5 h-3.5" />}
+                  Publish now
+                </button>
+              ) : (
+                <div className="px-4 py-2 bg-gray-100 text-gray-500 text-[13px] font-medium rounded-lg flex items-center gap-2 cursor-not-allowed border border-gray-200" title={`You must schedule posts at least ${minScheduleDays} days in advance.`}>
+                  <Send className="w-3.5 h-3.5" /> Publish now (Disabled)
+                </div>
+              )
             )}
           </>
         )}

@@ -48,19 +48,35 @@ model VerificationToken {
 
 // ─── Core Models ────────────────────────────────────────
 model User {
-  id            String    @id @default(cuid())
-  name          String?
-  email         String?   @unique
-  emailVerified DateTime?
-  image         String?
-  role          String    @default("USER")
-  isApproved    Boolean   @default(false)
-  accounts      Account[]
-  sessions      Session[]
-  clients       Client[]
-  posts         Post[]
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
+  id              String      @id @default(cuid())
+  name            String?
+  username        String?     @unique
+  email           String?     @unique
+  password        String?
+  emailVerified   DateTime?
+  image           String?
+  role            String      @default("TEAM_MEMBER") // SUPER_ADMIN, AGENCY_OWNER, TEAM_MEMBER
+  isApproved      Boolean     @default(true)
+  
+  // Hierarchy
+  ownerId         String?
+  owner           User?       @relation("TeamMembers", fields: [ownerId], references: [id])
+  teamMembers     User[]      @relation("TeamMembers")
+
+  // Permissions (primarily for TEAM_MEMBER)
+  canPublishNow   Boolean     @default(true)
+  canSchedule     Boolean     @default(true)
+  minScheduleDays Int         @default(0)
+
+  // Assigned Profiles
+  assignedLocations Location[] @relation("LocationAssignments")
+
+  accounts        Account[]
+  sessions        Session[]
+  clients         Client[]
+  posts           Post[]
+  createdAt       DateTime    @default(now())
+  updatedAt       DateTime    @updatedAt
 }
 
 model Client {
@@ -94,6 +110,8 @@ model Location {
 
   @@unique([gbpAccountId, gbpLocationId])
   @@index([clientId])
+  
+  assignedUsers User[] @relation("LocationAssignments")
 }
 
 model Post {

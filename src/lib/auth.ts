@@ -2,7 +2,7 @@ import { NextAuthOptions } from "next-auth";
 import GoogleProvider from "next-auth/providers/google";
 import CredentialsProvider from "next-auth/providers/credentials";
 import prisma from "./prisma";
-import { findUserByEmail, verifyPassword } from "./user-store";
+import { findUserByCredentials, verifyPassword } from "./user-store";
 
 async function refreshAccessToken(token: any) {
   try {
@@ -46,8 +46,8 @@ export const authOptions: NextAuthOptions = {
       async authorize(credentials) {
         if (!credentials?.email || !credentials?.password) return null;
 
-        const user = await findUserByEmail(credentials.email);
-        if (!user) return null;
+        const user = await findUserByCredentials(credentials.email);
+        if (!user || !user.password) return null;
 
         if (!verifyPassword(credentials.password, user.password)) return null;
 
@@ -55,8 +55,10 @@ export const authOptions: NextAuthOptions = {
           id: user.id,
           name: user.name,
           email: user.email,
+          username: user.username,
           role: user.role,
           isApproved: user.isApproved,
+          ownerId: user.ownerId,
         };
       },
     }),
@@ -80,41 +82,23 @@ export const authOptions: NextAuthOptions = {
   callbacks: {
     async jwt({ token, account, user }) {
       if (user) {
-        token.role = (user as any).role || "TEAM";
+        token.role = (user as any).role || "TEAM_MEMBER";
         token.userId = user.id;
+        token.username = (user as any).username;
+        token.ownerId = (user as any).ownerId;
       }
 
-      // First-time Google sign-in or routine refresh — ensure we have up-to-date DB state
-      if (account?.provider === "google" && user?.email) {
+      // Google OAuth linking (Triggered from Settings)
+      if (account?.provider === "google") {
         token.accessToken = account.access_token;
         token.refreshToken = account.refresh_token;
         token.accessTokenExpires = account.expires_at
           ? account.expires_at * 1000
           : Date.now() + 3600 * 1000;
 
-        const isSuperAdmin = user.email.toLowerCase() === "rankved.business@gmail.com";
-        const assignedRole = isSuperAdmin ? "SUPER_ADMIN" : "USER";
-        const initialApprovedState = isSuperAdmin ? true : false;
-        token.role = assignedRole;
-
-        // Upsert the Google user into our DB so FK constraints work
-        try {
-          const dbUser = await prisma.user.upsert({
-            where: { email: user.email },
-            update: { name: user.name ?? undefined, role: assignedRole },
-            create: {
-              name: user.name,
-              email: user.email,
-              image: user.image,
-              role: assignedRole,
-              isApproved: initialApprovedState,
-            },
-          });
-          token.userId = dbUser.id;
-          token.isApproved = dbUser.isApproved;
-
-          // ✅ Persist Google OAuth tokens to Account table so cron job can use them
-          if (account.access_token && account.providerAccountId) {
+        if (token.userId) {
+          // User is already logged in, link the Google account to their existing User ID
+          try {
             await prisma.account.upsert({
               where: {
                 provider_providerAccountId: {
@@ -129,9 +113,10 @@ export const authOptions: NextAuthOptions = {
                 token_type: account.token_type ?? undefined,
                 scope: account.scope ?? undefined,
                 id_token: account.id_token ?? undefined,
+                userId: token.userId as string,
               },
               create: {
-                userId: dbUser.id,
+                userId: token.userId as string,
                 type: account.type,
                 provider: account.provider,
                 providerAccountId: account.providerAccountId,
@@ -143,10 +128,10 @@ export const authOptions: NextAuthOptions = {
                 id_token: account.id_token ?? undefined,
               },
             });
-            console.log("[Auth] Persisted Google tokens for user:", dbUser.email);
+            console.log("[Auth] Persisted Google tokens for existing user ID:", token.userId);
+          } catch (e) {
+            console.error("Failed to link Google account in DB:", e);
           }
-        } catch (e) {
-          console.error("Failed to upsert Google user/account in DB:", e);
         }
       } else if (token.userId) {
         // Just keep the token.isApproved synced if not a fresh Google login
@@ -177,12 +162,14 @@ export const authOptions: NextAuthOptions = {
         (session as any).accessToken = token.accessToken;
         (session as any).user.role = token.role;
         (session as any).user.id = token.userId;
+        (session as any).user.username = token.username;
         (session as any).user.isApproved = token.isApproved;
+        (session as any).user.ownerId = token.ownerId;
         (session as any).tokenError = token.error;
       }
       return session;
     },
   },
-  session: { strategy: "jwt" },
+  session: { strategy: "jwt", maxAge: 30 * 24 * 60 * 60 },
   secret: process.env.NEXTAUTH_SECRET,
 };

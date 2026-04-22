@@ -1,29 +1,28 @@
 /**
  * user-store.ts
- *
- * Replaced from file-system JSON to Prisma DB to support
- * read-only serverless environments (Vercel, etc.)
- *
- * NOTE: Google OAuth users are managed automatically by NextAuth via
- * the Prisma adapter. This store only handles credential-based users.
+ * Handled via Prisma with the updated RBAC schema.
  */
 
 import crypto from "crypto";
 import prisma from "./prisma";
 
-export type UserRole = "ADMIN" | "TEAM";
+export type UserRole = "SUPER_ADMIN" | "AGENCY_OWNER" | "TEAM_MEMBER";
 
 export interface AppUser {
   id: string;
   name: string;
+  username: string;
   email: string;
-  password: string; // hashed — stored in a separate field
+  password?: string;
   role: UserRole;
   isApproved: boolean;
+  canPublishNow: boolean;
+  minScheduleDays: number;
+  ownerId: string | null;
   createdAt: string;
 }
 
-function hashPassword(password: string): string {
+export function hashPassword(password: string): string {
   return crypto.createHash("sha256").update(password).digest("hex");
 }
 
@@ -31,99 +30,121 @@ export function verifyPassword(password: string, hash: string): boolean {
   return hashPassword(password) === hash;
 }
 
-/**
- * Finds a user by email for credential login.
- * Checks the `emailVerified` field as a proxy for password storage.
- * Passwords are stored as a SHA256 hash in the `image` field (temporary hack
- * until a proper CredentialsUser table is added).
- *
- * NOTE: For Google OAuth users, NextAuth handles auth automatically.
- * This is only for email+password login.
- */
-export async function findUserByEmail(email: string): Promise<AppUser | undefined> {
-  const user = await prisma.user.findUnique({
-    where: { email: email.toLowerCase() },
-  });
-  if (!user || !user.image?.startsWith("pwd:")) return undefined;
+function mapToAppUser(user: any): AppUser {
   return {
     id: user.id,
     name: user.name || "User",
+    username: user.username || "",
     email: user.email || "",
-    password: user.image.replace("pwd:", ""),
-    role: (user.role as UserRole) || "TEAM",
+    password: user.password || undefined,
+    role: (user.role as UserRole) || "TEAM_MEMBER",
     isApproved: user.isApproved,
+    canPublishNow: user.canPublishNow,
+    minScheduleDays: user.minScheduleDays,
+    ownerId: user.ownerId,
     createdAt: user.createdAt.toISOString(),
   };
+}
+
+export async function findUserByCredentials(identifier: string): Promise<AppUser | undefined> {
+  const user = await prisma.user.findFirst({
+    where: {
+      OR: [
+        { email: identifier.toLowerCase() },
+        { username: identifier }
+      ]
+    },
+  });
+  if (!user || !user.password) return undefined;
+  return mapToAppUser(user);
 }
 
 export async function findUserById(id: string): Promise<AppUser | undefined> {
   const user = await prisma.user.findUnique({ where: { id } });
-  if (!user || !user.image?.startsWith("pwd:")) return undefined;
-  return {
-    id: user.id,
-    name: user.name || "User",
-    email: user.email || "",
-    password: user.image.replace("pwd:", ""),
-    role: (user.role as UserRole) || "TEAM",
-    isApproved: user.isApproved,
-    createdAt: user.createdAt.toISOString(),
-  };
+  if (!user) return undefined;
+  return mapToAppUser(user);
 }
 
 export async function getAllUsers(): Promise<Omit<AppUser, "password">[]> {
   const users = await prisma.user.findMany({
-    where: { image: { startsWith: "pwd:" } },
     orderBy: { createdAt: "desc" },
   });
-  return users.map((u) => ({
-    id: u.id,
-    name: u.name || "User",
-    email: u.email || "",
-    role: (u.role as UserRole) || "TEAM",
-    isApproved: u.isApproved,
-    createdAt: u.createdAt.toISOString(),
-  }));
+  return users.map(u => {
+    const appUser = mapToAppUser(u);
+    delete appUser.password;
+    return appUser;
+  });
 }
 
-export async function createUser(data: {
+export interface CreateUserData {
   name: string;
-  email: string;
-  password: string;
+  username: string;
+  email?: string;
+  password?: string;
   role: UserRole;
-}): Promise<Omit<AppUser, "password">> {
-  const existing = await prisma.user.findUnique({ where: { email: data.email.toLowerCase() } });
-  if (existing) throw new Error("A user with this email already exists");
+  ownerId?: string;
+  canPublishNow?: boolean;
+  canSchedule?: boolean;
+  minScheduleDays?: number;
+}
 
-  const hashed = hashPassword(data.password);
+export async function createUser(data: CreateUserData): Promise<Omit<AppUser, "password">> {
+  // Check if username exists
+  const existingUsername = await prisma.user.findUnique({ where: { username: data.username } });
+  if (existingUsername) throw new Error("A user with this username already exists");
+
+  if (data.email) {
+    const existingEmail = await prisma.user.findUnique({ where: { email: data.email.toLowerCase() } });
+    if (existingEmail) throw new Error("A user with this email already exists");
+  }
+
+  const hashed = data.password ? hashPassword(data.password) : null;
   const user = await prisma.user.create({
     data: {
       name: data.name,
-      email: data.email.toLowerCase(),
+      username: data.username,
+      email: data.email ? data.email.toLowerCase() : null,
+      password: hashed,
       role: data.role,
-      image: `pwd:${hashed}`, // store password hash
+      ownerId: data.ownerId,
+      canPublishNow: data.canPublishNow ?? true,
+      canSchedule: data.canSchedule ?? true,
+      minScheduleDays: data.minScheduleDays ?? 0,
+      isApproved: true,
     },
   });
 
-  return {
-    id: user.id,
-    name: user.name || data.name,
-    email: user.email || data.email,
-    role: user.role as UserRole,
-    isApproved: user.isApproved,
-    createdAt: user.createdAt.toISOString(),
-  };
+  const appUser = mapToAppUser(user);
+  delete appUser.password;
+  return appUser;
+}
+
+export async function seedAdminUser() {
+  await prisma.user.upsert({
+    where: { email: "rankved.business@gmail.com" },
+    update: {
+      username: "admin",
+      password: hashPassword("Sona@15jan2026##"),
+      role: "SUPER_ADMIN",
+      isApproved: true,
+      canPublishNow: true,
+      minScheduleDays: 0,
+    },
+    create: {
+      name: "Super Admin",
+      username: "admin",
+      email: "rankved.business@gmail.com",
+      password: hashPassword("Sona@15jan2026##"),
+      role: "SUPER_ADMIN",
+      isApproved: true,
+      canPublishNow: true,
+      minScheduleDays: 0,
+    }
+  });
+  console.log("Admin user seeded/updated.");
 }
 
 export async function deleteUser(id: string): Promise<boolean> {
-  // Prevent deleting the last admin
-  const allAdmins = await prisma.user.findMany({
-    where: { role: "ADMIN", image: { startsWith: "pwd:" } },
-  });
-  const target = allAdmins.find((u) => u.id === id);
-  if (target && allAdmins.length === 1) {
-    throw new Error("Cannot delete the last admin user");
-  }
-
   try {
     await prisma.user.delete({ where: { id } });
     return true;

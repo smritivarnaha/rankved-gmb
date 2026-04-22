@@ -7,9 +7,11 @@ import { Loader2, CheckCircle2, ExternalLink, RefreshCw, MapPin, AlertCircle, Sh
 export default function SettingsPage() {
   const { data: session } = useSession();
   const role = (session as any)?.user?.role;
-  const isAdmin = role === "ADMIN" || role === "SUPER_ADMIN";
+  const isSuperAdmin = role === "SUPER_ADMIN";
+  const isAgencyOwner = role === "AGENCY_OWNER";
+  const canConnectGoogle = isSuperAdmin || isAgencyOwner;
+  const isMainAdmin = canConnectGoogle; // alias to fix legacy naming
   const userEmail = session?.user?.email || "";
-  const isMainAdmin = userEmail === "rankved.business@gmail.com" || role === "SUPER_ADMIN";
 
   const [connecting, setConnecting] = useState(false);
   const [fetching, setFetching] = useState(false);
@@ -62,15 +64,15 @@ export default function SettingsPage() {
           </div>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
             <span style={{ color: "var(--text-secondary)" }}>Role</span>
-            <span className={`badge ${isMainAdmin ? "badge-info" : "badge-default"}`}>
-              {isMainAdmin ? "Super Admin" : isAdmin ? "Admin" : "Team"}
+            <span className={`badge ${isSuperAdmin ? "badge-info" : isAgencyOwner ? "badge-success" : "badge-default"}`}>
+              {isSuperAdmin ? "Super Admin" : isAgencyOwner ? "Agency Owner" : "Team Member"}
             </span>
           </div>
         </div>
       </div>
 
       {/* Google Integration */}
-      {isAdmin && (
+      {canConnectGoogle && (
         <div className="card">
           <div className="card-header"><h2 className="card-title" style={{ fontSize: 14 }}>Google Business Profile</h2></div>
           <div className="card-body">
@@ -96,7 +98,7 @@ export default function SettingsPage() {
       )}
 
       {/* Profiles */}
-      {isAdmin && (
+      {canConnectGoogle && (
         <div className="card">
           <div className="card-header">
             <div>

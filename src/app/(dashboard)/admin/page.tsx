@@ -1,28 +1,38 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Shield, ShieldAlert, CheckCircle, XCircle, Search, Mail, Loader2, UserPlus, UserCircle } from "lucide-react";
+import { Shield, ShieldAlert, Users, Database, FileText, Loader2, UserPlus, UserCircle, Search } from "lucide-react";
 
 export default function AdminDashboard() {
   const [users, setUsers] = useState<any[]>([]);
+  const [stats, setStats] = useState({ totalUsers: 0, totalProfiles: 0, totalPosts: 0 });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [searchQuery, setSearchQuery] = useState("");
+  
+  // Create User Modal
+  const [showCreateModal, setShowCreateModal] = useState(false);
+  const [newUserName, setNewUserName] = useState("");
+  const [newUserUsername, setNewUserUsername] = useState("");
+  const [newUserEmail, setNewUserEmail] = useState("");
+  const [newUserPassword, setNewUserPassword] = useState("");
+  const [creatingUser, setCreatingUser] = useState(false);
 
   useEffect(() => {
-    fetchUsers();
+    fetchData();
   }, []);
 
-  const fetchUsers = async () => {
+  const fetchData = async () => {
     setLoading(true);
     try {
       const res = await fetch("/api/admin/users");
       if (!res.ok) {
          if(res.status === 403) throw new Error("You do not have permission to view this page.");
-         throw new Error("Failed to fetch users");
+         throw new Error("Failed to fetch data");
       }
       const data = await res.json();
       setUsers(data.data || []);
+      if (data.stats) setStats(data.stats);
     } catch (err: any) {
       setError(err.message);
     } finally {
@@ -30,27 +40,43 @@ export default function AdminDashboard() {
     }
   };
 
-  const toggleApproval = async (userId: string, currentStatus: boolean) => {
+  const handleCreateUser = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setCreatingUser(true);
     try {
-      // Optimistic update
-      setUsers(users.map(u => u.id === userId ? { ...u, isApproved: !currentStatus } : u));
-      
-      const res = await fetch("/api/admin/users/approve", {
+      const res = await fetch("/api/admin/users", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ userId, isApproved: !currentStatus }),
+        body: JSON.stringify({ 
+          name: newUserName,
+          username: newUserUsername,
+          email: newUserEmail,
+          password: newUserPassword
+        }),
       });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Failed to create user");
       
-      if (!res.ok) throw new Error("Failed to update status");
-    } catch (err) {
-      // Revert on failure
-      setUsers(users.map(u => u.id === userId ? { ...u, isApproved: currentStatus } : u));
-      alert("Failed to update user approval status");
+      // Add user to state
+      setUsers([data.data, ...users]);
+      setStats(prev => ({ ...prev, totalUsers: prev.totalUsers + 1 }));
+      setShowCreateModal(false);
+      
+      // Reset form
+      setNewUserName("");
+      setNewUserUsername("");
+      setNewUserEmail("");
+      setNewUserPassword("");
+    } catch (err: any) {
+      alert(err.message);
+    } finally {
+      setCreatingUser(false);
     }
   };
 
   const filteredUsers = users.filter(u => 
     (u.name?.toLowerCase() || "").includes(searchQuery.toLowerCase()) || 
+    (u.username?.toLowerCase() || "").includes(searchQuery.toLowerCase()) ||
     (u.email?.toLowerCase() || "").includes(searchQuery.toLowerCase())
   );
 
@@ -58,7 +84,7 @@ export default function AdminDashboard() {
     return (
       <div className="flex-1 flex flex-col items-center justify-center min-h-[60vh]">
         <Loader2 className="w-8 h-8 text-[var(--accent)] animate-spin mb-4" />
-        <p className="text-[var(--text-secondary)]">Loading users...</p>
+        <p className="text-[var(--text-secondary)]">Loading dashboard...</p>
       </div>
     );
   }
@@ -70,9 +96,7 @@ export default function AdminDashboard() {
           <ShieldAlert className="w-8 h-8" />
         </div>
         <h2 className="text-xl font-bold text-[var(--text-primary)] mb-2">Access Denied</h2>
-        <p className="text-[var(--text-secondary)] max-w-md mx-auto mb-6">
-          {error}
-        </p>
+        <p className="text-[var(--text-secondary)] max-w-md mx-auto mb-6">{error}</p>
       </div>
     );
   }
@@ -87,7 +111,32 @@ export default function AdminDashboard() {
           </div>
           <div>
             <h1 className="text-2xl font-bold text-[var(--text-primary)]">Admin Dashboard</h1>
-            <p className="text-sm text-[var(--text-secondary)]">Manage team members and approval requests</p>
+            <p className="text-sm text-[var(--text-secondary)]">Platform overview and user management</p>
+          </div>
+        </div>
+      </div>
+
+      {/* Stats */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <div className="bg-white border border-[var(--border)] rounded-2xl p-6 shadow-sm flex items-center gap-4">
+          <div className="p-4 bg-blue-50 text-blue-600 rounded-xl"><Users className="w-6 h-6" /></div>
+          <div>
+            <p className="text-sm text-[var(--text-secondary)] font-medium">Total Users</p>
+            <p className="text-3xl font-bold text-[var(--text-primary)]">{stats.totalUsers}</p>
+          </div>
+        </div>
+        <div className="bg-white border border-[var(--border)] rounded-2xl p-6 shadow-sm flex items-center gap-4">
+          <div className="p-4 bg-purple-50 text-purple-600 rounded-xl"><Database className="w-6 h-6" /></div>
+          <div>
+            <p className="text-sm text-[var(--text-secondary)] font-medium">Total Profiles Connected</p>
+            <p className="text-3xl font-bold text-[var(--text-primary)]">{stats.totalProfiles}</p>
+          </div>
+        </div>
+        <div className="bg-white border border-[var(--border)] rounded-2xl p-6 shadow-sm flex items-center gap-4">
+          <div className="p-4 bg-green-50 text-green-600 rounded-xl"><FileText className="w-6 h-6" /></div>
+          <div>
+            <p className="text-sm text-[var(--text-secondary)] font-medium">Total Posts</p>
+            <p className="text-3xl font-bold text-[var(--text-primary)]">{stats.totalPosts}</p>
           </div>
         </div>
       </div>
@@ -95,7 +144,7 @@ export default function AdminDashboard() {
       {/* Content */}
       <div className="bg-white border border-[var(--border)] rounded-2xl overflow-hidden shadow-sm">
         {/* Toolbar */}
-        <div className="px-6 py-4 border-b border-[var(--border-light)] flex items-center gap-4 bg-[var(--bg-secondary)]/50">
+        <div className="px-6 py-4 border-b border-[var(--border-light)] flex flex-wrap items-center gap-4 bg-[var(--bg-secondary)]/50">
           <div className="relative flex-1 max-w-xs">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[var(--text-tertiary)]" />
             <input 
@@ -107,9 +156,12 @@ export default function AdminDashboard() {
             />
           </div>
           
-          <button className="ml-auto px-4 py-2 bg-white hover:bg-[var(--bg-tertiary)] border border-[var(--border)] text-[var(--text-primary)] text-sm font-medium rounded-lg transition-colors flex items-center gap-2 shadow-sm">
+          <button 
+            onClick={() => setShowCreateModal(true)}
+            className="ml-auto px-4 py-2 bg-[var(--accent)] hover:bg-indigo-700 text-white text-sm font-medium rounded-lg transition-colors flex items-center gap-2 shadow-sm"
+          >
             <UserPlus className="w-4 h-4" />
-            Invite Team Member
+            Create Agency Owner
           </button>
         </div>
 
@@ -119,16 +171,16 @@ export default function AdminDashboard() {
             <thead>
               <tr className="bg-[var(--bg-secondary)] border-b border-[var(--border-light)]">
                 <th className="px-6 py-3 text-xs font-semibold text-[var(--text-secondary)] uppercase tracking-wider">User</th>
+                <th className="px-6 py-3 text-xs font-semibold text-[var(--text-secondary)] uppercase tracking-wider">Username</th>
                 <th className="px-6 py-3 text-xs font-semibold text-[var(--text-secondary)] uppercase tracking-wider">Role</th>
                 <th className="px-6 py-3 text-xs font-semibold text-[var(--text-secondary)] uppercase tracking-wider">Joined</th>
-                <th className="px-6 py-3 text-xs font-semibold text-[var(--text-secondary)] uppercase tracking-wider text-right">Approval Status</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-[var(--border-light)]">
               {filteredUsers.length === 0 ? (
                 <tr>
                   <td colSpan={4} className="px-6 py-12 text-center text-sm text-[var(--text-tertiary)]">
-                    No users found matching "{searchQuery}"
+                    No users found
                   </td>
                 </tr>
               ) : (
@@ -141,46 +193,22 @@ export default function AdminDashboard() {
                         </div>
                         <div>
                           <div className="font-semibold text-sm text-[var(--text-primary)]">{user.name || "Unknown"}</div>
-                          <div className="text-xs text-[var(--text-secondary)] flex items-center gap-1.5 mt-0.5">
-                            <Mail className="w-3 h-3" />
-                            {user.email}
-                          </div>
+                          {user.email && <div className="text-xs text-[var(--text-secondary)]">{user.email}</div>}
                         </div>
                       </div>
                     </td>
+                    <td className="px-6 py-4 text-sm font-medium">{user.username}</td>
                     <td className="px-6 py-4">
                       <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${
                         user.role === 'SUPER_ADMIN' ? 'bg-purple-100 text-purple-700' :
-                        user.role === 'ADMIN' ? 'bg-blue-100 text-blue-700' :
+                        user.role === 'AGENCY_OWNER' ? 'bg-blue-100 text-blue-700' :
                         'bg-gray-100 text-gray-700'
                       }`}>
                         {user.role}
                       </span>
                     </td>
                     <td className="px-6 py-4 text-sm text-[var(--text-secondary)]">
-                      {new Date(user.createdAt).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' })}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-right">
-                      {user.role === 'SUPER_ADMIN' ? (
-                        <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium text-gray-500">
-                          <CheckCircle className="w-3.5 h-3.5" /> Auto-Approved
-                        </span>
-                      ) : (
-                        <button
-                          onClick={() => toggleApproval(user.id, user.isApproved)}
-                          className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold border transition-colors shadow-sm ${
-                            user.isApproved 
-                              ? 'bg-[var(--success-bg)] border-[var(--success)]/20 text-[var(--success)] hover:bg-[var(--success)] hover:text-white'
-                              : 'bg-red-50 border-red-200 text-red-600 hover:bg-red-600 hover:text-white'
-                          }`}
-                        >
-                          {user.isApproved ? (
-                            <><CheckCircle className="w-3.5 h-3.5" /> Approved</>
-                          ) : (
-                            <><XCircle className="w-3.5 h-3.5" /> Pending Approval</>
-                          )}
-                        </button>
-                      )}
+                      {new Date(user.createdAt).toLocaleDateString()}
                     </td>
                   </tr>
                 ))
@@ -189,6 +217,40 @@ export default function AdminDashboard() {
           </table>
         </div>
       </div>
+
+      {/* Create User Modal */}
+      {showCreateModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+          <div className="bg-white rounded-2xl p-6 w-full max-w-md shadow-xl">
+            <h2 className="text-xl font-bold mb-4">Create Agency Owner</h2>
+            <form onSubmit={handleCreateUser} className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Name</label>
+                <input required type="text" value={newUserName} onChange={e => setNewUserName(e.target.value)} className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-[var(--accent)] outline-none" />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Username</label>
+                <input required type="text" value={newUserUsername} onChange={e => setNewUserUsername(e.target.value)} className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-[var(--accent)] outline-none" />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Email (Optional)</label>
+                <input type="email" value={newUserEmail} onChange={e => setNewUserEmail(e.target.value)} className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-[var(--accent)] outline-none" />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Password</label>
+                <input required type="password" value={newUserPassword} onChange={e => setNewUserPassword(e.target.value)} className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-[var(--accent)] outline-none" />
+              </div>
+              <div className="flex justify-end gap-3 mt-6">
+                <button type="button" onClick={() => setShowCreateModal(false)} className="px-4 py-2 border rounded-lg hover:bg-gray-50">Cancel</button>
+                <button type="submit" disabled={creatingUser} className="px-4 py-2 bg-[var(--accent)] text-white rounded-lg hover:bg-indigo-700 flex items-center gap-2">
+                  {creatingUser && <Loader2 className="w-4 h-4 animate-spin" />}
+                  Create User
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

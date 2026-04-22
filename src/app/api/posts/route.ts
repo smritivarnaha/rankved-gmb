@@ -1,7 +1,7 @@
 import { NextResponse, NextRequest } from "next/server";
 import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/lib/auth";
-import { getAllPosts, createPost, deletePost } from "@/lib/post-store";
+import { getAllPosts, getPostsByProfile, createPost, deletePost } from "@/lib/post-store";
 import { publishToGBP } from "@/lib/gbp-publisher";
 import prisma from "@/lib/prisma";
 
@@ -13,12 +13,17 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: "Your account is pending approval by rankved.business@gmail.com." }, { status: 403 });
   }
 
+  const userId = (session as any).user.id;
+  const role = (session as any).user.role;
+
   const { searchParams } = new URL(req.url);
   const profileId = searchParams.get("profileId");
 
-  let posts = await getAllPosts();
+  let posts = [];
   if (profileId) {
-    posts = posts.filter((p) => p.profileId === profileId);
+    posts = await getPostsByProfile(profileId, userId, role);
+  } else {
+    posts = await getAllPosts(userId, role);
   }
 
   return NextResponse.json({ data: posts });

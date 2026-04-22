@@ -48,24 +48,49 @@ function locationToProfile(loc: any): ProfileData {
   };
 }
 
-export async function getAllProfiles(): Promise<ProfileData[]> {
-  const locations = await prisma.location.findMany({
-    orderBy: { createdAt: "desc" },
-  });
-  return locations.map(locationToProfile);
+export async function getAllProfiles(userId: string, role: string): Promise<ProfileData[]> {
+  if (role === "SUPER_ADMIN") {
+    const locations = await prisma.location.findMany({ orderBy: { createdAt: "desc" } });
+    return locations.map(locationToProfile);
+  } else if (role === "AGENCY_OWNER") {
+    // Agency Owner sees profiles associated with their default Client
+    const client = await prisma.client.findFirst({ where: { userId } });
+    if (!client) return [];
+    const locations = await prisma.location.findMany({
+      where: { clientId: client.id },
+      orderBy: { createdAt: "desc" },
+    });
+    return locations.map(locationToProfile);
+  } else {
+    // Team Member sees only profiles explicitly assigned to them
+    const locations = await prisma.location.findMany({
+      where: { assignedUsers: { some: { id: userId } } },
+      orderBy: { createdAt: "desc" },
+    });
+    return locations.map(locationToProfile);
+  }
 }
 
-export async function getProfileById(id: string): Promise<ProfileData | undefined> {
-  const loc = await prisma.location.findUnique({ where: { id } });
-  return loc ? locationToProfile(loc) : undefined;
+export async function getProfileById(id: string, userId: string, role: string): Promise<ProfileData | undefined> {
+  const loc = await prisma.location.findUnique({ 
+    where: { id },
+    include: { client: true, assignedUsers: true }
+  });
+  if (!loc) return undefined;
+
+  if (role === "SUPER_ADMIN") return locationToProfile(loc);
+  if (role === "AGENCY_OWNER" && loc.client.userId === userId) return locationToProfile(loc);
+  if (role === "TEAM_MEMBER" && loc.assignedUsers.some(u => u.id === userId)) return locationToProfile(loc);
+
+  return undefined;
 }
 
 export async function saveProfiles(profiles: ProfileData[], userId: string): Promise<void> {
   const clientId = await ensureDefaultClient(userId);
 
-  // Delete all existing locations for this client and re-insert fresh from Google
-  await prisma.location.deleteMany({ where: { clientId } });
-
+  // We DO NOT delete existing locations here because it would wipe assignments for Team Members!
+  // Instead we just upsert the ones we found.
+  
   for (const p of profiles) {
     await prisma.location.upsert({
       where: { gbpAccountId_gbpLocationId: { gbpAccountId: p.accountId, gbpLocationId: p.googleName } },

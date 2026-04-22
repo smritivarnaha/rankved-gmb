@@ -30,10 +30,13 @@ export async function GET(req: NextRequest) {
   const session = await getServerSession(authOptions);
   if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   if (!(session as any).user.isApproved) {
-    return NextResponse.json({ error: "Your account is pending approval by rankved.business@gmail.com." }, { status: 403 });
+    return NextResponse.json({ error: "Your account is pending approval." }, { status: 403 });
   }
 
-  const profiles = await getAllProfiles();
+  const userId = (session as any).user.id;
+  const role = (session as any).user.role;
+
+  const profiles = await getAllProfiles(userId, role);
   return NextResponse.json({ data: profiles });
 }
 

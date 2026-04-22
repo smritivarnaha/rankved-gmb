@@ -5,7 +5,7 @@ import "./globals.css";
 export const metadata: Metadata = {
   title: "Rankved | GMB Manager",
   description: "Manage, schedule, and publish Google Business Profile posts across all your clients from one beautiful dashboard.",
-  icons: { icon: "/logo.png" },
+  icons: { icon: "/rankved-logo.png" },
 };
 
 export default function RootLayout({
