@@ -41,7 +41,7 @@ export function Topbar() {
       <div className="flex items-center flex-1 gap-4">
         {/* Mobile logo */}
         <div className="md:hidden flex items-center gap-2">
-          <Image src="/rankved-logo.png" alt="RankVed" width={100} height={30} className="object-contain" priority />
+          <Image src="/logo.png" alt="RankVed" width={100} height={30} className="object-contain" priority />
         </div>
 
         {/* Search */}

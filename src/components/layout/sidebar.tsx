@@ -63,7 +63,7 @@ export function Sidebar() {
         
         {/* Product header */}
         <div className="h-[70px] flex items-center justify-center border-b border-[var(--border-light)]">
-          <Image src="/rankved-logo.png" alt="RankVed" width={140} height={40} className="object-contain" priority />
+          <Image src="/logo.png" alt="RankVed" width={110} height={36} className="object-contain" priority />
         </div>
 
         {/* Nav items */}
