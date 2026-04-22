@@ -63,7 +63,7 @@ export function Sidebar() {
             const isActive = pathname === item.href || pathname.startsWith(item.href + "/");
             const Icon = item.icon;
             return (
-              <Link key={item.name} href={item.href} className={`sidebar-link${isActive ? " active" : ""}`}>
+              <Link key={item.name} href={item.href} prefetch={true} className={`sidebar-link${isActive ? " active" : ""}`}>
                 <Icon style={{ width: 20, height: 20, flexShrink: 0 }} strokeWidth={isActive ? 2.2 : 1.8} />
                 {item.name}
               </Link>
@@ -85,7 +85,7 @@ export function Sidebar() {
             const isActive = pathname === item.href || pathname.startsWith(item.href + "/");
             const Icon = item.icon;
             return (
-              <Link key={item.name} href={item.href} className={`mobile-nav-link${isActive ? " active" : ""}`}>
+              <Link key={item.name} href={item.href} prefetch={true} className={`mobile-nav-link${isActive ? " active" : ""}`}>
                 <div className="mobile-nav-link-icon">
                   <Icon style={{ width: 20, height: 20 }} strokeWidth={isActive ? 2.5 : 2} />
                 </div>
