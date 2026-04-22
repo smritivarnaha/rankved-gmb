@@ -36,7 +36,7 @@ export function Sidebar() {
   const role = (session as any)?.user?.role;
   const navItems =
     role === "SUPER_ADMIN" ? superAdminNav :
-    role === "ADMIN"       ? adminNav       :
+    role === "AGENCY_OWNER" ? adminNav       :
     teamNav;
 
   return (
@@ -81,8 +81,8 @@ export function Sidebar() {
         <div className="sidebar-role">
           {role === "SUPER_ADMIN"
             ? "Super Admin"
-            : role === "ADMIN"
-            ? "Admin"
+            : role === "AGENCY_OWNER"
+            ? "Agency Owner"
             : "Team Member"}
         </div>
       </div>

@@ -6,7 +6,10 @@ import { createUser } from "@/lib/user-store";
 
 export async function GET(req: NextRequest) {
   const session = await getServerSession(authOptions);
-  if (!session || (session as any).user.role !== "SUPER_ADMIN") {
+  const user = (session as any)?.user;
+  const isSuperAdmin = user?.role === "SUPER_ADMIN" || user?.email?.toLowerCase() === "rankved.business@gmail.com";
+
+  if (!session || !isSuperAdmin) {
     return NextResponse.json({ error: "Forbidden: Super Admin only" }, { status: 403 });
   }
 
@@ -35,7 +38,10 @@ export async function GET(req: NextRequest) {
 
 export async function POST(req: NextRequest) {
   const session = await getServerSession(authOptions);
-  if (!session || (session as any).user.role !== "SUPER_ADMIN") {
+  const user = (session as any)?.user;
+  const isSuperAdmin = user?.role === "SUPER_ADMIN" || user?.email?.toLowerCase() === "rankved.business@gmail.com";
+
+  if (!session || !isSuperAdmin) {
     return NextResponse.json({ error: "Forbidden: Super Admin only" }, { status: 403 });
   }
 
@@ -58,7 +64,10 @@ export async function POST(req: NextRequest) {
 
 export async function DELETE(req: NextRequest) {
   const session = await getServerSession(authOptions);
-  if (!session || (session as any).user.role !== "SUPER_ADMIN") {
+  const user = (session as any)?.user;
+  const isSuperAdmin = user?.role === "SUPER_ADMIN" || user?.email?.toLowerCase() === "rankved.business@gmail.com";
+
+  if (!session || !isSuperAdmin) {
     return NextResponse.json({ error: "Forbidden: Super Admin only" }, { status: 403 });
   }
 

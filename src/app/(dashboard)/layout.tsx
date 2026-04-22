@@ -3,10 +3,25 @@ import { Topbar } from "@/components/layout/topbar";
 import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/lib/auth";
 import { ShieldAlert } from "lucide-react";
+import prisma from "@/lib/prisma";
 
 export default async function DashboardLayout({ children }: { children: React.ReactNode }) {
   const session = await getServerSession(authOptions);
-  const user = (session as any)?.user;
+  let user = (session as any)?.user;
+  
+  // If not approved or role missing, try to refresh from DB to handle stale sessions
+  if (user && (!user.isApproved || !user.role)) {
+    const dbUser = await prisma.user.findUnique({ where: { id: user.id } });
+    if (dbUser) {
+      // Create a merged user object with fresh DB data
+      user = {
+        ...user,
+        isApproved: dbUser.isApproved || dbUser.email?.toLowerCase() === "rankved.business@gmail.com",
+        role: dbUser.email?.toLowerCase() === "rankved.business@gmail.com" ? "SUPER_ADMIN" : dbUser.role,
+      };
+    }
+  }
+
   const isApproved = user?.isApproved;
   const role = user?.role;
   const hasAccess = isApproved || role === "SUPER_ADMIN";
