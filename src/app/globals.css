@@ -7,56 +7,56 @@
 
 :root {
   /* ── Backgrounds ── */
-  --bg-body: #f8f9fa;        /* Google light gray background */
+  --bg-body: #f8fafc;        /* Soft blue-gray */
   --bg-card: #ffffff;
   --bg-sidebar: #ffffff;
-  --bg-elevated: #f1f3f4;
+  --bg-elevated: #f1f5f9;
   --bg-input: #ffffff;
-  --bg-hover: #f1f3f4;       /* Google hover gray */
-  --bg-active: #e8f0fe;      /* Google active blue-gray */
+  --bg-hover: #f1f5f9;
+  --bg-active: #eff6ff;
 
   /* ── Text ── */
-  --text-primary: #202124;   /* Google primary text */
-  --text-secondary: #5f6368; /* Google secondary text */
-  --text-muted: #70757a;
+  --text-primary: #0f172a;
+  --text-secondary: #475569;
+  --text-muted: #94a3b8;
   --text-white: #ffffff;
 
-  /* ── Accent (Google Blue) ── */
-  --accent: #1a73e8;
-  --accent-hover: #1557b0;
-  --accent-light: #e8f0fe;
-  --accent-glow: rgba(26, 115, 232, 0.2);
-  --accent-gradient: #1a73e8; /* Solid, no gradient */
+  /* ── Accent ── */
+  --accent: #2563eb;
+  --accent-hover: #1d4ed8;
+  --accent-light: #dbeafe;
+  --accent-glow: rgba(37, 99, 235, 0.2);
+  --accent-gradient: #2563eb;
 
   /* ── Status ── */
-  --success: #1e8e3e;
-  --success-bg: #e6f4ea;
-  --success-border: #ceead6;
-  --warning: #f29900;
-  --warning-bg: #fef7e0;
-  --warning-border: #feefc3;
-  --error: #d93025;
-  --error-bg: #fce8e6;
-  --error-border: #fad2cf;
-  --info: #1a73e8;
-  --info-bg: #e8f0fe;
-  --info-border: #d2e3fc;
+  --success: #16a34a;
+  --success-bg: #dcfce7;
+  --success-border: #bbf7d0;
+  --warning: #eab308;
+  --warning-bg: #fef9c3;
+  --warning-border: #fef08a;
+  --error: #dc2626;
+  --error-bg: #fee2e2;
+  --error-border: #fecaca;
+  --info: #2563eb;
+  --info-bg: #eff6ff;
+  --info-border: #bfdbfe;
 
   /* ── Borders & Shadows ── */
-  --border: #dadce0;         /* Google border color */
-  --border-light: #e8eaed;
+  --border: #e2e8f0;
+  --border-light: #f1f5f9;
   --shadow-xs: none;
-  --shadow-sm: 0 1px 2px 0 rgba(60,64,67,0.3), 0 1px 3px 1px rgba(60,64,67,0.15); /* Google Card Shadow */
-  --shadow-md: 0 1px 3px 0 rgba(60,64,67,0.3), 0 4px 8px 3px rgba(60,64,67,0.15); /* Google Modal Shadow */
-  --shadow-lg: 0 4px 6px 0 rgba(60,64,67,0.3), 0 8px 12px 6px rgba(60,64,67,0.15);
+  --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+  --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+  --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
   --shadow-accent: none;
 
   /* ── Radii (Corporate/Flat) ── */
-  --radius-sm: 4px;
-  --radius-md: 8px;
-  --radius-lg: 8px;
-  --radius-xl: 8px;
-  --radius-2xl: 8px;
+  --radius-sm: 6px;
+  --radius-md: 12px;
+  --radius-lg: 16px;
+  --radius-xl: 20px;
+  --radius-2xl: 24px;
   --radius-full: 9999px;     /* Only for avatars and pills */
 
   /* ── Layout ── */
@@ -68,7 +68,7 @@
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 html { font-size: 14px; scroll-behavior: smooth; }
 body {
-  font-family: 'Roboto', 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
   color: var(--text-primary);
   background: var(--bg-body);
   line-height: 1.5;
@@ -76,9 +76,9 @@ body {
   -moz-osx-font-smoothing: grayscale;
 }
 h1, h2, h3, h4, h5, h6 {
-  font-family: 'Roboto', sans-serif;
-  font-weight: 500;
-  letter-spacing: 0;
+  font-family: 'Inter', sans-serif;
+  font-weight: 600;
+  letter-spacing: -0.025em;
   line-height: 1.25;
 }
 a { color: inherit; text-decoration: none; }
