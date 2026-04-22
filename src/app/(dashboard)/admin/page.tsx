@@ -68,7 +68,6 @@ export default function AdminDashboard() {
       setNewUserEmail("");
       setNewUserPassword("");
     } catch (err: any) {
-    } catch (err: any) {
       alert(err.message);
     } finally {
       setCreatingUser(false);
@@ -202,7 +201,7 @@ export default function AdminDashboard() {
             <tbody className="divide-y divide-[var(--border-light)]">
               {filteredUsers.length === 0 ? (
                 <tr>
-                  <td colSpan={4} className="px-6 py-12 text-center text-sm text-[var(--text-tertiary)]">
+                  <td colSpan={5} className="px-6 py-12 text-center text-sm text-[var(--text-tertiary)]">
                     No users found
                   </td>
                 </tr>
