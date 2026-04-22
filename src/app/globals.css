@@ -677,8 +677,10 @@ tr:hover td { background: var(--bg-hover); }
 .absolute { position: absolute; }
 .sticky { position: sticky; }
 .top-0 { top: 0; }
+.top-2 { top: 8px; }
 .left-0 { left: 0; }
 .right-0 { right: 0; }
+.right-2 { right: 8px; }
 .top-1\/2 { top: 50%; }
 .-translate-y-1\/2 { transform: translateY(-50%); }
 
