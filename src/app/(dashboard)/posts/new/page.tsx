@@ -10,16 +10,24 @@ export default function NewPostPage() {
   const [sharedDate, setSharedDate] = useState("");
 
   return (
-    <div className="space-y-5 max-w-[900px] mx-auto">
-      <div>
-        <Link href="/posts" className="inline-flex items-center gap-1.5 text-[13px] text-[var(--text-tertiary)] hover:text-[var(--text-primary)] mb-3 transition-colors">
-          <ArrowLeft className="w-3.5 h-3.5" /> Back to posts
+    <div style={{ maxWidth: 980, margin: "0 auto" }}>
+      {/* Header */}
+      <div style={{ marginBottom: 20 }}>
+        <Link
+          href="/posts"
+          style={{ display: "inline-flex", alignItems: "center", gap: 6, fontSize: 13, color: "#5f6368", marginBottom: 10 }}
+        >
+          <ArrowLeft style={{ width: 15, height: 15 }} />
+          Back to posts
         </Link>
-        <h1 className="text-[20px] font-semibold text-[var(--text-primary)]">Create post</h1>
-        <p className="text-[13px] text-[var(--text-secondary)] mt-0.5">Compose a new update for a Google Business Profile.</p>
+        <h1 style={{ fontSize: 24, fontWeight: 400, color: "#202124", marginBottom: 4 }}>Create post</h1>
+        <p style={{ fontSize: 14, color: "#5f6368" }}>Compose a new update for a Google Business Profile.</p>
       </div>
 
+      {/* Timeline */}
       <PostTimeline onDateSelect={setSharedDate} selectedDate={sharedDate} />
+
+      {/* Editor */}
       <PostEditor timelineDate={sharedDate} onDateChange={setSharedDate} />
     </div>
   );
