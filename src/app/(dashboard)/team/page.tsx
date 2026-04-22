@@ -13,155 +13,119 @@ export default function TeamPage() {
   const [saving, setSaving] = useState(false);
   const [form, setForm] = useState({ name: "", email: "", password: "", role: "TEAM" });
 
-  const fetchMembers = async () => {
-    setLoading(true);
-    const res = await fetch("/api/team");
-    if (res.ok) {
-      const data = await res.json();
-      setMembers(data.data || []);
-    }
-    setLoading(false);
-  };
-
+  const fetchMembers = async () => { setLoading(true); const res = await fetch("/api/team"); if (res.ok) { const data = await res.json(); setMembers(data.data || []); } setLoading(false); };
   useEffect(() => { fetchMembers(); }, []);
 
   const handleAdd = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setSaving(true);
-    const res = await fetch("/api/team", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(form),
-    });
-    if (res.ok) {
-      setForm({ name: "", email: "", password: "", role: "TEAM" });
-      setShowForm(false);
-      fetchMembers();
-    } else {
-      const data = await res.json();
-      alert(data.error);
-    }
+    e.preventDefault(); setSaving(true);
+    const res = await fetch("/api/team", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(form) });
+    if (res.ok) { setForm({ name: "", email: "", password: "", role: "TEAM" }); setShowForm(false); fetchMembers(); } else { const data = await res.json(); alert(data.error); }
     setSaving(false);
   };
 
-  const handleDelete = async (id: string, name: string) => {
-    if (!confirm(`Remove ${name} from the team?`)) return;
-    await fetch(`/api/team?id=${id}`, { method: "DELETE" });
-    fetchMembers();
-  };
+  const handleDelete = async (id: string, name: string) => { if (!confirm(`Remove ${name} from the team?`)) return; await fetch(`/api/team?id=${id}`, { method: "DELETE" }); fetchMembers(); };
 
   if (!isAdmin) {
     return (
-      <div className="text-center py-20">
-        <Shield className="w-10 h-10 text-[var(--border)] mx-auto mb-3" />
-        <h2 className="text-[16px] font-semibold text-[var(--text-primary)] mb-1">Admin only</h2>
-        <p className="text-[13px] text-[var(--text-tertiary)]">You don't have permission to manage team members.</p>
+      <div className="empty-state" style={{ padding: "80px 24px" }}>
+        <div className="empty-icon"><Shield style={{ width: 28, height: 28 }} /></div>
+        <h3 className="empty-title">Admin only</h3>
+        <p className="empty-text">You don&apos;t have permission to manage team members.</p>
       </div>
     );
   }
 
   return (
-    <div className="space-y-6">
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+    <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
+      <div className="page-header">
         <div>
-          <h1 className="text-[20px] font-semibold text-[var(--text-primary)]">Team</h1>
-          <p className="text-[13px] text-[var(--text-secondary)] mt-0.5">Manage who can create and schedule posts.</p>
+          <h1 className="page-title">Team</h1>
+          <p className="page-subtitle">Manage who can create and schedule posts.</p>
         </div>
-        <button onClick={() => setShowForm(!showForm)}
-          className="inline-flex items-center gap-2 px-3.5 py-2 bg-[var(--accent)] hover:bg-[var(--accent-hover)] text-white text-[13px] font-medium rounded-lg transition-colors">
-          {showForm ? <X className="w-4 h-4" /> : <Plus className="w-4 h-4" />}
+        <button onClick={() => setShowForm(!showForm)} className="btn btn-primary btn-sm">
+          {showForm ? <X style={{ width: 16, height: 16 }} /> : <Plus style={{ width: 16, height: 16 }} />}
           {showForm ? "Cancel" : "Add member"}
         </button>
       </div>
 
       {showForm && (
-        <div className="bg-white border border-[var(--border)] rounded-lg p-6">
-          <h3 className="text-[14px] font-semibold text-[var(--text-primary)] mb-4">New team member</h3>
-          <form onSubmit={handleAdd} className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="card" style={{ padding: 24 }}>
+          <h3 style={{ fontSize: 14, fontWeight: 600, marginBottom: 16 }}>New team member</h3>
+          <form onSubmit={handleAdd} style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
             <div>
-              <label className="block text-[12px] font-medium text-[var(--text-secondary)] mb-1">Full name</label>
-              <input type="text" required value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })}
-                className="w-full border border-[var(--border)] rounded-lg py-2.5 px-3 text-[14px] focus:outline-none focus:ring-2 focus:ring-[var(--accent)] focus:border-transparent" placeholder="John Doe" />
+              <label className="label">Full name</label>
+              <input className="input" type="text" required value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder="John Doe" />
             </div>
             <div>
-              <label className="block text-[12px] font-medium text-[var(--text-secondary)] mb-1">Email</label>
-              <input type="email" required value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })}
-                className="w-full border border-[var(--border)] rounded-lg py-2.5 px-3 text-[14px] focus:outline-none focus:ring-2 focus:ring-[var(--accent)] focus:border-transparent" placeholder="john@company.com" />
+              <label className="label">Email</label>
+              <input className="input" type="email" required value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} placeholder="john@company.com" />
             </div>
             <div>
-              <label className="block text-[12px] font-medium text-[var(--text-secondary)] mb-1">Password</label>
-              <input type="text" required value={form.password} onChange={(e) => setForm({ ...form, password: e.target.value })}
-                className="w-full border border-[var(--border)] rounded-lg py-2.5 px-3 text-[14px] focus:outline-none focus:ring-2 focus:ring-[var(--accent)] focus:border-transparent" placeholder="Set a password" />
+              <label className="label">Password</label>
+              <input className="input" type="text" required value={form.password} onChange={(e) => setForm({ ...form, password: e.target.value })} placeholder="Set a password" />
             </div>
             <div>
-              <label className="block text-[12px] font-medium text-[var(--text-secondary)] mb-1">Role</label>
-              <select value={form.role} onChange={(e) => setForm({ ...form, role: e.target.value })}
-                className="w-full border border-[var(--border)] rounded-lg py-2.5 px-3 text-[14px] bg-white focus:outline-none focus:ring-2 focus:ring-[var(--accent)] focus:border-transparent">
+              <label className="label">Role</label>
+              <select className="input" value={form.role} onChange={(e) => setForm({ ...form, role: e.target.value })} style={{ background: "var(--bg-card)" }}>
                 <option value="TEAM">Team member (posts only)</option>
                 <option value="ADMIN">Admin (full access)</option>
               </select>
             </div>
-            <div className="md:col-span-2 flex justify-end">
-              <button type="submit" disabled={saving}
-                className="px-4 py-2 bg-[var(--accent)] hover:bg-[var(--accent-hover)] disabled:opacity-50 text-white text-[13px] font-medium rounded-lg transition-colors flex items-center gap-2">
-                {saving ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Plus className="w-3.5 h-3.5" />} Add member
+            <div style={{ gridColumn: "1 / -1", display: "flex", justifyContent: "flex-end" }}>
+              <button type="submit" disabled={saving} className="btn btn-primary btn-sm">
+                {saving ? <Loader2 className="anim-spin" style={{ width: 14, height: 14 }} /> : <Plus style={{ width: 14, height: 14 }} />} Add member
               </button>
             </div>
           </form>
         </div>
       )}
 
-      <div className="bg-white border border-[var(--border)] rounded-lg overflow-hidden">
+      <div className="card" style={{ overflow: "hidden" }}>
         {loading ? (
-          <div className="py-16 flex justify-center"><Loader2 className="w-5 h-5 text-[var(--text-tertiary)] animate-spin" /></div>
+          <div style={{ padding: "60px 0", display: "flex", justifyContent: "center" }}><Loader2 className="anim-spin" style={{ width: 20, height: 20, color: "var(--text-muted)" }} /></div>
         ) : members.length === 0 ? (
-          <div className="py-16 text-center">
-            <Users className="w-8 h-8 text-[var(--border)] mx-auto mb-2" />
-            <p className="text-[13px] text-[var(--text-tertiary)]">No team members yet.</p>
+          <div className="empty-state">
+            <div className="empty-icon"><Users style={{ width: 28, height: 28 }} /></div>
+            <p className="empty-text">No team members yet.</p>
           </div>
         ) : (
-          <table className="w-full text-[13px]">
-            <thead>
-              <tr className="border-b border-[var(--border)] bg-[var(--bg-secondary)] text-[11px] text-[var(--text-tertiary)] uppercase tracking-wide text-left">
-                <th className="px-5 py-2.5 font-medium">Member</th>
-                <th className="px-5 py-2.5 font-medium">Email</th>
-                <th className="px-5 py-2.5 font-medium">Role</th>
-                <th className="px-5 py-2.5 font-medium hidden sm:table-cell">Added</th>
-                <th className="px-5 py-2.5 font-medium text-right"></th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-[var(--border-light)]">
-              {members.map((m) => (
-                <tr key={m.id} className="hover:bg-[var(--bg-secondary)] transition-colors">
-                  <td className="px-5 py-3.5">
-                    <div className="flex items-center gap-3">
-                      <div className="w-8 h-8 rounded-full bg-[var(--bg-tertiary)] flex items-center justify-center text-[12px] font-semibold text-[var(--text-secondary)]">
-                        {m.name.charAt(0).toUpperCase()}
-                      </div>
-                      <span className="font-medium text-[var(--text-primary)]">{m.name}</span>
-                    </div>
-                  </td>
-                  <td className="px-5 py-3.5 text-[var(--text-secondary)]">{m.email}</td>
-                  <td className="px-5 py-3.5">
-                    <span className={`text-[11px] font-medium px-2 py-0.5 rounded-full ${
-                      m.role === "ADMIN" ? "text-[var(--accent)] bg-[var(--accent-light)]" : "text-[var(--text-tertiary)] bg-[var(--bg-tertiary)]"
-                    }`}>{m.role === "ADMIN" ? "Admin" : "Team"}</span>
-                  </td>
-                  <td className="px-5 py-3.5 text-[12px] text-[var(--text-tertiary)] hidden sm:table-cell">
-                    {new Date(m.createdAt).toLocaleDateString()}
-                  </td>
-                  <td className="px-5 py-3.5 text-right">
-                    {m.role !== "ADMIN" && (
-                      <button onClick={() => handleDelete(m.id, m.name)}
-                        className="p-1.5 text-[var(--text-tertiary)] hover:text-[var(--error)] hover:bg-[var(--error-bg)] rounded-md transition-colors">
-                        <Trash2 className="w-3.5 h-3.5" />
-                      </button>
-                    )}
-                  </td>
+          <div className="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>Member</th>
+                  <th>Email</th>
+                  <th>Role</th>
+                  <th>Added</th>
+                  <th style={{ width: 60 }}></th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {members.map((m) => (
+                  <tr key={m.id}>
+                    <td>
+                      <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                        <div style={{ width: 32, height: 32, borderRadius: "50%", background: "var(--bg-elevated)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 12, fontWeight: 600, color: "var(--text-secondary)" }}>
+                          {m.name.charAt(0).toUpperCase()}
+                        </div>
+                        <span style={{ fontWeight: 500 }}>{m.name}</span>
+                      </div>
+                    </td>
+                    <td style={{ color: "var(--text-secondary)" }}>{m.email}</td>
+                    <td><span className={`badge ${m.role === "ADMIN" ? "badge-info" : "badge-default"}`}>{m.role === "ADMIN" ? "Admin" : "Team"}</span></td>
+                    <td style={{ color: "var(--text-muted)", fontSize: 12 }}>{new Date(m.createdAt).toLocaleDateString()}</td>
+                    <td style={{ textAlign: "right" }}>
+                      {m.role !== "ADMIN" && (
+                        <button onClick={() => handleDelete(m.id, m.name)} style={{ padding: 6, borderRadius: "var(--radius-sm)", color: "var(--text-muted)", transition: "all 0.12s" }}>
+                          <Trash2 style={{ width: 14, height: 14 }} />
+                        </button>
+                      )}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         )}
       </div>
     </div>

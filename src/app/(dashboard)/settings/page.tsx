@@ -19,107 +19,74 @@ export default function SettingsPage() {
   const [accessRequested, setAccessRequested] = useState(false);
   const [requestSending, setRequestSending] = useState(false);
 
-  const handleGoogleConnect = async () => {
-    setConnecting(true);
-    await signIn("google", { callbackUrl: "/settings" });
-  };
-
+  const handleGoogleConnect = async () => { setConnecting(true); await signIn("google", { callbackUrl: "/settings" }); };
   const hasGoogleToken = !!(session as any)?.accessToken;
 
-  // Load saved profiles
   useEffect(() => {
-    fetch("/api/profiles")
-      .then(r => r.ok ? r.json() : { data: [] })
-      .then(d => setProfiles(d.data || []))
-      .catch(() => {})
-      .finally(() => setLoadingProfiles(false));
+    fetch("/api/profiles").then(r => r.ok ? r.json() : { data: [] }).then(d => setProfiles(d.data || [])).catch(() => {}).finally(() => setLoadingProfiles(false));
   }, []);
 
   const handleFetchProfiles = async () => {
-    setFetching(true);
-    setFetchResult(null);
+    setFetching(true); setFetchResult(null);
     try {
       const res = await fetch("/api/profiles", { method: "POST" });
       const data = await res.json();
-      if (res.ok) {
-        setProfiles(data.data || []);
-        setFetchResult({ success: data.message || `${(data.data || []).length} profiles fetched.` });
-      } else {
-        setFetchResult({ error: data.error || "Failed to fetch profiles." });
-      }
-    } catch {
-      setFetchResult({ error: "Network error. Please try again." });
-    }
+      if (res.ok) { setProfiles(data.data || []); setFetchResult({ success: data.message || `${(data.data || []).length} profiles fetched.` }); }
+      else { setFetchResult({ error: data.error || "Failed to fetch profiles." }); }
+    } catch { setFetchResult({ error: "Network error. Please try again." }); }
     setFetching(false);
   };
 
-  const handleRequestAccess = async () => {
-    setRequestSending(true);
-    // Simulate sending request to admin
-    await new Promise(r => setTimeout(r, 1500));
-    setAccessRequested(true);
-    setRequestSending(false);
-  };
+  const handleRequestAccess = async () => { setRequestSending(true); await new Promise(r => setTimeout(r, 1500)); setAccessRequested(true); setRequestSending(false); };
+
+  const sectionGap = { display: "flex", flexDirection: "column" as const, gap: 20 };
 
   return (
-    <div className="space-y-6 max-w-[700px]">
+    <div style={{ ...sectionGap, maxWidth: 700 }}>
       <div>
-        <h1 className="text-[20px] font-semibold text-[var(--text-primary)]">Settings</h1>
-        <p className="text-[13px] text-[var(--text-secondary)] mt-0.5">Account and integration settings.</p>
+        <h1 className="page-title">Settings</h1>
+        <p className="page-subtitle">Account and integration settings.</p>
       </div>
 
       {/* Account */}
-      <div className="bg-white border border-[var(--border)] rounded-xl shadow-[var(--shadow-sm)]">
-        <div className="px-5 py-4 border-b border-[var(--border-light)]">
-          <h2 className="text-[14px] font-semibold text-[var(--text-primary)]">Account</h2>
-        </div>
-        <div className="p-5 space-y-3 text-[13px]">
-          <div className="flex justify-between items-center">
-            <span className="text-[var(--text-secondary)]">Name</span>
-            <span className="text-[var(--text-primary)] font-medium">{session?.user?.name || "—"}</span>
+      <div className="card">
+        <div className="card-header"><h2 className="card-title" style={{ fontSize: 14 }}>Account</h2></div>
+        <div className="card-body" style={{ display: "flex", flexDirection: "column", gap: 12, fontSize: 13 }}>
+          <div style={{ display: "flex", justifyContent: "space-between" }}>
+            <span style={{ color: "var(--text-secondary)" }}>Name</span>
+            <span style={{ fontWeight: 500 }}>{session?.user?.name || "—"}</span>
           </div>
-          <div className="flex justify-between items-center">
-            <span className="text-[var(--text-secondary)]">Email</span>
-            <span className="text-[var(--text-primary)] font-medium">{session?.user?.email || "—"}</span>
+          <div style={{ display: "flex", justifyContent: "space-between" }}>
+            <span style={{ color: "var(--text-secondary)" }}>Email</span>
+            <span style={{ fontWeight: 500 }}>{session?.user?.email || "—"}</span>
           </div>
-          <div className="flex justify-between items-center">
-            <span className="text-[var(--text-secondary)]">Role</span>
-            <span className={`text-[11px] font-semibold px-2.5 py-1 rounded-full ${
-              isMainAdmin ? "text-[var(--accent)] bg-[var(--accent-light)]" :
-              isAdmin ? "text-[var(--accent)] bg-[var(--accent-light)]" :
-              "text-[var(--text-tertiary)] bg-[var(--bg-tertiary)]"
-            }`}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+            <span style={{ color: "var(--text-secondary)" }}>Role</span>
+            <span className={`badge ${isMainAdmin ? "badge-info" : "badge-default"}`}>
               {isMainAdmin ? "Super Admin" : isAdmin ? "Admin" : "Team"}
             </span>
           </div>
         </div>
       </div>
 
-      {/* Google Integration — Admin only */}
+      {/* Google Integration */}
       {isAdmin && (
-        <div className="bg-white border border-[var(--border)] rounded-xl shadow-[var(--shadow-sm)]">
-          <div className="px-5 py-4 border-b border-[var(--border-light)]">
-            <h2 className="text-[14px] font-semibold text-[var(--text-primary)]">Google Business Profile</h2>
-          </div>
-          <div className="p-5">
+        <div className="card">
+          <div className="card-header"><h2 className="card-title" style={{ fontSize: 14 }}>Google Business Profile</h2></div>
+          <div className="card-body">
             {hasGoogleToken ? (
-              <div className="flex items-center gap-3 p-3.5 bg-[var(--success-bg)] rounded-xl border border-green-100">
-                <CheckCircle2 className="w-5 h-5 text-[var(--success)]" />
+              <div className="badge-success" style={{ padding: "12px 16px", borderRadius: "var(--radius-md)", display: "flex", alignItems: "center", gap: 10, fontSize: 13 }}>
+                <CheckCircle2 style={{ width: 18, height: 18 }} />
                 <div>
-                  <p className="text-[13px] font-semibold text-[var(--success)]">Connected</p>
-                  <p className="text-[11px] text-[var(--text-secondary)] mt-0.5">Google account is linked and active.</p>
+                  <p style={{ fontWeight: 600 }}>Connected</p>
+                  <p style={{ fontSize: 11, opacity: 0.8, marginTop: 2 }}>Google account is linked and active.</p>
                 </div>
               </div>
             ) : (
-              <div className="space-y-3">
-                <p className="text-[13px] text-[var(--text-secondary)]">
-                  Connect your Google account to manage Business Profiles and publish posts.
-                </p>
-                <button onClick={handleGoogleConnect} disabled={connecting}
-                  className="inline-flex items-center gap-2 px-4 py-2.5 bg-[var(--accent)] hover:bg-[var(--accent-hover)] disabled:opacity-50 text-white text-[13px] font-semibold rounded-xl transition-all shadow-[var(--shadow-sm)]">
-                  {connecting ? <Loader2 className="w-4 h-4 animate-spin" /> : (
-                    <svg className="w-4 h-4" viewBox="0 0 24 24"><path fill="currentColor" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92a5.06 5.06 0 01-2.2 3.32v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.1z"/><path fill="currentColor" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/><path fill="currentColor" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/><path fill="currentColor" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/></svg>
-                  )}
+              <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+                <p style={{ fontSize: 13, color: "var(--text-secondary)" }}>Connect your Google account to manage Business Profiles and publish posts.</p>
+                <button onClick={handleGoogleConnect} disabled={connecting} className="btn btn-primary" style={{ alignSelf: "flex-start" }}>
+                  {connecting ? <Loader2 className="anim-spin" style={{ width: 16, height: 16 }} /> : null}
                   Connect Google account
                 </button>
               </div>
@@ -128,110 +95,80 @@ export default function SettingsPage() {
         </div>
       )}
 
-      {/* Fetch Profiles — Admin approval required */}
+      {/* Profiles */}
       {isAdmin && (
-        <div className="bg-white border border-[var(--border)] rounded-xl shadow-[var(--shadow-sm)]">
-          <div className="px-5 py-4 border-b border-[var(--border-light)] flex items-center justify-between">
+        <div className="card">
+          <div className="card-header">
             <div>
-              <h2 className="text-[14px] font-semibold text-[var(--text-primary)]">Profiles</h2>
-              <p className="text-[11px] text-[var(--text-tertiary)] mt-0.5">
+              <h2 className="card-title" style={{ fontSize: 14 }}>Profiles</h2>
+              <p style={{ fontSize: 11, color: "var(--text-muted)", marginTop: 2 }}>
                 {profiles.length > 0 ? `${profiles.length} profiles saved` : "No profiles fetched yet"}
               </p>
             </div>
             {isMainAdmin ? (
-              <button onClick={handleFetchProfiles} disabled={fetching || !hasGoogleToken}
-                className="inline-flex items-center gap-2 px-3.5 py-2 bg-[var(--accent)] hover:bg-[var(--accent-hover)] disabled:opacity-50 text-white text-[13px] font-semibold rounded-xl transition-all shadow-[var(--shadow-sm)]">
-                {fetching ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <RefreshCw className="w-3.5 h-3.5" />}
+              <button onClick={handleFetchProfiles} disabled={fetching || !hasGoogleToken} className="btn btn-primary btn-sm">
+                {fetching ? <Loader2 className="anim-spin" style={{ width: 14, height: 14 }} /> : <RefreshCw style={{ width: 14, height: 14 }} />}
                 {fetching ? "Fetching..." : "Fetch profiles"}
               </button>
             ) : accessRequested ? (
-              <div className="inline-flex items-center gap-2 px-3.5 py-2 bg-[var(--warning-bg)] text-[var(--warning)] text-[12px] font-semibold rounded-xl border border-amber-100">
-                <Clock className="w-3.5 h-3.5" />
-                Request pending
-              </div>
+              <span className="badge badge-warning"><Clock style={{ width: 14, height: 14 }} /> Request pending</span>
             ) : (
-              <button onClick={handleRequestAccess} disabled={requestSending}
-                className="inline-flex items-center gap-2 px-3.5 py-2 bg-amber-50 hover:bg-amber-100 text-amber-700 text-[13px] font-semibold rounded-xl transition-all border border-amber-200 disabled:opacity-50">
-                {requestSending ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Send className="w-3.5 h-3.5" />}
+              <button onClick={handleRequestAccess} disabled={requestSending} className="btn btn-sm" style={{ background: "var(--warning-bg)", color: "var(--warning)", border: "1px solid var(--warning-border)" }}>
+                {requestSending ? <Loader2 className="anim-spin" style={{ width: 14, height: 14 }} /> : <Send style={{ width: 14, height: 14 }} />}
                 {requestSending ? "Sending..." : "Request access"}
               </button>
             )}
           </div>
-
-          <div className="p-5">
-            {/* Admin approval notice */}
+          <div className="card-body">
             {!isMainAdmin && (
-              <div className="flex items-start gap-3 p-3.5 bg-amber-50 border border-amber-100 rounded-xl mb-4">
-                <Shield className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
+              <div style={{ display: "flex", alignItems: "flex-start", gap: 10, padding: "12px 16px", background: "var(--warning-bg)", border: "1px solid var(--warning-border)", borderRadius: "var(--radius-md)", marginBottom: 16, fontSize: 12 }}>
+                <Shield style={{ width: 16, height: 16, color: "var(--warning)", flexShrink: 0, marginTop: 1 }} />
                 <div>
-                  <p className="text-[12px] font-semibold text-amber-800 mb-0.5">Admin approval required</p>
-                  <p className="text-[11px] text-amber-700 leading-relaxed">
-                    Profile fetching and management features require approval from the admin 
-                    (rankved.business@gmail.com). Submit a request and wait for approval to access these features.
-                  </p>
+                  <p style={{ fontWeight: 600, color: "var(--text-primary)", marginBottom: 2 }}>Admin approval required</p>
+                  <p style={{ color: "var(--text-secondary)", lineHeight: 1.6 }}>Profile fetching requires approval from the admin (rankved.business@gmail.com).</p>
                 </div>
               </div>
             )}
-
-            {/* Result message */}
             {fetchResult && (
-              <div className={`p-3 rounded-xl mb-4 flex items-start gap-2 ${
-                fetchResult.success ? "bg-[var(--success-bg)] border border-green-100" : "bg-[var(--error-bg)] border border-red-100"
-              }`}>
-                {fetchResult.success ? (
-                  <CheckCircle2 className="w-4 h-4 text-[var(--success)] shrink-0 mt-0.5" />
-                ) : (
-                  <AlertCircle className="w-4 h-4 text-[var(--error)] shrink-0 mt-0.5" />
-                )}
-                <p className={`text-[12px] ${fetchResult.success ? "text-[var(--success)]" : "text-[var(--error)]"}`}>
-                  {fetchResult.success || fetchResult.error}
-                </p>
+              <div style={{ padding: "10px 14px", borderRadius: "var(--radius-md)", marginBottom: 16, display: "flex", alignItems: "flex-start", gap: 8, fontSize: 12, background: fetchResult.success ? "var(--success-bg)" : "var(--error-bg)", border: `1px solid ${fetchResult.success ? "var(--success-border)" : "var(--error-border)"}`, color: fetchResult.success ? "var(--success)" : "var(--error)" }}>
+                {fetchResult.success ? <CheckCircle2 style={{ width: 16, height: 16, flexShrink: 0 }} /> : <AlertCircle style={{ width: 16, height: 16, flexShrink: 0 }} />}
+                {fetchResult.success || fetchResult.error}
               </div>
             )}
-
-            {!hasGoogleToken && isMainAdmin && (
-              <p className="text-[12px] text-[var(--text-tertiary)]">Connect your Google account first to fetch profiles.</p>
-            )}
-
+            {!hasGoogleToken && isMainAdmin && <p style={{ fontSize: 12, color: "var(--text-muted)" }}>Connect your Google account first to fetch profiles.</p>}
             {loadingProfiles ? (
-              <div className="py-6 flex justify-center"><Loader2 className="w-4 h-4 text-[var(--text-tertiary)] animate-spin" /></div>
+              <div style={{ padding: "24px 0", display: "flex", justifyContent: "center" }}><Loader2 className="anim-spin" style={{ width: 16, height: 16, color: "var(--text-muted)" }} /></div>
             ) : profiles.length > 0 ? (
-              <div className="divide-y divide-[var(--border-light)]">
+              <div>
                 {profiles.map((p) => (
-                  <div key={p.id} className="py-3 flex items-start gap-3">
-                    <div className="w-8 h-8 rounded-lg bg-[var(--bg-secondary)] flex items-center justify-center shrink-0">
-                      <MapPin className="w-4 h-4 text-[var(--text-tertiary)]" />
+                  <div key={p.id} style={{ padding: "12px 0", borderBottom: "1px solid var(--border-light)", display: "flex", alignItems: "flex-start", gap: 10 }}>
+                    <div style={{ width: 32, height: 32, borderRadius: "var(--radius-sm)", background: "var(--bg-elevated)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                      <MapPin style={{ width: 16, height: 16, color: "var(--text-muted)" }} />
                     </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-[13px] font-medium text-[var(--text-primary)]">{p.name}</p>
-                      <p className="text-[11px] text-[var(--text-tertiary)] mt-0.5">{p.accountName}</p>
-                      {p.address && <p className="text-[11px] text-[var(--text-tertiary)] truncate">{p.address}</p>}
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <p style={{ fontSize: 13, fontWeight: 500 }}>{p.name}</p>
+                      <p style={{ fontSize: 11, color: "var(--text-muted)", marginTop: 2 }}>{p.accountName}</p>
+                      {p.address && <p style={{ fontSize: 11, color: "var(--text-muted)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{p.address}</p>}
                     </div>
-                    <div className="text-right shrink-0">
-                      {p.phone && <p className="text-[11px] text-[var(--text-secondary)]">{p.phone}</p>}
-                    </div>
+                    {p.phone && <p style={{ fontSize: 11, color: "var(--text-secondary)", flexShrink: 0 }}>{p.phone}</p>}
                   </div>
                 ))}
               </div>
             ) : hasGoogleToken && isMainAdmin ? (
-              <p className="text-[12px] text-[var(--text-tertiary)] py-4 text-center">Click &quot;Fetch profiles&quot; to pull your Google Business Profiles.</p>
+              <p style={{ fontSize: 12, color: "var(--text-muted)", textAlign: "center", padding: "16px 0" }}>Click &quot;Fetch profiles&quot; to pull your Google Business Profiles.</p>
             ) : null}
           </div>
         </div>
       )}
 
-      {/* API Info */}
+      {/* API Quota */}
       {isMainAdmin && (
-        <div className="bg-white border border-[var(--border)] rounded-xl shadow-[var(--shadow-sm)]">
-          <div className="px-5 py-4 border-b border-[var(--border-light)]">
-            <h2 className="text-[14px] font-semibold text-[var(--text-primary)]">API Quota</h2>
-          </div>
-          <div className="p-5 text-[13px] text-[var(--text-secondary)] space-y-2">
+        <div className="card">
+          <div className="card-header"><h2 className="card-title" style={{ fontSize: 14 }}>API Quota</h2></div>
+          <div className="card-body" style={{ fontSize: 13, color: "var(--text-secondary)", display: "flex", flexDirection: "column", gap: 8 }}>
             <p>Google Business Profile API requires quota approval for your Cloud project.</p>
-            <a href="https://docs.google.com/forms/d/e/1FAIpQLSfME4CQiNAKZPFsnwwlBSLIH-CHtpXBz1daKQbIpqJj63Y-UQ/viewform"
-              target="_blank"
-              className="inline-flex items-center gap-1.5 text-[var(--accent)] hover:underline text-[13px] font-medium">
-              <ExternalLink className="w-3.5 h-3.5" /> Submit GBP API access request
+            <a href="https://docs.google.com/forms/d/e/1FAIpQLSfME4CQiNAKZPFsnwwlBSLIH-CHtpXBz1daKQbIpqJj63Y-UQ/viewform" target="_blank" style={{ display: "inline-flex", alignItems: "center", gap: 6, color: "var(--accent)", fontWeight: 500 }}>
+              <ExternalLink style={{ width: 14, height: 14 }} /> Submit GBP API access request
             </a>
           </div>
         </div>

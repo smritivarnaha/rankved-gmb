@@ -9,30 +9,29 @@ export default async function DashboardLayout({ children }: { children: React.Re
   const user = (session as any)?.user;
   const isApproved = user?.isApproved;
   const role = user?.role;
-
-  // Let SUPER_ADMIN see the admin page even if somehow isApproved is false
   const hasAccess = isApproved || role === "SUPER_ADMIN";
+
   return (
-    <div className="flex min-h-screen bg-[var(--bg-secondary)] overflow-hidden">
+    <div className="app-shell">
       <Sidebar />
-      <div className="flex w-full flex-1 flex-col overflow-hidden">
+      <div className="app-main">
         <Topbar />
-        <main className="flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8 pb-24 md:pb-8 relative">
+        <main className="app-content">
           {hasAccess ? (
-            <div className="mx-auto max-w-[1100px]">{children}</div>
+            <div className="app-content-inner anim-fade-up">{children}</div>
           ) : (
-            <div className="absolute inset-0 flex flex-col items-center justify-center p-6 text-center z-50 bg-white">
-              <div className="w-20 h-20 bg-blue-50 text-blue-500 rounded-full flex items-center justify-center mb-6">
-                <ShieldAlert className="w-10 h-10" />
+            <div className="approval-screen">
+              <div style={{ width: 72, height: 72, borderRadius: "50%", background: "var(--accent-light)", display: "flex", alignItems: "center", justifyContent: "center", marginBottom: 20 }}>
+                <ShieldAlert style={{ width: 36, height: 36, color: "var(--accent)" }} />
               </div>
-              <h1 className="text-2xl font-bold text-[var(--text-primary)] mb-3">Pending Approval</h1>
-              <p className="text-[var(--text-secondary)] max-w-md mx-auto leading-relaxed">
-                Your account has been created, but you must be approved by the workspace administrator (<span className="font-semibold text-[var(--text-primary)]">rankved.business@gmail.com</span>) before you can connect Google accounts and create posts.
+              <h1 style={{ fontSize: 22, fontWeight: 700, marginBottom: 10 }}>Pending Approval</h1>
+              <p style={{ fontSize: 14, color: "var(--text-secondary)", maxWidth: 400, lineHeight: 1.7 }}>
+                Your account has been created, but you must be approved by the workspace administrator (<strong>rankved.business@gmail.com</strong>) before you can connect Google accounts and create posts.
               </p>
-              <div className="mt-8 p-4 bg-gray-50 border border-gray-100 rounded-xl max-w-sm w-full mx-auto shadow-sm">
-                <p className="text-xs font-medium text-gray-500 uppercase tracking-widest mb-1.5">Status</p>
-                <div className="flex items-center justify-center gap-2 text-sm font-semibold text-amber-600">
-                  <span className="w-2 h-2 rounded-full bg-amber-500 animate-pulse" />
+              <div style={{ marginTop: 24, padding: "14px 20px", background: "var(--warning-bg)", border: "1px solid var(--warning-border)", borderRadius: "var(--radius-md)" }}>
+                <p style={{ fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.08em", color: "var(--text-muted)", marginBottom: 4 }}>Status</p>
+                <div style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 13, fontWeight: 600, color: "var(--warning)" }}>
+                  <span className="anim-pulse" style={{ width: 8, height: 8, borderRadius: "50%", background: "var(--warning)" }} />
                   Waiting for Admin Review
                 </div>
               </div>
