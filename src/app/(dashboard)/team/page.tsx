@@ -145,7 +145,7 @@ export default function TeamPage() {
 
         <button 
           onClick={() => setShowForm(true)}
-          className="px-6 py-3 bg-[var(--accent)] hover:bg-indigo-700 text-white text-sm font-bold rounded-xl transition-all flex items-center gap-2 shadow-lg hover:shadow-indigo-200 active:scale-95"
+          className="btn btn-primary px-6 h-12 rounded-xl text-sm font-bold flex items-center gap-2 shadow-lg hover:shadow-indigo-200 active:scale-95"
         >
           <Plus className="w-5 h-5" />
           Add New Team Member
