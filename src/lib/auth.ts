@@ -80,15 +80,42 @@ export const authOptions: NextAuthOptions = {
     signIn: "/login",
   },
   callbacks: {
+    async signIn({ user, account, profile }) {
+      // Always allow sign-in. If it's a Google sign-in, we handle the linking in the jwt callback.
+      return true;
+    },
     async jwt({ token, account, user }) {
+      // 1. Initial sign-in (Credentials or Google)
       if (user) {
-        token.role = (user as any).role || "TEAM_MEMBER";
-        token.userId = user.id;
-        token.username = (user as any).username;
-        token.ownerId = (user as any).ownerId;
+        // If it's a credentials login, user is our DB user object
+        if (account?.provider === "credentials") {
+          token.role = (user as any).role || "TEAM_MEMBER";
+          token.userId = user.id;
+          token.username = (user as any).username;
+          token.ownerId = (user as any).ownerId;
+          token.isApproved = (user as any).isApproved;
+        } 
+        // If it's a Google login (either first time or linking)
+        // We generally DON'T want to overwrite userId/role if they already exist (linking case)
+        else if (account?.provider === "google") {
+          // If we don't have a userId yet, this is a Google-first login (not typical for this app now)
+          if (!token.userId) {
+            // Try to find user by email to link them
+            try {
+              const dbUser = await prisma.user.findUnique({ where: { email: user.email?.toLowerCase() || "" } });
+              if (dbUser) {
+                token.userId = dbUser.id;
+                token.role = dbUser.role;
+                token.username = dbUser.username;
+                token.ownerId = dbUser.ownerId;
+                token.isApproved = dbUser.isApproved;
+              }
+            } catch (e) {}
+          }
+        }
       }
 
-      // Google OAuth linking (Triggered from Settings)
+      // 2. Google OAuth linking (Triggered from Settings)
       if (account?.provider === "google") {
         token.accessToken = account.access_token;
         token.refreshToken = account.refresh_token;
@@ -97,7 +124,7 @@ export const authOptions: NextAuthOptions = {
           : Date.now() + 3600 * 1000;
 
         if (token.userId) {
-          // User is already logged in, link the Google account to their existing User ID
+          // Persist token to DB for background jobs
           try {
             await prisma.account.upsert({
               where: {
@@ -128,29 +155,35 @@ export const authOptions: NextAuthOptions = {
                 id_token: account.id_token ?? undefined,
               },
             });
-            console.log("[Auth] Persisted Google tokens for existing user ID:", token.userId);
           } catch (e) {
             console.error("Failed to link Google account in DB:", e);
           }
         }
-      } else if (token.userId) {
-        // Just keep the token.isApproved synced if not a fresh Google login
+      } 
+      
+      // 3. Refresh user data from DB periodically (if not a fresh login/linking)
+      if (token.userId && !account) {
         try {
           const dbUser = await prisma.user.findUnique({ where: { id: token.userId as string } });
           if (dbUser) {
-             const isSuperAdmin = dbUser.email?.toLowerCase() === "rankved.business@gmail.com";
-             token.isApproved = isSuperAdmin ? true : dbUser.isApproved;
-             token.role = isSuperAdmin ? "SUPER_ADMIN" : dbUser.role;
+            token.isApproved = dbUser.isApproved;
+            token.role = dbUser.role;
+            token.username = dbUser.username;
+            token.ownerId = dbUser.ownerId;
+            // Forced Super Admin check for the specific email
+            if (dbUser.email?.toLowerCase() === "rankved.business@gmail.com") {
+              token.role = "SUPER_ADMIN";
+              token.isApproved = true;
+            }
           }
         } catch (e) {}
       }
 
-      // If token hasn't expired, return as-is
+      // 4. Token expiration check and refresh
       if (token.accessTokenExpires && Date.now() < (token.accessTokenExpires as number)) {
         return token;
       }
 
-      // Token expired — refresh it
       if (token.refreshToken) {
         return await refreshAccessToken(token);
       }

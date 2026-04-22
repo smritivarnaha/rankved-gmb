@@ -132,8 +132,8 @@ export default function TeamPage() {
   return (
     <div className="space-y-8">
       {/* Header */}
-      <div>
-        <div className="flex items-center gap-3 mb-2">
+      <div className="flex flex-wrap items-center justify-between gap-4">
+        <div className="flex items-center gap-3">
           <div className="p-2 bg-[var(--accent-light)]/20 rounded-xl">
             <Users className="w-6 h-6 text-[var(--accent)]" />
           </div>
@@ -142,6 +142,14 @@ export default function TeamPage() {
             <p className="text-sm text-[var(--text-secondary)]">Manage team access and permissions</p>
           </div>
         </div>
+
+        <button 
+          onClick={() => setShowForm(true)}
+          className="px-6 py-3 bg-[var(--accent)] hover:bg-indigo-700 text-white text-sm font-bold rounded-xl transition-all flex items-center gap-2 shadow-lg hover:shadow-indigo-200 active:scale-95"
+        >
+          <Plus className="w-5 h-5" />
+          Add New Team Member
+        </button>
       </div>
 
       {!(session as any)?.accessToken && (
@@ -174,13 +182,7 @@ export default function TeamPage() {
             />
           </div>
           
-          <button 
-            onClick={() => setShowForm(true)}
-            className="ml-auto px-4 py-2 bg-[var(--accent)] hover:bg-indigo-700 text-white text-sm font-medium rounded-lg transition-colors flex items-center gap-2 shadow-sm"
-          >
-            <Plus className="w-4 h-4" />
-            Add Team Member
-          </button>
+          </div>
         </div>
 
         {/* Table */}

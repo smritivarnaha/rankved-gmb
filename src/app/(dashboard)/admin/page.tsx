@@ -125,8 +125,8 @@ export default function AdminDashboard() {
   return (
     <div className="space-y-8">
       {/* Header */}
-      <div>
-        <div className="flex items-center gap-3 mb-2">
+      <div className="flex flex-wrap items-center justify-between gap-4">
+        <div className="flex items-center gap-3">
           <div className="p-2 bg-[var(--accent-light)]/20 rounded-xl">
             <Shield className="w-6 h-6 text-[var(--accent)]" />
           </div>
@@ -135,6 +135,14 @@ export default function AdminDashboard() {
             <p className="text-sm text-[var(--text-secondary)]">Platform overview and user management</p>
           </div>
         </div>
+
+        <button 
+          onClick={() => setShowCreateModal(true)}
+          className="px-6 py-3 bg-[var(--accent)] hover:bg-indigo-700 text-white text-sm font-bold rounded-xl transition-all flex items-center gap-2 shadow-lg hover:shadow-indigo-200 active:scale-95"
+        >
+          <UserPlus className="w-5 h-5" />
+          Create New Agency Owner
+        </button>
       </div>
 
       {/* Stats */}
@@ -177,13 +185,7 @@ export default function AdminDashboard() {
             />
           </div>
           
-          <button 
-            onClick={() => setShowCreateModal(true)}
-            className="ml-auto px-5 py-2.5 bg-[var(--accent)] hover:bg-indigo-700 text-white text-sm font-bold rounded-lg transition-colors flex items-center gap-2 shadow-md hover:shadow-lg"
-          >
-            <UserPlus className="w-4 h-4" />
-            Create User (Agency Owner)
-          </button>
+          </div>
         </div>
 
         {/* Table */}
