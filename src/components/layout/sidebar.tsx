@@ -33,10 +33,13 @@ const teamNav = [
 export function Sidebar() {
   const pathname = usePathname();
   const { data: session } = useSession();
-  const role = (session as any)?.user?.role;
+  const user = (session as any)?.user;
+  const role = user?.role;
+  const isSuperAdmin = role === "SUPER_ADMIN" || user?.email?.toLowerCase() === "rankved.business@gmail.com";
+  
   const navItems =
-    role === "SUPER_ADMIN" ? superAdminNav :
-    role === "AGENCY_OWNER" ? adminNav       :
+    isSuperAdmin ? superAdminNav :
+    role === "AGENCY_OWNER" ? adminNav :
     teamNav;
 
   return (
@@ -79,7 +82,7 @@ export function Sidebar() {
       {/* Footer */}
       <div className="sidebar-footer">
         <div className="sidebar-role">
-          {role === "SUPER_ADMIN"
+          {isSuperAdmin
             ? "Super Admin"
             : role === "AGENCY_OWNER"
             ? "Agency Owner"
