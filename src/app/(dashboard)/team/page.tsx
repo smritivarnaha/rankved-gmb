@@ -79,12 +79,14 @@ export default function TeamPage() {
 
   const handleDelete = async (id: string, name: string) => { 
     if (!confirm(`Remove ${name} from the team?`)) return; 
+    const previousMembers = [...members];
+    setMembers(members.filter(m => m.id !== id));
     try {
       const res = await fetch(`/api/team?id=${id}`, { method: "DELETE" }); 
       if(!res.ok) throw new Error("Failed to delete user");
-      fetchData(); 
     } catch (err: any) {
       alert(err.message);
+      setMembers(previousMembers);
     }
   };
 
@@ -141,6 +143,21 @@ export default function TeamPage() {
           </div>
         </div>
       </div>
+
+      {!(session as any)?.accessToken && (
+        <div className="p-4 bg-indigo-50 border border-indigo-200 rounded-xl flex items-start gap-3 text-indigo-800 shadow-sm">
+          <div className="p-2 bg-indigo-100 rounded-lg shrink-0">
+            <MapPin className="w-5 h-5 text-indigo-600" />
+          </div>
+          <div className="flex-1">
+            <h3 className="font-semibold text-sm mb-1">Connect your Google Business Profile</h3>
+            <p className="text-xs text-indigo-700/80 mb-3">To assign locations to your team members, you must first connect your Google Account in settings. This is securely used only to fetch your managed profiles.</p>
+            <a href="/settings" className="inline-block px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-semibold rounded-lg transition-colors">
+              Connect Google Account →
+            </a>
+          </div>
+        </div>
+      )}
 
       {/* Content */}
       <div className="bg-white border border-[var(--border)] rounded-2xl overflow-hidden shadow-sm">

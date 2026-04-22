@@ -6,7 +6,7 @@ import { format } from "date-fns";
 import { Plus, Filter, Loader2, Trash2, MapPin, Eye, Clock, CheckCircle2, AlertTriangle, FileText } from "lucide-react";
 import { useSession } from "next-auth/react";
 
-const statusTabs = ["All", "Draft", "Scheduled", "Published", "Failed"];
+const statusTabs = ["All", "Pending", "Draft", "Scheduled", "Published", "Failed"];
 
 export default function PostsPage() {
   const { data: session } = useSession();
@@ -33,13 +33,22 @@ export default function PostsPage() {
   useEffect(() => { fetchPosts(); }, []);
 
   const handleDelete = async (id: string) => {
-    if (!confirm("Are you sure you want to permanently delete this scheduled post?")) return;
-    await fetch(`/api/posts?id=${id}`, { method: "DELETE" });
-    fetchPosts();
+    if (!confirm("Are you sure you want to permanently delete this post?")) return;
+    const previousPosts = [...posts];
+    setPosts(posts.filter(p => p.id !== id));
+    try {
+      await fetch(`/api/posts?id=${id}`, { method: "DELETE" });
+    } catch {
+      setPosts(previousPosts);
+    }
   };
 
   const filtered = posts
-    .filter(p => statusFilter === "All" || p.status === statusFilter.toUpperCase())
+    .filter(p => {
+      if (statusFilter === "All") return true;
+      if (statusFilter === "Pending") return p.status === "PENDING_APPROVAL";
+      return p.status === statusFilter.toUpperCase();
+    })
     .filter(p => profileFilter === "All Profiles" || p.profileName === profileFilter);
 
   return (
@@ -120,14 +129,12 @@ export default function PostsPage() {
                   <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 14 }}>
                     <StatusBadge status={post.status} />
                     <div style={{ display: "flex", gap: 6 }}>
-                      <Link href={`/posts/${post.id}`} className="btn btn-ghost btn-sm" style={{ padding: 6, borderRadius: "50%", background: "var(--accent-light)", color: "var(--accent)" }}>
+                      <Link href={`/posts/${post.id}`} className="btn btn-ghost btn-sm" style={{ padding: 6, borderRadius: "50%", background: "var(--accent-light)", color: "var(--accent)" }} title={post.status === "PENDING_APPROVAL" ? "Review Post" : "View Post"}>
                         <Eye style={{ width: 15, height: 15 }} />
                       </Link>
-                      {isAdmin && (
-                        <button onClick={() => handleDelete(post.id)} className="btn btn-ghost btn-sm" style={{ padding: 6, borderRadius: "50%", background: "var(--error-bg)", color: "var(--error)" }}>
-                          <Trash2 style={{ width: 15, height: 15 }} />
-                        </button>
-                      )}
+                      <button onClick={() => handleDelete(post.id)} className="btn btn-ghost btn-sm" style={{ padding: 6, borderRadius: "50%", background: "var(--error-bg)", color: "var(--error)" }} title="Delete Post">
+                        <Trash2 style={{ width: 15, height: 15 }} />
+                      </button>
                     </div>
                   </div>
 
@@ -166,6 +173,7 @@ function StatusBadge({ status }: { status: string }) {
   const iconStyle = { width: 13, height: 13 };
   if (s === "PUBLISHED") return <span className={cls + "badge-success"}><CheckCircle2 style={iconStyle} /> PUBLISHED</span>;
   if (s === "SCHEDULED") return <span className={cls + "badge-warning"}><Clock style={iconStyle} /> SCHEDULED</span>;
+  if (s === "PENDING_APPROVAL") return <span className={cls} style={{ background: "var(--warning-bg)", color: "var(--warning)", borderColor: "var(--warning-border)" }}><AlertTriangle style={iconStyle} /> PENDING REVIEW</span>;
   if (s === "FAILED") return <span className={cls + "badge-error"}><AlertTriangle style={iconStyle} /> FAILED</span>;
   return <span className={cls + "badge-default"}><FileText style={iconStyle} /> DRAFT</span>;
 }

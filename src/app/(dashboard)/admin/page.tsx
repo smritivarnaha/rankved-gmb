@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Shield, ShieldAlert, Users, Database, FileText, Loader2, UserPlus, UserCircle, Search } from "lucide-react";
+import { Shield, ShieldAlert, Users, Database, FileText, Loader2, UserPlus, UserCircle, Search, Trash2 } from "lucide-react";
 
 export default function AdminDashboard() {
   const [users, setUsers] = useState<any[]>([]);
@@ -68,9 +68,31 @@ export default function AdminDashboard() {
       setNewUserEmail("");
       setNewUserPassword("");
     } catch (err: any) {
+    } catch (err: any) {
       alert(err.message);
     } finally {
       setCreatingUser(false);
+    }
+  };
+
+  const handleDelete = async (id: string, name: string) => {
+    if (!confirm(`Are you sure you want to delete the user "${name}"? This action cannot be undone and will delete all their associated posts and profiles.`)) return;
+    
+    // Optimistic UI update
+    const previousUsers = [...users];
+    setUsers(users.filter(u => u.id !== id));
+    setStats(prev => ({ ...prev, totalUsers: Math.max(0, prev.totalUsers - 1) }));
+
+    try {
+      const res = await fetch(`/api/admin/users?id=${id}`, { method: "DELETE" });
+      if (!res.ok) {
+        throw new Error("Failed to delete user");
+      }
+    } catch (err: any) {
+      alert(err.message);
+      // Revert optimistic update
+      setUsers(previousUsers);
+      setStats(prev => ({ ...prev, totalUsers: prev.totalUsers + 1 }));
     }
   };
 
@@ -158,10 +180,10 @@ export default function AdminDashboard() {
           
           <button 
             onClick={() => setShowCreateModal(true)}
-            className="ml-auto px-4 py-2 bg-[var(--accent)] hover:bg-indigo-700 text-white text-sm font-medium rounded-lg transition-colors flex items-center gap-2 shadow-sm"
+            className="ml-auto px-5 py-2.5 bg-[var(--accent)] hover:bg-indigo-700 text-white text-sm font-bold rounded-lg transition-colors flex items-center gap-2 shadow-md hover:shadow-lg"
           >
             <UserPlus className="w-4 h-4" />
-            Create Agency Owner
+            Create User (Agency Owner)
           </button>
         </div>
 
@@ -174,6 +196,7 @@ export default function AdminDashboard() {
                 <th className="px-6 py-3 text-xs font-semibold text-[var(--text-secondary)] uppercase tracking-wider">Username</th>
                 <th className="px-6 py-3 text-xs font-semibold text-[var(--text-secondary)] uppercase tracking-wider">Role</th>
                 <th className="px-6 py-3 text-xs font-semibold text-[var(--text-secondary)] uppercase tracking-wider">Joined</th>
+                <th className="px-6 py-3 text-xs font-semibold text-[var(--text-secondary)] uppercase tracking-wider text-right">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-[var(--border-light)]">
@@ -210,6 +233,17 @@ export default function AdminDashboard() {
                     <td className="px-6 py-4 text-sm text-[var(--text-secondary)]">
                       {new Date(user.createdAt).toLocaleDateString()}
                     </td>
+                    <td className="px-6 py-4 text-right">
+                      {user.role !== "SUPER_ADMIN" && (
+                        <button
+                          onClick={() => handleDelete(user.id, user.name || user.username)}
+                          className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors inline-flex"
+                          title="Delete User"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      )}
+                    </td>
                   </tr>
                 ))
               )}
@@ -222,7 +256,7 @@ export default function AdminDashboard() {
       {showCreateModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
           <div className="bg-white rounded-2xl p-6 w-full max-w-md shadow-xl">
-            <h2 className="text-xl font-bold mb-4">Create Agency Owner</h2>
+            <h2 className="text-xl font-bold mb-4">Create User (Agency Owner)</h2>
             <form onSubmit={handleCreateUser} className="space-y-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Name</label>

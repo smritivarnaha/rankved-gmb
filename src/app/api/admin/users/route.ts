@@ -55,3 +55,26 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: err.message }, { status: 400 });
   }
 }
+
+export async function DELETE(req: NextRequest) {
+  const session = await getServerSession(authOptions);
+  if (!session || (session as any).user.role !== "SUPER_ADMIN") {
+    return NextResponse.json({ error: "Forbidden: Super Admin only" }, { status: 403 });
+  }
+
+  const { searchParams } = new URL(req.url);
+  const id = searchParams.get("id");
+
+  if (!id) {
+    return NextResponse.json({ error: "User ID is required" }, { status: 400 });
+  }
+
+  try {
+    await prisma.user.delete({
+      where: { id },
+    });
+    return NextResponse.json({ success: true });
+  } catch (err: any) {
+    return NextResponse.json({ error: "Failed to delete user" }, { status: 500 });
+  }
+}
