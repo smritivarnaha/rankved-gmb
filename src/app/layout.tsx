@@ -3,9 +3,9 @@ import { Providers } from "@/components/providers";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "RankVed — GMB Manager",
+  title: "Rankved | GMB Manager",
   description: "Manage, schedule, and publish Google Business Profile posts across all your clients from one beautiful dashboard.",
-  icons: { icon: "/rankved-logo.png" },
+  icons: { icon: "/logo.png" },
 };
 
 export default function RootLayout({
