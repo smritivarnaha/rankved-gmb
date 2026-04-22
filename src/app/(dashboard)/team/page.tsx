@@ -181,8 +181,6 @@ export default function TeamPage() {
               className="w-full pl-9 pr-4 py-2 bg-white border border-[var(--border)] rounded-lg text-sm text-[var(--text-primary)] focus:outline-none focus:ring-2 focus:ring-[var(--accent)] transition-shadow"
             />
           </div>
-          
-          </div>
         </div>
 
         {/* Table */}
