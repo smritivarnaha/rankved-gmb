@@ -69,7 +69,7 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
       if (result.success) {
         const publishedPost = await updatePost(id, {
           status: "PUBLISHED",
-          publishedAt: new Date(),
+          publishedAt: new Date().toISOString(),
           gbpPostName: result.gbpPostName || undefined,
         });
         return NextResponse.json({ data: publishedPost });
