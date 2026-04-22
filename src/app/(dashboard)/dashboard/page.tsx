@@ -1,99 +1,76 @@
-"use client";
-
-import { Building2, MapPin, FileText, Clock, CheckCircle2, AlertTriangle, Plus } from "lucide-react";
+import { getServerSession } from "next-auth/next";
+import { authOptions } from "@/lib/auth";
+import prisma from "@/lib/prisma";
+import { MapPin, FileText, Clock, CheckCircle2, Plus } from "lucide-react";
 import Link from "next/link";
-import { useSession } from "next-auth/react";
-import { useState, useEffect } from "react";
 
-export default function DashboardPage() {
-  const { data: session } = useSession();
-  const [stats, setStats] = useState({ clients: 0, locations: 0, scheduled: 0, published: 0 });
-  const [posts, setPosts] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
+export default async function DashboardPage() {
+  const session = await getServerSession(authOptions);
+  const user = (session as any)?.user;
 
-  useEffect(() => {
-    const load = async () => {
-      try {
-        const [postsRes, profilesRes] = await Promise.all([
-          fetch("/api/posts"),
-          fetch("/api/profiles"),
-        ]);
-        const postsData = postsRes.ok ? await postsRes.json() : { data: [] };
-        const profilesData = profilesRes.ok ? await profilesRes.json() : { data: [] };
-        const allPosts: any[] = postsData.data || [];
-        setPosts(allPosts.slice(0, 5));
-        setStats({
-          clients: 0,
-          locations: profilesData.data?.length || 0,
-          scheduled: allPosts.filter((p: any) => p.status === "SCHEDULED").length,
-          published: allPosts.filter((p: any) => p.status === "PUBLISHED").length,
-        });
-      } catch {}
-      setLoading(false);
-    };
-    load();
-  }, []);
+  // Real-time server-side data fetching directly from Prisma! Super fast.
+  const [stats, recentPosts] = await Promise.all([
+    prisma.$transaction(async (tx) => {
+      const locations = await tx.location.count();
+      const scheduled = await tx.post.count({ where: { status: "SCHEDULED" } });
+      const published = await tx.post.count({ where: { status: "PUBLISHED" } });
+      return { locations, scheduled, published };
+    }),
+    prisma.post.findMany({
+      where: user?.role === "ADMIN" || user?.role === "SUPER_ADMIN" ? undefined : { userId: user.id },
+      orderBy: { createdAt: "desc" },
+      take: 6,
+      include: { location: { include: { client: true } } },
+    }),
+  ]);
 
-  const name = session?.user?.name?.split(" ")[0] || "there";
+  const name = user?.name?.split(" ")[0] || "User";
 
   const cards = [
-    { label: "Profiles", value: stats.locations, icon: MapPin, href: "/profiles" },
-    { label: "Scheduled", value: stats.scheduled, icon: Clock, href: "/posts" },
-    { label: "Published", value: stats.published, icon: CheckCircle2, href: "/posts" },
-    { label: "Total Posts", value: stats.scheduled + stats.published, icon: FileText, href: "/posts" },
+    { label: "Synced Profiles", value: stats.locations, icon: MapPin, href: "/profiles", color: "blue" },
+    { label: "Scheduled Posts", value: stats.scheduled, icon: Clock, href: "/posts?status=Scheduled", color: "amber" },
+    { label: "Published Posts", value: stats.published, icon: CheckCircle2, href: "/posts?status=Published", color: "emerald" },
+    { label: "Total Lifetime Posts", value: stats.scheduled + stats.published, icon: FileText, href: "/posts", color: "indigo" },
   ];
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 24 }}>
-      {/* Header */}
-      <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 16 }}>
+    <div className="space-y-8 animate-fade-in-up">
+      {/* Header section */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 style={{ fontFamily: "'Google Sans', sans-serif", fontSize: 24, fontWeight: 400, color: "var(--text-primary)", letterSpacing: "0", margin: "0 0 4px 0" }}>
-            Good morning, {name}
+          <h1 className="text-[28px] font-bold text-[var(--text-primary)] tracking-tight mb-1">
+            Hey, {name} 👋
           </h1>
-          <p style={{ fontSize: 13, color: "var(--text-secondary)", margin: 0 }}>
-            Here&apos;s what&apos;s happening with your Google Business profiles.
+          <p className="text-[15px] text-[var(--text-secondary)]">
+            Here's what's happening with your Google Business profiles today.
           </p>
         </div>
-        <Link href="/posts/new" style={{
-          display: "inline-flex", alignItems: "center", gap: 8,
-          padding: "10px 20px", borderRadius: 24, // Pill shape for Google MD3 primary action
-          background: "var(--accent)", color: "#fff",
-          fontFamily: "'Google Sans', sans-serif", fontSize: 14, fontWeight: 500, textDecoration: "none",
-          transition: "box-shadow 0.15s, background 0.15s",
-          whiteSpace: "nowrap", flexShrink: 0,
-        }}
-          onMouseEnter={e => { (e.currentTarget as HTMLAnchorElement).style.boxShadow = "var(--shadow-md);"; (e.currentTarget as HTMLAnchorElement).style.background = "var(--accent-hover)"; }}
-          onMouseLeave={e => { (e.currentTarget as HTMLAnchorElement).style.boxShadow = "none"; (e.currentTarget as HTMLAnchorElement).style.background = "var(--accent)"; }}
-        >
-          <Plus size={18} /> New post
+        <Link href="/posts/new" className="inline-flex items-center gap-2 px-5 py-2.5 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white shadow-lg shadow-blue-500/25 rounded-full text-[14px] font-semibold transition-all duration-200 hover:shadow-blue-500/40 hover:-translate-y-0.5">
+          <Plus className="w-4 h-4" strokeWidth={2.5} /> 
+          Create New Post
         </Link>
       </div>
 
-      {/* Stats */}
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: 16 }}>
+      {/* Hero Stats */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5 mt-2">
         {cards.map((c) => {
           const Icon = c.icon;
           return (
-            <Link key={c.label} href={c.href} style={{ textDecoration: "none" }}>
-              <div style={{
-                background: "#fff", border: "1px solid var(--border-light)",
-                borderRadius: 12, padding: "24px",
-                display: "flex", alignItems: "flex-start", justifyContent: "space-between",
-                transition: "box-shadow 0.15s, border-color 0.15s",
-                cursor: "pointer",
-              }}
-                onMouseEnter={e => { (e.currentTarget as HTMLDivElement).style.boxShadow = "var(--shadow-md)"; (e.currentTarget as HTMLDivElement).style.borderColor = "var(--border)"; }}
-                onMouseLeave={e => { (e.currentTarget as HTMLDivElement).style.boxShadow = "none"; (e.currentTarget as HTMLDivElement).style.borderColor = "var(--border-light)"; }}
-              >
-                <div>
-                  <p style={{ fontSize: 13, fontWeight: 500, color: "var(--text-secondary)", margin: "0 0 8px 0" }}>{c.label}</p>
-                  <p style={{ fontFamily: "'Google Sans', sans-serif", fontSize: 32, fontWeight: 400, color: "var(--text-primary)", lineHeight: 1, margin: 0 }}>
-                    {loading ? "—" : c.value}
-                  </p>
-                </div>
-                <div style={{ color: "var(--accent)" }}>
-                  <Icon size={24} strokeWidth={1.5} />
+            <Link key={c.label} href={c.href} className="group transition-card block relative top-0 hover:-top-1">
+              <div className="bg-[var(--bg-card)] border border-[var(--border-light)] rounded-[20px] p-6 shadow-sm hover:shadow-lg transition-all duration-300 relative overflow-hidden">
+                {/* Subtle gradient background glow */}
+                <div className={`absolute -right-10 -top-10 w-32 h-32 rounded-full blur-3xl opacity-10 bg-${c.color}-500 group-hover:opacity-20 transition-opacity`}></div>
+                
+                <div className="flex items-start justify-between relative z-10">
+                  <div>
+                    <p className="text-[13px] font-semibold text-[var(--text-tertiary)] uppercase tracking-wider mb-2">{c.label}</p>
+                    <p className="text-[36px] font-bold text-[var(--text-primary)] leading-none tracking-tight">
+                      {c.value.toLocaleString()}
+                    </p>
+                  </div>
+                  <div className={`p-3 bg-[var(--bg-secondary)] rounded-2xl group-hover:bg-gradient-to-br group-hover:from-blue-500 group-hover:to-indigo-600 group-hover:text-white transition-colors duration-300 text-[var(--text-tertiary)]`}>
+                    <Icon className="w-6 h-6" strokeWidth={1.5} />
+                  </div>
                 </div>
               </div>
             </Link>
@@ -101,76 +78,58 @@ export default function DashboardPage() {
         })}
       </div>
 
-      <div style={{ display: "grid", gridTemplateColumns: "1fr", gap: 16 }}>
-        {/* Recent posts */}
-        <div style={{ background: "#fff", border: "1px solid var(--border-light)", borderRadius: 12, overflow: "hidden" }}>
-          <div style={{ padding: "16px 20px", borderBottom: "1px solid var(--border-light)", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-            <h2 style={{ fontFamily: "'Google Sans', sans-serif", fontSize: 16, fontWeight: 400, color: "var(--text-primary)", margin: 0 }}>Recent posts</h2>
-            <Link href="/posts" style={{ fontFamily: "'Google Sans', sans-serif", fontSize: 13, fontWeight: 500, color: "var(--accent)", textDecoration: "none" }}>View all</Link>
-          </div>
-          {loading ? (
-            <div style={{ padding: "48px 0", textAlign: "center", color: "var(--text-tertiary)", fontSize: 13 }}>Loading…</div>
-          ) : posts.length === 0 ? (
-            <div style={{ padding: "56px 24px", textAlign: "center" }}>
-              <FileText size={36} color="var(--border)" style={{ margin: "0 auto 12px", strokeWidth: 1 }} />
-              <p style={{ fontFamily: "'Google Sans', sans-serif", fontSize: 15, color: "var(--text-primary)", fontWeight: 400, margin: "0 0 4px 0" }}>No posts yet</p>
-              <p style={{ fontSize: 13, color: "var(--text-secondary)", margin: "0 0 16px 0" }}>Create your first post to get started.</p>
-              <Link href="/posts/new" style={{
-                display: "inline-flex", alignItems: "center", gap: 8,
-                padding: "8px 16px", borderRadius: 100, border: "1px solid var(--border)",
-                background: "transparent", color: "var(--accent)",
-                fontFamily: "'Google Sans', sans-serif", fontSize: 14, fontWeight: 500, textDecoration: "none",
-              }}
-                onMouseEnter={e => (e.currentTarget as HTMLAnchorElement).style.background = "var(--accent-light)"}
-                onMouseLeave={e => (e.currentTarget as HTMLAnchorElement).style.background = "transparent"}
-              >
-                <Plus size={16} /> Create post
-              </Link>
+      {/* Recent Posts Grid */}
+      <div className="bg-[var(--bg-card)] border border-[var(--border-light)] rounded-[24px] shadow-sm overflow-hidden">
+        <div className="px-6 py-5 border-b border-[var(--border-light)] flex items-center justify-between glass">
+          <h2 className="text-[18px] font-semibold text-[var(--text-primary)]">Recent Activity</h2>
+          <Link href="/posts" className="text-[14px] font-semibold text-[var(--accent)] hover:text-[var(--accent-hover)] transition-colors">
+            View all posts &rarr;
+          </Link>
+        </div>
+        
+        {recentPosts.length === 0 ? (
+          <div className="p-12 text-center">
+            <div className="w-16 h-16 bg-[var(--bg-secondary)] rounded-full flex items-center justify-center mx-auto mb-4">
+              <FileText className="w-8 h-8 text-[var(--text-tertiary)]" strokeWidth={1.5} />
             </div>
-          ) : (
-            posts.map((post, i) => (
-              <Link key={i} href={`/posts/${post.id}`} style={{
-                display: "flex", alignItems: "center", justifyContent: "space-between",
-                padding: "16px 20px", borderBottom: i < posts.length - 1 ? "1px solid var(--border-light)" : "none",
-                textDecoration: "none", transition: "background 0.1s",
-              }}
-                onMouseEnter={e => (e.currentTarget as HTMLAnchorElement).style.background = "var(--bg-secondary)"}
-                onMouseLeave={e => (e.currentTarget as HTMLAnchorElement).style.background = "transparent"}
-              >
-                <div style={{ minWidth: 0, flex: 1, marginRight: 16 }}>
-                  <p style={{ fontSize: 14, fontWeight: 400, color: "var(--text-primary)", margin: "0 0 4px 0", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                    {post.summary || post.content?.slice(0, 80) || "Untitled post"}
+            <h3 className="text-[16px] font-semibold text-[var(--text-primary)] mb-1">No posts scheduled</h3>
+            <p className="text-[14px] text-[var(--text-secondary)] mb-6">Create your first post to start engaging with customers.</p>
+            <Link href="/posts/new" className="inline-flex items-center gap-2 px-6 py-2.5 bg-[var(--bg-primary)] border-2 border-[var(--accent)] text-[var(--accent)] hover:bg-[var(--accent-light)] rounded-full text-[14px] font-semibold transition-all duration-200">
+              <Plus className="w-4 h-4" strokeWidth={2.5} /> 
+              Create your first post
+            </Link>
+          </div>
+        ) : (
+          <div className="divide-y divide-[var(--border-light)]">
+            {recentPosts.map((post) => (
+              <Link key={post.id} href={`/posts/${post.id}`} className="flex items-center justify-between p-5 hover:bg-[var(--bg-secondary)] transition-colors group">
+                <div className="min-w-0 pr-4">
+                  <p className="text-[15px] font-medium text-[var(--text-primary)] mb-1 truncate group-hover:text-[var(--accent)] transition-colors">
+                    {post.summary || "Untitled Post"}
                   </p>
-                  <p style={{ fontSize: 12, color: "var(--text-secondary)", margin: 0 }}>
-                    {post.profileName || post.clientName || ""}
+                  <p className="text-[13px] text-[var(--text-secondary)] flex items-center gap-1.5">
+                    <MapPin className="w-3.5 h-3.5 text-[var(--text-tertiary)]" />
+                    {post.location.name}
                   </p>
                 </div>
                 <StatusBadge status={post.status} />
               </Link>
-            ))
-          )}
-        </div>
+            ))}
+          </div>
+        )}
       </div>
     </div>
   );
 }
 
 function StatusBadge({ status }: { status: string }) {
-  const s = (status || "").toLowerCase();
-  const map: Record<string, { bg: string; color: string }> = {
-    published: { bg: "#e6f4ea", color: "#1e8e3e" }, // Google exact success
-    scheduled: { bg: "#fef7e0", color: "#b06c00" }, // Google exact warning
-    failed: { bg: "#fce8e6", color: "#d93025" },    // Google exact error
-    draft: { bg: "var(--bg-tertiary)", color: "var(--text-secondary)" },
-  };
-  const style = map[s] || map.draft;
-  return (
-    <span style={{
-      fontFamily: "'Google Sans', sans-serif", fontSize: 12, fontWeight: 500, padding: "2px 8px",
-      borderRadius: 4, background: style.bg, color: style.color,
-      whiteSpace: "nowrap", flexShrink: 0,
-    }}>
-      {s.charAt(0).toUpperCase() + s.slice(1)}
-    </span>
-  );
+  const s = (status || "DRAFT").toUpperCase();
+  let baseClasses = "px-3 py-1 rounded-full text-[11px] font-bold tracking-widest uppercase shadow-sm ";
+  
+  if (s === "PUBLISHED") baseClasses += "bg-emerald-100/80 text-emerald-700 dark:bg-emerald-400/10 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-400/20";
+  else if (s === "SCHEDULED") baseClasses += "bg-amber-100/80 text-amber-700 dark:bg-amber-400/10 dark:text-amber-400 border border-amber-200 dark:border-amber-400/20";
+  else if (s === "FAILED") baseClasses += "bg-red-100/80 text-red-700 dark:bg-red-400/10 dark:text-red-400 border border-red-200 dark:border-red-400/20";
+  else baseClasses += "bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400 border border-gray-200 dark:border-gray-700";
+
+  return <span className={baseClasses}>{s}</span>;
 }
