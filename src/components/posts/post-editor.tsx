@@ -295,8 +295,9 @@ export function PostEditor({ initialData = null, timelineDate, onDateChange }: {
                   <img src={imagePreview} alt="Post preview" className="w-full max-h-[240px] object-cover" />
                   {!isPublished && (
                     <button onClick={removeImage}
-                      className="absolute top-2 right-2 p-1.5 bg-white/90 hover:bg-white rounded-full border border-[var(--border)] transition-colors shadow-sm">
-                      <X className="w-4 h-4 text-[var(--text-secondary)]" />
+                      className="absolute top-2 right-2 p-1.5 rounded-full border border-[var(--border)] transition-colors shadow-sm"
+                      style={{ backgroundColor: "#ffffff" }}>
+                      <X className="w-4 h-4" style={{ color: "var(--text-secondary)" }} />
                     </button>
                   )}
                   {imageFile && (
@@ -599,8 +600,9 @@ export function PostEditor({ initialData = null, timelineDate, onDateChange }: {
                     const isPast = new Date(dateStr) < new Date(todayStr) && !isToday;
                     return (
                       <button key={day} onClick={() => !isPast && selectCalDay(day)} disabled={isPast}
+                        style={isSelected ? { backgroundColor: "var(--accent)", color: "white" } : {}}
                         className={`w-7 h-7 mx-auto rounded-full text-[11px] font-medium transition-colors ${
-                          isSelected ? "bg-[var(--accent)] text-white" :
+                          isSelected ? "" :
                           isToday ? "border border-[var(--accent)] text-[var(--accent)]" :
                           isPast ? "text-[var(--border)] cursor-not-allowed" :
                           "text-[var(--text-secondary)] hover:bg-[var(--bg-tertiary)]"
@@ -619,9 +621,10 @@ export function PostEditor({ initialData = null, timelineDate, onDateChange }: {
                   <div className="grid grid-cols-4 gap-1 max-h-[120px] overflow-y-auto no-scrollbar">
                     {timeSlots.map(t => (
                       <button key={t} onClick={() => setSelectedTime(t)}
+                        style={selectedTime === t ? { backgroundColor: "var(--accent)", color: "white", border: "none" } : {}}
                         className={`py-1.5 text-[11px] font-medium rounded transition-colors ${
                           selectedTime === t 
-                            ? "bg-[var(--accent)] text-white" 
+                            ? "" 
                             : "text-[var(--text-secondary)] border border-[var(--border)] hover:bg-white"
                         }`}>
                         {t}
