@@ -1,45 +1,41 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import Link from "next/link";
 import { format } from "date-fns";
 import { Plus, Filter, Loader2, Trash2, MapPin, Eye, Clock, CheckCircle2, AlertTriangle, FileText } from "lucide-react";
 import { useSession } from "next-auth/react";
+import useSWR from "swr";
 
-const statusTabs = ["All", "Pending", "Draft", "Scheduled", "Published", "Failed"];
+const fetcher = (url: string) => fetch(url).then((res) => res.json());
 
 export default function PostsPage() {
   const { data: session } = useSession();
   const isAdmin = (session as any)?.user?.role === "ADMIN" || (session as any)?.user?.role === "SUPER_ADMIN";
-  const [posts, setPosts] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
+  
+  const { data, error, isLoading, mutate } = useSWR("/api/posts", fetcher, {
+    revalidateOnFocus: false,
+    dedupingInterval: 5000,
+  });
+
+  const posts = data?.data || [];
+  const statusTabs = ["All", "Pending", "Draft", "Scheduled", "Published", "Failed"];
   const [statusFilter, setStatusFilter] = useState("All");
-  const [profiles, setProfiles] = useState<string[]>([]);
   const [profileFilter, setProfileFilter] = useState("All Profiles");
 
-  const fetchPosts = async () => {
-    setLoading(true);
-    try {
-      const res = await fetch("/api/posts");
-      const data = await res.json();
-      const loadedPosts = data.data || [];
-      setPosts(loadedPosts);
-      const uniqueProfiles = Array.from(new Set(loadedPosts.map((p: any) => p.profileName))).filter(Boolean) as string[];
-      setProfiles(uniqueProfiles);
-    } catch {}
-    setLoading(false);
-  };
-
-  useEffect(() => { fetchPosts(); }, []);
+  const profiles = Array.from(new Set(posts.map((p: any) => p.profileName))).filter(Boolean) as string[];
 
   const handleDelete = async (id: string) => {
     if (!confirm("Are you sure you want to permanently delete this post?")) return;
-    const previousPosts = [...posts];
-    setPosts(posts.filter(p => p.id !== id));
+    
+    // Optimistic update
+    mutate({ ...data, data: posts.filter((p: any) => p.id !== id) }, false);
+    
     try {
       await fetch(`/api/posts?id=${id}`, { method: "DELETE" });
+      mutate(); // Sync with server
     } catch {
-      setPosts(previousPosts);
+      mutate(); // Revert on error
     }
   };
 
