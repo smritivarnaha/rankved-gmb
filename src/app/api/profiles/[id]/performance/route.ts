@@ -3,7 +3,8 @@ import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/lib/auth";
 import { getProfileById } from "@/lib/profile-store";
 
-export async function GET(req: NextRequest, { params }: { params: { id: string } }) {
+export async function GET(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params;
   const session = await getServerSession(authOptions);
   if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
@@ -13,7 +14,7 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
 
   if (!accessToken) return NextResponse.json({ error: "Google account not connected" }, { status: 400 });
 
-  const profile = await getProfileById(params.id, userId, role);
+  const profile = await getProfileById(id, userId, role);
   if (!profile) return NextResponse.json({ error: "Profile not found or access denied" }, { status: 404 });
 
   // googleName is in format "locations/123"
