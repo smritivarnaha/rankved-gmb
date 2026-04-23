@@ -17,19 +17,24 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
   const profile = await getProfileById(id, userId, role);
   if (!profile) return NextResponse.json({ error: "Profile not found" }, { status: 404 });
 
+  // Support dynamic date ranges
+  const { searchParams } = new URL(req.url);
+  const days = parseInt(searchParams.get("days") || "30");
+
   const resourceName = profile.googleName; 
 
-  // Calculate last 30 days
+  // Calculate range with 3-day buffer
   const now = new Date();
-  const thirtyDaysAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+  const endDate = new Date(now.getTime() - 3 * 24 * 60 * 60 * 1000);
+  const startDate = new Date(now.getTime() - (days + 3) * 24 * 60 * 60 * 1000);
 
-  const startYear = thirtyDaysAgo.getFullYear();
-  const startMonth = thirtyDaysAgo.getMonth() + 1;
-  const startDay = thirtyDaysAgo.getDate();
+  const startYear = startDate.getFullYear();
+  const startMonth = startDate.getMonth() + 1;
+  const startDay = startDate.getDate();
 
-  const endYear = now.getFullYear();
-  const endMonth = now.getMonth() + 1;
-  const endDay = now.getDate();
+  const endYear = endDate.getFullYear();
+  const endMonth = endDate.getMonth() + 1;
+  const endDay = endDate.getDate();
 
   const url = `https://businessprofileperformance.googleapis.com/v1/${resourceName}/searchKeywords:list?` + 
     `dailyRange.startDate.year=${startYear}&dailyRange.startDate.month=${startMonth}&dailyRange.startDate.day=${startDay}` +

@@ -10,6 +10,7 @@ interface Profile {
 }
 
 export function PerformanceView({ profile, onBack }: { profile: Profile, onBack?: () => void }) {
+  const [days, setDays] = useState(30);
   const [data, setData] = useState<any>(null);
   const [keywords, setKeywords] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -22,8 +23,8 @@ export function PerformanceView({ profile, onBack }: { profile: Profile, onBack?
       setError(null);
       try {
         const [perfRes, keyRes] = await Promise.all([
-          fetch(`/api/profiles/${profile.id}/performance`),
-          fetch(`/api/profiles/${profile.id}/keywords`)
+          fetch(`/api/profiles/${profile.id}/performance?days=${days}`),
+          fetch(`/api/profiles/${profile.id}/keywords?days=${days}`)
         ]);
         
         const perfData = await perfRes.json();
@@ -39,7 +40,7 @@ export function PerformanceView({ profile, onBack }: { profile: Profile, onBack?
       setLoading(false);
     }
     loadData();
-  }, [profile.id]);
+  }, [profile.id, days]);
 
   const tabs = [
     { id: "overview", label: "Overview" },
@@ -54,15 +55,30 @@ export function PerformanceView({ profile, onBack }: { profile: Profile, onBack?
   return (
     <div className="card" style={{ padding: 0, height: '100%', display: 'flex', flexDirection: 'column', background: 'white' }}>
       {/* Header */}
-      <div style={{ padding: '24px 32px', borderBottom: '1px solid var(--border-light)', display: 'flex', alignItems: 'center', gap: 16 }}>
-        {onBack && (
-          <button onClick={onBack} className="btn-secondary" style={{ padding: '8px 12px' }}>
-            <ArrowLeft className="w-4 h-4" />
-          </button>
-        )}
-        <div>
-          <h2 style={{ fontSize: 20, fontWeight: 700, color: 'var(--text-primary)' }}>{profile.name}</h2>
-          <p style={{ fontSize: 12, color: 'var(--text-muted)' }}>Real-time performance metrics from Google</p>
+      <div style={{ padding: '24px 32px', borderBottom: '1px solid var(--border-light)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
+          {onBack && (
+            <button onClick={onBack} className="btn-secondary" style={{ padding: '8px 12px' }}>
+              <ArrowLeft className="w-4 h-4" />
+            </button>
+          )}
+          <div>
+            <h2 style={{ fontSize: 20, fontWeight: 700, color: 'var(--text-primary)' }}>{profile.name}</h2>
+            <p style={{ fontSize: 12, color: 'var(--text-muted)' }}>Real-time performance metrics from Google</p>
+          </div>
+        </div>
+
+        <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+          <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase' }}>Period:</span>
+          <select 
+            value={days} 
+            onChange={(e) => setDays(parseInt(e.target.value))}
+            style={{ padding: '6px 12px', borderRadius: 8, border: '1px solid var(--border-light)', fontSize: 12, fontWeight: 600, color: 'var(--text-primary)', outline: 'none' }}
+          >
+            <option value={30}>Last 30 Days</option>
+            <option value={90}>Last 3 Months</option>
+            <option value={180}>Last 6 Months</option>
+          </select>
         </div>
       </div>
 

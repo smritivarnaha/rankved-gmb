@@ -18,13 +18,14 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
   if (!profile) return NextResponse.json({ error: "Profile not found or access denied" }, { status: 404 });
 
   // googleName is in format "locations/123"
-  // We need the full resource name for the performance API
-  const resourceName = profile.googleName; 
+  // Support dynamic date ranges
+  const { searchParams } = new URL(req.url);
+  const days = parseInt(searchParams.get("days") || "30");
 
   // Google data has a ~3 day delay. End the range 3 days ago to ensure data presence.
   const now = new Date();
   const endDate = new Date(now.getTime() - 3 * 24 * 60 * 60 * 1000);
-  const startDate = new Date(now.getTime() - 33 * 24 * 60 * 60 * 1000);
+  const startDate = new Date(now.getTime() - (days + 3) * 24 * 60 * 60 * 1000);
 
   const startYear = startDate.getFullYear();
   const startMonth = startDate.getMonth() + 1;
