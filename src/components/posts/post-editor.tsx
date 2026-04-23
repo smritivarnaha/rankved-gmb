@@ -745,7 +745,20 @@ export function PostEditor({ initialData = null, timelineDate, onDateChange }: {
                   {saving && savingType === "DRAFT" ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Save className="w-3.5 h-3.5" />}
                   Save draft
                 </button>
-                {getScheduledAt() ? (
+
+                {canPublishNow ? (
+                  <button onClick={() => { clearSchedule(); handleSave("PUBLISH"); }} disabled={saving || !form.locationId || !form.summary}
+                    className={`px-4 py-2 text-[13px] font-medium rounded-lg transition-colors disabled:opacity-50 flex items-center gap-2 ${getScheduledAt() ? 'border border-[var(--accent)] text-[var(--accent)] hover:bg-white' : 'bg-[var(--accent)] hover:bg-[var(--accent-hover)] text-white'}`}>
+                    {saving && savingType === "PUBLISH" ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Send className="w-3.5 h-3.5" />}
+                    Publish now
+                  </button>
+                ) : (
+                  <div className="px-4 py-2 bg-gray-100 text-gray-500 text-[13px] font-medium rounded-lg flex items-center gap-2 cursor-not-allowed border border-gray-200" title={`You must schedule posts at least ${minScheduleDays} days in advance.`}>
+                    <Send className="w-3.5 h-3.5" /> Publish now (Disabled)
+                  </div>
+                )}
+
+                {getScheduledAt() && (
                   canSchedule ? (
                     <button onClick={() => handleSave("SCHEDULED")} disabled={saving || !form.locationId || !form.summary}
                       className="px-4 py-2 bg-[var(--accent)] hover:bg-[var(--accent-hover)] text-white text-[13px] font-medium rounded-lg transition-colors disabled:opacity-50 flex items-center gap-2">
@@ -755,18 +768,6 @@ export function PostEditor({ initialData = null, timelineDate, onDateChange }: {
                   ) : (
                     <div className="px-4 py-2 bg-gray-100 text-gray-500 text-[13px] font-medium rounded-lg flex items-center gap-2 cursor-not-allowed border border-gray-200" title="You do not have permission to schedule posts.">
                       <Clock className="w-3.5 h-3.5" /> Schedule (Disabled)
-                    </div>
-                  )
-                ) : (
-                  canPublishNow ? (
-                    <button onClick={() => handleSave("PUBLISH")} disabled={saving || !form.locationId || !form.summary}
-                      className="px-4 py-2 bg-[var(--accent)] hover:bg-[var(--accent-hover)] text-white text-[13px] font-medium rounded-lg transition-colors disabled:opacity-50 flex items-center gap-2">
-                      {saving && savingType === "PUBLISH" ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Send className="w-3.5 h-3.5" />}
-                      Publish now
-                    </button>
-                  ) : (
-                    <div className="px-4 py-2 bg-gray-100 text-gray-500 text-[13px] font-medium rounded-lg flex items-center gap-2 cursor-not-allowed border border-gray-200" title={`You must schedule posts at least ${minScheduleDays} days in advance.`}>
-                      <Send className="w-3.5 h-3.5" /> Publish now (Disabled)
                     </div>
                   )
                 )}
