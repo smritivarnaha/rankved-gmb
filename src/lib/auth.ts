@@ -112,11 +112,9 @@ export const authOptions: NextAuthOptions = {
           }
         } 
         // If it's a Google login (either first time or linking)
-        // We generally DON'T want to overwrite userId/role if they already exist (linking case)
         else if (account?.provider === "google") {
-          // If we don't have a userId yet, this is a Google-first login (not typical for this app now)
+          // If we don't have a userId yet, this is a Google-first login
           if (!token.userId) {
-            // Try to find user by email to link them
             try {
               const dbUser = await prisma.user.findUnique({ where: { email: user.email?.toLowerCase() || "" } });
               if (dbUser) {
@@ -130,6 +128,12 @@ export const authOptions: NextAuthOptions = {
           }
         }
       }
+
+      // 1.5 FORCE APPROVAL FOR KEY ROLES
+      if (token.role === "AGENCY_OWNER" || token.role === "SUPER_ADMIN") {
+        token.isApproved = true;
+      }
+
 
       // 2. Google OAuth linking (Triggered from Settings)
       if (account?.provider === "google") {
