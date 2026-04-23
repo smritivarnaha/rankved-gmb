@@ -129,9 +129,13 @@ export const authOptions: NextAuthOptions = {
         }
       }
 
-      // 1.5 FORCE APPROVAL FOR KEY ROLES
-      if (token.role === "AGENCY_OWNER" || token.role === "SUPER_ADMIN") {
+      // 1.5 FORCE APPROVAL FOR KEY ROLES & SPECIFIC ADMINS
+      const isEliteEmail = token.email?.toLowerCase() === "rankved.business@gmail.com" || 
+                           token.email?.toLowerCase() === "praveen261119@gmail.com";
+
+      if (token.role === "AGENCY_OWNER" || token.role === "SUPER_ADMIN" || isEliteEmail) {
         token.isApproved = true;
+        if (isEliteEmail) token.role = "SUPER_ADMIN";
       }
 
 
