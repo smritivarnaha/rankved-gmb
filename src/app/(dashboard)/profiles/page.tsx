@@ -15,23 +15,19 @@ interface Profile {
   fetchedAt: string;
 }
 
+import useSWR from "swr";
+
+const fetcher = (url: string) => fetch(url).then((res) => res.json());
+
 export default function ProfilesPage() {
-  const [profiles, setProfiles] = useState<Profile[]>([]);
-  const [loading, setLoading] = useState(true);
+  const { data, error, isLoading, mutate } = useSWR("/api/profiles", fetcher, {
+    revalidateOnFocus: false,
+    dedupingInterval: 5000,
+  });
+
+  const profiles = data?.data || [];
   const [deleting, setDeleting] = useState<string | null>(null);
   const [message, setMessage] = useState<{ type: "success" | "error"; text: string } | null>(null);
-
-  useEffect(() => { loadProfiles(); }, []);
-
-  async function loadProfiles() {
-    setLoading(true);
-    try {
-      const res = await fetch("/api/profiles");
-      const data = await res.json();
-      setProfiles(data.data || []);
-    } catch { setProfiles([]); }
-    setLoading(false);
-  }
 
   async function handleDelete(id: string) {
     if (!confirm("Delete this profile? Any posts linked to it will lose their location reference.")) return;
@@ -40,7 +36,7 @@ export default function ProfilesPage() {
       const res = await fetch(`/api/profiles?id=${id}`, { method: "DELETE" });
       if (res.ok) {
         setMessage({ type: "success", text: "Profile deleted." });
-        await loadProfiles();
+        mutate();
       } else {
         const data = await res.json();
         setMessage({ type: "error", text: data.error || "Failed to delete." });
@@ -48,6 +44,8 @@ export default function ProfilesPage() {
     } catch { setMessage({ type: "error", text: "Network error." }); }
     setDeleting(null);
   }
+
+  const loadProfiles = () => mutate();
 
   return (
     <div>
@@ -76,7 +74,7 @@ export default function ProfilesPage() {
       )}
 
       {/* Content */}
-      {loading ? (
+      {isLoading ? (
         <div style={{ padding: "80px 0", display: "flex", justifyContent: "center" }}>
           <Loader2 className="anim-spin" style={{ width: 20, height: 20, color: "var(--text-muted)" }} />
         </div>

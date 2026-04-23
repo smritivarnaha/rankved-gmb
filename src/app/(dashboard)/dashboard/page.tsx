@@ -107,7 +107,14 @@ export default async function DashboardPage() {
             {recentPosts.map((post) => (
               <Link key={post.id} href={`/posts/${post.id}`} className="activity-item">
                 <div className="activity-info">
-                  <p className="activity-title">{post.summary || "Untitled Post"}</p>
+                  <p className="activity-title" style={{ 
+                    overflow: "hidden", 
+                    textOverflow: "ellipsis", 
+                    whiteSpace: "nowrap",
+                    maxWidth: "500px"
+                  }}>
+                    {post.summary || "Untitled Post"}
+                  </p>
                   <div className="activity-meta">
                     <MapPin style={{ width: 13, height: 13 }} />
                     {post.location.name}

@@ -1,12 +1,19 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Shield, ShieldAlert, Users, Database, FileText, Loader2, UserPlus, UserCircle, Search, Trash2 } from "lucide-react";
+import { Shield, ShieldAlert, Users, Database, FileText, Loader2, UserPlus, UserCircle, Search, Trash2, X } from "lucide-react";
+import useSWR from "swr";
+
+const fetcher = (url: string) => fetch(url).then((res) => res.json());
 
 export default function AdminDashboard() {
-  const [users, setUsers] = useState<any[]>([]);
-  const [stats, setStats] = useState({ totalUsers: 0, totalProfiles: 0, totalPosts: 0 });
-  const [loading, setLoading] = useState(true);
+  const { data, error: fetchError, isLoading, mutate } = useSWR("/api/admin/users", fetcher, {
+    revalidateOnFocus: false,
+    dedupingInterval: 5000,
+  });
+
+  const users = data?.data || [];
+  const stats = data?.stats || { totalUsers: 0, totalProfiles: 0, totalPosts: 0 };
   const [error, setError] = useState("");
   const [searchQuery, setSearchQuery] = useState("");
   
@@ -19,26 +26,8 @@ export default function AdminDashboard() {
   const [creatingUser, setCreatingUser] = useState(false);
 
   useEffect(() => {
-    fetchData();
-  }, []);
-
-  const fetchData = async () => {
-    setLoading(true);
-    try {
-      const res = await fetch("/api/admin/users");
-      if (!res.ok) {
-         if(res.status === 403) throw new Error("You do not have permission to view this page.");
-         throw new Error("Failed to fetch data");
-      }
-      const data = await res.json();
-      setUsers(data.data || []);
-      if (data.stats) setStats(data.stats);
-    } catch (err: any) {
-      setError(err.message);
-    } finally {
-      setLoading(false);
-    }
-  };
+    if (fetchError) setError(fetchError.message);
+  }, [fetchError]);
 
   const handleCreateUser = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -54,15 +43,12 @@ export default function AdminDashboard() {
           password: newUserPassword
         }),
       });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || "Failed to create user");
+      const resData = await res.json();
+      if (!res.ok) throw new Error(resData.error || "Failed to create user");
       
-      // Add user to state
-      setUsers([data.data, ...users]);
-      setStats(prev => ({ ...prev, totalUsers: prev.totalUsers + 1 }));
+      mutate();
       setShowCreateModal(false);
       
-      // Reset form
       setNewUserName("");
       setNewUserUsername("");
       setNewUserEmail("");
@@ -75,33 +61,28 @@ export default function AdminDashboard() {
   };
 
   const handleDelete = async (id: string, name: string) => {
-    if (!confirm(`Are you sure you want to delete the user "${name}"? This action cannot be undone and will delete all their associated posts and profiles.`)) return;
+    if (!confirm(`Are you sure you want to delete the user "${name}"?`)) return;
     
-    // Optimistic UI update
-    const previousUsers = [...users];
-    setUsers(users.filter(u => u.id !== id));
-    setStats(prev => ({ ...prev, totalUsers: Math.max(0, prev.totalUsers - 1) }));
+    // Optimistic update
+    mutate({ ...data, data: users.filter((u: any) => u.id !== id) }, false);
 
     try {
       const res = await fetch(`/api/admin/users?id=${id}`, { method: "DELETE" });
-      if (!res.ok) {
-        throw new Error("Failed to delete user");
-      }
+      if (!res.ok) throw new Error("Failed to delete user");
+      mutate();
     } catch (err: any) {
       alert(err.message);
-      // Revert optimistic update
-      setUsers(previousUsers);
-      setStats(prev => ({ ...prev, totalUsers: prev.totalUsers + 1 }));
+      mutate();
     }
   };
 
-  const filteredUsers = users.filter(u => 
+  const filteredUsers = users.filter((u: any) => 
     (u.name?.toLowerCase() || "").includes(searchQuery.toLowerCase()) || 
     (u.username?.toLowerCase() || "").includes(searchQuery.toLowerCase()) ||
     (u.email?.toLowerCase() || "").includes(searchQuery.toLowerCase())
   );
 
-  if (loading) {
+  if (isLoading) {
     return (
       <div className="flex-1 flex flex-col items-center justify-center min-h-[60vh]">
         <Loader2 className="w-8 h-8 text-[var(--accent)] animate-spin mb-4" />
@@ -206,7 +187,7 @@ export default function AdminDashboard() {
                   </td>
                 </tr>
               ) : (
-                filteredUsers.map((user) => (
+                filteredUsers.map((user: any) => (
                   <tr key={user.id} className="hover:bg-[var(--bg-tertiary)]/50 transition-colors">
                     <td className="px-6 py-4">
                       <div className="flex items-center gap-3">
@@ -253,31 +234,40 @@ export default function AdminDashboard() {
 
       {/* Create User Modal */}
       {showCreateModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-          <div className="bg-white rounded-2xl p-6 w-full max-w-md shadow-xl">
-            <h2 className="text-xl font-bold mb-4">Create User (Agency Owner)</h2>
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-sm anim-fade">
+          <div className="bg-white rounded-2xl p-6 w-full max-w-md shadow-2xl anim-scale-in">
+            <div className="flex items-center justify-between mb-6">
+              <h2 className="text-xl font-bold text-slate-900">Create New Agency Owner</h2>
+              <button onClick={() => setShowCreateModal(false)} className="p-2 hover:bg-slate-100 rounded-full transition-colors text-slate-400">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
             <form onSubmit={handleCreateUser} className="space-y-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Name</label>
-                <input required type="text" value={newUserName} onChange={e => setNewUserName(e.target.value)} className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-[var(--accent)] outline-none" />
+                <label className="block text-sm font-semibold text-slate-700 mb-1.5">Full Name</label>
+                <input required type="text" value={newUserName} onChange={e => setNewUserName(e.target.value)} className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none transition-all" placeholder="Enter owner name" />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Username</label>
-                <input required type="text" value={newUserUsername} onChange={e => setNewUserUsername(e.target.value)} className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-[var(--accent)] outline-none" />
+                <label className="block text-sm font-semibold text-slate-700 mb-1.5">Username</label>
+                <input required type="text" value={newUserUsername} onChange={e => setNewUserUsername(e.target.value)} className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none transition-all" placeholder="Set a username" />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Email (Optional)</label>
-                <input type="email" value={newUserEmail} onChange={e => setNewUserEmail(e.target.value)} className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-[var(--accent)] outline-none" />
+                <label className="block text-sm font-semibold text-slate-700 mb-1.5">Email (Optional)</label>
+                <input type="email" value={newUserEmail} onChange={e => setNewUserEmail(e.target.value)} className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none transition-all" placeholder="owner@agency.com" />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Password</label>
-                <input required type="password" value={newUserPassword} onChange={e => setNewUserPassword(e.target.value)} className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-[var(--accent)] outline-none" />
+                <label className="block text-sm font-semibold text-slate-700 mb-1.5">Initial Password</label>
+                <input required type="password" value={newUserPassword} onChange={e => setNewUserPassword(e.target.value)} className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none transition-all" placeholder="••••••••" />
               </div>
-              <div className="flex justify-end gap-3 mt-6">
-                <button type="button" onClick={() => setShowCreateModal(false)} className="px-4 py-2 border rounded-lg hover:bg-gray-50">Cancel</button>
-                <button type="submit" disabled={creatingUser} className="px-4 py-2 bg-[var(--accent)] text-white rounded-lg hover:bg-indigo-700 flex items-center gap-2">
-                  {creatingUser && <Loader2 className="w-4 h-4 animate-spin" />}
-                  Create User
+              
+              <div className="flex gap-3 pt-4">
+                <button type="button" onClick={() => setShowCreateModal(false)} className="flex-1 px-4 py-2.5 border border-slate-200 text-slate-600 font-semibold rounded-xl hover:bg-slate-50 transition-colors">
+                  Cancel
+                </button>
+                <button type="submit" disabled={creatingUser} className="flex-1 px-4 py-2.5 bg-indigo-600 text-white font-semibold rounded-xl hover:bg-indigo-700 shadow-lg shadow-indigo-200 flex items-center justify-center gap-2 transition-all active:scale-95 disabled:opacity-50">
+                  {creatingUser ? <Loader2 className="w-4 h-4 animate-spin" /> : <UserPlus className="w-4 h-4" />}
+                  Create Account
                 </button>
               </div>
             </form>

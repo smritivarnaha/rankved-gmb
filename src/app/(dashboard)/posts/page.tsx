@@ -134,7 +134,19 @@ export default function PostsPage() {
                     </div>
                   </div>
 
-                  <p style={{ fontSize: 15, fontWeight: 500, color: "var(--text-primary)", lineHeight: 1.5, marginBottom: 16, flex: 1 }}>
+                  <p style={{ 
+                    fontSize: 14, 
+                    fontWeight: 500, 
+                    color: "var(--text-primary)", 
+                    lineHeight: 1.5, 
+                    marginBottom: 16, 
+                    flex: 1,
+                    display: "-webkit-box",
+                    WebkitLineClamp: 2,
+                    WebkitBoxOrient: "vertical",
+                    overflow: "hidden",
+                    textOverflow: "ellipsis"
+                  }}>
                     {post.summary}
                   </p>
 
