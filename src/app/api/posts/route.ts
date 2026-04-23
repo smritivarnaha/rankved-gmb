@@ -57,7 +57,6 @@ export async function POST(req: NextRequest) {
         topicType: body.topicType || "STANDARD",
         ctaType: body.ctaType || "",
         ctaUrl: body.ctaUrl || "",
-        finalUrl: body.finalUrl || body.ctaUrl || "",
         imageUrl: body.imageUrl || null,
         geoLat: body.geoLat || "",
         geoLng: body.geoLng || "",

@@ -36,7 +36,6 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
       topicType: body.topicType,
       ctaType: body.ctaType,
       ctaUrl: body.ctaUrl,
-      finalUrl: body.finalUrl,
       imageUrl: body.imageUrl,
       geoLat: body.geoLat,
       geoLng: body.geoLng,

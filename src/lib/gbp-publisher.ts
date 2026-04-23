@@ -141,7 +141,7 @@ export async function publishToGBP(opts: PublishOptions): Promise<PublishResult>
     const actionType = CTA_MAP[post.ctaType] || post.ctaType;
     payload.callToAction = {
       actionType,
-      url: post.finalUrl || post.ctaUrl || undefined,
+      url: post.ctaUrl || undefined,
     };
   } else if (post.ctaType === "CALL") {
     payload.callToAction = { actionType: "CALL" };
@@ -166,9 +166,13 @@ export async function publishToGBP(opts: PublishOptions): Promise<PublishResult>
   // Image
   if (imageDataUri) {
     const imageUrl = await resolveImageUrl(imageDataUri, accessToken);
-    if (imageUrl) {
-      payload.media = [{ mediaFormat: "PHOTO", sourceUrl: imageUrl }];
+    if (!imageUrl) {
+      return { 
+        success: false, 
+        error: "Failed to host image for Google. Please check your Supabase storage configuration (post-images bucket and API keys)." 
+      };
     }
+    payload.media = [{ mediaFormat: "PHOTO", sourceUrl: imageUrl }];
   }
 
   console.log(`[GBP] Publishing to ${locationName}:`, JSON.stringify(payload, null, 2));

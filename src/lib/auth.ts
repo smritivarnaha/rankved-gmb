@@ -94,6 +94,22 @@ export const authOptions: NextAuthOptions = {
           token.username = (user as any).username;
           token.ownerId = (user as any).ownerId;
           token.isApproved = (user as any).isApproved;
+
+          // Fetch linked google account tokens if they exist
+          try {
+            const googleAccount = await prisma.account.findFirst({
+              where: { userId: user.id, provider: "google" }
+            });
+            if (googleAccount) {
+              token.accessToken = googleAccount.access_token;
+              token.refreshToken = googleAccount.refresh_token;
+              token.accessTokenExpires = googleAccount.expires_at 
+                ? googleAccount.expires_at * 1000 
+                : undefined;
+            }
+          } catch (e) {
+            console.error("Failed to fetch linked Google account for credential login:", e);
+          }
         } 
         // If it's a Google login (either first time or linking)
         // We generally DON'T want to overwrite userId/role if they already exist (linking case)

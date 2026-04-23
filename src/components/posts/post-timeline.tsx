@@ -44,10 +44,17 @@ export function PostTimeline({ onDateSelect, selectedDate }: Props) {
 
   // Generate 52 days: 7 past + today + 44 future
   const days = [];
+  const toLocalDateString = (d: Date) => {
+    const year = d.getFullYear();
+    const month = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  };
+
   for (let i = -7; i <= 44; i++) {
     const d = new Date(now);
     d.setDate(now.getDate() + i);
-    const dateStr = d.toISOString().split("T")[0];
+    const dateStr = toLocalDateString(d);
     days.push({
       date: d, dateStr,
       day: d.getDate(),

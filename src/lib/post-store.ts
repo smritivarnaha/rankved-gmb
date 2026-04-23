@@ -16,7 +16,6 @@ export interface PostData {
   topicType: string;
   ctaType: string;
   ctaUrl: string;
-  finalUrl: string;
   imageUrl: string | null;
   geoLat: string;
   geoLng: string;
@@ -43,7 +42,6 @@ function mapPost(p: any): PostData {
     topicType: p.topicType || "STANDARD",
     ctaType: p.ctaType || "",
     ctaUrl: p.ctaUrl || "",
-    finalUrl: p.ctaUrl || "",
     imageUrl: p.mediaUrl || null,
     geoLat: "",
     geoLng: "",

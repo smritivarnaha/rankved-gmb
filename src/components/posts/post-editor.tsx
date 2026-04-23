@@ -92,38 +92,6 @@ export function PostEditor({ initialData = null, timelineDate, onDateChange }: {
     eventEnd: initialData?.eventEnd || "",
   });
 
-  const [utmSource, setUtmSource] = useState("google_business_profile");
-  const [utmMedium, setUtmMedium] = useState("organic");
-  const [utmCampaign, setUtmCampaign] = useState("");
-  const [utmContent, setUtmContent] = useState("");
-  const [copied, setCopied] = useState(false);
-
-  // Auto-generate campaign name from selected profile
-  const selectedProfile = locations.find(l => l.id === form.locationId);
-
-  const buildUtmUrl = () => {
-    if (!form.ctaUrl) return "";
-    try {
-      const url = new URL(form.ctaUrl);
-      if (utmSource) url.searchParams.set("utm_source", utmSource);
-      if (utmMedium) url.searchParams.set("utm_medium", utmMedium);
-      const campaign = utmCampaign || (selectedProfile ? `gbp_${selectedProfile.client.toLowerCase().replace(/\s+/g, "_")}_${selectedProfile.name.toLowerCase().replace(/\s+/g, "_")}` : "");
-      if (campaign) url.searchParams.set("utm_campaign", campaign);
-      if (utmContent) url.searchParams.set("utm_content", utmContent);
-      return url.toString();
-    } catch {
-      return form.ctaUrl;
-    }
-  };
-
-  const finalUrl = buildUtmUrl();
-
-  const copyUrl = () => {
-    navigator.clipboard.writeText(finalUrl);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
-  };
-
   const handleChange = (e: any) => setForm({ ...form, [e.target.name]: e.target.value });
 
   const [converting, setConverting] = useState(false);
@@ -240,6 +208,27 @@ export function PostEditor({ initialData = null, timelineDate, onDateChange }: {
     setSaving(true);
     setSavingType(type);
     try {
+      let finalImageUrl = imagePreview;
+
+      // Apply Geo-Tagging if enabled and coordinates exist
+      if (geoEnabled && imagePreview && geoLat && geoLng) {
+        try {
+          const { embedGPSInImage } = await import("@/lib/geo-exif");
+          finalImageUrl = await embedGPSInImage(
+            imagePreview,
+            parseFloat(geoLat),
+            parseFloat(geoLng),
+            geoLatRef,
+            geoLngRef,
+            geoTemplate,
+            geoDate
+          );
+        } catch (err) {
+          console.error("Failed to inject GPS metadata:", err);
+          // Continue with original image if metadata injection fails
+        }
+      }
+
       const profile = locations.find((l: any) => l.id === form.locationId);
       const isEdit = !!initialData?.id;
       const url = isEdit ? `/api/posts/${initialData.id}` : "/api/posts";
@@ -255,8 +244,7 @@ export function PostEditor({ initialData = null, timelineDate, onDateChange }: {
           topicType: form.topicType,
           ctaType: form.ctaType,
           ctaUrl: form.ctaType === "CALL" ? "" : form.ctaUrl,
-          finalUrl: form.ctaType === "CALL" ? "" : (finalUrl || form.ctaUrl),
-          imageUrl: imagePreview,
+          imageUrl: finalImageUrl,
           geoLat: geoLat,
           geoLng: geoLng,
           eventTitle: form.eventTitle,
@@ -462,12 +450,17 @@ export function PostEditor({ initialData = null, timelineDate, onDateChange }: {
                               alert('Invalid coordinates. Lat: -90 to 90, Lng: -180 to 180');
                               return;
                             }
-                            const geoBlob = await embedGPSInImage(imageFile, lat, lng, geoTemplate, geoDate || "2026-01-20");
-                            const geoFile = new File([geoBlob], imageFile.name.replace(/\.[^.]+$/, '.jpg'), { type: 'image/jpeg' });
+                            const { embedGPSInImage } = await import("@/lib/geo-exif");
+                            const geoDataUrl = await embedGPSInImage(imagePreview!, lat, lng, geoLatRef, geoLngRef, geoTemplate, geoDate || "2026-01-20");
+                            
+                            // Update preview and convert to File for persistence
+                            setImagePreview(geoDataUrl);
+                            const byteString = atob(geoDataUrl.split(',')[1]);
+                            const ab = new ArrayBuffer(byteString.length);
+                            const ia = new Uint8Array(ab);
+                            for (let i = 0; i < byteString.length; i++) ia[i] = byteString.charCodeAt(i);
+                            const geoFile = new File([ab], imageFile.name.replace(/\.[^.]+$/, '.jpg'), { type: 'image/jpeg' });
                             setImageFile(geoFile);
-                            const reader = new FileReader();
-                            reader.onload = () => setImagePreview(reader.result as string);
-                            reader.readAsDataURL(geoFile);
                             setGeoApplied(true);
                           } catch (err) {
                             alert('Failed to embed GPS data.');
@@ -577,56 +570,6 @@ export function PostEditor({ initialData = null, timelineDate, onDateChange }: {
                     className="w-full border border-[var(--border)] rounded-lg py-2.5 px-3 text-[14px] text-[var(--text-primary)] focus:outline-none focus:ring-2 focus:ring-[var(--accent)] focus:border-transparent disabled:opacity-50"
                     placeholder="https://example.com/page" />
                 </div>
-
-                {form.ctaUrl && (
-                  <div className="border border-[var(--border)] rounded-lg overflow-hidden">
-                    <div className="px-3 py-2.5 bg-[var(--bg-secondary)] border-b border-[var(--border-light)] flex items-center gap-2">
-                      <LinkIcon className="w-4 h-4 text-[var(--text-tertiary)]" />
-                      <span className="text-[13px] font-medium text-[var(--text-primary)]">UTM Tracking</span>
-                      <span className="text-[10px] text-[var(--text-tertiary)] bg-[var(--bg-tertiary)] px-1.5 py-0.5 rounded ml-auto">Auto-generated</span>
-                    </div>
-                    <div className="p-3 space-y-3">
-                      <div className="grid grid-cols-2 gap-3">
-                        <div>
-                          <label className="block text-[11px] font-medium text-[var(--text-secondary)] mb-1">Source</label>
-                          <input type="text" value={utmSource} onChange={(e) => setUtmSource(e.target.value)}
-                            className="w-full border border-[var(--border)] rounded-md py-1.5 px-2.5 text-[12px] text-[var(--text-primary)] focus:outline-none focus:ring-2 focus:ring-[var(--accent)] focus:border-transparent bg-white" />
-                        </div>
-                        <div>
-                          <label className="block text-[11px] font-medium text-[var(--text-secondary)] mb-1">Medium</label>
-                          <input type="text" value={utmMedium} onChange={(e) => setUtmMedium(e.target.value)}
-                            className="w-full border border-[var(--border)] rounded-md py-1.5 px-2.5 text-[12px] text-[var(--text-primary)] focus:outline-none focus:ring-2 focus:ring-[var(--accent)] focus:border-transparent bg-white" />
-                        </div>
-                      </div>
-                      <div>
-                        <label className="block text-[11px] font-medium text-[var(--text-secondary)] mb-1">Campaign</label>
-                        <input type="text" value={utmCampaign} onChange={(e) => setUtmCampaign(e.target.value)}
-                          placeholder={selectedProfile ? `gbp_${selectedProfile.client.toLowerCase().replace(/\s+/g, "_")}_${selectedProfile.name.toLowerCase().replace(/\s+/g, "_")}` : "auto-generated from profile"}
-                          className="w-full border border-[var(--border)] rounded-md py-1.5 px-2.5 text-[12px] text-[var(--text-primary)] focus:outline-none focus:ring-2 focus:ring-[var(--accent)] focus:border-transparent bg-white placeholder:text-[var(--text-tertiary)]" />
-                      </div>
-                      <div>
-                        <label className="block text-[11px] font-medium text-[var(--text-secondary)] mb-1">Content <span className="text-[var(--text-tertiary)]">(optional)</span></label>
-                        <input type="text" value={utmContent} onChange={(e) => setUtmContent(e.target.value)}
-                          placeholder="e.g. spring_sale_post"
-                          className="w-full border border-[var(--border)] rounded-md py-1.5 px-2.5 text-[12px] text-[var(--text-primary)] focus:outline-none focus:ring-2 focus:ring-[var(--accent)] focus:border-transparent bg-white placeholder:text-[var(--text-tertiary)]" />
-                      </div>
-
-                      {/* Final URL preview */}
-                      <div>
-                        <label className="block text-[11px] font-medium text-[var(--text-secondary)] mb-1">Final URL</label>
-                        <div className="flex gap-1.5">
-                          <div className="flex-1 bg-[var(--bg-secondary)] border border-[var(--border)] rounded-md py-1.5 px-2.5 text-[11px] text-[var(--text-secondary)] break-all leading-relaxed max-h-[52px] overflow-y-auto">
-                            {finalUrl}
-                          </div>
-                          <button type="button" onClick={copyUrl}
-                            className="p-2 border border-[var(--border)] rounded-md hover:bg-[var(--bg-secondary)] transition-colors shrink-0">
-                            {copied ? <Check className="w-3.5 h-3.5 text-[var(--success)]" /> : <Copy className="w-3.5 h-3.5 text-[var(--text-tertiary)]" />}
-                          </button>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                )}
               </div>
             )}
           </div>

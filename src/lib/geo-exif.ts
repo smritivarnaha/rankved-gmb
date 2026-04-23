@@ -74,33 +74,33 @@ export const CAMERA_TEMPLATES = [
  * Takes an image File/Blob and returns a new JPEG Blob with GPS EXIF data embedded.
  * Works in the browser using piexifjs.
  */
-export async function embedGPSInImage(file: File, lat: number, lng: number, templateId: string, captureDate: string): Promise<Blob> {
+export async function embedGPSInImage(
+  dataUri: string,
+  lat: number,
+  lng: number,
+  latRef: string,
+  lngRef: string,
+  templateId: string = "samsung_s23_ultra",
+  captureDate: string = "2026-01-20"
+): Promise<string> {
   return new Promise((resolve, reject) => {
     const img = new Image();
     img.onload = () => {
-      // Draw image to canvas to get clean JPEG without existing messy metadata
       const canvas = document.createElement("canvas");
       canvas.width = img.width;
       canvas.height = img.height;
       const ctx = canvas.getContext("2d")!;
       ctx.drawImage(img, 0, 0);
-      
       const jpegDataUrl = canvas.toDataURL("image/jpeg", 0.92);
       
       try {
-        const latRef = lat >= 0 ? "N" : "S";
-        const lngRef = lng >= 0 ? "E" : "W";
         const latRational = decimalToRational(lat);
         const lngRational = decimalToRational(lng);
-
-        // Find selected template
         const template = CAMERA_TEMPLATES.find(t => t.id === templateId) || CAMERA_TEMPLATES[0];
 
-        // Format capture date: YYYY-MM-DD -> YYYY:MM:DD HH:MM:SS
         const [year, month, day] = captureDate.split("-");
         const exifDateStr = `${year}:${month}:${day} 12:00:00`;
 
-        // Start fresh EXIF with required basic tags for better OS compatibility
         const exifObj: any = {
           "0th": {
             [piexif.ImageIFD.Make]: template.make,
@@ -115,46 +115,34 @@ export async function embedGPSInImage(file: File, lat: number, lng: number, temp
             [piexif.ExifIFD.ExifVersion]: "0230",
             [piexif.ExifIFD.DateTimeOriginal]: exifDateStr,
             [piexif.ExifIFD.DateTimeDigitized]: exifDateStr,
+            [piexif.ExifIFD.LensModel]: template.lensModel,
             [piexif.ExifIFD.ExposureTime]: template.exposureTime,
             [piexif.ExifIFD.FNumber]: template.fNumber,
             [piexif.ExifIFD.ISOSpeedRatings]: template.iso,
-            [piexif.ExifIFD.Flash]: template.flash,
             [piexif.ExifIFD.FocalLength]: template.focalLength,
-            [piexif.ExifIFD.ColorSpace]: 1, // sRGB
-            [piexif.ExifIFD.LensModel]: template.lensModel,
+            [piexif.ExifIFD.Flash]: template.flash,
+            [piexif.ExifIFD.ColorSpace]: 1,
             [piexif.ExifIFD.PixelXDimension]: img.width,
             [piexif.ExifIFD.PixelYDimension]: img.height,
           },
-          "GPS": {},
-          "Interop": {},
-          "1st": {},
-          "thumbnail": null
+          "GPS": {
+            [piexif.GPSIFD.GPSVersionID]: [2, 3, 0, 0],
+            [piexif.GPSIFD.GPSLatitudeRef]: latRef,
+            [piexif.GPSIFD.GPSLatitude]: latRational,
+            [piexif.GPSIFD.GPSLongitudeRef]: lngRef,
+            [piexif.GPSIFD.GPSLongitude]: lngRational,
+            [piexif.GPSIFD.GPSDateStamp]: `${year}:${month}:${day}`,
+          }
         };
 
-        // Set GPS data
-        exifObj["GPS"][piexif.GPSIFD.GPSVersionID] = [2, 2, 0, 0];
-        exifObj["GPS"][piexif.GPSIFD.GPSLatitudeRef] = latRef;
-        exifObj["GPS"][piexif.GPSIFD.GPSLatitude] = latRational;
-        exifObj["GPS"][piexif.GPSIFD.GPSLongitudeRef] = lngRef;
-        exifObj["GPS"][piexif.GPSIFD.GPSLongitude] = lngRational;
-
-        const exifBytes = piexif.dump(exifObj as any);
+        const exifBytes = piexif.dump(exifObj);
         const newJpegDataUrl = piexif.insert(exifBytes, jpegDataUrl);
-
-        // Convert data URL back to Blob
-        const byteString = atob(newJpegDataUrl.split(',')[1]);
-        const ab = new ArrayBuffer(byteString.length);
-        const ia = new Uint8Array(ab);
-        for (let i = 0; i < byteString.length; i++) {
-          ia[i] = byteString.charCodeAt(i);
-        }
-        resolve(new Blob([ab], { type: "image/jpeg" }));
+        resolve(newJpegDataUrl);
       } catch (err) {
         reject(err);
       }
     };
     img.onerror = () => reject(new Error("Failed to load image"));
-    img.src = URL.createObjectURL(file);
+    img.src = dataUri;
   });
 }
-
