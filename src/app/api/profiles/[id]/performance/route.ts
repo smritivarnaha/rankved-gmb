@@ -21,17 +21,18 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
   // We need the full resource name for the performance API
   const resourceName = profile.googleName; 
 
-  // Calculate last 30 days
+  // Google data has a ~3 day delay. End the range 3 days ago to ensure data presence.
   const now = new Date();
-  const thirtyDaysAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+  const endDate = new Date(now.getTime() - 3 * 24 * 60 * 60 * 1000);
+  const startDate = new Date(now.getTime() - 33 * 24 * 60 * 60 * 1000);
 
-  const startYear = thirtyDaysAgo.getFullYear();
-  const startMonth = thirtyDaysAgo.getMonth() + 1;
-  const startDay = thirtyDaysAgo.getDate();
+  const startYear = startDate.getFullYear();
+  const startMonth = startDate.getMonth() + 1;
+  const startDay = startDate.getDate();
 
-  const endYear = now.getFullYear();
-  const endMonth = now.getMonth() + 1;
-  const endDay = now.getDate();
+  const endYear = endDate.getFullYear();
+  const endMonth = endDate.getMonth() + 1;
+  const endDay = endDate.getDate();
 
   const metrics = [
     "BUSINESS_IMPRESSIONS_DESKTOP_MAPS",
@@ -55,27 +56,34 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
 
     if (!response.ok) {
       const errorData = await response.json();
+      console.error("Google Performance API Error:", errorData);
       return NextResponse.json({ error: errorData.error?.message || "Google API Error" }, { status: response.status });
     }
 
     const data = await response.json();
+    console.log(`Fetched performance for ${profile.name}:`, JSON.stringify(data).substring(0, 500));
     
-    // Process data to sum up totals for the 30 day period
     const totals: Record<string, number> = {};
     
-    (data.multiDailyMetricTimeSeries || []).forEach((series: any) => {
-      const metric = series.dailyMetricTimeSeries?.[0]?.dailyMetric;
-      if (!metric) return;
-      
-      const sum = (series.dailyMetricTimeSeries?.[0]?.timeSeries?.values || []).reduce((acc: number, val: any) => {
-        return acc + (parseInt(val.value) || 0);
-      }, 0);
-      
-      totals[metric] = sum;
+    // Google returns an array of MultiDailyMetricTimeSeries
+    (data.multiDailyMetricTimeSeries || []).forEach((item: any) => {
+      // Each item has a dailyMetricTimeSeries array
+      (item.dailyMetricTimeSeries || []).forEach((series: any) => {
+        const metric = series.dailyMetric;
+        if (!metric) return;
+        
+        // Sum all values in the timeSeries
+        const sum = (series.timeSeries?.values || []).reduce((acc: number, point: any) => {
+          return acc + (parseInt(point.value) || 0);
+        }, 0);
+        
+        totals[metric] = (totals[metric] || 0) + sum;
+      });
     });
 
     return NextResponse.json({ data: totals });
   } catch (err: any) {
+    console.error("Performance API Catch:", err);
     return NextResponse.json({ error: err.message }, { status: 500 });
   }
 }
