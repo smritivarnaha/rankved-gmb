@@ -57,6 +57,8 @@ async function resolveImageUrl(
     return null;
   }
 
+  console.log("[GBP] Using Supabase Storage:", supabaseUrl, "Key starts with:", supabaseKey.substring(0, 10) + "...");
+
   try {
     // Convert base64 to Buffer
     const base64Data = imageDataUri.split(",")[1];
