@@ -234,8 +234,8 @@ export default function AdminDashboard() {
 
       {/* Create User Modal */}
       {showCreateModal && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-sm anim-fade">
-          <div className="bg-white rounded-2xl p-6 w-full max-w-md shadow-2xl anim-scale-in">
+        <div className="modal-overlay anim-fade">
+          <div className="modal-content anim-scale p-6">
             <div className="flex items-center justify-between mb-6">
               <h2 className="text-xl font-bold text-slate-900">Create New Agency Owner</h2>
               <button onClick={() => setShowCreateModal(false)} className="p-2 hover:bg-slate-100 rounded-full transition-colors text-slate-400">

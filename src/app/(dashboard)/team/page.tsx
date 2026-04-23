@@ -240,8 +240,8 @@ export default function TeamPage() {
 
       {/* Create User Modal */}
       {showForm && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-sm anim-fade">
-          <div className="bg-white rounded-2xl p-6 w-full max-w-2xl shadow-2xl anim-scale-in max-h-[90vh] flex flex-col">
+        <div className="modal-overlay anim-fade">
+          <div className="modal-content anim-scale max-h-[90vh] flex flex-col" style={{ maxWidth: "600px" }}>
             <div className="flex items-center justify-between mb-6">
               <div className="flex items-center gap-3">
                 <div className="p-2 bg-indigo-50 rounded-lg">
