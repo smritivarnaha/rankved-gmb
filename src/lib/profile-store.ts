@@ -49,26 +49,16 @@ function locationToProfile(loc: any): ProfileData {
 }
 
 export async function getAllProfiles(userId: string, role: string): Promise<ProfileData[]> {
-  if (role === "SUPER_ADMIN") {
-    const locations = await prisma.location.findMany({ orderBy: { createdAt: "desc" } });
-    return locations.map(locationToProfile);
-  } else if (role === "AGENCY_OWNER") {
-    // Agency Owner sees profiles associated with their default Client
-    const client = await prisma.client.findFirst({ where: { userId } });
-    if (!client) return [];
-    const locations = await prisma.location.findMany({
-      where: { clientId: client.id },
-      orderBy: { createdAt: "desc" },
-    });
-    return locations.map(locationToProfile);
-  } else {
-    // Team Member sees only profiles explicitly assigned to them
-    const locations = await prisma.location.findMany({
-      where: { assignedUsers: { some: { id: userId } } },
-      orderBy: { createdAt: "desc" },
-    });
-    return locations.map(locationToProfile);
-  }
+  // Even for Super Admin, we should only show THEIR profiles on the main page
+  // to avoid confusion with other agency profiles.
+  const client = await prisma.client.findFirst({ where: { userId } });
+  if (!client) return [];
+  
+  const locations = await prisma.location.findMany({
+    where: { clientId: client.id },
+    orderBy: { createdAt: "desc" },
+  });
+  return locations.map(locationToProfile);
 }
 
 export async function getProfileById(id: string, userId: string, role: string): Promise<ProfileData | undefined> {
@@ -78,9 +68,9 @@ export async function getProfileById(id: string, userId: string, role: string): 
   });
   if (!loc) return undefined;
 
-  if (role === "SUPER_ADMIN") return locationToProfile(loc);
-  if (role === "AGENCY_OWNER" && loc.client.userId === userId) return locationToProfile(loc);
-  if (role === "TEAM_MEMBER" && loc.assignedUsers.some(u => u.id === userId)) return locationToProfile(loc);
+  // Strict check: User must own the client or be assigned
+  if (loc.client.userId === userId) return locationToProfile(loc);
+  if (loc.assignedUsers.some(u => u.id === userId)) return locationToProfile(loc);
 
   return undefined;
 }
@@ -88,10 +78,9 @@ export async function getProfileById(id: string, userId: string, role: string): 
 export async function saveProfiles(profiles: ProfileData[], userId: string): Promise<void> {
   const clientId = await ensureDefaultClient(userId);
 
-  // We DO NOT delete existing locations here because it would wipe assignments for Team Members!
-  // Instead we just upsert the ones we found.
-  
   for (const p of profiles) {
+    // We update the clientId on EVERY sync to ensure the current user 
+    // actually "owns" the view of this profile in their dashboard.
     await prisma.location.upsert({
       where: { gbpAccountId_gbpLocationId: { gbpAccountId: p.accountId, gbpLocationId: p.googleName } },
       update: {
@@ -99,6 +88,7 @@ export async function saveProfiles(profiles: ProfileData[], userId: string): Pro
         address: p.address || null,
         phone: p.phone || null,
         cachedAt: new Date(p.fetchedAt),
+        clientId: clientId, // FORCE ownership to current user
       },
       create: {
         id: p.id,
