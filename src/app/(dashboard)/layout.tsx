@@ -3,28 +3,16 @@ import { Topbar } from "@/components/layout/topbar";
 import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/lib/auth";
 import { ShieldAlert, Loader2 } from "lucide-react";
-import prisma from "@/lib/prisma";
 import { Suspense } from "react";
 
 export default async function DashboardLayout({ children }: { children: React.ReactNode }) {
   const session = await getServerSession(authOptions);
-  let user = (session as any)?.user;
+  const user = (session as any)?.user;
   
-  // If not approved or role missing, try to refresh from DB to handle stale sessions
-  if (user && (!user.isApproved || !user.role)) {
-    const dbUser = await prisma.user.findUnique({ where: { id: user.id } });
-    if (dbUser) {
-      user = {
-        ...user,
-        isApproved: dbUser.isApproved || dbUser.email?.toLowerCase() === "rankved.business@gmail.com",
-        role: dbUser.email?.toLowerCase() === "rankved.business@gmail.com" ? "SUPER_ADMIN" : dbUser.role,
-      };
-    }
-  }
-
   const isApproved = user?.isApproved;
   const role = user?.role;
   const hasAccess = isApproved || role === "SUPER_ADMIN";
+
 
   return (
     <div className="app-shell">
