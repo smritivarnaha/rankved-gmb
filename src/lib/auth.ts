@@ -177,7 +177,9 @@ export const authOptions: NextAuthOptions = {
         }
       } 
       
+      /* 
       // 3. Refresh user data from DB periodically (if not a fresh login/linking)
+      // DISABLED: This causes 5+ second navigation lag on every click in serverless/cross-region setups.
       if (token.userId && !account) {
         try {
           const dbUser = await prisma.user.findUnique({ where: { id: token.userId as string } });
@@ -194,6 +196,7 @@ export const authOptions: NextAuthOptions = {
           }
         } catch (e) {}
       }
+      */
 
       // 4. Token expiration check and refresh
       if (token.accessTokenExpires && Date.now() < (token.accessTokenExpires as number)) {
