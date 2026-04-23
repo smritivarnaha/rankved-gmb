@@ -380,12 +380,19 @@ export function PostEditor({ initialData = null, timelineDate, onDateChange }: {
                         <div>
                           <label className="block text-[11px] font-medium text-[var(--text-secondary)] mb-1">Latitude</label>
                           <div className="relative">
-                            <input type="text" value={geoLat} onChange={(e) => { setGeoLat(e.target.value); setGeoApplied(false); }}
+                            <input type="text" value={geoLat} onChange={(e) => { 
+                                // Only allow numbers, minus sign, and period
+                                const val = e.target.value.replace(/[^\d.-]/g, '');
+                                // Only allow one minus sign at the start, and one period
+                                const cleanVal = val.replace(/(?!^)-/g, '').replace(/(\..*)\./g, '$1');
+                                setGeoLat(cleanVal); 
+                                setGeoApplied(false); 
+                              }}
                               placeholder="e.g. 45.5152"
-                              className="w-full border border-[var(--border)] rounded-md py-2 pl-2.5 pr-8 text-[13px] text-[var(--text-primary)] focus:outline-none focus:ring-2 focus:ring-[var(--accent)] focus:border-transparent" />
+                              className="w-full border border-[var(--border)] rounded-md py-2 pl-2.5 pr-10 text-[13px] text-[var(--text-primary)] focus:outline-none focus:ring-2 focus:ring-[var(--accent)] focus:border-transparent" />
                             {geoLat && !isNaN(parseFloat(geoLat)) && (
-                              <span className="absolute right-2.5 top-1/2 -translate-y-1/2 text-[12px] font-medium text-[var(--text-tertiary)] bg-white px-1">
-                                {parseFloat(geoLat) >= 0 ? 'N' : 'S'}
+                              <span className="absolute right-2.5 top-1/2 -translate-y-1/2 text-[12px] font-medium text-[var(--text-tertiary)] bg-white px-1 pointer-events-none">
+                                ° {parseFloat(geoLat) >= 0 ? 'N' : 'S'}
                               </span>
                             )}
                           </div>
@@ -393,12 +400,17 @@ export function PostEditor({ initialData = null, timelineDate, onDateChange }: {
                         <div>
                           <label className="block text-[11px] font-medium text-[var(--text-secondary)] mb-1">Longitude</label>
                           <div className="relative">
-                            <input type="text" value={geoLng} onChange={(e) => { setGeoLng(e.target.value); setGeoApplied(false); }}
+                            <input type="text" value={geoLng} onChange={(e) => { 
+                                const val = e.target.value.replace(/[^\d.-]/g, '');
+                                const cleanVal = val.replace(/(?!^)-/g, '').replace(/(\..*)\./g, '$1');
+                                setGeoLng(cleanVal); 
+                                setGeoApplied(false); 
+                              }}
                               placeholder="e.g. -122.6784"
-                              className="w-full border border-[var(--border)] rounded-md py-2 pl-2.5 pr-8 text-[13px] text-[var(--text-primary)] focus:outline-none focus:ring-2 focus:ring-[var(--accent)] focus:border-transparent" />
+                              className="w-full border border-[var(--border)] rounded-md py-2 pl-2.5 pr-10 text-[13px] text-[var(--text-primary)] focus:outline-none focus:ring-2 focus:ring-[var(--accent)] focus:border-transparent" />
                             {geoLng && !isNaN(parseFloat(geoLng)) && (
-                              <span className="absolute right-2.5 top-1/2 -translate-y-1/2 text-[12px] font-medium text-[var(--text-tertiary)] bg-white px-1">
-                                {parseFloat(geoLng) >= 0 ? 'E' : 'W'}
+                              <span className="absolute right-2.5 top-1/2 -translate-y-1/2 text-[12px] font-medium text-[var(--text-tertiary)] bg-white px-1 pointer-events-none">
+                                ° {parseFloat(geoLng) >= 0 ? 'E' : 'W'}
                               </span>
                             )}
                           </div>

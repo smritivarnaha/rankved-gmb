@@ -38,8 +38,24 @@ export async function embedGPSInImage(file: File, lat: number, lng: number): Pro
         const latRational = decimalToRational(lat);
         const lngRational = decimalToRational(lng);
 
-        // Start fresh EXIF
-        const exifObj: any = { "0th": {}, "Exif": {}, "GPS": {}, "Interop": {}, "1st": {}, "thumbnail": null };
+        // Start fresh EXIF with required basic tags for better OS compatibility
+        const exifObj: any = {
+          "0th": {
+            [piexif.ImageIFD.Make]: "RankVed",
+            [piexif.ImageIFD.Model]: "GBP Scheduler",
+            [piexif.ImageIFD.Software]: "RankVed GMB Manager",
+            [piexif.ImageIFD.XResolution]: [72, 1],
+            [piexif.ImageIFD.YResolution]: [72, 1],
+            [piexif.ImageIFD.ResolutionUnit]: 2,
+          },
+          "Exif": {
+            [piexif.ExifIFD.ExifVersion]: "0230",
+          },
+          "GPS": {},
+          "Interop": {},
+          "1st": {},
+          "thumbnail": null
+        };
 
         // Set GPS data
         exifObj["GPS"][piexif.GPSIFD.GPSVersionID] = [2, 2, 0, 0];
