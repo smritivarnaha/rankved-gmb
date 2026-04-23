@@ -112,9 +112,9 @@ export function PerformanceView({ profile, onBack }: { profile: Profile, onBack?
               </div>
             )}
 
-            {activeTab === "calls" && <MetricDetail label="Phone Calls" value={data?.BUSINESS_PHONE_CALLS} icon="📞" />}
+            {activeTab === "calls" && <MetricDetail label="Phone Calls" value={data?.CALL_CLICKS} icon="📞" />}
             {activeTab === "directions" && <MetricDetail label="Direction Requests" value={data?.BUSINESS_DIRECTION_REQUESTS} icon="📍" />}
-            {activeTab === "website" && <MetricDetail label="Website Clicks" value={data?.BUSINESS_WEBSITE_CLICKS} icon="🌐" />}
+            {activeTab === "website" && <MetricDetail label="Website Clicks" value={data?.WEBSITE_CLICKS} icon="🌐" />}
 
             {activeTab === "keywords" && (
               <div className="space-y-3">

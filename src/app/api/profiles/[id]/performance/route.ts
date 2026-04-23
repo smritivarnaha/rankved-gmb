@@ -39,8 +39,8 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
     "BUSINESS_IMPRESSIONS_DESKTOP_SEARCH",
     "BUSINESS_IMPRESSIONS_MOBILE_SEARCH",
     "BUSINESS_DIRECTION_REQUESTS",
-    "BUSINESS_PHONE_CALLS",
-    "BUSINESS_WEBSITE_CLICKS"
+    "CALL_CLICKS",
+    "WEBSITE_CLICKS"
   ];
 
   const url = `https://businessprofileperformance.googleapis.com/v1/${resourceName}:fetchMultiDailyMetricsTimeSeries?` + 
