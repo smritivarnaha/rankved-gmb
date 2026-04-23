@@ -147,68 +147,155 @@ export default function ProfilesPage() {
 
 function PerformanceModal({ profile, onClose }: { profile: any, onClose: () => void }) {
   const [data, setData] = useState<any>(null);
+  const [keywords, setKeywords] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [activeTab, setActiveTab] = useState<"overview" | "keywords">("overview");
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    fetch(`/api/profiles/${profile.id}/performance`)
-      .then(r => r.ok ? r.json() : Promise.reject("Failed to load"))
-      .then(d => setData(d.data))
-      .catch(e => setError(e))
-      .finally(() => setLoading(false));
+    async function loadData() {
+      setLoading(true);
+      try {
+        const [perfRes, keyRes] = await Promise.all([
+          fetch(`/api/profiles/${profile.id}/performance`),
+          fetch(`/api/profiles/${profile.id}/keywords`)
+        ]);
+        
+        const perfData = await perfRes.json();
+        const keyData = await keyRes.json();
+        
+        setData(perfData.data);
+        setKeywords(keyData.data || []);
+      } catch (e) {
+        setError("Failed to load insights");
+      }
+      setLoading(false);
+    }
+    loadData();
   }, [profile.id]);
 
   const metrics = [
-    { label: "Google Maps (Desktop)", key: "BUSINESS_IMPRESSIONS_DESKTOP_MAPS" },
-    { label: "Google Maps (Mobile)", key: "BUSINESS_IMPRESSIONS_MOBILE_MAPS" },
-    { label: "Google Search (Desktop)", key: "BUSINESS_IMPRESSIONS_DESKTOP_SEARCH" },
-    { label: "Google Search (Mobile)", key: "BUSINESS_IMPRESSIONS_MOBILE_SEARCH" },
-    { label: "Website Clicks", key: "BUSINESS_WEBSITE_CLICKS", highlight: true },
-    { label: "Phone Calls", key: "BUSINESS_PHONE_CALLS", highlight: true },
-    { label: "Direction Requests", key: "BUSINESS_DIRECTION_REQUESTS", highlight: true },
+    { label: "Maps Impressions (Mobile)", key: "BUSINESS_IMPRESSIONS_MOBILE_MAPS", icon: "📱" },
+    { label: "Maps Impressions (Desktop)", key: "BUSINESS_IMPRESSIONS_DESKTOP_MAPS", icon: "💻" },
+    { label: "Search Impressions (Mobile)", key: "BUSINESS_IMPRESSIONS_MOBILE_SEARCH", icon: "🔍" },
+    { label: "Search Impressions (Desktop)", key: "BUSINESS_IMPRESSIONS_DESKTOP_SEARCH", icon: "🖥️" },
+    { label: "Website Clicks", key: "BUSINESS_WEBSITE_CLICKS", highlight: true, icon: "🌐" },
+    { label: "Phone Calls", key: "BUSINESS_PHONE_CALLS", highlight: true, icon: "📞" },
+    { label: "Direction Requests", key: "BUSINESS_DIRECTION_REQUESTS", highlight: true, icon: "📍" },
   ];
 
   return (
     <div className="modal-overlay anim-fade">
-      <div className="modal-content anim-scale" style={{ maxWidth: 500 }}>
-        <div className="modal-header">
-          <div>
-            <h2 className="text-xl font-bold text-slate-900">{profile.name}</h2>
-            <p className="text-xs text-slate-500 mt-1">Last 30 Days Performance</p>
+      <div className="modal-content anim-scale" style={{ maxWidth: 600, height: '85vh' }}>
+        <div className="modal-header" style={{ paddingBottom: 0 }}>
+          <div style={{ paddingBottom: 16 }}>
+            <h2 className="text-2xl font-black text-slate-900 tracking-tight">{profile.name}</h2>
+            <div className="flex items-center gap-2 mt-1">
+              <span className="flex h-2 w-2 rounded-full bg-emerald-500"></span>
+              <p className="text-xs font-bold text-slate-500 uppercase tracking-widest">Live Insights · Last 30 Days</p>
+            </div>
           </div>
-          <button onClick={onClose} className="p-2 hover:bg-slate-100 rounded-full transition-colors text-slate-400">
+          <button onClick={onClose} className="p-2 hover:bg-slate-100 rounded-full transition-colors text-slate-400 absolute top-4 right-4">
             <X className="w-5 h-5" />
           </button>
         </div>
 
-        <div className="modal-body">
+        {/* Tab Switcher */}
+        <div className="px-6 flex gap-1 border-b border-slate-100">
+          <button 
+            onClick={() => setActiveTab("overview")}
+            className={`px-4 py-3 text-sm font-bold transition-all border-b-2 ${activeTab === "overview" ? "border-indigo-600 text-indigo-600" : "border-transparent text-slate-400 hover:text-slate-600"}`}
+          >
+            Overview
+          </button>
+          <button 
+            onClick={() => setActiveTab("keywords")}
+            className={`px-4 py-3 text-sm font-bold transition-all border-b-2 ${activeTab === "keywords" ? "border-indigo-600 text-indigo-600" : "border-transparent text-slate-400 hover:text-slate-600"}`}
+          >
+            Keywords
+          </button>
+        </div>
+
+        <div className="modal-body" style={{ background: '#fcfdfe' }}>
           {loading ? (
-            <div className="flex flex-col items-center justify-center py-12">
-              <Loader2 className="w-8 h-8 animate-spin text-indigo-600 mb-4" />
-              <p className="text-sm text-slate-500">Fetching Google Insights...</p>
+            <div className="flex flex-col items-center justify-center py-24">
+              <div className="relative">
+                <div className="w-16 h-16 border-4 border-indigo-100 border-t-indigo-600 rounded-full animate-spin"></div>
+                <div className="absolute inset-0 flex items-center justify-center">
+                  <div className="w-8 h-8 bg-indigo-50 rounded-full"></div>
+                </div>
+              </div>
+              <p className="text-sm font-bold text-slate-400 mt-6 tracking-tight uppercase">Analyzing Data...</p>
             </div>
           ) : error ? (
-            <div className="bg-red-50 p-4 rounded-xl text-red-600 text-sm flex items-center gap-3">
-              <AlertCircle className="w-5 h-5" />
-              {error}
+            <div className="bg-red-50 p-6 rounded-3xl text-red-600 text-sm flex items-center gap-4 border border-red-100">
+              <div className="w-10 h-10 bg-red-100 rounded-2xl flex items-center justify-center flex-shrink-0">
+                <AlertCircle className="w-5 h-5" />
+              </div>
+              <div>
+                <p className="font-bold">Insight Error</p>
+                <p className="opacity-80">{error}</p>
+              </div>
+            </div>
+          ) : activeTab === "overview" ? (
+            <div className="space-y-3">
+              <div className="grid grid-cols-2 gap-3 mb-6">
+                 <div className="bg-white p-5 rounded-3xl border border-slate-100 shadow-sm">
+                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Total Interactions</p>
+                    <p className="text-3xl font-black text-slate-900 tracking-tighter">
+                      {Object.values(data || {}).reduce((a: any, b: any) => a + b, 0)}
+                    </p>
+                 </div>
+                 <div className="bg-indigo-600 p-5 rounded-3xl shadow-lg shadow-indigo-100">
+                    <p className="text-[10px] font-black text-white/60 uppercase tracking-widest mb-1">Website Clicks</p>
+                    <p className="text-3xl font-black text-white tracking-tighter">
+                      {data?.BUSINESS_WEBSITE_CLICKS || 0}
+                    </p>
+                 </div>
+              </div>
+              
+              <div className="space-y-2">
+                {metrics.map(m => (
+                  <div key={m.key} className="flex items-center justify-between p-4 rounded-2xl bg-white border border-slate-100 hover:border-indigo-100 transition-colors group">
+                    <div className="flex items-center gap-3">
+                      <span className="text-xl grayscale group-hover:grayscale-0 transition-all">{m.icon}</span>
+                      <span className="text-sm font-semibold text-slate-700">{m.label}</span>
+                    </div>
+                    <span className="text-base font-black text-slate-900">
+                      {data?.[m.key] || 0}
+                    </span>
+                  </div>
+                ))}
+              </div>
             </div>
           ) : (
-            <div className="grid grid-cols-1 gap-3">
-              {metrics.map(m => (
-                <div key={m.key} className={`flex items-center justify-between p-4 rounded-2xl border ${m.highlight ? 'bg-indigo-50/30 border-indigo-100' : 'bg-slate-50 border-slate-100'}`}>
-                  <span className={`text-sm ${m.highlight ? 'font-semibold text-slate-900' : 'text-slate-600'}`}>{m.label}</span>
-                  <span className={`text-lg font-bold ${m.highlight ? 'text-indigo-600' : 'text-slate-900'}`}>
-                    {data[m.key] || 0}
-                  </span>
+            <div className="space-y-2">
+              {keywords.length > 0 ? (
+                keywords.map((k, i) => (
+                  <div key={i} className="flex items-center justify-between p-4 rounded-2xl bg-white border border-slate-100">
+                    <div className="flex items-center gap-3">
+                      <div className="w-8 h-8 rounded-xl bg-slate-50 flex items-center justify-center text-xs font-bold text-slate-400">
+                        #{i+1}
+                      </div>
+                      <span className="text-sm font-bold text-slate-700 capitalize">{k.keyword}</span>
+                    </div>
+                    <div className="px-3 py-1 bg-indigo-50 text-indigo-600 rounded-full text-xs font-black">
+                      {k.count} hits
+                    </div>
+                  </div>
+                ))
+              ) : (
+                <div className="py-12 text-center">
+                   <p className="text-slate-400 font-bold italic">No specific keywords found for this period.</p>
                 </div>
-              ))}
+              )}
             </div>
           )}
         </div>
 
-        <div className="modal-footer">
-          <button onClick={onClose} className="px-6 py-2.5 bg-slate-900 text-white font-semibold rounded-xl hover:bg-slate-800 transition-all active:scale-95">
-            Done
+        <div className="modal-footer" style={{ borderTop: 'none', background: 'white' }}>
+          <button onClick={onClose} className="w-full py-4 bg-slate-900 text-white font-black rounded-2xl hover:bg-slate-800 transition-all active:scale-95 shadow-lg shadow-slate-100">
+            Close Dashboard
           </button>
         </div>
       </div>
