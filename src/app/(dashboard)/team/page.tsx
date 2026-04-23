@@ -2,7 +2,7 @@
 
 import { useSession } from "next-auth/react";
 import { useState, useEffect } from "react";
-import { Users, Plus, Trash2, Loader2, ShieldAlert, X, Shield, Search, UserCircle, MapPin, Mail, Settings } from "lucide-react";
+import { Users, Plus, Trash2, Loader2, ShieldAlert, X, Shield, Search, UserCircle, MapPin, Mail, Settings, UserPlus } from "lucide-react";
 import useSWR from "swr";
 
 const fetcher = (url: string) => fetch(url).then((res) => res.json());
@@ -18,7 +18,6 @@ export default function TeamPage() {
   const members = teamData?.data || [];
   const profiles = profileData?.data || [];
   const loading = teamLoading || profilesLoading;
-
   const [error, setError] = useState("");
   const [searchQuery, setSearchQuery] = useState("");
   
@@ -29,10 +28,6 @@ export default function TeamPage() {
     name: "", username: "", email: "", password: "", 
     canPublishNow: true, canSchedule: true, minScheduleDays: 0, assignedLocations: [] as string[]
   });
-
-  useEffect(() => { 
-    if (!canManageTeam) setError("You don't have permission to manage team members.");
-  }, [canManageTeam]);
 
   const handleAdd = async (e: React.FormEvent) => {
     e.preventDefault(); 
@@ -48,7 +43,7 @@ export default function TeamPage() {
       
       setForm({ name: "", username: "", email: "", password: "", canPublishNow: true, canSchedule: true, minScheduleDays: 0, assignedLocations: [] }); 
       setShowForm(false); 
-      fetchData(); 
+      mutateTeam(); 
     } catch (err: any) {
       alert(err.message);
     } finally {
@@ -58,14 +53,17 @@ export default function TeamPage() {
 
   const handleDelete = async (id: string, name: string) => { 
     if (!confirm(`Remove ${name} from the team?`)) return; 
-    const previousMembers = [...members];
-    setMembers(members.filter(m => m.id !== id));
+    
+    // Optimistic update
+    mutateTeam({ ...teamData, data: members.filter((m: any) => m.id !== id) }, false);
+    
     try {
       const res = await fetch(`/api/team?id=${id}`, { method: "DELETE" }); 
       if(!res.ok) throw new Error("Failed to delete user");
+      mutateTeam();
     } catch (err: any) {
       alert(err.message);
-      setMembers(previousMembers);
+      mutateTeam();
     }
   };
 
@@ -81,11 +79,12 @@ export default function TeamPage() {
     });
   };
 
-  const filteredMembers = members.filter(u => 
+  const filteredMembers = members.filter((u: any) => 
     (u.name?.toLowerCase() || "").includes(searchQuery.toLowerCase()) || 
     (u.username?.toLowerCase() || "").includes(searchQuery.toLowerCase()) ||
     (u.email?.toLowerCase() || "").includes(searchQuery.toLowerCase())
   );
+
 
   if (loading) {
     return (
@@ -181,7 +180,7 @@ export default function TeamPage() {
                   </td>
                 </tr>
               ) : (
-                filteredMembers.map((user) => (
+                filteredMembers.map((user: any) => (
                   <tr key={user.id} className="hover:bg-[var(--bg-tertiary)]/50 transition-colors">
                     <td className="px-6 py-4">
                       <div className="flex items-center gap-3">
@@ -322,7 +321,7 @@ export default function TeamPage() {
                   </div>
                 ) : (
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 max-h-[180px] overflow-y-auto pr-1">
-                    {profiles.map(loc => (
+                    {profiles.map((loc: any) => (
                       <label key={loc.id} className={`flex items-center gap-3 p-3 border rounded-xl cursor-pointer transition-all ${form.assignedLocations.includes(loc.id) ? 'bg-indigo-50 border-indigo-200 ring-1 ring-indigo-200' : 'bg-white border-slate-200 hover:border-indigo-200'}`}>
                         <input 
                           type="checkbox" 

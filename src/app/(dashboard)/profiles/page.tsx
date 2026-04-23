@@ -102,7 +102,7 @@ export default function ProfilesPage() {
                 </tr>
               </thead>
               <tbody>
-                {profiles.map((p) => (
+                {profiles.map((p: Profile) => (
                   <tr key={p.id}>
                     <td>
                       <Link href={`/profiles/${p.id}`} style={{ display: "flex", alignItems: "center", gap: 10 }}>
