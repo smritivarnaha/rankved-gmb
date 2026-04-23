@@ -379,15 +379,29 @@ export function PostEditor({ initialData = null, timelineDate, onDateChange }: {
                       <div className="grid grid-cols-2 gap-3">
                         <div>
                           <label className="block text-[11px] font-medium text-[var(--text-secondary)] mb-1">Latitude</label>
-                          <input type="text" value={geoLat} onChange={(e) => { setGeoLat(e.target.value); setGeoApplied(false); }}
-                            placeholder="e.g. 45.5152"
-                            className="w-full border border-[var(--border)] rounded-md py-2 px-2.5 text-[13px] text-[var(--text-primary)] focus:outline-none focus:ring-2 focus:ring-[var(--accent)] focus:border-transparent" />
+                          <div className="relative">
+                            <input type="text" value={geoLat} onChange={(e) => { setGeoLat(e.target.value); setGeoApplied(false); }}
+                              placeholder="e.g. 45.5152"
+                              className="w-full border border-[var(--border)] rounded-md py-2 pl-2.5 pr-8 text-[13px] text-[var(--text-primary)] focus:outline-none focus:ring-2 focus:ring-[var(--accent)] focus:border-transparent" />
+                            {geoLat && !isNaN(parseFloat(geoLat)) && (
+                              <span className="absolute right-2.5 top-1/2 -translate-y-1/2 text-[12px] font-medium text-[var(--text-tertiary)] bg-white px-1">
+                                {parseFloat(geoLat) >= 0 ? 'N' : 'S'}
+                              </span>
+                            )}
+                          </div>
                         </div>
                         <div>
                           <label className="block text-[11px] font-medium text-[var(--text-secondary)] mb-1">Longitude</label>
-                          <input type="text" value={geoLng} onChange={(e) => { setGeoLng(e.target.value); setGeoApplied(false); }}
-                            placeholder="e.g. -122.6784"
-                            className="w-full border border-[var(--border)] rounded-md py-2 px-2.5 text-[13px] text-[var(--text-primary)] focus:outline-none focus:ring-2 focus:ring-[var(--accent)] focus:border-transparent" />
+                          <div className="relative">
+                            <input type="text" value={geoLng} onChange={(e) => { setGeoLng(e.target.value); setGeoApplied(false); }}
+                              placeholder="e.g. -122.6784"
+                              className="w-full border border-[var(--border)] rounded-md py-2 pl-2.5 pr-8 text-[13px] text-[var(--text-primary)] focus:outline-none focus:ring-2 focus:ring-[var(--accent)] focus:border-transparent" />
+                            {geoLng && !isNaN(parseFloat(geoLng)) && (
+                              <span className="absolute right-2.5 top-1/2 -translate-y-1/2 text-[12px] font-medium text-[var(--text-tertiary)] bg-white px-1">
+                                {parseFloat(geoLng) >= 0 ? 'E' : 'W'}
+                              </span>
+                            )}
+                          </div>
                         </div>
                       </div>
                       <button type="button" disabled={!geoLat || !geoLng || !imageFile || geoApplied}
