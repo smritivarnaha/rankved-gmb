@@ -105,11 +105,10 @@ export default function LoginPage() {
       <div className="form-card">
         <div style={{ textAlign: "center", marginBottom: 32 }}>
           <img
-            src="/rankved-logo.png"
+            src="/logo.png"
             alt="RankVed"
-            width={48}
-            height={48}
-            style={{ borderRadius: 12, boxShadow: "0 2px 12px rgba(0,0,0,0.15)", margin: "0 auto 16px auto", display: "block" }}
+            width={120}
+            style={{ margin: "0 auto 24px auto", display: "block", objectFit: "contain" }}
           />
           <h2 style={{ fontSize: 24, fontWeight: 800, color: "#0f172a", letterSpacing: "-0.03em", marginBottom: 6 }}>
             RankVed GMB Manager

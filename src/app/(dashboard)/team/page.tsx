@@ -80,9 +80,11 @@ export default function TeamPage() {
   };
 
   const filteredMembers = members.filter((u: any) => 
-    (u.name?.toLowerCase() || "").includes(searchQuery.toLowerCase()) || 
-    (u.username?.toLowerCase() || "").includes(searchQuery.toLowerCase()) ||
-    (u.email?.toLowerCase() || "").includes(searchQuery.toLowerCase())
+    u.role === "TEAM_MEMBER" && (
+      (u.name?.toLowerCase() || "").includes(searchQuery.toLowerCase()) || 
+      (u.username?.toLowerCase() || "").includes(searchQuery.toLowerCase()) ||
+      (u.email?.toLowerCase() || "").includes(searchQuery.toLowerCase())
+    )
   );
 
 
