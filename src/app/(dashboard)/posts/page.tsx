@@ -40,12 +40,12 @@ export default function PostsPage() {
   };
 
   const filtered = posts
-    .filter(p => {
+    .filter((p: any) => {
       if (statusFilter === "All") return true;
       if (statusFilter === "Pending") return p.status === "PENDING_APPROVAL";
       return p.status === statusFilter.toUpperCase();
     })
-    .filter(p => profileFilter === "All Profiles" || p.profileName === profileFilter);
+    .filter((p: any) => profileFilter === "All Profiles" || p.profileName === profileFilter);
 
   return (
     <div>
@@ -94,7 +94,7 @@ export default function PostsPage() {
 
         {/* Content */}
         <div style={{ padding: 16, minHeight: 350, background: "var(--bg-body)" }}>
-          {loading ? (
+          {isLoading ? (
             <div style={{ padding: "80px 0", display: "flex", flexDirection: "column", alignItems: "center" }}>
               <Loader2 className="anim-spin" style={{ width: 28, height: 28, color: "var(--accent)", marginBottom: 12 }} />
               <p style={{ fontSize: 13, color: "var(--text-muted)" }}>Loading your workspace...</p>
@@ -116,7 +116,7 @@ export default function PostsPage() {
             </div>
           ) : (
             <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(300px, 1fr))", gap: 16 }}>
-              {filtered.map((post, idx) => (
+              {filtered.map((post: any, idx: number) => (
                 <div
                   key={post.id}
                   className="card anim-fade-up"
