@@ -19,6 +19,7 @@ export function PerformanceView({ profile, onBack }: { profile: Profile, onBack?
   useEffect(() => {
     async function loadData() {
       setLoading(true);
+      setError(null);
       try {
         const [perfRes, keyRes] = await Promise.all([
           fetch(`/api/profiles/${profile.id}/performance`),
@@ -30,7 +31,7 @@ export function PerformanceView({ profile, onBack }: { profile: Profile, onBack?
         
         if (!perfRes.ok) throw new Error(perfData.error || "Failed performance fetch");
         
-        setData(perfData.data);
+        setData(perfData.data || {});
         setKeywords(keyData.data || []);
       } catch (e: any) {
         setError(e.message || "Failed to load insights");
@@ -48,62 +49,78 @@ export function PerformanceView({ profile, onBack }: { profile: Profile, onBack?
     { id: "keywords", label: "Keywords" },
   ];
 
+  const totalInteractions = Object.values(data || {}).reduce((a: any, b: any) => a + (typeof b === 'number' ? b : 0), 0) as number;
+
   return (
-    <div className="anim-fade" style={{ background: 'white', borderRadius: 32, overflow: 'hidden', border: '1px solid var(--border-light)', height: '100%', display: 'flex', flexDirection: 'column' }}>
-      <div style={{ padding: '24px 32px', borderBottom: '1px solid var(--border-light)', display: 'flex', alignItems: 'center', gap: 16 }}>
+    <div className="anim-fade" style={{ background: 'var(--bg-main)', borderRadius: 24, overflow: 'hidden', border: '1px solid var(--border-light)', height: '100%', display: 'flex', flexDirection: 'column', boxShadow: '0 10px 40px -10px rgba(0,0,0,0.05)' }}>
+      {/* Header */}
+      <div style={{ padding: '24px 32px', borderBottom: '1px solid var(--border-light)', background: 'white', display: 'flex', alignItems: 'center', gap: 16 }}>
         {onBack && (
-          <button onClick={onBack} className="p-2 hover:bg-slate-100 rounded-full transition-colors">
+          <button onClick={onBack} className="btn-icon" style={{ padding: 8, borderRadius: '50%', background: 'var(--bg-elevated)' }}>
             <ArrowLeft className="w-5 h-5 text-slate-600" />
           </button>
         )}
         <div>
-          <h2 className="text-2xl font-black text-slate-900 tracking-tight">{profile.name}</h2>
-          <div className="flex items-center gap-2 mt-1">
-            <span className="flex h-2 w-2 rounded-full bg-emerald-500"></span>
-            <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Real-Time Performance Dashboard</p>
+          <h2 style={{ fontSize: 22, fontWeight: 900, color: 'var(--text-primary)', letterSpacing: '-0.02em' }}>{profile.name}</h2>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 4 }}>
+            <span style={{ width: 6, height: 6, borderRadius: '50%', background: '#10b981', boxShadow: '0 0 10px #10b981' }}></span>
+            <p style={{ fontSize: 10, fontWeight: 800, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Real-Time Insights</p>
           </div>
         </div>
       </div>
 
-      <div className="flex gap-1 border-b border-slate-100 bg-white px-8">
+      {/* Tabs */}
+      <div style={{ display: 'flex', gap: 8, background: 'white', padding: '0 32px', borderBottom: '1px solid var(--border-light)', position: 'sticky', top: 0, zIndex: 10 }}>
         {tabs.map(tab => (
           <button 
             key={tab.id}
             onClick={() => setActiveTab(tab.id)}
-            className={`px-4 py-4 text-xs font-black uppercase tracking-wider transition-all border-b-2 ${activeTab === tab.id ? "border-indigo-600 text-indigo-600" : "border-transparent text-slate-400 hover:text-slate-600"}`}
+            style={{ 
+              padding: '16px 4px', 
+              fontSize: 11, 
+              fontWeight: 800, 
+              textTransform: 'uppercase', 
+              letterSpacing: '0.05em',
+              color: activeTab === tab.id ? 'var(--accent)' : 'var(--text-muted)',
+              borderBottom: `2px solid ${activeTab === tab.id ? 'var(--accent)' : 'transparent'}`,
+              transition: 'all 0.2s ease',
+              background: 'none',
+              borderTop: 'none', borderLeft: 'none', borderRight: 'none'
+            }}
           >
             {tab.label}
           </button>
         ))}
       </div>
 
-      <div style={{ flex: 1, overflowY: 'auto', padding: '32px', background: '#fcfdfe' }}>
+      {/* Content */}
+      <div style={{ flex: 1, overflowY: 'auto', padding: '32px', background: '#f8fafc' }}>
         {loading ? (
-          <div className="flex flex-col items-center justify-center py-24">
-            <Loader2 className="w-10 h-10 animate-spin text-indigo-600 mb-4" />
-            <p className="text-xs font-bold text-slate-400 tracking-widest uppercase">Fetching Google Insights...</p>
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '80px 0' }}>
+            <Loader2 className="anim-spin" style={{ width: 32, height: 32, color: 'var(--accent)', marginBottom: 16 }} />
+            <p style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Syncing with Google...</p>
           </div>
         ) : error ? (
-          <div className="bg-red-50 p-8 rounded-[32px] text-red-600 text-sm flex items-center gap-4 border border-red-100">
-            <AlertCircle className="w-6 h-6" />
+          <div style={{ background: '#fff1f2', border: '1px solid #fee2e2', padding: 24, borderRadius: 20, display: 'flex', alignItems: 'center', gap: 16 }}>
+            <div style={{ width: 40, height: 40, background: '#fecaca', borderRadius: 12, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <AlertCircle style={{ color: '#dc2626', width: 20, height: 20 }} />
+            </div>
             <div>
-              <p className="font-bold text-base">Connection Error</p>
-              <p className="opacity-80">{error}</p>
+              <p style={{ fontWeight: 800, color: '#991b1b', fontSize: 14 }}>Connection Failed</p>
+              <p style={{ color: '#dc2626', fontSize: 12, opacity: 0.8 }}>{error}</p>
             </div>
           </div>
         ) : (
           <div className="anim-fade-up">
             {activeTab === "overview" && (
-              <div className="space-y-8">
-                <div className="bg-white p-10 rounded-[40px] border border-slate-100 shadow-sm text-center">
-                  <p className="text-[11px] font-black text-slate-400 uppercase tracking-widest mb-2">Total Interactions (30d)</p>
-                  <p className="text-7xl font-black text-slate-900 tracking-tighter">
-                    {(Object.values(data || {}).reduce((a: any, b: any) => a + (typeof b === 'number' ? b : 0), 0) as number)}
-                  </p>
-                  <p className="text-sm text-slate-500 mt-4 max-w-md mx-auto">Consolidated activity from Google Search and Maps across all devices.</p>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
+                <div style={{ background: 'white', padding: 40, borderRadius: 32, border: '1px solid var(--border-light)', textAlign: 'center', boxShadow: '0 4px 20px rgba(0,0,0,0.02)' }}>
+                  <p style={{ fontSize: 10, fontWeight: 900, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: 8 }}>Total Interactions (30D)</p>
+                  <p style={{ fontSize: 64, fontWeight: 900, color: 'var(--text-primary)', letterSpacing: '-0.04em', lineHeight: 1 }}>{totalInteractions}</p>
+                  <p style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 16, maxWidth: 300, margin: '16px auto 0' }}>All impressions and clicks generated from Google Maps and Search.</p>
                 </div>
                 
-                <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: 16 }}>
                   <StatCard label="Desktop Maps" value={data?.BUSINESS_IMPRESSIONS_DESKTOP_MAPS} icon="💻" />
                   <StatCard label="Mobile Maps" value={data?.BUSINESS_IMPRESSIONS_MOBILE_MAPS} icon="📱" />
                   <StatCard label="Desktop Search" value={data?.BUSINESS_IMPRESSIONS_DESKTOP_SEARCH} icon="🔍" />
@@ -117,23 +134,21 @@ export function PerformanceView({ profile, onBack }: { profile: Profile, onBack?
             {activeTab === "website" && <MetricDetail label="Website Clicks" value={data?.WEBSITE_CLICKS} icon="🌐" />}
 
             {activeTab === "keywords" && (
-              <div className="space-y-3">
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
                 {keywords.length > 0 ? (
                   keywords.map((k, i) => (
-                    <div key={i} className="flex items-center justify-between p-5 rounded-3xl bg-white border border-slate-100 hover:border-indigo-100 transition-all group">
-                      <div className="flex items-center gap-4">
-                        <span className="w-8 text-xs font-black text-slate-200 group-hover:text-indigo-200 transition-colors">{(i+1).toString().padStart(2, '0')}</span>
-                        <span className="text-sm font-bold text-slate-700 capitalize tracking-tight">{k.keyword}</span>
+                    <div key={i} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '16px 20px', borderRadius: 20, background: 'white', border: '1px solid var(--border-light)' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                        <span style={{ fontSize: 10, fontWeight: 900, color: '#cbd5e1', width: 20 }}>{(i+1).toString().padStart(2, '0')}</span>
+                        <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-primary)' }}>{k.keyword}</span>
                       </div>
-                      <div className="text-xs font-black text-indigo-600 bg-indigo-50 px-4 py-1.5 rounded-full border border-indigo-100/50">
+                      <div style={{ background: '#f1f5f9', padding: '4px 12px', borderRadius: 20, fontSize: 11, fontWeight: 800, color: 'var(--accent)' }}>
                         {k.count} Hits
                       </div>
                     </div>
                   ))
                 ) : (
-                  <div className="text-center py-24">
-                    <p className="text-slate-400 font-bold italic">No search keyword data found for this period.</p>
-                  </div>
+                  <div style={{ padding: 40, textAlign: 'center', color: 'var(--text-muted)', fontStyle: 'italic', fontSize: 13 }}>No keyword insights for this period.</div>
                 )}
               </div>
             )}
@@ -146,11 +161,11 @@ export function PerformanceView({ profile, onBack }: { profile: Profile, onBack?
 
 function StatCard({ label, value, icon }: { label: string, value: number, icon: string }) {
   return (
-    <div className="bg-white p-5 rounded-3xl border border-slate-100 hover:border-indigo-100 transition-colors group">
-      <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-2 group-hover:text-indigo-400">{label}</p>
-      <div className="flex items-center justify-between">
-        <span className="text-2xl font-black text-slate-900">{value || 0}</span>
-        <span className="text-xl grayscale group-hover:grayscale-0 transition-all">{icon}</span>
+    <div style={{ background: 'white', padding: 20, borderRadius: 24, border: '1px solid var(--border-light)' }}>
+      <p style={{ fontSize: 9, fontWeight: 900, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 8 }}>{label}</p>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+        <span style={{ fontSize: 24, fontWeight: 900, color: 'var(--text-primary)' }}>{value || 0}</span>
+        <span style={{ fontSize: 20, opacity: 0.5 }}>{icon}</span>
       </div>
     </div>
   );
@@ -158,13 +173,13 @@ function StatCard({ label, value, icon }: { label: string, value: number, icon: 
 
 function MetricDetail({ label, value, icon }: { label: string, value: number, icon: string }) {
   return (
-    <div className="flex flex-col items-center justify-center py-20 bg-white rounded-[48px] border border-slate-100 shadow-sm anim-fade-up">
-      <div className="w-24 h-24 bg-indigo-50 rounded-[32px] flex items-center justify-center text-4xl mb-8 border border-indigo-100">
+    <div className="anim-fade-up" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: 60, background: 'white', borderRadius: 32, border: '1px solid var(--border-light)', textAlign: 'center' }}>
+      <div style={{ width: 80, height: 80, background: '#f1f5f9', borderRadius: 24, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 40, marginBottom: 24 }}>
         {icon}
       </div>
-      <h3 className="text-xs font-black text-slate-400 uppercase tracking-widest mb-2">{label}</h3>
-      <p className="text-7xl font-black text-slate-900 tracking-tighter">{value || 0}</p>
-      <p className="text-sm text-slate-500 mt-6 max-w-xs text-center leading-relaxed">Engagement generated from direct user actions in the last 30 days.</p>
+      <h3 style={{ fontSize: 10, fontWeight: 900, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: 8 }}>{label}</h3>
+      <p style={{ fontSize: 72, fontWeight: 900, color: 'var(--text-primary)', letterSpacing: '-0.04em', lineHeight: 1 }}>{value || 0}</p>
+      <p style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 20, maxWidth: 240 }}>Actionable customer engagement in the last 30 days.</p>
     </div>
   );
 }
