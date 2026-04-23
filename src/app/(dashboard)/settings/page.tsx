@@ -24,6 +24,31 @@ export default function SettingsPage() {
   const handleGoogleConnect = async () => { setConnecting(true); await signIn("google", { callbackUrl: "/settings" }); };
   const hasGoogleToken = !!(session as any)?.accessToken;
 
+  const [resetting, setResetting] = useState(false);
+  const [disconnecting, setDisconnecting] = useState(false);
+
+  const handleReset = async () => {
+    if (!confirm("Are you sure? This will delete all saved profiles and you'll need to fetch them again.")) return;
+    setResetting(true);
+    try {
+      const res = await fetch("/api/profiles/reset", { method: "POST" });
+      if (res.ok) { setProfiles([]); setFetchResult({ success: "Profiles reset successfully." }); }
+      else setFetchResult({ error: "Failed to reset profiles." });
+    } catch { setFetchResult({ error: "Network error." }); }
+    setResetting(false);
+  };
+
+  const handleDisconnect = async () => {
+    if (!confirm("WIPE EVERYTHING? This will disconnect your Google account and delete ALL synced profiles. This cannot be undone.")) return;
+    setDisconnecting(true);
+    try {
+      const res = await fetch("/api/auth/disconnect", { method: "POST" });
+      if (res.ok) { window.location.reload(); }
+      else setFetchResult({ error: "Failed to disconnect." });
+    } catch { setFetchResult({ error: "Network error." }); }
+    setDisconnecting(false);
+  };
+
   useEffect(() => {
     fetch("/api/profiles").then(r => r.ok ? r.json() : { data: [] }).then(d => setProfiles(d.data || [])).catch(() => {}).finally(() => setLoadingProfiles(false));
   }, []);
@@ -77,11 +102,24 @@ export default function SettingsPage() {
           <div className="card-header"><h2 className="card-title" style={{ fontSize: 14 }}>Google Business Profile</h2></div>
           <div className="card-body">
             {hasGoogleToken ? (
-              <div className="badge-success" style={{ padding: "12px 16px", borderRadius: "var(--radius-md)", display: "flex", alignItems: "center", gap: 10, fontSize: 13 }}>
-                <CheckCircle2 style={{ width: 18, height: 18 }} />
-                <div>
-                  <p style={{ fontWeight: 600 }}>Connected</p>
-                  <p style={{ fontSize: 11, opacity: 0.8, marginTop: 2 }}>Google account is linked and active.</p>
+              <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+                <div className="badge-success" style={{ padding: "12px 16px", borderRadius: "var(--radius-md)", display: "flex", alignItems: "center", gap: 10, fontSize: 13 }}>
+                  <CheckCircle2 style={{ width: 18, height: 18 }} />
+                  <div>
+                    <p style={{ fontWeight: 600 }}>Connected</p>
+                    <p style={{ fontSize: 11, opacity: 0.8, marginTop: 2 }}>Google account is linked and active.</p>
+                  </div>
+                </div>
+                
+                <div style={{ display: "flex", gap: 12 }}>
+                  <button onClick={handleReset} disabled={resetting || fetching} className="btn" style={{ fontSize: 12, padding: "8px 14px", background: "var(--bg-elevated)", border: "1px solid var(--border)" }}>
+                    {resetting ? <Loader2 className="anim-spin" style={{ width: 14, height: 14 }} /> : <RefreshCw style={{ width: 14, height: 14 }} />}
+                    Reset Profiles
+                  </button>
+                  <button onClick={handleDisconnect} disabled={disconnecting} className="btn" style={{ fontSize: 12, padding: "8px 14px", background: "#fef2f2", color: "#dc2626", border: "1px solid #fecaca" }}>
+                    {disconnecting ? <Loader2 className="anim-spin" style={{ width: 14, height: 14 }} /> : <AlertCircle style={{ width: 14, height: 14 }} />}
+                    Disconnect Google
+                  </button>
                 </div>
               </div>
             ) : (
