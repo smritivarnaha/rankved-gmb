@@ -118,6 +118,7 @@ export default function ProfilesPage() {
                     <td style={{ color: "var(--text-secondary)" }}>{p.accountName || "—"}</td>
                     <td style={{ color: "var(--text-muted)", fontSize: 12 }}>{format(new Date(p.fetchedAt), "MMM d, yyyy")}</td>
                     <td style={{ textAlign: "right" }}>
+                      <div style={{ display: "flex", alignItems: "center", gap: 4, justifyContent: "flex-end" }}>
                         <button onClick={() => setPerfProfile(p)} title="View Performance" style={{ padding: 6, borderRadius: "var(--radius-sm)", color: "var(--accent)", transition: "all 0.12s" }}>
                           <ArrowUpRight style={{ width: 14, height: 14 }} />
                         </button>
@@ -149,7 +150,7 @@ function PerformanceModal({ profile, onClose }: { profile: any, onClose: () => v
   const [data, setData] = useState<any>(null);
   const [keywords, setKeywords] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState<"overview" | "keywords">("overview");
+  const [activeTab, setActiveTab] = useState<string>("overview");
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -174,25 +175,23 @@ function PerformanceModal({ profile, onClose }: { profile: any, onClose: () => v
     loadData();
   }, [profile.id]);
 
-  const metrics = [
-    { label: "Maps Impressions (Mobile)", key: "BUSINESS_IMPRESSIONS_MOBILE_MAPS", icon: "📱" },
-    { label: "Maps Impressions (Desktop)", key: "BUSINESS_IMPRESSIONS_DESKTOP_MAPS", icon: "💻" },
-    { label: "Search Impressions (Mobile)", key: "BUSINESS_IMPRESSIONS_MOBILE_SEARCH", icon: "🔍" },
-    { label: "Search Impressions (Desktop)", key: "BUSINESS_IMPRESSIONS_DESKTOP_SEARCH", icon: "🖥️" },
-    { label: "Website Clicks", key: "BUSINESS_WEBSITE_CLICKS", highlight: true, icon: "🌐" },
-    { label: "Phone Calls", key: "BUSINESS_PHONE_CALLS", highlight: true, icon: "📞" },
-    { label: "Direction Requests", key: "BUSINESS_DIRECTION_REQUESTS", highlight: true, icon: "📍" },
+  const tabs = [
+    { id: "overview", label: "Overview" },
+    { id: "calls", label: "Calls" },
+    { id: "directions", label: "Directions" },
+    { id: "website", label: "Website Clicks" },
+    { id: "keywords", label: "Keywords" },
   ];
 
   return (
     <div className="modal-overlay anim-fade">
-      <div className="modal-content anim-scale" style={{ maxWidth: 600, height: '85vh' }}>
+      <div className="modal-content anim-scale" style={{ maxWidth: 650, height: '85vh' }}>
         <div className="modal-header" style={{ paddingBottom: 0 }}>
           <div style={{ paddingBottom: 16 }}>
             <h2 className="text-2xl font-black text-slate-900 tracking-tight">{profile.name}</h2>
             <div className="flex items-center gap-2 mt-1">
               <span className="flex h-2 w-2 rounded-full bg-emerald-500"></span>
-              <p className="text-xs font-bold text-slate-500 uppercase tracking-widest">Live Insights · Last 30 Days</p>
+              <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Real-Time Google Performance</p>
             </div>
           </div>
           <button onClick={onClose} className="p-2 hover:bg-slate-100 rounded-full transition-colors text-slate-400 absolute top-4 right-4">
@@ -201,104 +200,111 @@ function PerformanceModal({ profile, onClose }: { profile: any, onClose: () => v
         </div>
 
         {/* Tab Switcher */}
-        <div className="px-6 flex gap-1 border-b border-slate-100">
-          <button 
-            onClick={() => setActiveTab("overview")}
-            className={`px-4 py-3 text-sm font-bold transition-all border-b-2 ${activeTab === "overview" ? "border-indigo-600 text-indigo-600" : "border-transparent text-slate-400 hover:text-slate-600"}`}
-          >
-            Overview
-          </button>
-          <button 
-            onClick={() => setActiveTab("keywords")}
-            className={`px-4 py-3 text-sm font-bold transition-all border-b-2 ${activeTab === "keywords" ? "border-indigo-600 text-indigo-600" : "border-transparent text-slate-400 hover:text-slate-600"}`}
-          >
-            Keywords
-          </button>
+        <div className="px-6 flex gap-1 border-b border-slate-100 bg-white sticky top-0 z-10">
+          {tabs.map(tab => (
+            <button 
+              key={tab.id}
+              onClick={() => setActiveTab(tab.id)}
+              className={`px-4 py-3 text-xs font-black uppercase tracking-wider transition-all border-b-2 ${activeTab === tab.id ? "border-indigo-600 text-indigo-600" : "border-transparent text-slate-400 hover:text-slate-600"}`}
+            >
+              {tab.label}
+            </button>
+          ))}
         </div>
 
         <div className="modal-body" style={{ background: '#fcfdfe' }}>
           {loading ? (
             <div className="flex flex-col items-center justify-center py-24">
-              <div className="relative">
-                <div className="w-16 h-16 border-4 border-indigo-100 border-t-indigo-600 rounded-full animate-spin"></div>
-                <div className="absolute inset-0 flex items-center justify-center">
-                  <div className="w-8 h-8 bg-indigo-50 rounded-full"></div>
-                </div>
-              </div>
-              <p className="text-sm font-bold text-slate-400 mt-6 tracking-tight uppercase">Analyzing Data...</p>
+              <Loader2 className="w-10 h-10 animate-spin text-indigo-600 mb-4" />
+              <p className="text-xs font-bold text-slate-400 tracking-widest uppercase">Fetching Data...</p>
             </div>
           ) : error ? (
             <div className="bg-red-50 p-6 rounded-3xl text-red-600 text-sm flex items-center gap-4 border border-red-100">
-              <div className="w-10 h-10 bg-red-100 rounded-2xl flex items-center justify-center flex-shrink-0">
-                <AlertCircle className="w-5 h-5" />
-              </div>
+              <AlertCircle className="w-5 h-5" />
               <div>
-                <p className="font-bold">Insight Error</p>
+                <p className="font-bold">Sync Failed</p>
                 <p className="opacity-80">{error}</p>
               </div>
             </div>
-          ) : activeTab === "overview" ? (
-            <div className="space-y-3">
-              <div className="grid grid-cols-2 gap-3 mb-6">
-                 <div className="bg-white p-5 rounded-3xl border border-slate-100 shadow-sm">
-                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Total Interactions</p>
-                    <p className="text-3xl font-black text-slate-900 tracking-tighter">
-                      {Object.values(data || {}).reduce((a: any, b: any) => a + b, 0)}
-                    </p>
-                 </div>
-                 <div className="bg-indigo-600 p-5 rounded-3xl shadow-lg shadow-indigo-100">
-                    <p className="text-[10px] font-black text-white/60 uppercase tracking-widest mb-1">Website Clicks</p>
-                    <p className="text-3xl font-black text-white tracking-tighter">
-                      {data?.BUSINESS_WEBSITE_CLICKS || 0}
-                    </p>
-                 </div>
-              </div>
-              
-              <div className="space-y-2">
-                {metrics.map(m => (
-                  <div key={m.key} className="flex items-center justify-between p-4 rounded-2xl bg-white border border-slate-100 hover:border-indigo-100 transition-colors group">
-                    <div className="flex items-center gap-3">
-                      <span className="text-xl grayscale group-hover:grayscale-0 transition-all">{m.icon}</span>
-                      <span className="text-sm font-semibold text-slate-700">{m.label}</span>
-                    </div>
-                    <span className="text-base font-black text-slate-900">
-                      {data?.[m.key] || 0}
-                    </span>
-                  </div>
-                ))}
-              </div>
-            </div>
           ) : (
-            <div className="space-y-2">
-              {keywords.length > 0 ? (
-                keywords.map((k, i) => (
-                  <div key={i} className="flex items-center justify-between p-4 rounded-2xl bg-white border border-slate-100">
-                    <div className="flex items-center gap-3">
-                      <div className="w-8 h-8 rounded-xl bg-slate-50 flex items-center justify-center text-xs font-bold text-slate-400">
-                        #{i+1}
-                      </div>
-                      <span className="text-sm font-bold text-slate-700 capitalize">{k.keyword}</span>
-                    </div>
-                    <div className="px-3 py-1 bg-indigo-50 text-indigo-600 rounded-full text-xs font-black">
-                      {k.count} hits
-                    </div>
+            <div className="anim-fade-up">
+              {activeTab === "overview" && (
+                <div className="space-y-6">
+                  <div className="bg-white p-8 rounded-[32px] border border-slate-100 shadow-sm text-center">
+                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Total Interactions</p>
+                    <p className="text-5xl font-black text-slate-900 tracking-tighter">
+                      {(Object.values(data || {}).reduce((a: any, b: any) => a + b, 0) as number)}
+                    </p>
+                    <p className="text-xs text-slate-500 mt-2">Combined views and clicks across Maps & Search</p>
                   </div>
-                ))
-              ) : (
-                <div className="py-12 text-center">
-                   <p className="text-slate-400 font-bold italic">No specific keywords found for this period.</p>
+                  
+                  <div className="grid grid-cols-2 gap-3">
+                    <StatCard label="Desktop Maps" value={data?.BUSINESS_IMPRESSIONS_DESKTOP_MAPS} icon="💻" />
+                    <StatCard label="Mobile Maps" value={data?.BUSINESS_IMPRESSIONS_MOBILE_MAPS} icon="📱" />
+                    <StatCard label="Desktop Search" value={data?.BUSINESS_IMPRESSIONS_DESKTOP_SEARCH} icon="🔍" />
+                    <StatCard label="Mobile Search" value={data?.BUSINESS_IMPRESSIONS_MOBILE_SEARCH} icon="✨" />
+                  </div>
+                </div>
+              )}
+
+              {activeTab === "calls" && <MetricDetail label="Phone Calls" value={data?.BUSINESS_PHONE_CALLS} icon="📞" />}
+              {activeTab === "directions" && <MetricDetail label="Direction Requests" value={data?.BUSINESS_DIRECTION_REQUESTS} icon="📍" />}
+              {activeTab === "website" && <MetricDetail label="Website Clicks" value={data?.BUSINESS_WEBSITE_CLICKS} icon="🌐" />}
+
+              {activeTab === "keywords" && (
+                <div className="space-y-2">
+                  {keywords.length > 0 ? (
+                    keywords.map((k, i) => (
+                      <div key={i} className="flex items-center justify-between p-4 rounded-2xl bg-white border border-slate-100 hover:border-indigo-100 transition-colors">
+                        <div className="flex items-center gap-3">
+                          <span className="w-6 text-xs font-black text-slate-300">{(i+1).toString().padStart(2, '0')}</span>
+                          <span className="text-sm font-bold text-slate-700 capitalize">{k.keyword}</span>
+                        </div>
+                        <div className="text-xs font-black text-indigo-600 bg-indigo-50 px-3 py-1 rounded-full">
+                          {k.count}
+                        </div>
+                      </div>
+                    ))
+                  ) : (
+                    <p className="text-center py-12 text-slate-400 italic">No search keyword data available.</p>
+                  )}
                 </div>
               )}
             </div>
           )}
         </div>
 
-        <div className="modal-footer" style={{ borderTop: 'none', background: 'white' }}>
+        <div className="modal-footer" style={{ border: 'none', background: 'white' }}>
           <button onClick={onClose} className="w-full py-4 bg-slate-900 text-white font-black rounded-2xl hover:bg-slate-800 transition-all active:scale-95 shadow-lg shadow-slate-100">
-            Close Dashboard
+            Done
           </button>
         </div>
       </div>
+    </div>
+  );
+}
+
+function StatCard({ label, value, icon }: { label: string, value: number, icon: string }) {
+  return (
+    <div className="bg-white p-4 rounded-2xl border border-slate-100">
+      <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">{label}</p>
+      <div className="flex items-center justify-between">
+        <span className="text-xl font-black text-slate-900">{value || 0}</span>
+        <span className="text-lg grayscale">{icon}</span>
+      </div>
+    </div>
+  );
+}
+
+function MetricDetail({ label, value, icon }: { label: string, value: number, icon: string }) {
+  return (
+    <div className="flex flex-col items-center justify-center py-12 bg-white rounded-[32px] border border-slate-100 shadow-sm">
+      <div className="w-20 h-20 bg-indigo-50 rounded-[24px] flex items-center justify-center text-3xl mb-6">
+        {icon}
+      </div>
+      <h3 className="text-sm font-black text-slate-400 uppercase tracking-widest mb-2">{label}</h3>
+      <p className="text-6xl font-black text-slate-900 tracking-tighter">{value || 0}</p>
+      <p className="text-xs text-slate-500 mt-4">Direct customer interactions in the last 30 days</p>
     </div>
   );
 }
