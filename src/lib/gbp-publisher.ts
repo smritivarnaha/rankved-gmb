@@ -50,41 +50,47 @@ async function resolveImageUrl(
 
   // It's a base64 data URI — try to upload to Supabase storage
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_SERVICE_KEY;
 
   if (!supabaseUrl || !supabaseKey) {
-    console.warn("[GBP] No Supabase storage configured — cannot upload base64 image");
+    console.error("[GBP] Missing Supabase Config. URL:", !!supabaseUrl, "Key:", !!supabaseKey);
     return null;
   }
 
   try {
     // Convert base64 to Buffer
     const base64Data = imageDataUri.split(",")[1];
+    if (!base64Data) {
+      console.error("[GBP] Invalid image data URI format");
+      return null;
+    }
     const mimeType = imageDataUri.match(/data:([^;]+)/)?.[1] || "image/jpeg";
     const buffer = Buffer.from(base64Data, "base64");
 
     const filename = `gbp-posts/${Date.now()}.jpg`;
-    const uploadRes = await fetch(
-      `${supabaseUrl}/storage/v1/object/post-images/${filename}`,
-      {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${supabaseKey}`,
-          "Content-Type": mimeType,
-          "x-upsert": "true",
-        },
-        body: buffer,
-      }
-    );
+    const uploadUrl = `${supabaseUrl}/storage/v1/object/post-images/${filename}`;
+    
+    const uploadRes = await fetch(uploadUrl, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${supabaseKey}`,
+        "Content-Type": mimeType,
+        "x-upsert": "true",
+      },
+      body: buffer,
+    });
 
     if (!uploadRes.ok) {
-      console.error("[GBP] Supabase upload failed:", await uploadRes.text());
+      const errorText = await uploadRes.text();
+      console.error(`[GBP] Supabase upload failed (${uploadRes.status}):`, errorText);
       return null;
     }
 
-    return `${supabaseUrl}/storage/v1/object/public/post-images/${filename}`;
+    const publicUrl = `${supabaseUrl}/storage/v1/object/public/post-images/${filename}`;
+    console.log("[GBP] Image hosted successfully:", publicUrl);
+    return publicUrl;
   } catch (err) {
-    console.error("[GBP] Image upload error:", err);
+    console.error("[GBP] Image upload exception:", err);
     return null;
   }
 }
