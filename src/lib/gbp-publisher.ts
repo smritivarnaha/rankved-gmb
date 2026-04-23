@@ -39,37 +39,29 @@ interface PublishResult {
  * For now: if a public URL is given (starts with http), use it directly.
  * If base64: upload to Supabase storage first (requires SUPABASE_URL + SUPABASE_SERVICE_KEY).
  */
-async function resolveImageUrl(
-  imageDataUri: string,
-  accessToken: string
-): Promise<string | null> {
+async function resolveImageUrlDetail(
+  imageDataUri: string
+): Promise<{ success: boolean; url?: string; error?: string }> {
   // If it's already a public URL, use directly
   if (imageDataUri.startsWith("http")) {
-    return imageDataUri;
+    return { success: true, url: imageDataUri };
   }
 
   // It's a base64 data URI — try to upload to Supabase storage
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_SERVICE_KEY;
 
-  if (!supabaseUrl || !supabaseKey) {
-    console.error("[GBP] Missing Supabase Config. URL:", !!supabaseUrl, "Key:", !!supabaseKey);
-    return null;
-  }
-
-  console.log("[GBP] Using Supabase Storage:", supabaseUrl, "Key starts with:", supabaseKey.substring(0, 10) + "...");
+  if (!supabaseUrl) return { success: false, error: "Missing NEXT_PUBLIC_SUPABASE_URL" };
+  if (!supabaseKey) return { success: false, error: "Missing SUPABASE_SERVICE_ROLE_KEY" };
 
   try {
-    // Convert base64 to Buffer
     const base64Data = imageDataUri.split(",")[1];
-    if (!base64Data) {
-      console.error("[GBP] Invalid image data URI format");
-      return null;
-    }
+    if (!base64Data) return { success: false, error: "Invalid image format" };
+    
     const mimeType = imageDataUri.match(/data:([^;]+)/)?.[1] || "image/jpeg";
     const buffer = Buffer.from(base64Data, "base64");
 
-    const filename = `gbp-posts/${Date.now()}.jpg`;
+    const filename = `${Date.now()}.jpg`;
     const uploadUrl = `${supabaseUrl}/storage/v1/object/post-images/${filename}`;
     
     const uploadRes = await fetch(uploadUrl, {
@@ -84,16 +76,13 @@ async function resolveImageUrl(
 
     if (!uploadRes.ok) {
       const errorText = await uploadRes.text();
-      console.error(`[GBP] Supabase upload failed (${uploadRes.status}):`, errorText);
-      return null;
+      return { success: false, error: `Supabase Error (${uploadRes.status}): ${errorText}` };
     }
 
     const publicUrl = `${supabaseUrl}/storage/v1/object/public/post-images/${filename}`;
-    console.log("[GBP] Image hosted successfully:", publicUrl);
-    return publicUrl;
-  } catch (err) {
-    console.error("[GBP] Image upload exception:", err);
-    return null;
+    return { success: true, url: publicUrl };
+  } catch (err: any) {
+    return { success: false, error: `Exception: ${err.message}` };
   }
 }
 
@@ -173,14 +162,14 @@ export async function publishToGBP(opts: PublishOptions): Promise<PublishResult>
 
   // Image
   if (imageDataUri) {
-    const imageUrl = await resolveImageUrl(imageDataUri, accessToken);
-    if (!imageUrl) {
+    const uploadResult = await resolveImageUrlDetail(imageDataUri);
+    if (!uploadResult.success) {
       return { 
         success: false, 
-        error: "Failed to host image for Google. Please check your Supabase storage configuration (post-images bucket and API keys)." 
+        error: `Image Upload Failed: ${uploadResult.error}` 
       };
     }
-    payload.media = [{ mediaFormat: "PHOTO", sourceUrl: imageUrl }];
+    payload.media = [{ mediaFormat: "PHOTO", sourceUrl: uploadResult.url! }];
   }
 
   console.log(`[GBP] Publishing to ${locationName}:`, JSON.stringify(payload, null, 2));
