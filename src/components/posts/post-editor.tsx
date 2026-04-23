@@ -52,7 +52,9 @@ export function PostEditor({ initialData = null, timelineDate, onDateChange }: {
   }, []);
   const [geoEnabled, setGeoEnabled] = useState(false);
   const [geoLat, setGeoLat] = useState("");
+  const [geoLatRef, setGeoLatRef] = useState("N");
   const [geoLng, setGeoLng] = useState("");
+  const [geoLngRef, setGeoLngRef] = useState("E");
   const [geoApplied, setGeoApplied] = useState(false);
   const [imageKeyword, setImageKeyword] = useState("");
 
@@ -379,40 +381,50 @@ export function PostEditor({ initialData = null, timelineDate, onDateChange }: {
                       <div className="grid grid-cols-2 gap-3">
                         <div>
                           <label className="block text-[11px] font-medium text-[var(--text-secondary)] mb-1">Latitude</label>
-                          <div className="relative">
+                          <div className="flex border border-[var(--border)] rounded-md overflow-hidden focus-within:ring-2 focus-within:ring-[var(--accent)] focus-within:border-transparent">
                             <input type="text" value={geoLat} onChange={(e) => { 
-                                // Only allow numbers, minus sign, and period
-                                const val = e.target.value.replace(/[^\d.-]/g, '');
-                                // Only allow one minus sign at the start, and one period
-                                const cleanVal = val.replace(/(?!^)-/g, '').replace(/(\..*)\./g, '$1');
-                                setGeoLat(cleanVal); 
+                                let val = e.target.value.replace(/[^\d.-]/g, '');
+                                val = val.replace(/(?!^)-/g, '').replace(/(\..*)\./g, '$1');
+                                if (val.startsWith('-')) {
+                                  setGeoLatRef('S');
+                                  val = val.substring(1);
+                                }
+                                setGeoLat(val); 
                                 setGeoApplied(false); 
                               }}
                               placeholder="e.g. 45.5152"
-                              className="w-full border border-[var(--border)] rounded-md py-2 pl-2.5 pr-10 text-[13px] text-[var(--text-primary)] focus:outline-none focus:ring-2 focus:ring-[var(--accent)] focus:border-transparent" />
-                            {geoLat && !isNaN(parseFloat(geoLat)) && (
-                              <span className="absolute right-2.5 top-1/2 -translate-y-1/2 text-[12px] font-medium text-[var(--text-tertiary)] bg-white px-1 pointer-events-none">
-                                ° {parseFloat(geoLat) >= 0 ? 'N' : 'S'}
-                              </span>
-                            )}
+                              className="w-full py-2 pl-2.5 text-[13px] text-[var(--text-primary)] focus:outline-none bg-transparent" />
+                            <div className="flex items-center bg-[var(--bg-secondary)] border-l border-[var(--border)] px-1 shrink-0">
+                              <span className="text-[12px] font-medium text-[var(--text-tertiary)] pl-1 select-none">°</span>
+                              <select value={geoLatRef} onChange={(e) => { setGeoLatRef(e.target.value); setGeoApplied(false); }} className="bg-transparent text-[12px] font-medium text-[var(--text-secondary)] focus:outline-none py-1 pr-1 cursor-pointer">
+                                <option value="N">N</option>
+                                <option value="S">S</option>
+                              </select>
+                            </div>
                           </div>
                         </div>
                         <div>
                           <label className="block text-[11px] font-medium text-[var(--text-secondary)] mb-1">Longitude</label>
-                          <div className="relative">
+                          <div className="flex border border-[var(--border)] rounded-md overflow-hidden focus-within:ring-2 focus-within:ring-[var(--accent)] focus-within:border-transparent">
                             <input type="text" value={geoLng} onChange={(e) => { 
-                                const val = e.target.value.replace(/[^\d.-]/g, '');
-                                const cleanVal = val.replace(/(?!^)-/g, '').replace(/(\..*)\./g, '$1');
-                                setGeoLng(cleanVal); 
+                                let val = e.target.value.replace(/[^\d.-]/g, '');
+                                val = val.replace(/(?!^)-/g, '').replace(/(\..*)\./g, '$1');
+                                if (val.startsWith('-')) {
+                                  setGeoLngRef('W');
+                                  val = val.substring(1);
+                                }
+                                setGeoLng(val); 
                                 setGeoApplied(false); 
                               }}
-                              placeholder="e.g. -122.6784"
-                              className="w-full border border-[var(--border)] rounded-md py-2 pl-2.5 pr-10 text-[13px] text-[var(--text-primary)] focus:outline-none focus:ring-2 focus:ring-[var(--accent)] focus:border-transparent" />
-                            {geoLng && !isNaN(parseFloat(geoLng)) && (
-                              <span className="absolute right-2.5 top-1/2 -translate-y-1/2 text-[12px] font-medium text-[var(--text-tertiary)] bg-white px-1 pointer-events-none">
-                                ° {parseFloat(geoLng) >= 0 ? 'E' : 'W'}
-                              </span>
-                            )}
+                              placeholder="e.g. 122.6784"
+                              className="w-full py-2 pl-2.5 text-[13px] text-[var(--text-primary)] focus:outline-none bg-transparent" />
+                            <div className="flex items-center bg-[var(--bg-secondary)] border-l border-[var(--border)] px-1 shrink-0">
+                              <span className="text-[12px] font-medium text-[var(--text-tertiary)] pl-1 select-none">°</span>
+                              <select value={geoLngRef} onChange={(e) => { setGeoLngRef(e.target.value); setGeoApplied(false); }} className="bg-transparent text-[12px] font-medium text-[var(--text-secondary)] focus:outline-none py-1 pr-1 cursor-pointer">
+                                <option value="E">E</option>
+                                <option value="W">W</option>
+                              </select>
+                            </div>
                           </div>
                         </div>
                       </div>
@@ -420,8 +432,11 @@ export function PostEditor({ initialData = null, timelineDate, onDateChange }: {
                         onClick={async () => {
                           if (!imageFile || !geoLat || !geoLng) return;
                           try {
-                            const lat = parseFloat(geoLat);
-                            const lng = parseFloat(geoLng);
+                            const latNum = parseFloat(geoLat);
+                            const lngNum = parseFloat(geoLng);
+                            const lat = geoLatRef === 'S' ? -latNum : latNum;
+                            const lng = geoLngRef === 'W' ? -lngNum : lngNum;
+                            
                             if (isNaN(lat) || isNaN(lng) || lat < -90 || lat > 90 || lng < -180 || lng > 180) {
                               alert('Invalid coordinates. Lat: -90 to 90, Lng: -180 to 180');
                               return;
