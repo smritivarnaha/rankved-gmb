@@ -6,16 +6,17 @@ import { usePathname } from "next/navigation";
 import { useSession } from "next-auth/react";
 import {
   LayoutDashboard, CalendarDays, Settings, MapPin,
-  FileText, Users, Shield
+  FileText, Users, Shield, BarChart3
 } from "lucide-react";
 
 const adminNav = [
-  { name: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
-  { name: "Profiles",  href: "/profiles",  icon: MapPin },
-  { name: "Posts",     href: "/posts",     icon: FileText },
-  { name: "Calendar",  href: "/calendar",  icon: CalendarDays },
-  { name: "Team",      href: "/team",      icon: Users },
-  { name: "Settings",  href: "/settings",  icon: Settings },
+  { name: "Dashboard",   href: "/dashboard",   icon: LayoutDashboard },
+  { name: "Performance", href: "/performance", icon: BarChart3 },
+  { name: "Profiles",    href: "/profiles",    icon: MapPin },
+  { name: "Posts",       href: "/posts",       icon: FileText },
+  { name: "Calendar",    href: "/calendar",    icon: CalendarDays },
+  { name: "Team",        href: "/team",        icon: Users },
+  { name: "Settings",    href: "/settings",    icon: Settings },
 ];
 
 const superAdminNav = [
@@ -24,10 +25,11 @@ const superAdminNav = [
 ];
 
 const teamNav = [
-  { name: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
-  { name: "Profiles",  href: "/profiles",  icon: MapPin },
-  { name: "Posts",     href: "/posts",     icon: FileText },
-  { name: "Calendar",  href: "/calendar",  icon: CalendarDays },
+  { name: "Dashboard",   href: "/dashboard",   icon: LayoutDashboard },
+  { name: "Performance", href: "/performance", icon: BarChart3 },
+  { name: "Profiles",    href: "/profiles",    icon: MapPin },
+  { name: "Posts",       href: "/posts",       icon: FileText },
+  { name: "Calendar",    href: "/calendar",    icon: CalendarDays },
 ];
 
 export function Sidebar() {
