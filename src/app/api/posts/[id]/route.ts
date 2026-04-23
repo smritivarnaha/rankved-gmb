@@ -48,37 +48,37 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
 
     if (!post) return NextResponse.json({ error: "Post not found" }, { status: 404 });
 
-    // If user requested PUBLISH NOW — call GBP API immediately
+    // If user requested PUBLISH NOW — start background process
     if (requestedStatus === "PUBLISHED") {
       const accessToken = (session as any)?.accessToken;
       if (!accessToken) {
         await updatePost(id, { status: "FAILED", failureReason: "No Google access token. Please reconnect in Settings.", publishedAt: null });
-        return NextResponse.json({
-          data: { ...post, status: "FAILED" },
-          error: "No Google access token. Please reconnect your Google account in Settings.",
-        }, { status: 207 });
-      }
-
-      const result = await publishToGBP({
-        post,
-        accessToken,
-        imageDataUri: body.imageUrl || null,
-      });
-
-      if (result.success) {
-        const publishedPost = await updatePost(id, {
-          status: "PUBLISHED",
-          publishedAt: new Date().toISOString(),
-          gbpPostName: result.gbpPostName || undefined,
-        });
-        return NextResponse.json({ data: publishedPost });
       } else {
-        await updatePost(id, { status: "FAILED", failureReason: result.error || "GBP publish failed", publishedAt: null });
-        return NextResponse.json({
-          data: { ...post, status: "FAILED" },
-          error: result.error || "Failed to publish to Google Business Profile.",
-        }, { status: 207 });
+        // Background publish
+        (async () => {
+          try {
+            const result = await publishToGBP({
+              post,
+              accessToken,
+              imageDataUri: body.imageUrl || null,
+            });
+
+            if (result.success) {
+              await updatePost(id, {
+                status: "PUBLISHED",
+                publishedAt: new Date().toISOString(),
+                gbpPostName: result.gbpPostName || undefined,
+              });
+            } else {
+              await updatePost(id, { status: "FAILED", failureReason: result.error || "GBP publish failed", publishedAt: null });
+            }
+          } catch (bgErr) {
+            console.error("[BG Update Publish] Failed:", bgErr);
+          }
+        })();
       }
+      
+      return NextResponse.json({ data: post, message: "Publishing in progress..." });
     }
 
     return NextResponse.json({ data: post });

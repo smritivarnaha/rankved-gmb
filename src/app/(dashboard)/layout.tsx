@@ -2,8 +2,9 @@ import { Sidebar } from "@/components/layout/sidebar";
 import { Topbar } from "@/components/layout/topbar";
 import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/lib/auth";
-import { ShieldAlert } from "lucide-react";
+import { ShieldAlert, Loader2 } from "lucide-react";
 import prisma from "@/lib/prisma";
+import { Suspense } from "react";
 
 export default async function DashboardLayout({ children }: { children: React.ReactNode }) {
   const session = await getServerSession(authOptions);
@@ -13,7 +14,6 @@ export default async function DashboardLayout({ children }: { children: React.Re
   if (user && (!user.isApproved || !user.role)) {
     const dbUser = await prisma.user.findUnique({ where: { id: user.id } });
     if (dbUser) {
-      // Create a merged user object with fresh DB data
       user = {
         ...user,
         isApproved: dbUser.isApproved || dbUser.email?.toLowerCase() === "rankved.business@gmail.com",
@@ -33,7 +33,13 @@ export default async function DashboardLayout({ children }: { children: React.Re
         <Topbar />
         <main className="app-content">
           {hasAccess ? (
-            <div className="app-content-inner anim-fade-up">{children}</div>
+            <Suspense fallback={
+              <div className="flex h-[400px] items-center justify-center">
+                <Loader2 className="w-8 h-8 animate-spin text-[var(--accent)]" />
+              </div>
+            }>
+              <div className="app-content-inner anim-fade-up">{children}</div>
+            </Suspense>
           ) : (
             <div className="approval-screen">
               <div style={{ width: 72, height: 72, borderRadius: "50%", background: "var(--accent-light)", display: "flex", alignItems: "center", justifyContent: "center", marginBottom: 20 }}>

@@ -70,47 +70,46 @@ export async function POST(req: NextRequest) {
       userId
     );
 
-    // If user requested PUBLISH NOW — call GBP API immediately
+    // If user requested PUBLISH NOW — start background process
     if (body.status === "PUBLISHED") {
       if (!accessToken) {
-        // Mark as failed — no token
         await prisma.post.update({
           where: { id: post.id },
           data: { status: "FAILED", failureReason: "No Google access token. Please reconnect in Settings." },
         });
-        return NextResponse.json({
-          data: { ...post, status: "FAILED" },
-          error: "No Google access token. Please reconnect your Google account in Settings.",
-        }, { status: 207 });
-      }
-
-      const result = await publishToGBP({
-        post,
-        accessToken,
-        imageDataUri: body.imageUrl || null,
-      });
-
-      if (result.success) {
-        const updated = await prisma.post.update({
-          where: { id: post.id },
-          data: {
-            status: "PUBLISHED",
-            publishedAt: new Date(),
-            gbpPostName: result.gbpPostName || null,
-          },
-          include: { location: { include: { client: true } }, user: true },
-        });
-        return NextResponse.json({ data: updated }, { status: 201 });
       } else {
-        await prisma.post.update({
-          where: { id: post.id },
-          data: { status: "FAILED", failureReason: result.error || "GBP publish failed" },
-        });
-        return NextResponse.json({
-          data: { ...post, status: "FAILED" },
-          error: result.error || "Failed to publish to Google Business Profile.",
-        }, { status: 207 });
+        // Run publishing in background — do not await
+        (async () => {
+          try {
+            const result = await publishToGBP({
+              post,
+              accessToken,
+              imageDataUri: body.imageUrl || null,
+            });
+
+            if (result.success) {
+              await prisma.post.update({
+                where: { id: post.id },
+                data: {
+                  status: "PUBLISHED",
+                  publishedAt: new Date(),
+                  gbpPostName: result.gbpPostName || null,
+                },
+              });
+            } else {
+              await prisma.post.update({
+                where: { id: post.id },
+                data: { status: "FAILED", failureReason: result.error || "GBP publish failed" },
+              });
+            }
+          } catch (bgErr) {
+            console.error("[BG Publish] Failed:", bgErr);
+          }
+        })();
       }
+      
+      // Return 201 immediately with status 'DRAFT' (will update to PUBLISHED in seconds)
+      return NextResponse.json({ data: post, message: "Publishing in progress..." }, { status: 201 });
     }
 
     return NextResponse.json({ data: post }, { status: 201 });
