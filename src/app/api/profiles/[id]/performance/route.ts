@@ -18,6 +18,7 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
   if (!profile) return NextResponse.json({ error: "Profile not found or access denied" }, { status: 404 });
 
   // googleName is in format "locations/123"
+  const resourceName = profile.googleName; 
   // Support dynamic date ranges
   const { searchParams } = new URL(req.url);
   const days = parseInt(searchParams.get("days") || "30");
