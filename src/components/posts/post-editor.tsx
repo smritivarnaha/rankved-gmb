@@ -190,17 +190,23 @@ export function PostEditor({ initialData = null, timelineDate, onDateChange }: {
   };
 
   // Quick date helpers
-  const todayStr = now.toISOString().split("T")[0];
-  const tomorrowStr = new Date(now.getTime() + 86400000).toISOString().split("T")[0];
+  const toLocalDateString = (d: Date) => {
+    const year = d.getFullYear();
+    const month = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  };
+
+  const todayStr = toLocalDateString(now);
+  const tomorrowStr = toLocalDateString(new Date(now.getTime() + 86400000));
 
   const setQuickDate = (type: "now" | "today" | "tomorrow") => {
     if (type === "now") {
       setSelectedDate(todayStr);
       onDateChange?.(todayStr);
       const h = String(now.getHours()).padStart(2, "0");
-      const m = now.getMinutes() < 30 ? "30" : "00";
-      const hour = now.getMinutes() < 30 ? h : String(Number(h) + 1).padStart(2, "0");
-      setSelectedTime(`${hour}:${m}`);
+      const m = String(now.getMinutes()).padStart(2, "0");
+      setSelectedTime(`${h}:${m}`);
     } else if (type === "today") {
       setSelectedDate(todayStr);
       onDateChange?.(todayStr);
@@ -689,19 +695,12 @@ export function PostEditor({ initialData = null, timelineDate, onDateChange }: {
               {selectedDate && (
                 <div className="px-4 py-3 border-t border-[var(--border-light)]">
                   <label className="block text-[11px] font-medium text-[var(--text-tertiary)] uppercase tracking-wide mb-2">Time</label>
-                  <div className="grid grid-cols-4 gap-1 max-h-[120px] overflow-y-auto no-scrollbar">
-                    {timeSlots.map(t => (
-                      <button key={t} onClick={() => setSelectedTime(t)}
-                        style={selectedTime === t ? { backgroundColor: "var(--accent)", color: "white", border: "none" } : {}}
-                        className={`py-1.5 text-[11px] font-medium rounded transition-colors ${
-                          selectedTime === t 
-                            ? "" 
-                            : "text-[var(--text-secondary)] border border-[var(--border)] hover:bg-white"
-                        }`}>
-                        {t}
-                      </button>
-                    ))}
-                  </div>
+                  <input 
+                    type="time" 
+                    value={selectedTime} 
+                    onChange={(e) => setSelectedTime(e.target.value)}
+                    className="w-full border border-[var(--border)] rounded-md py-2 px-3 text-[13px] text-[var(--text-primary)] focus:outline-none focus:ring-2 focus:ring-[var(--accent)] bg-white"
+                  />
                 </div>
               )}
 
