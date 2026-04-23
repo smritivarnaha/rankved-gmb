@@ -39,13 +39,23 @@ export default function SettingsPage() {
   };
 
   const handleDisconnect = async () => {
-    if (!confirm("WIPE EVERYTHING? This will disconnect your Google account and delete ALL synced profiles. This cannot be undone.")) return;
+    if (!confirm("NUCLEAR RESET: This will disconnect Google and delete ALL profile data. Continue?")) return;
     setDisconnecting(true);
     try {
       const res = await fetch("/api/auth/disconnect", { method: "POST" });
-      if (res.ok) { window.location.reload(); }
-      else setFetchResult({ error: "Failed to disconnect." });
-    } catch { setFetchResult({ error: "Network error." }); }
+      if (res.ok) {
+        // Successful API disconnect - reload to clear state
+        window.location.reload();
+      } else {
+        // Fallback: If API fails, at least clear the local session so they can relink
+        console.warn("API disconnect failed, forcing local signout...");
+        const { signOut } = await import("next-auth/react");
+        await signOut({ callbackUrl: "/login" });
+      }
+    } catch (err) {
+      console.error("Disconnect error:", err);
+      setFetchResult({ error: "Network error during disconnect." });
+    }
     setDisconnecting(false);
   };
 
