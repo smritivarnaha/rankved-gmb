@@ -54,6 +54,9 @@ async function resolveImageUrlDetail(
   if (!supabaseUrl) return { success: false, error: "Missing NEXT_PUBLIC_SUPABASE_URL" };
   if (!supabaseKey) return { success: false, error: "Missing SUPABASE_SERVICE_ROLE_KEY" };
 
+  let cleanUrl = supabaseUrl.replace(/\/+$/, "");
+  if (cleanUrl.endsWith("/rest/v1")) cleanUrl = cleanUrl.replace("/rest/v1", "");
+
   try {
     const base64Data = imageDataUri.split(",")[1];
     if (!base64Data) return { success: false, error: "Invalid image format" };
@@ -62,7 +65,7 @@ async function resolveImageUrlDetail(
     const buffer = Buffer.from(base64Data, "base64");
 
     const filename = `${Date.now()}.jpg`;
-    const uploadUrl = `${supabaseUrl}/storage/v1/object/post-images/${filename}`;
+    const uploadUrl = `${cleanUrl}/storage/v1/object/post-images/${filename}`;
     
     const uploadRes = await fetch(uploadUrl, {
       method: "POST",
