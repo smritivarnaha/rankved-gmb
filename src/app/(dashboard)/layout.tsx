@@ -11,8 +11,9 @@ export default async function DashboardLayout({ children }: { children: React.Re
   
   const isApproved = user?.isApproved;
   const role = user?.role;
-  const hasAccess = isApproved || role === "SUPER_ADMIN";
-
+  
+  // Super Admins and Agency Owners created by Admin should ALWAYS have access
+  const hasAccess = isApproved || role === "SUPER_ADMIN" || role === "AGENCY_OWNER";
 
   return (
     <div className="app-shell">
@@ -29,21 +30,25 @@ export default async function DashboardLayout({ children }: { children: React.Re
               <div className="app-content-inner anim-fade-up">{children}</div>
             </Suspense>
           ) : (
-            <div className="approval-screen">
-              <div style={{ width: 72, height: 72, borderRadius: "50%", background: "var(--accent-light)", display: "flex", alignItems: "center", justifyContent: "center", marginBottom: 20 }}>
-                <ShieldAlert style={{ width: 36, height: 36, color: "var(--accent)" }} />
+            <div className="flex flex-col items-center justify-center min-h-[60vh] text-center anim-fade">
+              <div className="w-20 h-20 bg-indigo-50 rounded-3xl flex items-center justify-center mb-8 shadow-sm">
+                <ShieldAlert className="w-10 h-10 text-indigo-600" />
               </div>
-              <h1 style={{ fontSize: 22, fontWeight: 700, marginBottom: 10 }}>Pending Approval</h1>
-              <p style={{ fontSize: 14, color: "var(--text-secondary)", maxWidth: 400, lineHeight: 1.7 }}>
-                Your account has been created, but you must be approved by the workspace administrator (<strong>rankved.business@gmail.com</strong>) before you can connect Google accounts and create posts.
+              <h1 className="text-3xl font-bold text-slate-900 mb-4">Account Pending Review</h1>
+              <p className="text-slate-500 max-w-md mx-auto leading-relaxed mb-8">
+                Your account has been created successfully. For security, a workspace administrator 
+                (<span className="font-semibold text-slate-700">rankved.business@gmail.com</span>) 
+                needs to verify your profile before you can start posting.
               </p>
-              <div style={{ marginTop: 24, padding: "14px 20px", background: "var(--warning-bg)", border: "1px solid var(--warning-border)", borderRadius: "var(--radius-md)" }}>
-                <p style={{ fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.08em", color: "var(--text-muted)", marginBottom: 4 }}>Status</p>
-                <div style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 13, fontWeight: 600, color: "var(--warning)" }}>
-                  <span className="anim-pulse" style={{ width: 8, height: 8, borderRadius: "50%", background: "var(--warning)" }} />
-                  Waiting for Admin Review
-                </div>
+              
+              <div className="inline-flex items-center gap-3 px-5 py-3 bg-amber-50 border border-amber-100 rounded-2xl">
+                <div className="w-2.5 h-2.5 bg-amber-500 rounded-full anim-pulse" />
+                <span className="text-sm font-bold text-amber-800 tracking-tight uppercase">Waiting for Review</span>
               </div>
+              
+              <p className="mt-12 text-xs text-slate-400">
+                Usually takes less than 24 hours. You'll be notified via email.
+              </p>
             </div>
           )}
         </main>
