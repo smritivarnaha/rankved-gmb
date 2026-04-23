@@ -4,7 +4,7 @@ import { useState, useRef, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
 import { Save, Clock, Loader2, ImagePlus, X, Send, MapPin, Link as LinkIcon, Copy, Check } from "lucide-react";
-import { embedGPSInImage } from "@/lib/geo-exif";
+import { embedGPSInImage, CAMERA_TEMPLATES } from "@/lib/geo-exif";
 
 // No fallback sample data — profiles load from /api/profiles only
 const fallbackLocations: {id:string;name:string;client:string}[] = [];
@@ -55,6 +55,8 @@ export function PostEditor({ initialData = null, timelineDate, onDateChange }: {
   const [geoLatRef, setGeoLatRef] = useState("N");
   const [geoLng, setGeoLng] = useState("");
   const [geoLngRef, setGeoLngRef] = useState("E");
+  const [geoTemplate, setGeoTemplate] = useState("samsung_s23_ultra");
+  const [geoDate, setGeoDate] = useState("2026-01-20");
   const [geoApplied, setGeoApplied] = useState(false);
   const [imageKeyword, setImageKeyword] = useState("");
 
@@ -380,6 +382,19 @@ export function PostEditor({ initialData = null, timelineDate, onDateChange }: {
                       </p>
                       <div className="grid grid-cols-2 gap-3">
                         <div>
+                          <label className="block text-[11px] font-medium text-[var(--text-secondary)] mb-1">Camera Template</label>
+                          <select value={geoTemplate} onChange={(e) => { setGeoTemplate(e.target.value); setGeoApplied(false); }} className="w-full border border-[var(--border)] rounded-md py-2 px-2.5 text-[13px] text-[var(--text-primary)] focus:outline-none focus:ring-2 focus:ring-[var(--accent)] bg-white">
+                            {CAMERA_TEMPLATES.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
+                          </select>
+                        </div>
+                        <div>
+                          <label className="block text-[11px] font-medium text-[var(--text-secondary)] mb-1">Date of Capture</label>
+                          <input type="date" value={geoDate} onChange={(e) => { setGeoDate(e.target.value); setGeoApplied(false); }} className="w-full border border-[var(--border)] rounded-md py-2 px-2.5 text-[13px] text-[var(--text-primary)] focus:outline-none focus:ring-2 focus:ring-[var(--accent)] bg-white" />
+                        </div>
+                      </div>
+                      
+                      <div className="grid grid-cols-2 gap-3">
+                        <div>
                           <label className="block text-[11px] font-medium text-[var(--text-secondary)] mb-1">Latitude</label>
                           <div className="flex border border-[var(--border)] rounded-md overflow-hidden focus-within:ring-2 focus-within:ring-[var(--accent)] focus-within:border-transparent">
                             <input type="text" value={geoLat} onChange={(e) => { 
@@ -441,7 +456,7 @@ export function PostEditor({ initialData = null, timelineDate, onDateChange }: {
                               alert('Invalid coordinates. Lat: -90 to 90, Lng: -180 to 180');
                               return;
                             }
-                            const geoBlob = await embedGPSInImage(imageFile, lat, lng);
+                            const geoBlob = await embedGPSInImage(imageFile, lat, lng, geoTemplate, geoDate || "2026-01-20");
                             const geoFile = new File([geoBlob], imageFile.name.replace(/\.[^.]+$/, '.jpg'), { type: 'image/jpeg' });
                             setImageFile(geoFile);
                             const reader = new FileReader();
