@@ -38,12 +38,38 @@ export async function embedGPSInImage(file: File, lat: number, lng: number): Pro
         const latRational = decimalToRational(lat);
         const lngRational = decimalToRational(lng);
 
+const CAMERA_TEMPLATES = [
+  {
+    make: "Samsung",
+    model: "Samsung Galaxy S23 Ultra",
+    software: "S918BXXU1AWBD",
+  },
+  {
+    make: "Nokia",
+    model: "Nokia X20",
+    software: "Android 13",
+  },
+  {
+    make: "Motorola",
+    model: "Motorola Edge 40",
+    software: "T1TL33.115-36-3",
+  },
+  {
+    make: "OnePlus",
+    model: "OnePlus 11 5G",
+    software: "OxygenOS 13.0",
+  }
+];
+
+        // Pick a random camera template
+        const template = CAMERA_TEMPLATES[Math.floor(Math.random() * CAMERA_TEMPLATES.length)];
+
         // Start fresh EXIF with required basic tags for better OS compatibility
         const exifObj: any = {
           "0th": {
-            [piexif.ImageIFD.Make]: "RankVed",
-            [piexif.ImageIFD.Model]: "GBP Scheduler",
-            [piexif.ImageIFD.Software]: "RankVed GMB Manager",
+            [piexif.ImageIFD.Make]: template.make,
+            [piexif.ImageIFD.Model]: template.model,
+            [piexif.ImageIFD.Software]: template.software,
             [piexif.ImageIFD.XResolution]: [72, 1],
             [piexif.ImageIFD.YResolution]: [72, 1],
             [piexif.ImageIFD.ResolutionUnit]: 2,
