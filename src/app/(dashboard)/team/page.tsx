@@ -241,8 +241,8 @@ export default function TeamPage() {
       {/* Create User Modal */}
       {showForm && (
         <div className="modal-overlay anim-fade">
-          <div className="modal-content anim-scale max-h-[90vh] flex flex-col" style={{ maxWidth: "600px" }}>
-            <div className="flex items-center justify-between mb-6">
+          <div className="modal-content anim-scale">
+            <div className="modal-header">
               <div className="flex items-center gap-3">
                 <div className="p-2 bg-indigo-50 rounded-lg">
                   <UserPlus className="w-5 h-5 text-indigo-600" />
@@ -254,96 +254,98 @@ export default function TeamPage() {
               </button>
             </div>
             
-            <form onSubmit={handleAdd} className="space-y-6 overflow-y-auto pr-2 custom-scrollbar flex-1">
-              {/* Basic Info */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-semibold text-slate-700 mb-1.5">Full Name</label>
-                  <input required type="text" value={form.name} onChange={e => setForm({...form, name: e.target.value})} className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none transition-all" placeholder="John Doe" />
-                </div>
-                <div>
-                  <label className="block text-sm font-semibold text-slate-700 mb-1.5">Username <span className="text-red-500">*</span></label>
-                  <input required type="text" value={form.username} onChange={e => setForm({...form, username: e.target.value})} className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none transition-all" placeholder="johndoe" />
-                </div>
-                <div>
-                  <label className="block text-sm font-semibold text-slate-700 mb-1.5">Email (Optional)</label>
-                  <input type="email" value={form.email} onChange={e => setForm({...form, email: e.target.value})} className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none transition-all" placeholder="john@example.com" />
-                </div>
-                <div>
-                  <label className="block text-sm font-semibold text-slate-700 mb-1.5">Initial Password <span className="text-red-500">*</span></label>
-                  <input required type="text" value={form.password} onChange={e => setForm({...form, password: e.target.value})} className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none transition-all" placeholder="Set a password" />
-                </div>
-              </div>
-
-              {/* Permissions */}
-              <div className="border-t border-slate-100 pt-6">
-                <h3 className="text-sm font-bold text-slate-900 flex items-center gap-2 mb-4"><Settings className="w-4 h-4 text-slate-400"/> Permissions & Access</h3>
-                <div className="grid grid-cols-1 gap-4">
+            <form onSubmit={handleAdd} className="flex flex-col overflow-hidden">
+              <div className="modal-body space-y-6">
+                {/* Basic Info */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-sm font-semibold text-slate-700 mb-1.5">Publishing Rights</label>
-                    <select 
-                      value={form.canPublishNow ? "FULL" : form.canSchedule ? "SCHEDULE" : "DRAFT"} 
-                      onChange={(e) => {
-                        const val = e.target.value;
-                        if (val === "FULL") {
-                          setForm({...form, canPublishNow: true, canSchedule: true, minScheduleDays: 0});
-                        } else if (val === "SCHEDULE") {
-                          setForm({...form, canPublishNow: false, canSchedule: true, minScheduleDays: 2});
-                        } else {
-                          setForm({...form, canPublishNow: false, canSchedule: false, minScheduleDays: 0});
-                        }
-                      }}
-                      className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none transition-all appearance-none"
-                    >
-                      <option value="FULL">Full Access (Immediate Publish & Schedule)</option>
-                      <option value="SCHEDULE">Schedule Only (Requires Advance Notice)</option>
-                      <option value="DRAFT">Draft Only (Requires Approval)</option>
-                    </select>
+                    <label className="block text-sm font-semibold text-slate-700 mb-1.5">Full Name</label>
+                    <input required type="text" value={form.name} onChange={e => setForm({...form, name: e.target.value})} className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none transition-all" placeholder="John Doe" />
                   </div>
+                  <div>
+                    <label className="block text-sm font-semibold text-slate-700 mb-1.5">Username <span className="text-red-500">*</span></label>
+                    <input required type="text" value={form.username} onChange={e => setForm({...form, username: e.target.value})} className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none transition-all" placeholder="johndoe" />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-semibold text-slate-700 mb-1.5">Email (Optional)</label>
+                    <input type="email" value={form.email} onChange={e => setForm({...form, email: e.target.value})} className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none transition-all" placeholder="john@example.com" />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-semibold text-slate-700 mb-1.5">Initial Password <span className="text-red-500">*</span></label>
+                    <input required type="text" value={form.password} onChange={e => setForm({...form, password: e.target.value})} className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none transition-all" placeholder="Set a password" />
+                  </div>
+                </div>
+
+                {/* Permissions */}
+                <div className="border-t border-slate-100 pt-6">
+                  <h3 className="text-sm font-bold text-slate-900 flex items-center gap-2 mb-4"><Settings className="w-4 h-4 text-slate-400"/> Permissions & Access</h3>
+                  <div className="grid grid-cols-1 gap-4">
+                    <div>
+                      <label className="block text-sm font-semibold text-slate-700 mb-1.5">Publishing Rights</label>
+                      <select 
+                        value={form.canPublishNow ? "FULL" : form.canSchedule ? "SCHEDULE" : "DRAFT"} 
+                        onChange={(e) => {
+                          const val = e.target.value;
+                          if (val === "FULL") {
+                            setForm({...form, canPublishNow: true, canSchedule: true, minScheduleDays: 0});
+                          } else if (val === "SCHEDULE") {
+                            setForm({...form, canPublishNow: false, canSchedule: true, minScheduleDays: 2});
+                          } else {
+                            setForm({...form, canPublishNow: false, canSchedule: false, minScheduleDays: 0});
+                          }
+                        }}
+                        className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none transition-all appearance-none"
+                      >
+                        <option value="FULL">Full Access (Immediate Publish & Schedule)</option>
+                        <option value="SCHEDULE">Schedule Only (Requires Advance Notice)</option>
+                        <option value="DRAFT">Draft Only (Requires Approval)</option>
+                      </select>
+                    </div>
+                    
+                    {!form.canPublishNow && form.canSchedule && (
+                      <div className="p-4 bg-amber-50 border border-amber-100 rounded-xl">
+                        <label className="block text-sm font-semibold text-amber-900 mb-1">Minimum Notice Period (Days)</label>
+                        <div className="text-xs text-amber-700/70 mb-3">Posts must be scheduled at least this many days in advance.</div>
+                        <input type="number" min="0" value={form.minScheduleDays} onChange={e => setForm({...form, minScheduleDays: parseInt(e.target.value) || 0})} className="w-24 px-4 py-2 bg-white border border-amber-200 rounded-lg focus:ring-2 focus:ring-amber-500/20 outline-none" />
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                {/* Location Assignment */}
+                <div className="border-t border-slate-100 pt-6">
+                  <h3 className="text-sm font-bold text-slate-900 flex items-center gap-2 mb-4"><MapPin className="w-4 h-4 text-slate-400"/> Assigned Locations</h3>
                   
-                  {!form.canPublishNow && form.canSchedule && (
-                    <div className="p-4 bg-amber-50 border border-amber-100 rounded-xl">
-                      <label className="block text-sm font-semibold text-amber-900 mb-1">Minimum Notice Period (Days)</label>
-                      <div className="text-xs text-amber-700/70 mb-3">Posts must be scheduled at least this many days in advance.</div>
-                      <input type="number" min="0" value={form.minScheduleDays} onChange={e => setForm({...form, minScheduleDays: parseInt(e.target.value) || 0})} className="w-24 px-4 py-2 bg-white border border-amber-200 rounded-lg focus:ring-2 focus:ring-amber-500/20 outline-none" />
+                  {profiles.length === 0 ? (
+                    <div className="p-4 bg-slate-50 border border-slate-200 rounded-xl text-center">
+                      <p className="text-sm text-slate-500">No profiles synced yet. Please connect Google in Settings.</p>
+                    </div>
+                  ) : (
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pr-1">
+                      {profiles.map((loc: any) => (
+                        <label key={loc.id} className={`flex items-center gap-3 p-3 border rounded-xl cursor-pointer transition-all ${form.assignedLocations.includes(loc.id) ? 'bg-indigo-50 border-indigo-200 ring-1 ring-indigo-200' : 'bg-white border-slate-200 hover:border-indigo-200'}`}>
+                          <input 
+                            type="checkbox" 
+                            checked={form.assignedLocations.includes(loc.id)} 
+                            onChange={() => toggleLocation(loc.id)} 
+                            className="w-4 h-4 text-indigo-600 rounded border-slate-300 focus:ring-indigo-500 cursor-pointer" 
+                          />
+                          <div className="flex-1 min-w-0">
+                            <div className="text-sm font-semibold text-slate-900 truncate">{loc.name}</div>
+                            <div className="text-[11px] text-slate-500 truncate">{loc.address}</div>
+                          </div>
+                        </label>
+                      ))}
                     </div>
                   )}
                 </div>
               </div>
 
-              {/* Location Assignment */}
-              <div className="border-t border-slate-100 pt-6">
-                <h3 className="text-sm font-bold text-slate-900 flex items-center gap-2 mb-4"><MapPin className="w-4 h-4 text-slate-400"/> Assigned Locations</h3>
-                
-                {profiles.length === 0 ? (
-                  <div className="p-4 bg-slate-50 border border-slate-200 rounded-xl text-center">
-                    <p className="text-sm text-slate-500">No profiles synced yet. Please connect Google in Settings.</p>
-                  </div>
-                ) : (
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 max-h-[180px] overflow-y-auto pr-1">
-                    {profiles.map((loc: any) => (
-                      <label key={loc.id} className={`flex items-center gap-3 p-3 border rounded-xl cursor-pointer transition-all ${form.assignedLocations.includes(loc.id) ? 'bg-indigo-50 border-indigo-200 ring-1 ring-indigo-200' : 'bg-white border-slate-200 hover:border-indigo-200'}`}>
-                        <input 
-                          type="checkbox" 
-                          checked={form.assignedLocations.includes(loc.id)} 
-                          onChange={() => toggleLocation(loc.id)} 
-                          className="w-4 h-4 text-indigo-600 rounded border-slate-300 focus:ring-indigo-500 cursor-pointer" 
-                        />
-                        <div className="flex-1 min-w-0">
-                          <div className="text-sm font-semibold text-slate-900 truncate">{loc.name}</div>
-                          <div className="text-[11px] text-slate-500 truncate">{loc.address}</div>
-                        </div>
-                      </label>
-                    ))}
-                  </div>
-                )}
-              </div>
-
-              <div className="flex gap-3 pt-6 border-t border-slate-100 mt-auto">
-                <button type="button" onClick={() => setShowForm(false)} className="flex-1 px-4 py-2.5 border border-slate-200 text-slate-600 font-semibold rounded-xl hover:bg-slate-50 transition-colors">
+              <div className="modal-footer">
+                <button type="button" onClick={() => setShowForm(false)} className="px-6 py-2.5 border border-slate-200 text-slate-600 font-semibold rounded-xl hover:bg-slate-50 transition-colors">
                   Cancel
                 </button>
-                <button type="submit" disabled={saving} className="flex-1 px-4 py-2.5 bg-indigo-600 text-white font-semibold rounded-xl hover:bg-indigo-700 shadow-lg shadow-indigo-200 flex items-center justify-center gap-2 transition-all active:scale-95 disabled:opacity-50">
+                <button type="submit" disabled={saving} className="px-6 py-2.5 bg-indigo-600 text-white font-semibold rounded-xl hover:bg-indigo-700 shadow-lg shadow-indigo-200 flex items-center justify-center gap-2 transition-all active:scale-95 disabled:opacity-50">
                   {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Plus className="w-4 h-4" />}
                   Create Team Member
                 </button>
