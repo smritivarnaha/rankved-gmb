@@ -25,6 +25,12 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
   try {
     const body = await req.json();
 
+    // Guard: block re-publishing already-published posts to prevent duplicate GBP posts
+    const existing = await getPostById(id);
+    if (existing?.status === "PUBLISHED" && body.status === "PUBLISHED") {
+      return NextResponse.json({ error: "This post has already been published. To edit it, use Google Business Manager directly." }, { status: 409 });
+    }
+
     const requestedStatus = body.status;
     const initialStatus = requestedStatus === "PUBLISHED" ? "DRAFT" : requestedStatus;
 

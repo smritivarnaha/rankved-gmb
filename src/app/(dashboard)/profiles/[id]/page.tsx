@@ -3,10 +3,11 @@
 import Link from "next/link";
 import { format } from "date-fns";
 import { useState, useEffect } from "react";
-import { ArrowLeft, MapPin, Plus, FileText, Clock, Send, Image as ImageIcon, Loader2, CheckCircle2, AlertCircle, X } from "lucide-react";
+import { ArrowLeft, MapPin, Plus, FileText, Clock, Send, Loader2, Lock, ThumbsUp, Edit3, ExternalLink, AlertTriangle, CheckCircle2 } from "lucide-react";
 import { useParams } from "next/navigation";
 import { PostTimeline } from "@/components/posts/post-timeline";
 import useSWR from "swr";
+import { useSession } from "next-auth/react";
 
 const fetcher = (url: string) => fetch(url).then(r => r.json());
 
@@ -32,15 +33,19 @@ interface Post {
   topicType: string;
 }
 
-const statusStyle: Record<string, { bg: string; color: string; label: string }> = {
-  PUBLISHED: { bg: "var(--success-bg)", color: "var(--success)", label: "Published" },
-  SCHEDULED: { bg: "var(--warning-bg)", color: "var(--warning)", label: "Scheduled" },
-  DRAFT: { bg: "var(--bg-elevated)", color: "var(--text-muted)", label: "Draft" },
-  FAILED: { bg: "var(--error-bg)", color: "var(--error)", label: "Failed" },
+const statusStyle: Record<string, { bg: string; color: string; label: string; border: string }> = {
+  PUBLISHED:        { bg: "var(--success-bg)",  color: "var(--success)",  label: "Published",     border: "var(--success)" },
+  SCHEDULED:        { bg: "var(--accent-light)", color: "var(--accent)",   label: "Scheduled",     border: "var(--accent)" },
+  DRAFT:            { bg: "var(--bg-elevated)",  color: "var(--text-muted)", label: "Draft",       border: "var(--border)" },
+  FAILED:           { bg: "var(--error-bg)",     color: "var(--error)",   label: "Failed",        border: "var(--error)" },
+  PENDING_APPROVAL: { bg: "#fffbeb",             color: "#b45309",        label: "Needs Approval", border: "#f59e0b" },
 };
 
-function PostThumbnail({ post }: { post: Post }) {
+function PostThumbnail({ post, canApprove, onApprove }: { post: Post; canApprove: boolean; onApprove: (post: Post) => void }) {
   const s = statusStyle[post.status] || statusStyle.DRAFT;
+  const isPending = post.status === "PENDING_APPROVAL";
+  const isPublished = post.status === "PUBLISHED";
+  const isDraft = post.status === "DRAFT";
   const dateLabel = post.publishedAt
     ? format(new Date(post.publishedAt), "MMM d")
     : post.scheduledAt
@@ -48,54 +53,119 @@ function PostThumbnail({ post }: { post: Post }) {
     : format(new Date(post.createdAt), "MMM d");
 
   return (
-    <Link href={`/posts/${post.id}`} style={{
-      display: "block",
+    <div style={{
       background: "var(--bg-card)",
-      border: "1px solid var(--border)",
+      border: `2px solid ${isPending ? "#f59e0b" : "var(--border)"}`,
       borderRadius: "var(--radius-sm)",
       overflow: "hidden",
-      transition: "box-shadow 0.12s, border-color 0.12s",
-    }} className="post-thumb-hover">
-      {/* Image or placeholder */}
-      <div style={{ height: 120, background: "var(--bg-elevated)", position: "relative", overflow: "hidden" }}>
+      display: "flex",
+      flexDirection: "column",
+      boxShadow: isPending ? "0 0 0 3px #fef3c7" : "none",
+      transition: "box-shadow 0.12s",
+    }}>
+      {/* Image */}
+      <Link href={`/posts/${post.id}`} style={{ display: "block", height: 100, background: "var(--bg-elevated)", overflow: "hidden", position: "relative" }}>
         {post.imageUrl ? (
           <img src={post.imageUrl} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
         ) : (
           <div style={{ width: "100%", height: "100%", display: "flex", alignItems: "center", justifyContent: "center" }}>
-            <FileText style={{ width: 28, height: 28, color: "var(--border)" }} />
+            <FileText style={{ width: 24, height: 24, color: "var(--border)" }} />
           </div>
         )}
-        {/* Status pill */}
         <div style={{
-          position: "absolute", top: 8, right: 8,
+          position: "absolute", top: 6, right: 6,
           background: s.bg, color: s.color,
-          fontSize: 10, fontWeight: 700, padding: "3px 8px",
+          fontSize: 9, fontWeight: 700, padding: "2px 7px",
           borderRadius: "var(--radius-full)", textTransform: "uppercase", letterSpacing: "0.05em",
-        }}>{s.label}</div>
-      </div>
+          display: "flex", alignItems: "center", gap: 3,
+        }}>
+          {isPending && <AlertTriangle style={{ width: 9, height: 9 }} />}
+          {isPublished && <CheckCircle2 style={{ width: 9, height: 9 }} />}
+          {s.label}
+        </div>
+      </Link>
+
       {/* Content */}
-      <div style={{ padding: "10px 12px" }}>
-        <p style={{ fontSize: 12, color: "var(--text-primary)", fontWeight: 500, overflow: "hidden", display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical", lineHeight: 1.4 }}>
+      <div style={{ padding: "8px 10px" }}>
+        <p style={{ fontSize: 11, color: isPublished ? "var(--text-muted)" : "var(--text-primary)", fontWeight: 500, overflow: "hidden", display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical", lineHeight: 1.4, marginBottom: 6 }}>
           {post.summary || "No content"}
         </p>
-        <p style={{ fontSize: 11, color: "var(--text-muted)", marginTop: 6 }}>{dateLabel}</p>
+        <p style={{ fontSize: 10, color: "var(--text-muted)", marginBottom: 8 }}>{dateLabel}</p>
+
+        {/* Action row */}
+        <div style={{ display: "flex", gap: 5 }}>
+          {isPublished && (
+            <>
+              <Link href={`/posts/${post.id}`}
+                style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", gap: 4, padding: "5px 0", fontSize: 11, fontWeight: 600, color: "var(--text-muted)", border: "1px solid var(--border)", borderRadius: "var(--radius-sm)", background: "var(--bg-elevated)" }}>
+                <Lock style={{ width: 10, height: 10 }} /> View
+              </Link>
+              <a href="https://business.google.com" target="_blank" rel="noopener noreferrer"
+                style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", gap: 4, padding: "5px 0", fontSize: 11, fontWeight: 600, color: "var(--accent)", border: "1px solid var(--accent-light)", borderRadius: "var(--radius-sm)", background: "var(--accent-light)" }}>
+                <ExternalLink style={{ width: 10, height: 10 }} /> Google
+              </a>
+            </>
+          )}
+          {isDraft && (
+            <Link href={`/posts/${post.id}`}
+              style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", gap: 4, padding: "5px 0", fontSize: 11, fontWeight: 600, color: "var(--accent)", border: "1px solid var(--accent-light)", borderRadius: "var(--radius-sm)", background: "var(--accent-light)" }}>
+              <Edit3 style={{ width: 10, height: 10 }} /> Edit Draft
+            </Link>
+          )}
+          {isPending && canApprove && (
+            <>
+              <Link href={`/posts/${post.id}`}
+                style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", gap: 4, padding: "5px 0", fontSize: 11, fontWeight: 600, color: "var(--text-secondary)", border: "1px solid var(--border)", borderRadius: "var(--radius-sm)" }}>
+                Preview
+              </Link>
+              <button onClick={() => onApprove(post)}
+                style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", gap: 4, padding: "5px 0", fontSize: 11, fontWeight: 700, color: "#fff", background: "#d97706", border: "none", borderRadius: "var(--radius-sm)", cursor: "pointer" }}>
+                <ThumbsUp style={{ width: 10, height: 10 }} /> Approve
+              </button>
+            </>
+          )}
+          {isPending && !canApprove && (
+            <span style={{ fontSize: 10, color: "#b45309", fontStyle: "italic" }}>Awaiting approval</span>
+          )}
+          {(post.status === "SCHEDULED" || post.status === "FAILED") && (
+            <Link href={`/posts/${post.id}`}
+              style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", gap: 4, padding: "5px 0", fontSize: 11, fontWeight: 600, color: "var(--text-secondary)", border: "1px solid var(--border)", borderRadius: "var(--radius-sm)" }}>
+              View
+            </Link>
+          )}
+        </div>
       </div>
-    </Link>
+    </div>
   );
 }
 
+
 export default function ProfileDetailPage() {
   const params = useParams();
+  const { data: session } = useSession();
+  const canApprove = (session as any)?.user?.role === "SUPER_ADMIN" || (session as any)?.user?.role === "AGENCY_OWNER";
+
   const [profile, setProfile] = useState<Profile | null>(null);
   const [profileLoading, setProfileLoading] = useState(true);
   const [timelineDate, setTimelineDate] = useState("");
 
-  const { data: postsData, isLoading: postsLoading } = useSWR(
+  const { data: postsData, isLoading: postsLoading, mutate: mutatePosts } = useSWR(
     params.id ? `/api/posts?profileId=${params.id}` : null,
     fetcher, { revalidateOnFocus: false }
   );
 
   const posts: Post[] = postsData?.data || [];
+
+  const handleApprove = async (post: Post) => {
+    const newStatus = (post as any).scheduledAt ? "SCHEDULED" : "PUBLISHED";
+    const res = await fetch(`/api/posts/${post.id}`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ ...(post as any), status: newStatus }),
+    });
+    if (res.ok) mutatePosts();
+    else alert("Failed to approve post.");
+  };
 
   useEffect(() => {
     async function loadProfile() {
@@ -234,8 +304,8 @@ export default function ProfileDetailPage() {
           </div>
         ) : (
           <div style={{ padding: 16 }}>
-            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(160px, 1fr))", gap: 12 }}>
-              {recentPosts.map(post => <PostThumbnail key={post.id} post={post} />)}
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(170px, 1fr))", gap: 12 }}>
+              {recentPosts.map(post => <PostThumbnail key={post.id} post={post} canApprove={canApprove} onApprove={handleApprove} />)}
             </div>
             {posts.length > 6 && (
               <div style={{ padding: "12px 0 4px", textAlign: "center" }}>
