@@ -3,9 +3,8 @@
 import { useSession, signIn } from "next-auth/react";
 import { useState, useEffect } from "react";
 import { 
-  Loader2, CheckCircle2, ExternalLink, RefreshCw, MapPin, 
-  AlertCircle, Shield, Clock, Send, ChevronDown, ChevronUp,
-  Cpu, Image as ImageIcon, Key, Sparkles, Wand2
+  Loader2, CheckCircle2, RefreshCw, MapPin, 
+  AlertCircle, Key, Sparkles, Wand2, FlaskConical, XCircle
 } from "lucide-react";
 
 export default function SettingsPage() {
@@ -14,7 +13,6 @@ export default function SettingsPage() {
   const isSuperAdmin = role === "SUPER_ADMIN";
   const isAgencyOwner = role === "AGENCY_OWNER";
   const canConnectGoogle = isSuperAdmin || isAgencyOwner;
-  const userEmail = session?.user?.email || "";
 
   const [connecting, setConnecting] = useState(false);
   const [fetching, setFetching] = useState(false);
@@ -178,6 +176,10 @@ function AiSettingsCard() {
     geminiImageModel: "imagen-3.0-generate-001"
   });
   const [success, setSuccess] = useState(false);
+  
+  // Test states
+  const [testing, setTesting] = useState<Record<string, boolean>>({});
+  const [testResults, setTestResults] = useState<Record<string, { success?: boolean; error?: string }>>({});
 
   useEffect(() => {
     fetch("/api/user/settings")
@@ -209,6 +211,30 @@ function AiSettingsCard() {
       setTimeout(() => setSuccess(false), 3000);
     }
     setSaving(false);
+  };
+
+  const handleTestKey = async (provider: string, apiKey: string) => {
+    if (!apiKey) return;
+    setTesting({ ...testing, [provider]: true });
+    setTestResults({ ...testResults, [provider]: {} });
+    
+    try {
+      const res = await fetch("/api/user/settings/test", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ provider, apiKey }),
+      });
+      const data = await res.json();
+      if (res.ok) {
+        setTestResults({ ...testResults, [provider]: { success: true } });
+      } else {
+        setTestResults({ ...testResults, [provider]: { error: data.error } });
+      }
+    } catch (err) {
+      setTestResults({ ...testResults, [provider]: { error: "Network error" } });
+    } finally {
+      setTesting({ ...testing, [provider]: false });
+    }
   };
 
   if (loading) return null;
@@ -275,20 +301,64 @@ function AiSettingsCard() {
         {/* Step 2: API Keys */}
         <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
           <h3 style={{ fontSize: 12, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.05em", color: "var(--text-secondary)", display: "flex", alignItems: "center", gap: 8 }}>
-            <Key size={14} /> 2. API Credentials
+            <Key size={14} /> 2. API Credentials & Testing
           </h3>
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 16 }}>
-            <div style={{ background: "#f8fafc", padding: 16, borderRadius: 12, border: "1px solid #e2e8f0" }}>
-              <label style={{ display: "block", fontSize: 11, fontWeight: 600, color: "#64748b", marginBottom: 8 }}>ANTHROPIC (Claude)</label>
-              <input type="password" value={settings.anthropicApiKey} onChange={e => setSettings({ ...settings, anthropicApiKey: e.target.value })} placeholder="sk-ant-..." style={{ width: "100%", padding: "8px 12px", borderRadius: 8, border: "1px solid #cbd5e1", fontSize: 13 }} />
+            {/* Anthropic */}
+            <div style={{ background: "#f8fafc", padding: 16, borderRadius: 16, border: "1px solid #e2e8f0", display: "flex", flexDirection: "column", gap: 12 }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                <label style={{ fontSize: 11, fontWeight: 700, color: "#64748b", textTransform: "uppercase" }}>Anthropic</label>
+                {testResults.CLAUDE?.success && <CheckCircle2 size={14} style={{ color: "#16a34a" }} />}
+                {testResults.CLAUDE?.error && <XCircle size={14} style={{ color: "#dc2626" }} />}
+              </div>
+              <input type="password" value={settings.anthropicApiKey} onChange={e => setSettings({ ...settings, anthropicApiKey: e.target.value })} placeholder="sk-ant-..." style={{ width: "100%", padding: "10px", borderRadius: 10, border: "1px solid #cbd5e1", fontSize: 13 }} />
+              <button 
+                onClick={() => handleTestKey("CLAUDE", settings.anthropicApiKey)} 
+                disabled={testing.CLAUDE || !settings.anthropicApiKey}
+                style={{ width: "100%", padding: "8px", borderRadius: 8, background: "white", border: "1px solid #e2e8f0", fontSize: 12, fontWeight: 600, color: "var(--accent)", display: "flex", alignItems: "center", justifyContent: "center", gap: 6 }}
+              >
+                {testing.CLAUDE ? <Loader2 size={12} className="anim-spin" /> : <FlaskConical size={12} />}
+                Test Connection
+              </button>
+              {testResults.CLAUDE?.error && <p style={{ fontSize: 10, color: "#dc2626", marginTop: 2 }}>{testResults.CLAUDE.error}</p>}
             </div>
-            <div style={{ background: "#f8fafc", padding: 16, borderRadius: 12, border: "1px solid #e2e8f0" }}>
-              <label style={{ display: "block", fontSize: 11, fontWeight: 600, color: "#64748b", marginBottom: 8 }}>OPENAI (GPT/DALL-E)</label>
-              <input type="password" value={settings.openaiApiKey} onChange={e => setSettings({ ...settings, openaiApiKey: e.target.value })} placeholder="sk-..." style={{ width: "100%", padding: "8px 12px", borderRadius: 8, border: "1px solid #cbd5e1", fontSize: 13 }} />
+
+            {/* OpenAI */}
+            <div style={{ background: "#f8fafc", padding: 16, borderRadius: 16, border: "1px solid #e2e8f0", display: "flex", flexDirection: "column", gap: 12 }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                <label style={{ fontSize: 11, fontWeight: 700, color: "#64748b", textTransform: "uppercase" }}>OpenAI</label>
+                {testResults.GPT?.success && <CheckCircle2 size={14} style={{ color: "#16a34a" }} />}
+                {testResults.GPT?.error && <XCircle size={14} style={{ color: "#dc2626" }} />}
+              </div>
+              <input type="password" value={settings.openaiApiKey} onChange={e => setSettings({ ...settings, openaiApiKey: e.target.value })} placeholder="sk-..." style={{ width: "100%", padding: "10px", borderRadius: 10, border: "1px solid #cbd5e1", fontSize: 13 }} />
+              <button 
+                onClick={() => handleTestKey("GPT", settings.openaiApiKey)} 
+                disabled={testing.GPT || !settings.openaiApiKey}
+                style={{ width: "100%", padding: "8px", borderRadius: 8, background: "white", border: "1px solid #e2e8f0", fontSize: 12, fontWeight: 600, color: "var(--accent)", display: "flex", alignItems: "center", justifyContent: "center", gap: 6 }}
+              >
+                {testing.GPT ? <Loader2 size={12} className="anim-spin" /> : <FlaskConical size={12} />}
+                Test Connection
+              </button>
+              {testResults.GPT?.error && <p style={{ fontSize: 10, color: "#dc2626", marginTop: 2 }}>{testResults.GPT.error}</p>}
             </div>
-            <div style={{ background: "#f8fafc", padding: 16, borderRadius: 12, border: "1px solid #e2e8f0" }}>
-              <label style={{ display: "block", fontSize: 11, fontWeight: 600, color: "#64748b", marginBottom: 8 }}>GOOGLE (Gemini)</label>
-              <input type="password" value={settings.geminiApiKey} onChange={e => setSettings({ ...settings, geminiApiKey: e.target.value })} placeholder="AIza..." style={{ width: "100%", padding: "8px 12px", borderRadius: 8, border: "1px solid #cbd5e1", fontSize: 13 }} />
+
+            {/* Google */}
+            <div style={{ background: "#f8fafc", padding: 16, borderRadius: 16, border: "1px solid #e2e8f0", display: "flex", flexDirection: "column", gap: 12 }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                <label style={{ fontSize: 11, fontWeight: 700, color: "#64748b", textTransform: "uppercase" }}>Google</label>
+                {testResults.GEMINI?.success && <CheckCircle2 size={14} style={{ color: "#16a34a" }} />}
+                {testResults.GEMINI?.error && <XCircle size={14} style={{ color: "#dc2626" }} />}
+              </div>
+              <input type="password" value={settings.geminiApiKey} onChange={e => setSettings({ ...settings, geminiApiKey: e.target.value })} placeholder="AIza..." style={{ width: "100%", padding: "10px", borderRadius: 10, border: "1px solid #cbd5e1", fontSize: 13 }} />
+              <button 
+                onClick={() => handleTestKey("GEMINI", settings.geminiApiKey)} 
+                disabled={testing.GEMINI || !settings.geminiApiKey}
+                style={{ width: "100%", padding: "8px", borderRadius: 8, background: "white", border: "1px solid #e2e8f0", fontSize: 12, fontWeight: 600, color: "var(--accent)", display: "flex", alignItems: "center", justifyContent: "center", gap: 6 }}
+              >
+                {testing.GEMINI ? <Loader2 size={12} className="anim-spin" /> : <FlaskConical size={12} />}
+                Test Connection
+              </button>
+              {testResults.GEMINI?.error && <p style={{ fontSize: 10, color: "#dc2626", marginTop: 2 }}>{testResults.GEMINI.error}</p>}
             </div>
           </div>
         </div>
