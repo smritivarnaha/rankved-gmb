@@ -84,10 +84,14 @@ export async function generatePostContent(
   }
 
   if (provider === "GEMINI") {
-    if (!apiKeys.gemini) throw new Error("Gemini API key is missing");
+    if (!apiKeys.gemini) throw new Error("Google API key is missing. Please add it in Settings.");
     const genAI = geminiClient(apiKeys.gemini);
-    const model = genAI.getGenerativeModel({ model: "gemini-1.5-pro" });
-    const result = await model.generateContent(`${systemPrompt}\n\nGenerate the GMB post JSON.`);
+    // Use gemini-1.5-flash for faster, more reliable JSON generation
+    const model = genAI.getGenerativeModel({ 
+      model: "gemini-1.5-flash",
+      generationConfig: { responseMimeType: "application/json" }
+    });
+    const result = await model.generateContent(`${systemPrompt}\n\nGenerate the GMB post JSON. Ensure it is a valid JSON object.`);
     const response = await result.response;
     return parseJson(response.text());
   }
@@ -118,13 +122,20 @@ export async function generatePostImage(
   }
 
   if (provider === "GEMINI") {
-    if (!apiKeys.gemini) throw new Error("Gemini API key is missing");
-    const genAI = geminiClient(apiKeys.gemini);
-    // Note: Gemini image generation (Imagen) is typically via the 'imagen-3' model or similar
-    // For now, we'll use a placeholder or the specific Imagen API if available in the SDK
-    // If not directly in the SDK, we'd use a fetch.
-    // For simplicity, we'll assume the user might want DALL-E fallback or we'll throw a specific error if Gemini isn't ready.
-    throw new Error("Gemini Image Generation (Imagen 3) integration is coming soon. Please use OpenAI DALL-E for now.");
+    // If Gemini is picked for images, we use DALL-E 3 as a high-quality fallback 
+    // until Google's Imagen 3 API is fully stabilized in the standard SDK.
+    if (!apiKeys.openai) {
+      throw new Error("Google Gemini does not support native image generation yet. Please add an OpenAI key in Settings to enable DALL-E fallback.");
+    }
+    const openai = openaiClient(apiKeys.openai);
+    const response = await openai.images.generate({
+      model: "dall-e-3",
+      prompt: `${prompt} --no-text`,
+      n: 1,
+      size: "1024x1024",
+      quality: "standard",
+    });
+    return response.data?.[0]?.url || "";
   }
 
   throw new Error(`Unsupported image provider: ${provider}`);
