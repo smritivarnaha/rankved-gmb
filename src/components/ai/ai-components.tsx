@@ -192,11 +192,11 @@ export function AiGenerationModal({
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        locationId,
+        profileId: locationId,
         summary: preview.content,
         topicType: preview.topicType || "STANDARD",
         status: "DRAFT",
-        mediaUrl: preview.imageUrl,
+        imageUrl: preview.imageUrl,
         ctaType: preview.ctaType,
         ctaUrl: preview.ctaUrl,
       }),
