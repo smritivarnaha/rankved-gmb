@@ -130,8 +130,8 @@ model Location {
   aiKeywordSequence      String?   @db.Text   // Comma-separated or JSON list
   aiCurrentSequenceIndex Int       @default(0)
   
-  aiContentProvider      String    @default("CLAUDE") // CLAUDE, GPT, GEMINI
-  aiImageProvider        String    @default("DALL-E-3") // DALL-E-3
+  aiContentProvider      String    @default("DEFAULT") // CLAUDE, GPT, GEMINI
+  aiImageProvider        String    @default("DEFAULT") // DALL-E-3
   
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
