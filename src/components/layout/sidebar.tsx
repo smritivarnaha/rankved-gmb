@@ -49,14 +49,19 @@ export function Sidebar() {
     <aside className="sidebar">
       {/* Logo */}
       <div className="sidebar-logo">
-        <Image
-          src="/logo.png"
-          alt="RankVed"
-          width={110}
-          height={36}
-          style={{ objectFit: "contain" }}
-          priority
-        />
+        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+          <Image
+            src="https://rankved.com/wp-content/uploads/2025/04/Rankved-Logo-Official-Black.avif"
+            alt="RankVed"
+            width={32}
+            height={32}
+            style={{ objectFit: "contain" }}
+            priority
+          />
+          <span style={{ fontSize: 16, fontWeight: 700, color: "#0A0A0A", whiteSpace: "nowrap" }}>
+            GMB Manager
+          </span>
+        </div>
       </div>
 
       {/* Navigation */}

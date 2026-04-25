@@ -4,6 +4,14 @@ const nextConfig: NextConfig = {
   experimental: {
     optimizePackageImports: ["lucide-react", "date-fns"],
   },
+  images: {
+    remotePatterns: [
+      {
+        protocol: 'https',
+        hostname: 'rankved.com',
+      },
+    ],
+  },
 };
 
 export default nextConfig;

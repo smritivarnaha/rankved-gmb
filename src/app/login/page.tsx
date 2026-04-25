@@ -445,8 +445,16 @@ export default function LoginPage() {
           <div className="login-form-wrap">
 
             {/* Logo + heading */}
-            <img src="/logo.png" alt="RankVed" className="form-logo" />
-            <h2 className="form-heading">RankVed GMB Manager</h2>
+            <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 24 }}>
+              <img 
+                src="https://rankved.com/wp-content/uploads/2025/04/Rankved-Logo-Official-Black.avif" 
+                alt="RankVed" 
+                style={{ height: 32, width: "auto", display: "block" }} 
+              />
+              <span style={{ fontSize: 18, fontWeight: 700, color: "#0A0A0A", letterSpacing: "-0.02em" }}>
+                GMB Manager
+              </span>
+            </div>
             <p className="form-subheading">Sign in to your account</p>
 
             {/* Error */}
