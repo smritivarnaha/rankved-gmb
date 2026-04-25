@@ -2,7 +2,11 @@
 
 import { useSession, signIn } from "next-auth/react";
 import { useState, useEffect } from "react";
-import { Loader2, CheckCircle2, ExternalLink, RefreshCw, MapPin, AlertCircle, Shield, Clock, Send, ChevronDown, ChevronUp } from "lucide-react";
+import { 
+  Loader2, CheckCircle2, ExternalLink, RefreshCw, MapPin, 
+  AlertCircle, Shield, Clock, Send, ChevronDown, ChevronUp,
+  Cpu, Image as ImageIcon, Key, Sparkles, Wand2
+} from "lucide-react";
 
 export default function SettingsPage() {
   const { data: session } = useSession();
@@ -10,7 +14,6 @@ export default function SettingsPage() {
   const isSuperAdmin = role === "SUPER_ADMIN";
   const isAgencyOwner = role === "AGENCY_OWNER";
   const canConnectGoogle = isSuperAdmin || isAgencyOwner;
-  const isMainAdmin = canConnectGoogle; // alias to fix legacy naming
   const userEmail = session?.user?.email || "";
 
   const [connecting, setConnecting] = useState(false);
@@ -18,8 +21,6 @@ export default function SettingsPage() {
   const [fetchResult, setFetchResult] = useState<{ success?: string; error?: string } | null>(null);
   const [profiles, setProfiles] = useState<any[]>([]);
   const [loadingProfiles, setLoadingProfiles] = useState(true);
-  const [accessRequested, setAccessRequested] = useState(false);
-  const [requestSending, setRequestSending] = useState(false);
 
   const handleGoogleConnect = async () => { setConnecting(true); await signIn("google", { callbackUrl: "/settings" }); };
   const hasGoogleToken = !!(session as any)?.accessToken;
@@ -67,36 +68,13 @@ export default function SettingsPage() {
     setFetching(false);
   };
 
-  const handleRequestAccess = async () => { setRequestSending(true); await new Promise(r => setTimeout(r, 1500)); setAccessRequested(true); setRequestSending(false); };
-
-  const sectionGap = { display: "flex", flexDirection: "column" as const, gap: 20 };
+  const sectionGap = { display: "flex", flexDirection: "column" as const, gap: 24 };
 
   return (
-    <div style={{ ...sectionGap, maxWidth: 800 }}>
+    <div style={{ ...sectionGap, maxWidth: 900 }}>
       <div>
         <h1 className="page-title">Settings</h1>
-        <p className="page-subtitle">Account and AI configuration.</p>
-      </div>
-
-      {/* Account */}
-      <div className="card">
-        <div className="card-header"><h2 className="card-title" style={{ fontSize: 14 }}>Account</h2></div>
-        <div className="card-body" style={{ display: "flex", flexDirection: "column", gap: 12, fontSize: 13 }}>
-          <div style={{ display: "flex", justifyContent: "space-between" }}>
-            <span style={{ color: "var(--text-secondary)" }}>Name</span>
-            <span style={{ fontWeight: 500 }}>{session?.user?.name || "—"}</span>
-          </div>
-          <div style={{ display: "flex", justifyContent: "space-between" }}>
-            <span style={{ color: "var(--text-secondary)" }}>Email</span>
-            <span style={{ fontWeight: 500 }}>{session?.user?.email || "—"}</span>
-          </div>
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-            <span style={{ color: "var(--text-secondary)" }}>Role</span>
-            <span className={`badge ${isSuperAdmin ? "badge-info" : isAgencyOwner ? "badge-success" : "badge-default"}`}>
-              {isSuperAdmin ? "Super Admin" : isAgencyOwner ? "Agency Owner" : "Team Member"}
-            </span>
-          </div>
-        </div>
+        <p className="page-subtitle">Configure RankVed's AI engines and your Google connections.</p>
       </div>
 
       {/* AI Integration */}
@@ -104,7 +82,7 @@ export default function SettingsPage() {
 
       {/* Google Integration */}
       {canConnectGoogle && (
-        <div className="card">
+        <div className="card shadow-sm">
           <div className="card-header"><h2 className="card-title" style={{ fontSize: 14 }}>Google Business Profile</h2></div>
           <div className="card-body">
             {hasGoogleToken ? (
@@ -142,7 +120,7 @@ export default function SettingsPage() {
 
       {/* Profiles List */}
       {canConnectGoogle && (
-        <div className="card">
+        <div className="card shadow-sm">
           <div className="card-header">
             <div>
               <h2 className="card-title" style={{ fontSize: 14 }}>Profiles</h2>
@@ -165,14 +143,14 @@ export default function SettingsPage() {
             {loadingProfiles ? (
               <div style={{ padding: "24px 0", display: "flex", justifyContent: "center" }}><Loader2 className="anim-spin" style={{ width: 16, height: 16, color: "var(--text-muted)" }} /></div>
             ) : profiles.length > 0 ? (
-              <div>
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))", gap: 12 }}>
                 {profiles.map((p) => (
-                  <div key={p.id} style={{ padding: "12px 0", borderBottom: "1px solid var(--border-light)", display: "flex", alignItems: "flex-start", gap: 10 }}>
-                    <div style={{ width: 32, height: 32, borderRadius: "var(--radius-sm)", background: "var(--bg-elevated)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-                      <MapPin style={{ width: 16, height: 16, color: "var(--text-muted)" }} />
+                  <div key={p.id} style={{ padding: 12, borderRadius: 10, border: "1px solid var(--border-light)", background: "var(--bg-elevated)", display: "flex", alignItems: "center", gap: 12 }}>
+                    <div style={{ width: 36, height: 36, borderRadius: 8, background: "#f1f5f9", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                      <MapPin style={{ width: 18, height: 18, color: "#64748b" }} />
                     </div>
                     <div style={{ flex: 1, minWidth: 0 }}>
-                      <p style={{ fontSize: 13, fontWeight: 500 }}>{p.name}</p>
+                      <p style={{ fontSize: 13, fontWeight: 600, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{p.name}</p>
                       <p style={{ fontSize: 11, color: "var(--text-muted)", marginTop: 2 }}>{p.accountName}</p>
                     </div>
                   </div>
@@ -189,7 +167,6 @@ export default function SettingsPage() {
 function AiSettingsCard() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const [showAdvanced, setShowAdvanced] = useState(false);
   const [settings, setSettings] = useState({ 
     anthropicApiKey: "", openaiApiKey: "", geminiApiKey: "",
     defaultAiContentProvider: "CLAUDE",
@@ -222,7 +199,6 @@ function AiSettingsCard() {
 
   const handleSave = async () => {
     setSaving(true);
-    setSuccess(false);
     const res = await fetch("/api/user/settings", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -238,108 +214,142 @@ function AiSettingsCard() {
   if (loading) return null;
 
   return (
-    <div className="card">
-      <div className="card-header" style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-        <h2 className="card-title" style={{ fontSize: 14 }}>AI Command Center</h2>
-        {success && <span style={{ fontSize: 12, color: "#16a34a", fontWeight: 600 }}>✓ Settings Saved</span>}
+    <div className="card shadow-lg" style={{ border: "1px solid var(--border)", overflow: "hidden" }}>
+      <div className="card-header" style={{ background: "#f8fafc", padding: "16px 24px", borderBottom: "1px solid var(--border)" }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+          <div style={{ padding: 8, background: "var(--accent)", borderRadius: 8, color: "white" }}>
+            <Sparkles size={18} />
+          </div>
+          <div>
+            <h2 className="card-title" style={{ fontSize: 16 }}>AI Global Configuration</h2>
+            <p style={{ fontSize: 11, color: "var(--text-muted)", marginTop: 2 }}>Define the primary brains powering your automation.</p>
+          </div>
+        </div>
+        {success && (
+          <div style={{ display: "flex", alignItems: "center", gap: 6, color: "#16a34a", fontSize: 13, fontWeight: 600 }}>
+            <CheckCircle2 size={16} /> Saved
+          </div>
+        )}
       </div>
-      <div className="card-body" style={{ display: "flex", flexDirection: "column", gap: 16 }}>
-        <p style={{ fontSize: 12, color: "var(--text-muted)", marginBottom: 4 }}>
-          Configure your global AI preferences and API keys.
-        </p>
+
+      <div className="card-body" style={{ padding: 24, display: "flex", flexDirection: "column", gap: 32 }}>
         
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
-          <div>
-            <label style={{ display: "block", fontSize: 11, fontWeight: 700, color: "var(--text-secondary)", marginBottom: 6, textTransform: "uppercase" }}>Default Content Provider</label>
-            <select 
-              value={settings.defaultAiContentProvider}
-              onChange={e => setSettings({ ...settings, defaultAiContentProvider: e.target.value })}
-              style={{ width: "100%", padding: "9px 12px", borderRadius: 8, border: "1px solid var(--border)", fontSize: 13, background: "var(--bg-elevated)" }}
-            >
-              <option value="CLAUDE">Anthropic Claude</option>
-              <option value="GPT">OpenAI GPT</option>
-              <option value="GEMINI">Google Gemini</option>
-            </select>
-          </div>
-          <div>
-            <label style={{ display: "block", fontSize: 11, fontWeight: 700, color: "var(--text-secondary)", marginBottom: 6, textTransform: "uppercase" }}>Default Image Provider</label>
-            <select 
-              value={settings.defaultAiImageProvider}
-              onChange={e => setSettings({ ...settings, defaultAiImageProvider: e.target.value })}
-              style={{ width: "100%", padding: "9px 12px", borderRadius: 8, border: "1px solid var(--border)", fontSize: 13, background: "var(--bg-elevated)" }}
-            >
-              <option value="DALL-E-3">OpenAI DALL-E</option>
-              <option value="GEMINI">Google Gemini</option>
-            </select>
-          </div>
-        </div>
-
-        <div style={{ height: "1px", background: "var(--border-light)", margin: "8px 0" }} />
-
-        {/* API Keys */}
-        <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-          <div>
-            <label style={{ display: "block", fontSize: 11, fontWeight: 700, color: "var(--text-secondary)", marginBottom: 6, textTransform: "uppercase" }}>Anthropic Key</label>
-            <input type="password" value={settings.anthropicApiKey} onChange={e => setSettings({ ...settings, anthropicApiKey: e.target.value })} placeholder="sk-ant-..." style={{ width: "100%", padding: "8px 12px", borderRadius: 8, border: "1px solid var(--border)", fontSize: 13, background: "var(--bg-elevated)" }} />
-          </div>
-          <div>
-            <label style={{ display: "block", fontSize: 11, fontWeight: 700, color: "var(--text-secondary)", marginBottom: 6, textTransform: "uppercase" }}>OpenAI Key</label>
-            <input type="password" value={settings.openaiApiKey} onChange={e => setSettings({ ...settings, openaiApiKey: e.target.value })} placeholder="sk-..." style={{ width: "100%", padding: "8px 12px", borderRadius: 8, border: "1px solid var(--border)", fontSize: 13, background: "var(--bg-elevated)" }} />
-          </div>
-          <div>
-            <label style={{ display: "block", fontSize: 11, fontWeight: 700, color: "var(--text-secondary)", marginBottom: 6, textTransform: "uppercase" }}>Google Key</label>
-            <input type="password" value={settings.geminiApiKey} onChange={e => setSettings({ ...settings, geminiApiKey: e.target.value })} placeholder="AIza..." style={{ width: "100%", padding: "8px 12px", borderRadius: 8, border: "1px solid var(--border)", fontSize: 13, background: "var(--bg-elevated)" }} />
-          </div>
-        </div>
-
-        {/* Advanced Model Control */}
-        <div style={{ marginTop: 8 }}>
-          <button 
-            onClick={() => setShowAdvanced(!showAdvanced)}
-            style={{ background: "none", border: "none", color: "var(--accent)", fontSize: 12, fontWeight: 600, cursor: "pointer", display: "flex", alignItems: "center", gap: 4, padding: 0 }}
-          >
-            {showAdvanced ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
-            {showAdvanced ? "Hide Advanced Model Control" : "Advanced Model Control (Custom Model IDs)"}
-          </button>
-
-          {showAdvanced && (
-            <div style={{ marginTop: 16, padding: 16, background: "#f8fafc", borderRadius: 10, border: "1px solid #e2e8f0", display: "flex", flexDirection: "column", gap: 12 }}>
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
-                <div>
-                  <label style={{ display: "block", fontSize: 10, fontWeight: 700, color: "#64748b", marginBottom: 4, textTransform: "uppercase" }}>Anthropic Model</label>
-                  <input value={settings.anthropicModel} onChange={e => setSettings({ ...settings, anthropicModel: e.target.value })} style={{ width: "100%", padding: "6px 10px", borderRadius: 6, border: "1px solid #e2e8f0", fontSize: 12 }} />
-                </div>
-                <div>
-                  <label style={{ display: "block", fontSize: 10, fontWeight: 700, color: "#64748b", marginBottom: 4, textTransform: "uppercase" }}>OpenAI Content</label>
-                  <input value={settings.openaiContentModel} onChange={e => setSettings({ ...settings, openaiContentModel: e.target.value })} style={{ width: "100%", padding: "6px 10px", borderRadius: 6, border: "1px solid #e2e8f0", fontSize: 12 }} />
-                </div>
-              </div>
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
-                <div>
-                  <label style={{ display: "block", fontSize: 10, fontWeight: 700, color: "#64748b", marginBottom: 4, textTransform: "uppercase" }}>Gemini Content</label>
-                  <input value={settings.geminiContentModel} onChange={e => setSettings({ ...settings, geminiContentModel: e.target.value })} style={{ width: "100%", padding: "6px 10px", borderRadius: 6, border: "1px solid #e2e8f0", fontSize: 12 }} />
-                </div>
-                <div>
-                  <label style={{ display: "block", fontSize: 10, fontWeight: 700, color: "#64748b", marginBottom: 4, textTransform: "uppercase" }}>Gemini Image (Imagen)</label>
-                  <input value={settings.geminiImageModel} onChange={e => setSettings({ ...settings, geminiImageModel: e.target.value })} style={{ width: "100%", padding: "6px 10px", borderRadius: 6, border: "1px solid #e2e8f0", fontSize: 12 }} />
-                </div>
-              </div>
-              <div>
-                <label style={{ display: "block", fontSize: 10, fontWeight: 700, color: "#64748b", marginBottom: 4, textTransform: "uppercase" }}>OpenAI Image (DALL-E)</label>
-                <input value={settings.openaiImageModel} onChange={e => setSettings({ ...settings, openaiImageModel: e.target.value })} style={{ width: "100%", padding: "6px 10px", borderRadius: 6, border: "1px solid #e2e8f0", fontSize: 12 }} />
+        {/* Step 1: Default Providers */}
+        <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+          <h3 style={{ fontSize: 12, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.05em", color: "var(--text-secondary)", display: "flex", alignItems: "center", gap: 8 }}>
+            <Wand2 size={14} /> 1. Primary Providers
+          </h3>
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 20 }}>
+            <div className="form-group">
+              <label style={{ display: "block", fontSize: 13, fontWeight: 600, marginBottom: 8 }}>Default Content Engine</label>
+              <div style={{ position: "relative" }}>
+                <select 
+                  value={settings.defaultAiContentProvider}
+                  onChange={e => setSettings({ ...settings, defaultAiContentProvider: e.target.value })}
+                  style={{ width: "100%", padding: "12px 16px", borderRadius: 12, border: "2px solid #e2e8f0", background: "white", fontSize: 14, appearance: "none" }}
+                >
+                  <option value="CLAUDE">Anthropic Claude (Recommended)</option>
+                  <option value="GPT">OpenAI GPT</option>
+                  <option value="GEMINI">Google Gemini</option>
+                </select>
+                <ChevronDown size={16} style={{ position: "absolute", right: 16, top: "50%", transform: "translateY(-50%)", pointerEvents: "none", color: "#64748b" }} />
               </div>
             </div>
-          )}
+            <div className="form-group">
+              <label style={{ display: "block", fontSize: 13, fontWeight: 600, marginBottom: 8 }}>Default Image Engine</label>
+              <div style={{ position: "relative" }}>
+                <select 
+                  value={settings.defaultAiImageProvider}
+                  onChange={e => setSettings({ ...settings, defaultAiImageProvider: e.target.value })}
+                  style={{ width: "100%", padding: "12px 16px", borderRadius: 12, border: "2px solid #e2e8f0", background: "white", fontSize: 14, appearance: "none" }}
+                >
+                  <option value="DALL-E-3">OpenAI DALL-E (Recommended)</option>
+                  <option value="GEMINI">Google Gemini (Imagen)</option>
+                </select>
+                <ChevronDown size={16} style={{ position: "absolute", right: 16, top: "50%", transform: "translateY(-50%)", pointerEvents: "none", color: "#64748b" }} />
+              </div>
+            </div>
+          </div>
         </div>
 
-        <button 
-          onClick={handleSave} 
-          disabled={saving} 
-          className="btn btn-primary" 
-          style={{ alignSelf: "flex-end", padding: "10px 24px", fontSize: 13, fontWeight: 700, marginTop: 8 }}
-        >
-          {saving ? <Loader2 size={14} className="anim-spin" /> : "Save All AI Settings"}
-        </button>
+        {/* Step 2: API Keys */}
+        <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+          <h3 style={{ fontSize: 12, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.05em", color: "var(--text-secondary)", display: "flex", alignItems: "center", gap: 8 }}>
+            <Key size={14} /> 2. API Credentials
+          </h3>
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 16 }}>
+            <div style={{ background: "#f8fafc", padding: 16, borderRadius: 12, border: "1px solid #e2e8f0" }}>
+              <label style={{ display: "block", fontSize: 11, fontWeight: 600, color: "#64748b", marginBottom: 8 }}>ANTHROPIC (Claude)</label>
+              <input type="password" value={settings.anthropicApiKey} onChange={e => setSettings({ ...settings, anthropicApiKey: e.target.value })} placeholder="sk-ant-..." style={{ width: "100%", padding: "8px 12px", borderRadius: 8, border: "1px solid #cbd5e1", fontSize: 13 }} />
+            </div>
+            <div style={{ background: "#f8fafc", padding: 16, borderRadius: 12, border: "1px solid #e2e8f0" }}>
+              <label style={{ display: "block", fontSize: 11, fontWeight: 600, color: "#64748b", marginBottom: 8 }}>OPENAI (GPT/DALL-E)</label>
+              <input type="password" value={settings.openaiApiKey} onChange={e => setSettings({ ...settings, openaiApiKey: e.target.value })} placeholder="sk-..." style={{ width: "100%", padding: "8px 12px", borderRadius: 8, border: "1px solid #cbd5e1", fontSize: 13 }} />
+            </div>
+            <div style={{ background: "#f8fafc", padding: 16, borderRadius: 12, border: "1px solid #e2e8f0" }}>
+              <label style={{ display: "block", fontSize: 11, fontWeight: 600, color: "#64748b", marginBottom: 8 }}>GOOGLE (Gemini)</label>
+              <input type="password" value={settings.geminiApiKey} onChange={e => setSettings({ ...settings, geminiApiKey: e.target.value })} placeholder="AIza..." style={{ width: "100%", padding: "8px 12px", borderRadius: 8, border: "1px solid #cbd5e1", fontSize: 13 }} />
+            </div>
+          </div>
+        </div>
+
+        {/* Step 3: Specific Model Strings */}
+        <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+          <h3 style={{ fontSize: 12, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.05em", color: "var(--text-secondary)", display: "flex", alignItems: "center", gap: 8 }}>
+            <Cpu size={14} /> 3. Advanced Model IDs
+          </h3>
+          <div style={{ padding: 20, background: "rgba(37, 99, 235, 0.03)", borderRadius: 16, border: "1px dashed #bfdbfe" }}>
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 24 }}>
+              <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+                <p style={{ fontSize: 11, fontWeight: 600, color: "#3b82f6", display: "flex", alignItems: "center", gap: 4 }}><Sparkles size={12} /> Content Models</p>
+                <div className="form-group">
+                  <label style={{ display: "block", fontSize: 11, color: "#64748b", marginBottom: 4 }}>Anthropic String</label>
+                  <input value={settings.anthropicModel} onChange={e => setSettings({ ...settings, anthropicModel: e.target.value })} style={{ width: "100%", padding: "10px", borderRadius: 8, border: "1px solid #e2e8f0", fontSize: 13 }} />
+                </div>
+                <div className="form-group">
+                  <label style={{ display: "block", fontSize: 11, color: "#64748b", marginBottom: 4 }}>OpenAI String</label>
+                  <input value={settings.openaiContentModel} onChange={e => setSettings({ ...settings, openaiContentModel: e.target.value })} style={{ width: "100%", padding: "10px", borderRadius: 8, border: "1px solid #e2e8f0", fontSize: 13 }} />
+                </div>
+                <div className="form-group">
+                  <label style={{ display: "block", fontSize: 11, color: "#64748b", marginBottom: 4 }}>Google String</label>
+                  <input value={settings.geminiContentModel} onChange={e => setSettings({ ...settings, geminiContentModel: e.target.value })} style={{ width: "100%", padding: "10px", borderRadius: 8, border: "1px solid #e2e8f0", fontSize: 13 }} />
+                </div>
+              </div>
+              <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+                <p style={{ fontSize: 11, fontWeight: 600, color: "#3b82f6", display: "flex", alignItems: "center", gap: 4 }}><ImageIcon size={12} /> Image Models</p>
+                <div className="form-group">
+                  <label style={{ display: "block", fontSize: 11, color: "#64748b", marginBottom: 4 }}>DALL-E String</label>
+                  <input value={settings.openaiImageModel} onChange={e => setSettings({ ...settings, openaiImageModel: e.target.value })} style={{ width: "100%", padding: "10px", borderRadius: 8, border: "1px solid #e2e8f0", fontSize: 13 }} />
+                </div>
+                <div className="form-group">
+                  <label style={{ display: "block", fontSize: 11, color: "#64748b", marginBottom: 4 }}>Imagen String</label>
+                  <input value={settings.geminiImageModel} onChange={e => setSettings({ ...settings, geminiImageModel: e.target.value })} style={{ width: "100%", padding: "10px", borderRadius: 8, border: "1px solid #e2e8f0", fontSize: 13 }} />
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div style={{ display: "flex", justifyContent: "flex-end", marginTop: 10 }}>
+          <button 
+            onClick={handleSave} 
+            disabled={saving} 
+            className="btn btn-primary" 
+            style={{ 
+              padding: "14px 32px", 
+              fontSize: 14, 
+              fontWeight: 700, 
+              borderRadius: 14,
+              boxShadow: "0 4px 12px rgba(37, 99, 235, 0.2)",
+              display: "flex",
+              alignItems: "center",
+              gap: 8
+            }}
+          >
+            {saving ? <Loader2 size={18} className="anim-spin" /> : <Sparkles size={18} />}
+            {saving ? "Saving Configuration..." : "Apply AI Settings"}
+          </button>
+        </div>
       </div>
     </div>
   );
