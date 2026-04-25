@@ -1,36 +1,96 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Rankved GMB Manager (GBP Scheduler)
 
-## Getting Started
+![Rankved GMB Manager Banner](./public/logo.png)
 
-First, run the development server:
+Rankved GMB Manager is a powerful, enterprise-grade SaaS platform built to help marketing agencies and franchise businesses automate, manage, and schedule posts across multiple Google Business Profiles (GBP) from a single unified dashboard.
 
+## 🚀 What It Does
+
+Rankved GMB Manager eliminates the tedious process of logging in and out of different Google accounts to post updates for clients. 
+
+- **Multi-Location Management:** Seamlessly sync and manage dozens of Google Business Profile locations.
+- **Automated Scheduling:** Write posts now, schedule them for later. The integrated cron jobs push updates directly to Google at your exact specified time.
+- **Role-Based Access Control (RBAC):** Perfect for teams! Includes robust permission sets for Super Admins, Agency Owners, and Team Members. Restrict junior staff from publishing directly and require scheduled reviews.
+- **Performance Analytics:** Real-time metrics synced directly from Google (Views, Clicks, Calls, Direction requests).
+- **Post Variety:** Support for Standard updates, Events (with start/end dates), and Offers (with coupon codes and terms).
+
+## 🎯 Who It's For
+
+- **Digital Marketing Agencies:** Manage all your clients' GBP updates without sharing master Google account passwords with your staff.
+- **Franchise Owners:** Keep your local listings updated with fresh content simultaneously.
+- **Local SEO Specialists:** Automate local signals through consistent, high-quality GBP updates.
+
+## 🛠️ How To Use It
+
+1. **Connect:** The Agency Owner logs in and connects their Google Account via OAuth.
+2. **Sync:** Click "Fetch Profiles" to automatically sync all managed Google Business Profile locations into the dashboard.
+3. **Assign:** (Optional) Add Team Members and grant them access to specific locations with custom scheduling limits.
+4. **Create & Schedule:** Navigate to "Create Post", select the profile, craft your update (with media and CTA buttons), and hit "Schedule". 
+5. **Relax:** The system automatically pushes the post to the Google My Business API at the right time.
+
+## 📸 Dashboard Preview
+
+*(Add your screenshots here!)*
+
+- `![Dashboard Overview](./docs/screenshots/dashboard.png)`
+- `![Post Editor & Scheduler](./docs/screenshots/editor.png)`
+- `![Performance Analytics](./docs/screenshots/analytics.png)`
+
+## ⚙️ Setup & Installation
+
+Follow these instructions to get your own instance running locally:
+
+### 1. Clone the repository
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+git clone https://github.com/smritivarnaha/rankved-gmb.git
+cd rankved-gmb
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+### 2. Install dependencies
+```bash
+npm install
+# or
+yarn install
+```
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+### 3. Environment Variables
+Create a `.env` file in the root directory and add your configuration. You will need a PostgreSQL database (e.g., Supabase) and Google Cloud Console credentials with the **Google My Business API** enabled.
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+```env
+# Database (Prisma / Supabase)
+DATABASE_URL="postgresql://user:password@aws-0-region.pooler.supabase.com:6543/postgres?pgbouncer=true"
+DIRECT_URL="postgresql://user:password@aws-0-region.pooler.supabase.com:5432/postgres"
 
-## Learn More
+# NextAuth Configuration
+NEXTAUTH_URL="http://localhost:3000"
+NEXTAUTH_SECRET="generate-a-strong-secret-key"
 
-To learn more about Next.js, take a look at the following resources:
+# Google OAuth Credentials
+GOOGLE_CLIENT_ID="your-google-client-id.apps.googleusercontent.com"
+GOOGLE_CLIENT_SECRET="your-google-client-secret"
+```
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+### 4. Database Setup
+Run Prisma migrations to set up your database schema:
+```bash
+npx prisma generate
+npx prisma db push
+```
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+### 5. Start the Development Server
+```bash
+npm run dev
+```
+Open [http://localhost:3000](http://localhost:3000) in your browser. The default initial Super Admin account can be created on first launch or seeded directly in the database.
 
-## Deploy on Vercel
+## 🏗️ Tech Stack
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+- **Framework:** Next.js 14 (App Router)
+- **Database:** PostgreSQL (Supabase) + Prisma ORM
+- **Authentication:** NextAuth.js
+- **Styling:** Custom Enterprise Light Theme CSS (Global variables) + Lucide Icons
+- **Deployment:** Vercel
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+## 📄 License
+
+This project is proprietary and confidential. Unauthorized copying of this file, via any medium, is strictly prohibited.
