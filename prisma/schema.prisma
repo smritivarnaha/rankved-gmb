@@ -105,14 +105,21 @@ model Location {
   clientId      String
   client        Client   @relation(fields: [clientId], references: [id], onDelete: Cascade)
   posts         Post[]
-  cachedAt      DateTime? // When location data was last cached
+  assignedUsers User[] @relation("LocationAssignments")
+
+  // AI Configuration
+  aiInstructions         String?   @db.Text
+  aiKeywords             String?   @db.Text
+  aiTone                 String?
+  aiCompetitorData       String?   @db.Text
+  aiKeywordSequence      String?   @db.Text   // Comma-separated or JSON list
+  aiCurrentSequenceIndex Int       @default(0)
+  
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
 
   @@unique([gbpAccountId, gbpLocationId])
   @@index([clientId])
-  
-  assignedUsers User[] @relation("LocationAssignments")
 }
 
 model Post {

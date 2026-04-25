@@ -10,6 +10,8 @@ import {
 import { useParams } from "next/navigation";
 import useSWR from "swr";
 import { useSession } from "next-auth/react";
+import { AiSettingsTab, AiGenerationModal } from "@/components/ai/ai-components";
+import { Wand2 } from "lucide-react";
 
 const fetcher = (url: string) => fetch(url).then(r => r.json());
 
@@ -305,6 +307,8 @@ export default function ProfileDetailPage() {
   const [profile, setProfile] = useState<Profile | null>(null);
   const [profileLoading, setProfileLoading] = useState(true);
   const [statusFilter, setStatusFilter] = useState("ALL");
+  const [activeTab, setActiveTab] = useState<"POSTS" | "AI_SETTINGS">("POSTS");
+  const [isAiModalOpen, setIsAiModalOpen] = useState(false);
 
   const { data: postsData, isLoading: postsLoading, mutate: mutatePosts } = useSWR(
     params.id ? `/api/posts?profileId=${params.id}` : null,
@@ -399,15 +403,53 @@ export default function ProfileDetailPage() {
             {profile.address && <p style={{ fontSize: 12, color: "#94a3b8", marginTop: 3 }}>{profile.address}</p>}
           </div>
         </div>
-        <Link href={`/posts/new?profile=${profile.id}&from=profile`}
-          style={{ display: "inline-flex", alignItems: "center", gap: 8, padding: "9px 20px", background: "#2563eb", color: "#fff", borderRadius: 8, fontSize: 13, fontWeight: 600 }}>
-          <Plus style={{ width: 15, height: 15 }} /> Create Post
-        </Link>
+        
+        <div style={{ display: "flex", gap: 10 }}>
+          <button 
+            onClick={() => setIsAiModalOpen(true)}
+            style={{ display: "inline-flex", alignItems: "center", gap: 8, padding: "9px 18px", background: "#f8fafc", color: "#2563eb", border: "1px solid #dbeafe", borderRadius: 8, fontSize: 13, fontWeight: 600, cursor: "pointer" }}>
+            <Wand2 style={{ width: 15, height: 15 }} /> AI Create
+          </button>
+          <Link href={`/posts/new?profile=${profile.id}&from=profile`}
+            style={{ display: "inline-flex", alignItems: "center", gap: 8, padding: "9px 20px", background: "#2563eb", color: "#fff", borderRadius: 8, fontSize: 13, fontWeight: 600 }}>
+            <Plus style={{ width: 15, height: 15 }} /> Create Post
+          </Link>
+        </div>
       </div>
 
+      {/* Tabs */}
+      <div style={{ display: "flex", gap: 24, marginBottom: 20, borderBottom: "1px solid #e2e8f0" }}>
+        <button 
+          onClick={() => setActiveTab("POSTS")}
+          style={{ 
+            padding: "10px 4px", fontSize: 14, fontWeight: 600, border: "none", background: "none", cursor: "pointer",
+            color: activeTab === "POSTS" ? "#2563eb" : "#94a3b8",
+            borderBottom: activeTab === "POSTS" ? "2px solid #2563eb" : "2px solid transparent",
+            transition: "all 0.2s"
+          }}
+        >
+          Post Workspace
+        </button>
+        <button 
+          onClick={() => setActiveTab("AI_SETTINGS")}
+          style={{ 
+            padding: "10px 4px", fontSize: 14, fontWeight: 600, border: "none", background: "none", cursor: "pointer",
+            color: activeTab === "AI_SETTINGS" ? "#2563eb" : "#94a3b8",
+            borderBottom: activeTab === "AI_SETTINGS" ? "2px solid #2563eb" : "2px solid transparent",
+            transition: "all 0.2s"
+          }}
+        >
+          AI Config & Training
+        </button>
+      </div>
 
-      {/* ─── Two-Column Layout: [Left: stats+cal] [Right: post cards] ─── */}
-      <div style={{ display: "grid", gridTemplateColumns: "270px 1fr", gap: 18, alignItems: "start" }}>
+      {activeTab === "AI_SETTINGS" ? (
+        <div style={{ background: "#fff", border: "1px solid #e2e8f0", borderRadius: 12, overflow: "hidden" }}>
+          <AiSettingsTab locationId={profile.id} />
+        </div>
+      ) : (
+        /* Original Two-Column Layout */
+        <div style={{ display: "grid", gridTemplateColumns: "270px 1fr", gap: 18, alignItems: "start" }}>
 
         {/* LEFT — Compact Stats + Calendar */}
         <div style={{ position: "sticky", top: 80, display: "flex", flexDirection: "column", gap: 12 }}>
