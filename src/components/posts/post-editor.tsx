@@ -169,6 +169,13 @@ export function PostEditor({ initialData = null, timelineDate, onDateChange }: {
   const tomorrowStr = toLocalDateString(new Date(now.getTime() + 86400000));
 
   const setQuickDate = (type: "now" | "today" | "tomorrow") => {
+    let targetD = now;
+    if (type === "tomorrow") {
+      targetD = new Date(now.getTime() + 86400000);
+    }
+    setCalMonth(targetD.getMonth());
+    setCalYear(targetD.getFullYear());
+
     if (type === "now") {
       setSelectedDate(todayStr);
       onDateChange?.(todayStr);
@@ -556,7 +563,7 @@ export function PostEditor({ initialData = null, timelineDate, onDateChange }: {
             )}
 
             {form.ctaType === "CALL" && (
-              <div className="flex items-start gap-2 px-3 py-2.5 bg-blue-50 border border-blue-100 rounded-lg text-[12px] text-blue-700">
+              <div className="flex items-start gap-2 px-3 py-2.5 bg-[var(--info-bg)] border border-[var(--info-border)] rounded-lg text-[12px] text-[var(--info)]">
                 <span className="font-semibold shrink-0">📞 Call Now:</span>
                 <span>Google will use the phone number already on your Business Profile. No URL needed.</span>
               </div>
@@ -586,9 +593,9 @@ export function PostEditor({ initialData = null, timelineDate, onDateChange }: {
 
               {/* Quick picks */}
               <div className="px-4 py-3 border-b border-[var(--border-light)] flex gap-2">
-                <button onClick={() => setQuickDate("now")} className="flex-1 py-1.5 text-[12px] font-medium border border-[var(--border)] rounded-md hover:bg-white transition-colors text-[var(--text-secondary)]">Now</button>
-                <button onClick={() => setQuickDate("today")} className="flex-1 py-1.5 text-[12px] font-medium border border-[var(--border)] rounded-md hover:bg-white transition-colors text-[var(--text-secondary)]">Today</button>
-                <button onClick={() => setQuickDate("tomorrow")} className="flex-1 py-1.5 text-[12px] font-medium border border-[var(--border)] rounded-md hover:bg-white transition-colors text-[var(--text-secondary)]">Tomorrow</button>
+                <button onClick={() => setQuickDate("now")} disabled={minScheduleDays > 0} className={`flex-1 py-1.5 text-[12px] font-medium border border-[var(--border)] rounded-md transition-colors ${minScheduleDays > 0 ? "opacity-50 cursor-not-allowed bg-[var(--bg-secondary)]" : "hover:bg-white text-[var(--text-secondary)]"}`}>Now</button>
+                <button onClick={() => setQuickDate("today")} disabled={minScheduleDays > 0} className={`flex-1 py-1.5 text-[12px] font-medium border border-[var(--border)] rounded-md transition-colors ${minScheduleDays > 0 ? "opacity-50 cursor-not-allowed bg-[var(--bg-secondary)]" : "hover:bg-white text-[var(--text-secondary)]"}`}>Today</button>
+                <button onClick={() => setQuickDate("tomorrow")} disabled={minScheduleDays > 1} className={`flex-1 py-1.5 text-[12px] font-medium border border-[var(--border)] rounded-md transition-colors ${minScheduleDays > 1 ? "opacity-50 cursor-not-allowed bg-[var(--bg-secondary)]" : "hover:bg-white text-[var(--text-secondary)]"}`}>Tomorrow</button>
               </div>
 
               {/* Mini calendar */}
@@ -695,7 +702,7 @@ export function PostEditor({ initialData = null, timelineDate, onDateChange }: {
                     Publish now
                   </button>
                 ) : (
-                  <div className="px-4 py-2 bg-gray-100 text-gray-500 text-[13px] font-medium rounded-lg flex items-center gap-2 cursor-not-allowed border border-gray-200" title={`You must schedule posts at least ${minScheduleDays} days in advance.`}>
+                  <div className="px-4 py-2 bg-[var(--bg-elevated)] text-[var(--text-tertiary)] text-[13px] font-medium rounded-lg flex items-center gap-2 cursor-not-allowed border border-[var(--border)]" title={`You must schedule posts at least ${minScheduleDays} days in advance.`}>
                     <Send className="w-3.5 h-3.5" /> Publish now (Disabled)
                   </div>
                 )}
@@ -708,7 +715,7 @@ export function PostEditor({ initialData = null, timelineDate, onDateChange }: {
                       Schedule
                     </button>
                   ) : (
-                    <div className="px-4 py-2 bg-gray-100 text-gray-500 text-[13px] font-medium rounded-lg flex items-center gap-2 cursor-not-allowed border border-gray-200" title="You do not have permission to schedule posts.">
+                    <div className="px-4 py-2 bg-[var(--bg-elevated)] text-[var(--text-tertiary)] text-[13px] font-medium rounded-lg flex items-center gap-2 cursor-not-allowed border border-[var(--border)]" title="You do not have permission to schedule posts.">
                       <Clock className="w-3.5 h-3.5" /> Schedule (Disabled)
                     </div>
                   )
