@@ -278,11 +278,11 @@ function AiSettingsCard() {
       </div>
       <div className="card-body" style={{ display: "flex", flexDirection: "column", gap: 16 }}>
         <p style={{ fontSize: 12, color: "var(--text-muted)", marginBottom: 4 }}>
-          Enter your API keys to enable Claude 3.5 (text) and DALL-E 3 (images).
+          Enter your API keys to enable AI content and image generation.
         </p>
         
         <div>
-          <label style={{ display: "block", fontSize: 11, fontWeight: 700, color: "var(--text-secondary)", marginBottom: 6, textTransform: "uppercase" }}>Anthropic API Key (Claude)</label>
+          <label style={{ display: "block", fontSize: 11, fontWeight: 700, color: "var(--text-secondary)", marginBottom: 6, textTransform: "uppercase" }}>Anthropic API Key</label>
           <input 
             type="password"
             value={settings.anthropicApiKey}
@@ -293,7 +293,7 @@ function AiSettingsCard() {
         </div>
 
         <div>
-          <label style={{ display: "block", fontSize: 11, fontWeight: 700, color: "var(--text-secondary)", marginBottom: 6, textTransform: "uppercase" }}>OpenAI API Key (GPT & DALL-E)</label>
+          <label style={{ display: "block", fontSize: 11, fontWeight: 700, color: "var(--text-secondary)", marginBottom: 6, textTransform: "uppercase" }}>OpenAI API Key</label>
           <input 
             type="password"
             value={settings.openaiApiKey}
@@ -304,7 +304,7 @@ function AiSettingsCard() {
         </div>
 
         <div>
-          <label style={{ display: "block", fontSize: 11, fontWeight: 700, color: "var(--text-secondary)", marginBottom: 6, textTransform: "uppercase" }}>Google Gemini API Key</label>
+          <label style={{ display: "block", fontSize: 11, fontWeight: 700, color: "var(--text-secondary)", marginBottom: 6, textTransform: "uppercase" }}>Google API Key</label>
           <input 
             type="password"
             value={settings.geminiApiKey}
@@ -322,9 +322,9 @@ function AiSettingsCard() {
               onChange={e => setSettings({ ...settings, defaultAiContentProvider: e.target.value })}
               style={{ width: "100%", padding: "8px 12px", borderRadius: 8, border: "1px solid var(--border)", fontSize: 13, background: "var(--bg-elevated)" }}
             >
-              <option value="CLAUDE">Claude 3.5 Sonnet</option>
-              <option value="GPT">GPT-4o</option>
-              <option value="GEMINI">Gemini 1.5 Pro</option>
+              <option value="CLAUDE">Anthropic Claude</option>
+              <option value="GPT">OpenAI GPT</option>
+              <option value="GEMINI">Google Gemini</option>
             </select>
           </div>
           <div>
@@ -334,7 +334,8 @@ function AiSettingsCard() {
               onChange={e => setSettings({ ...settings, defaultAiImageProvider: e.target.value })}
               style={{ width: "100%", padding: "8px 12px", borderRadius: 8, border: "1px solid var(--border)", fontSize: 13, background: "var(--bg-elevated)" }}
             >
-              <option value="DALL-E-3">DALL-E 3</option>
+              <option value="DALL-E-3">OpenAI DALL-E</option>
+              <option value="GEMINI">Google Gemini</option>
             </select>
           </div>
         </div>

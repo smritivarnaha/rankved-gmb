@@ -47,7 +47,7 @@ export async function POST(req: NextRequest) {
     const postData = await generatePostContent(locationId, apiKeys, contentProvider);
 
     // Step 2: Generate Image
-    const imageUrl = await generatePostImage(postData.imagePrompt, apiKeys.openai);
+    const imageUrl = await generatePostImage(postData.imagePrompt, apiKeys, imageProvider);
 
     return NextResponse.json({
       ...postData,

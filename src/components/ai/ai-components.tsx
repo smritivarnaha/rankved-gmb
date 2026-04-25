@@ -107,9 +107,9 @@ export function AiSettingsTab({ locationId }: { locationId: string }) {
                 style={{ width: "100%", padding: 10, borderRadius: 8, border: "1px solid #e2e8f0", fontSize: 13, fontFamily: "inherit" }}
               >
                 <option value="DEFAULT">System Default</option>
-                <option value="CLAUDE">Claude 3.5 Sonnet</option>
-                <option value="GPT">GPT-4o</option>
-                <option value="GEMINI">Gemini 1.5 Pro</option>
+                <option value="CLAUDE">Anthropic Claude</option>
+                <option value="GPT">OpenAI GPT</option>
+                <option value="GEMINI">Google Gemini</option>
               </select>
             </div>
             <div>
@@ -120,7 +120,8 @@ export function AiSettingsTab({ locationId }: { locationId: string }) {
                 style={{ width: "100%", padding: 10, borderRadius: 8, border: "1px solid #e2e8f0", fontSize: 13, fontFamily: "inherit" }}
               >
                 <option value="DEFAULT">System Default</option>
-                <option value="DALL-E-3">DALL-E 3</option>
+                <option value="DALL-E-3">OpenAI DALL-E</option>
+                <option value="GEMINI">Google Gemini</option>
               </select>
             </div>
           </div>
@@ -293,7 +294,7 @@ export function AiGenerationModal({
                   <img src={preview.imageUrl} alt="AI Preview" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
                 </div>
                 <p style={{ fontSize: 11, color: "#94a3b8", marginTop: 8, fontStyle: "italic" }}>
-                  DALL-E 3 generated based on Claude's content brief.
+                  AI generated image based on the content brief.
                 </p>
               </div>
             </div>

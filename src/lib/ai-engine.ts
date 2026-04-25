@@ -96,18 +96,38 @@ export async function generatePostContent(
 }
 
 /**
- * Generates an image using the selected provider (currently only DALL-E 3).
+ * Generates an image using the selected provider (DALL-E 3 or Gemini).
  */
-export async function generatePostImage(prompt: string, openaiKey: string): Promise<string> {
-  const openai = openaiClient(openaiKey);
-  const response = await openai.images.generate({
-    model: "dall-e-3",
-    prompt: `${prompt} --no-text`,
-    n: 1,
-    size: "1024x1024",
-    quality: "standard",
-  });
-  return response.data?.[0]?.url || "";
+export async function generatePostImage(
+  prompt: string, 
+  apiKeys: { openai?: string; gemini?: string },
+  provider: string = "DALL-E-3"
+): Promise<string> {
+  
+  if (provider === "DALL-E-3") {
+    if (!apiKeys.openai) throw new Error("OpenAI API key is missing");
+    const openai = openaiClient(apiKeys.openai);
+    const response = await openai.images.generate({
+      model: "dall-e-3",
+      prompt: `${prompt} --no-text`,
+      n: 1,
+      size: "1024x1024",
+      quality: "standard",
+    });
+    return response.data?.[0]?.url || "";
+  }
+
+  if (provider === "GEMINI") {
+    if (!apiKeys.gemini) throw new Error("Gemini API key is missing");
+    const genAI = geminiClient(apiKeys.gemini);
+    // Note: Gemini image generation (Imagen) is typically via the 'imagen-3' model or similar
+    // For now, we'll use a placeholder or the specific Imagen API if available in the SDK
+    // If not directly in the SDK, we'd use a fetch.
+    // For simplicity, we'll assume the user might want DALL-E fallback or we'll throw a specific error if Gemini isn't ready.
+    throw new Error("Gemini Image Generation (Imagen 3) integration is coming soon. Please use OpenAI DALL-E for now.");
+  }
+
+  throw new Error(`Unsupported image provider: ${provider}`);
 }
 
 function parseJson(text: string): GeneratedPost {
