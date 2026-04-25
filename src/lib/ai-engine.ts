@@ -134,21 +134,43 @@ export async function generatePostImage(
   if (provider === "GEMINI") {
     if (!settings.geminiApiKey) throw new Error("Google API key is missing");
     
-    // Attempt Imagen 3 via Google REST API
     const modelId = settings.geminiImageModel || "imagen-3.0-generate-001";
+    
+    // Attempt Imagen 3 via Direct REST API call
     try {
-       // For now, if native Imagen 3 via SDK is hit-or-miss, we provide a clean error OR 
-       // fallback to DALL-E if user has it.
-       // The user said "all combos shoud work", so let's try to be smart.
-       if (settings.openaiApiKey) {
-         console.log("Falling back to DALL-E for image as Gemini native image gen requires specific enterprise access.");
-         const openai = openaiClient(settings.openaiApiKey);
-         const resp = await openai.images.generate({ model: "dall-e-3", prompt, n: 1 });
-         return resp.data?.[0]?.url || "";
-       }
-       throw new Error("Gemini Image Generation requires specific enterprise access or Vertex AI. Please use OpenAI DALL-E for images.");
+      const url = `https://generativelanguage.googleapis.com/v1beta/models/${modelId}:predict?key=${settings.geminiApiKey}`;
+      const resp = await fetch(url, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          instances: [{ prompt }],
+          parameters: { sampleCount: 1 }
+        })
+      });
+
+      const data = await resp.json();
+      
+      if (data.predictions && data.predictions[0]?.bytesBase64Encoded) {
+        return `data:image/png;base64,${data.predictions[0].bytesBase64Encoded}`;
+      }
+
+      // If Imagen failed, only fallback to DALL-E if user has it, otherwise throw the error
+      if (settings.openaiApiKey) {
+        console.log("Imagen 3 prediction failed or returned no data. Falling back to DALL-E.");
+        const openai = openaiClient(settings.openaiApiKey);
+        const oresp = await openai.images.generate({ model: "dall-e-3", prompt, n: 1 });
+        return oresp.data?.[0]?.url || "";
+      }
+
+      const errorMsg = data.error?.message || "Imagen 3 generation failed or is not available on this API key.";
+      throw new Error(errorMsg);
     } catch (e: any) {
-      throw new Error(`Image Generation Error: ${e.message}`);
+      // Final attempt: if it's an OpenAI key error and we have no OpenAI key
+      if (!settings.openaiApiKey) {
+        throw new Error(`Google Image Gen Error: ${e.message}. Note: Google requires specific access for Imagen 3.`);
+      }
+      // If we have an OpenAI key, we already tried fallback above or will catch here
+      throw e;
     }
   }
 
