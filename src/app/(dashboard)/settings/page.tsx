@@ -4,7 +4,7 @@ import { useSession, signIn } from "next-auth/react";
 import { useState, useEffect } from "react";
 import { 
   Loader2, CheckCircle2, RefreshCw, MapPin, 
-  AlertCircle, Key, Sparkles, Wand2, FlaskConical, XCircle
+  AlertCircle, Key, Sparkles, Wand2, FlaskConical, XCircle, ChevronDown
 } from "lucide-react";
 
 export default function SettingsPage() {
