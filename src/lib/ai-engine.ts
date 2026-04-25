@@ -2,9 +2,9 @@ import { Anthropic } from "@anthropic-ai/sdk";
 import OpenAI from "openai";
 import prisma from "./prisma";
 
-// Initialize clients (these will throw if keys are missing when called)
-const getAnthropic = () => new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
-const getOpenAI = () => new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+// Helper to initialize clients with provided keys
+const anthropicClient = (key: string) => new Anthropic({ apiKey: key });
+const openaiClient = (key: string) => new OpenAI({ apiKey: key });
 
 export interface GeneratedPost {
   content: string;
@@ -18,7 +18,7 @@ export interface GeneratedPost {
  * Generates post content using Claude 3.5 Sonnet.
  * Injects profile-specific instructions, keywords, and competitor data.
  */
-export async function generatePostContent(locationId: string): Promise<GeneratedPost> {
+export async function generatePostContent(locationId: string, anthropicKey: string): Promise<GeneratedPost> {
   const location = await prisma.location.findUnique({
     where: { id: locationId },
     include: { client: true },
@@ -29,7 +29,7 @@ export async function generatePostContent(locationId: string): Promise<Generated
   // Handle Keyword Sequencing
   const keyword = await consumeNextKeyword(locationId);
 
-  const anthropic = getAnthropic();
+  const anthropic = anthropicClient(anthropicKey);
 
   const systemPrompt = `
     You are an expert Google Business Profile content creator for "${location.name}".
@@ -76,8 +76,8 @@ export async function generatePostContent(locationId: string): Promise<Generated
  * Generates an image using DALL-E 3 based on the prompt provided.
  * Note: In a real app, you'd upload this to Supabase/S3. For now, returns the URL.
  */
-export async function generatePostImage(prompt: string): Promise<string> {
-  const openai = getOpenAI();
+export async function generatePostImage(prompt: string, openaiKey: string): Promise<string> {
+  const openai = openaiClient(openaiKey);
 
   const response = await openai.images.generate({
     model: "dall-e-3",

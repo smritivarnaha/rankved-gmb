@@ -58,6 +58,10 @@ model User {
   role            String      @default("TEAM_MEMBER") // SUPER_ADMIN, AGENCY_OWNER, TEAM_MEMBER
   isApproved      Boolean     @default(true)
   
+  // AI API Keys
+  anthropicApiKey String?
+  openaiApiKey    String?
+  
   // Hierarchy
   ownerId         String?
   owner           User?       @relation("TeamMembers", fields: [ownerId], references: [id])

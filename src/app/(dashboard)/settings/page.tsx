@@ -207,6 +207,11 @@ export default function SettingsPage() {
         </div>
       )}
 
+      {/* AI Integration */}
+      {(isAgencyOwner || isSuperAdmin) && (
+        <AiSettingsCard />
+      )}
+
       {/* API Quota */}
       {isMainAdmin && (
         <div className="card">
@@ -219,6 +224,85 @@ export default function SettingsPage() {
           </div>
         </div>
       )}
+    </div>
+  );
+}
+
+function AiSettingsCard() {
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [keys, setKeys] = useState({ anthropicApiKey: "", openaiApiKey: "" });
+  const [success, setSuccess] = useState(false);
+
+  useEffect(() => {
+    fetch("/api/user/settings")
+      .then(r => r.json())
+      .then(d => setKeys({ 
+        anthropicApiKey: d.anthropicApiKey || "", 
+        openaiApiKey: d.openaiApiKey || "" 
+      }))
+      .finally(() => setLoading(false));
+  }, []);
+
+  const handleSave = async () => {
+    setSaving(true);
+    setSuccess(false);
+    const res = await fetch("/api/user/settings", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(keys),
+    });
+    if (res.ok) {
+      setSuccess(true);
+      setTimeout(() => setSuccess(false), 3000);
+    }
+    setSaving(false);
+  };
+
+  if (loading) return null;
+
+  return (
+    <div className="card">
+      <div className="card-header" style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+        <h2 className="card-title" style={{ fontSize: 14 }}>AI Integration</h2>
+        {success && <span style={{ fontSize: 12, color: "#16a34a", fontWeight: 600 }}>✓ Saved</span>}
+      </div>
+      <div className="card-body" style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+        <p style={{ fontSize: 12, color: "var(--text-muted)", marginBottom: 4 }}>
+          Enter your API keys to enable Claude 3.5 (text) and DALL-E 3 (images).
+        </p>
+        
+        <div>
+          <label style={{ display: "block", fontSize: 11, fontWeight: 700, color: "var(--text-secondary)", marginBottom: 6, textTransform: "uppercase" }}>Anthropic API Key (Claude)</label>
+          <input 
+            type="password"
+            value={keys.anthropicApiKey}
+            onChange={e => setKeys({ ...keys, anthropicApiKey: e.target.value })}
+            placeholder="sk-ant-..."
+            style={{ width: "100%", padding: "8px 12px", borderRadius: 8, border: "1px solid var(--border)", fontSize: 13, background: "var(--bg-elevated)" }}
+          />
+        </div>
+
+        <div>
+          <label style={{ display: "block", fontSize: 11, fontWeight: 700, color: "var(--text-secondary)", marginBottom: 6, textTransform: "uppercase" }}>OpenAI API Key (DALL-E 3)</label>
+          <input 
+            type="password"
+            value={keys.openaiApiKey}
+            onChange={e => setKeys({ ...keys, openaiApiKey: e.target.value })}
+            placeholder="sk-..."
+            style={{ width: "100%", padding: "8px 12px", borderRadius: 8, border: "1px solid var(--border)", fontSize: 13, background: "var(--bg-elevated)" }}
+          />
+        </div>
+
+        <button 
+          onClick={handleSave} 
+          disabled={saving} 
+          className="btn btn-primary" 
+          style={{ alignSelf: "flex-end", padding: "8px 20px", fontSize: 13 }}
+        >
+          {saving ? <Loader2 size={14} className="anim-spin" /> : "Save API Keys"}
+        </button>
+      </div>
     </div>
   );
 }
