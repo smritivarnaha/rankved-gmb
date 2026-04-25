@@ -1,77 +1,19 @@
-@import url('https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&family=Inter:wght@400;500;600&display=swap');
+/* ════════════════════════════════════════════════════════════
+   RANKVED GBP MANAGER — Global Stylesheet
+   Design tokens live in: design-tokens.css (imported below)
+   This file: reset, layout shell, component classes, utilities
+   ════════════════════════════════════════════════════════════ */
+@import url('./design-tokens.css');
 
-/* ═══════════════════════════════════════════════════════
-   RANKVED GMB MANAGER — ENTERPRISE LIGHT THEME
-   Google Workspace-inspired · Pure CSS · Vercel Native
-   ═══════════════════════════════════════════════════════ */
-
-:root {
-  /* ── Backgrounds ── */
-  --bg-body: #f8fafc;        /* Soft blue-gray */
-  --bg-card: #ffffff;
-  --bg-sidebar: #ffffff;
-  --bg-elevated: #f1f5f9;
-  --bg-input: #ffffff;
-  --bg-hover: #f1f5f9;
-  --bg-active: #eff6ff;
-
-  /* ── Text ── */
-  --text-primary: #0f172a;
-  --text-secondary: #475569;
-  --text-muted: #94a3b8;
-  --text-white: #ffffff;
-
-  /* ── Accent ── */
-  --accent: #2563eb;
-  --accent-hover: #1d4ed8;
-  --accent-light: #dbeafe;
-  --accent-glow: rgba(37, 99, 235, 0.2);
-  --accent-gradient: #2563eb;
-
-  /* ── Status ── */
-  --success: #16a34a;
-  --success-bg: #dcfce7;
-  --success-border: #bbf7d0;
-  --warning: #eab308;
-  --warning-bg: #fef9c3;
-  --warning-border: #fef08a;
-  --error: #dc2626;
-  --error-bg: #fee2e2;
-  --error-border: #fecaca;
-  --info: #2563eb;
-  --info-bg: #eff6ff;
-  --info-border: #bfdbfe;
-
-  /* ── Borders & Shadows ── */
-  --border: #e2e8f0;
-  --border-light: #f1f5f9;
-  --shadow-xs: none;
-  --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
-  --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
-  --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
-  --shadow-accent: none;
-
-  /* ── Radii (Corporate/Flat) ── */
-  --radius-sm: 6px;
-  --radius-md: 12px;
-  --radius-lg: 16px;
-  --radius-xl: 20px;
-  --radius-2xl: 24px;
-  --radius-full: 9999px;     /* Only for avatars and pills */
-
-  /* ── Layout ── */
-  --sidebar-w: 256px;
-  --topbar-h: 64px;
-}
 
 /* ══════════════════════ RESET ══════════════════════ */
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 html { font-size: 14px; scroll-behavior: smooth; }
 body {
-  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  font-family: var(--font-sans);
   color: var(--text-primary);
-  background: var(--bg-body);
-  line-height: 1.5;
+  background: var(--bg-page);
+  line-height: var(--lh-base);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
@@ -115,6 +57,12 @@ input, select, textarea { font-family: inherit; border: none; outline: none; }
 .anim-scale   { animation: scaleIn 0.2s cubic-bezier(0.16, 1, 0.3, 1) both; }
 .anim-spin    { animation: spin 0.8s linear infinite; }
 .anim-pulse   { animation: pulse 1.5s ease-in-out infinite; }
+
+@keyframes fadeUp {
+  from { opacity: 0; transform: translateY(6px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.anim-fade-up { animation: fadeUp 0.18s ease-out both; }
 
 /* ══════════════════ MODAL UTILITIES ══════════════════ */
 .modal-overlay {
