@@ -405,33 +405,47 @@ export default function ProfileDetailPage() {
         </Link>
       </div>
 
-      {/* Stats Row */}
-      <div style={{
-        display: "grid", gridTemplateColumns: "repeat(4, 1fr)",
-        background: "#fff", border: "1px solid #e2e8f0",
-        borderRadius: 12, marginBottom: 24, overflow: "hidden",
-      }}>
-        {[
-          { label: "Published", sublabel: "this month", value: publishedThisMonth, dot: "#16a34a" },
-          { label: "Scheduled", sublabel: "upcoming", value: scheduled, dot: "#f59e0b" },
-          { label: "Drafts", sublabel: "in progress", value: drafts, dot: "#94a3b8" },
-          { label: "Awaiting", sublabel: "approval", value: pending, dot: "#f97316" },
-        ].map((stat, i) => (
-          <div key={i} style={{ padding: "18px 20px", textAlign: "center", borderRight: i < 3 ? "1px solid #f1f5f9" : "none" }}>
-            <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 6, marginBottom: 6 }}>
-              <span style={{ width: 8, height: 8, borderRadius: "50%", background: stat.dot, display: "inline-block" }} />
-              <span style={{ fontSize: 11, fontWeight: 700, color: "#64748b", textTransform: "uppercase", letterSpacing: "0.05em" }}>{stat.label}</span>
-            </div>
-            <p style={{ fontSize: 30, fontWeight: 800, color: "#0f172a", lineHeight: 1 }}>{stat.value}</p>
-            <p style={{ fontSize: 10, color: "#94a3b8", marginTop: 3 }}>{stat.sublabel}</p>
+
+      {/* ─── Two-Column Layout: [Left: stats+cal] [Right: post cards] ─── */}
+      <div style={{ display: "grid", gridTemplateColumns: "270px 1fr", gap: 18, alignItems: "start" }}>
+
+        {/* LEFT — Compact Stats + Calendar */}
+        <div style={{ position: "sticky", top: 80, display: "flex", flexDirection: "column", gap: 12 }}>
+
+          {/* Compact vertical stats */}
+          <div style={{ background: "#fff", border: "1px solid #e2e8f0", borderRadius: 12, overflow: "hidden" }}>
+            {[
+              { label: "Published", sublabel: "this month", value: publishedThisMonth, dot: "#16a34a" },
+              { label: "Scheduled", sublabel: "upcoming",   value: scheduled,         dot: "#f59e0b" },
+              { label: "Drafts",    sublabel: "in progress", value: drafts,            dot: "#94a3b8" },
+              { label: "Awaiting",  sublabel: "approval",   value: pending,           dot: "#f97316" },
+            ].map((s, i, arr) => (
+              <div key={i} style={{
+                display: "flex", alignItems: "center", justifyContent: "space-between",
+                padding: "10px 14px",
+                borderBottom: i < arr.length - 1 ? "1px solid #f1f5f9" : "none",
+              }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                  <span style={{ width: 8, height: 8, borderRadius: "50%", background: s.dot, flexShrink: 0, display: "inline-block" }} />
+                  <div>
+                    <p style={{ fontSize: 12, fontWeight: 600, color: "#0f172a", lineHeight: 1.2 }}>{s.value}</p>
+                    <p style={{ fontSize: 10, color: "#94a3b8" }}>{s.label}</p>
+                  </div>
+                </div>
+                <span style={{ fontSize: 10, color: "#cbd5e1" }}>{s.sublabel}</span>
+              </div>
+            ))}
           </div>
-        ))}
-      </div>
 
-      {/* ─── Two-Column Layout ─────────────────────── */}
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 280px", gap: 20, alignItems: "start" }}>
+          {/* Calendar */}
+          <ActivityCalendar posts={posts} />
 
-        {/* LEFT — Post Cards */}
+          <p style={{ fontSize: 10, color: "#94a3b8", paddingLeft: 2 }}>
+            Synced {format(new Date(profile.fetchedAt), "MMM d, yyyy")}
+          </p>
+        </div>
+
+        {/* RIGHT — Post Cards */}
         <div style={{ background: "#fff", border: "1px solid #e2e8f0", borderRadius: 12, overflow: "hidden" }}>
           {/* Filter tabs */}
           <div style={{ padding: "14px 16px", borderBottom: "1px solid #f1f5f9", display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap" }}>
@@ -465,7 +479,7 @@ export default function ProfileDetailPage() {
             ) : sortedPosts.length === 0 ? (
               <div style={{ padding: "50px 0", textAlign: "center" }}>
                 <FileText style={{ width: 32, height: 32, color: "#e2e8f0", margin: "0 auto 12px" }} />
-                <p style={{ fontSize: 14, color: "#64748b", marginBottom: 6 }}>No posts yet.</p>
+                <p style={{ fontSize: 14, color: "#64748b", marginBottom: 10 }}>No posts yet.</p>
                 <Link href={`/posts/new?profile=${profile.id}&from=profile`}
                   style={{ display: "inline-flex", alignItems: "center", gap: 6, padding: "7px 14px", border: "1px solid #2563eb", color: "#2563eb", borderRadius: 7, fontSize: 13, fontWeight: 600 }}>
                   <Plus style={{ width: 13, height: 13 }} /> Create first post
@@ -479,14 +493,6 @@ export default function ProfileDetailPage() {
               </div>
             )}
           </div>
-        </div>
-
-        {/* RIGHT — Activity Calendar */}
-        <div style={{ position: "sticky", top: 80 }}>
-          <ActivityCalendar posts={posts} />
-          <p style={{ fontSize: 10, color: "#94a3b8", marginTop: 10, paddingLeft: 2 }}>
-            Profile synced {format(new Date(profile.fetchedAt), "MMM d, yyyy")}
-          </p>
         </div>
       </div>
     </div>
