@@ -72,7 +72,6 @@ export class LocationService {
             name: loc.title,
             address: addressStr || null,
             phone: phoneStr || null,
-            cachedAt: new Date(),
           },
           create: {
             clientId: client.id,
@@ -81,7 +80,6 @@ export class LocationService {
             name: loc.title || "Unknown Location",
             address: addressStr || null,
             phone: phoneStr || null,
-            cachedAt: new Date(),
           },
         });
         

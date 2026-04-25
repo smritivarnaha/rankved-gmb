@@ -44,7 +44,7 @@ function locationToProfile(loc: any): ProfileData {
     phone: loc.phone || "",
     website: "",
     googleName: loc.gbpLocationId,
-    fetchedAt: loc.cachedAt?.toISOString() || loc.createdAt.toISOString(),
+    fetchedAt: loc.createdAt.toISOString(),
   };
 }
 
@@ -87,7 +87,6 @@ export async function saveProfiles(profiles: ProfileData[], userId: string): Pro
         name: p.name,
         address: p.address || null,
         phone: p.phone || null,
-        cachedAt: new Date(p.fetchedAt),
         clientId: clientId, // FORCE ownership to current user
       },
       create: {
@@ -97,7 +96,6 @@ export async function saveProfiles(profiles: ProfileData[], userId: string): Pro
         phone: p.phone || null,
         gbpAccountId: p.accountId,
         gbpLocationId: p.googleName || p.id,
-        cachedAt: new Date(p.fetchedAt),
         clientId,
       },
     });
