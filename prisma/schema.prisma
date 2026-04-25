@@ -61,6 +61,7 @@ model User {
   // AI API Keys
   anthropicApiKey String?
   openaiApiKey    String?
+  geminiApiKey    String?
   
   // Hierarchy
   ownerId         String?
@@ -118,6 +119,9 @@ model Location {
   aiCompetitorData       String?   @db.Text
   aiKeywordSequence      String?   @db.Text   // Comma-separated or JSON list
   aiCurrentSequenceIndex Int       @default(0)
+  
+  aiContentProvider      String    @default("CLAUDE") // CLAUDE, GPT, GEMINI
+  aiImageProvider        String    @default("DALL-E-3") // DALL-E-3
   
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt

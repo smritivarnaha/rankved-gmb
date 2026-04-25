@@ -231,7 +231,7 @@ export default function SettingsPage() {
 function AiSettingsCard() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const [keys, setKeys] = useState({ anthropicApiKey: "", openaiApiKey: "" });
+  const [keys, setKeys] = useState({ anthropicApiKey: "", openaiApiKey: "", geminiApiKey: "" });
   const [success, setSuccess] = useState(false);
 
   useEffect(() => {
@@ -239,7 +239,8 @@ function AiSettingsCard() {
       .then(r => r.json())
       .then(d => setKeys({ 
         anthropicApiKey: d.anthropicApiKey || "", 
-        openaiApiKey: d.openaiApiKey || "" 
+        openaiApiKey: d.openaiApiKey || "",
+        geminiApiKey: d.geminiApiKey || ""
       }))
       .finally(() => setLoading(false));
   }, []);
@@ -284,12 +285,23 @@ function AiSettingsCard() {
         </div>
 
         <div>
-          <label style={{ display: "block", fontSize: 11, fontWeight: 700, color: "var(--text-secondary)", marginBottom: 6, textTransform: "uppercase" }}>OpenAI API Key (DALL-E 3)</label>
+          <label style={{ display: "block", fontSize: 11, fontWeight: 700, color: "var(--text-secondary)", marginBottom: 6, textTransform: "uppercase" }}>OpenAI API Key (GPT & DALL-E)</label>
           <input 
             type="password"
             value={keys.openaiApiKey}
             onChange={e => setKeys({ ...keys, openaiApiKey: e.target.value })}
             placeholder="sk-..."
+            style={{ width: "100%", padding: "8px 12px", borderRadius: 8, border: "1px solid var(--border)", fontSize: 13, background: "var(--bg-elevated)" }}
+          />
+        </div>
+
+        <div>
+          <label style={{ display: "block", fontSize: 11, fontWeight: 700, color: "var(--text-secondary)", marginBottom: 6, textTransform: "uppercase" }}>Google Gemini API Key</label>
+          <input 
+            type="password"
+            value={keys.geminiApiKey}
+            onChange={e => setKeys({ ...keys, geminiApiKey: e.target.value })}
+            placeholder="AIza..."
             style={{ width: "100%", padding: "8px 12px", borderRadius: 8, border: "1px solid var(--border)", fontSize: 13, background: "var(--bg-elevated)" }}
           />
         </div>

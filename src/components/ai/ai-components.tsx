@@ -18,6 +18,8 @@ export function AiSettingsTab({ locationId }: { locationId: string }) {
     aiCompetitorData: "",
     aiKeywordSequence: "",
     aiCurrentSequenceIndex: 0,
+    aiContentProvider: "CLAUDE",
+    aiImageProvider: "DALL-E-3",
   });
 
   useEffect(() => {
@@ -29,6 +31,8 @@ export function AiSettingsTab({ locationId }: { locationId: string }) {
         aiCompetitorData: settings.aiCompetitorData || "",
         aiKeywordSequence: settings.aiKeywordSequence || "",
         aiCurrentSequenceIndex: settings.aiCurrentSequenceIndex || 0,
+        aiContentProvider: settings.aiContentProvider || "CLAUDE",
+        aiImageProvider: settings.aiImageProvider || "DALL-E-3",
       });
     }
   }, [settings]);
@@ -93,6 +97,32 @@ export function AiSettingsTab({ locationId }: { locationId: string }) {
               <option>Energetic & Promotional</option>
             </select>
           </div>
+
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+            <div>
+              <label style={{ display: "block", fontSize: 12, fontWeight: 600, color: "#334155", marginBottom: 6 }}>Content Engine</label>
+              <select 
+                value={formData.aiContentProvider}
+                onChange={e => setFormData({ ...formData, aiContentProvider: e.target.value })}
+                style={{ width: "100%", padding: 10, borderRadius: 8, border: "1px solid #e2e8f0", fontSize: 13, fontFamily: "inherit" }}
+              >
+                <option value="CLAUDE">Claude 3.5 Sonnet</option>
+                <option value="GPT">GPT-4o</option>
+                <option value="GEMINI">Gemini 1.5 Pro</option>
+              </select>
+            </div>
+            <div>
+              <label style={{ display: "block", fontSize: 12, fontWeight: 600, color: "#334155", marginBottom: 6 }}>Image Engine</label>
+              <select 
+                value={formData.aiImageProvider}
+                onChange={e => setFormData({ ...formData, aiImageProvider: e.target.value })}
+                style={{ width: "100%", padding: 10, borderRadius: 8, border: "1px solid #e2e8f0", fontSize: 13, fontFamily: "inherit" }}
+              >
+                <option value="DALL-E-3">DALL-E 3</option>
+              </select>
+            </div>
+          </div>
+
           <div>
             <label style={{ display: "block", fontSize: 12, fontWeight: 600, color: "#334155", marginBottom: 6 }}>Competitor Data (Reference Content)</label>
             <textarea 

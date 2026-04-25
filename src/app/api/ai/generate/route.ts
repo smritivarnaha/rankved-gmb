@@ -11,24 +11,28 @@ export async function POST(req: NextRequest) {
   // Fetch the user to get their stored API keys
   const user = await prisma.user.findUnique({
     where: { email: session.user?.email || "" },
-    select: { anthropicApiKey: true, openaiApiKey: true }
+    select: { anthropicApiKey: true, openaiApiKey: true, geminiApiKey: true }
   });
 
-  const anthropicKey = user?.anthropicApiKey || process.env.ANTHROPIC_API_KEY;
-  const openaiKey    = user?.openaiApiKey    || process.env.OPENAI_API_KEY;
+  const apiKeys = {
+    anthropic: user?.anthropicApiKey || process.env.ANTHROPIC_API_KEY,
+    openai:    user?.openaiApiKey    || process.env.OPENAI_API_KEY,
+    gemini:    user?.geminiApiKey    || process.env.GEMINI_API_KEY,
+  };
 
-  if (!anthropicKey) return NextResponse.json({ error: "Anthropic API Key is missing. Please set it in Settings." }, { status: 400 });
-  if (!openaiKey)    return NextResponse.json({ error: "OpenAI API Key is missing. Please set it in Settings." }, { status: 400 });
+  if (!apiKeys.openai) {
+    return NextResponse.json({ error: "OpenAI API Key is missing. Required for images." }, { status: 400 });
+  }
 
   try {
     const { locationId } = await req.json();
     if (!locationId) return NextResponse.json({ error: "locationId is required" }, { status: 400 });
 
     // Step 1: Generate Content & Prompt
-    const postData = await generatePostContent(locationId, anthropicKey);
+    const postData = await generatePostContent(locationId, apiKeys);
 
     // Step 2: Generate Image
-    const imageUrl = await generatePostImage(postData.imagePrompt, openaiKey);
+    const imageUrl = await generatePostImage(postData.imagePrompt, apiKeys.openai);
 
     return NextResponse.json({
       ...postData,
