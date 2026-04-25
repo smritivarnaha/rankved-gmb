@@ -7,6 +7,7 @@
 
 import { PostData } from "./post-store";
 import prisma from "@/lib/prisma";
+import { resolveImageUrl } from "./storage";
 
 const GBP_BASE = "https://mybusiness.googleapis.com/v4";
 
@@ -32,62 +33,6 @@ interface PublishResult {
   error?: string;
 }
 
-/**
- * Uploads a base64 image to GBP Media API and returns the mediaKey/sourceUrl.
- * GBP does NOT accept base64 directly — it needs a publicly reachable URL.
- * 
- * For now: if a public URL is given (starts with http), use it directly.
- * If base64: upload to Supabase storage first (requires SUPABASE_URL + SUPABASE_SERVICE_KEY).
- */
-async function resolveImageUrlDetail(
-  imageDataUri: string
-): Promise<{ success: boolean; url?: string; error?: string }> {
-  // If it's already a public URL, use directly
-  if (imageDataUri.startsWith("http")) {
-    return { success: true, url: imageDataUri };
-  }
-
-  // It's a base64 data URI — try to upload to Supabase storage
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_SERVICE_KEY;
-
-  if (!supabaseUrl) return { success: false, error: "Missing NEXT_PUBLIC_SUPABASE_URL" };
-  if (!supabaseKey) return { success: false, error: "Missing SUPABASE_SERVICE_ROLE_KEY" };
-
-  let cleanUrl = supabaseUrl.replace(/\/+$/, "");
-  if (cleanUrl.endsWith("/rest/v1")) cleanUrl = cleanUrl.replace("/rest/v1", "");
-
-  try {
-    const base64Data = imageDataUri.split(",")[1];
-    if (!base64Data) return { success: false, error: "Invalid image format" };
-    
-    const mimeType = imageDataUri.match(/data:([^;]+)/)?.[1] || "image/jpeg";
-    const buffer = Buffer.from(base64Data, "base64");
-
-    const filename = `${Date.now()}.jpg`;
-    const uploadUrl = `${cleanUrl}/storage/v1/object/post-images/${filename}`;
-    
-    const uploadRes = await fetch(uploadUrl, {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${supabaseKey}`,
-        "Content-Type": mimeType,
-        "x-upsert": "true",
-      },
-      body: buffer,
-    });
-
-    if (!uploadRes.ok) {
-      const errorText = await uploadRes.text();
-      return { success: false, error: `Supabase Error (${uploadRes.status}): ${errorText}` };
-    }
-
-    const publicUrl = `${supabaseUrl}/storage/v1/object/public/post-images/${filename}`;
-    return { success: true, url: publicUrl };
-  } catch (err: any) {
-    return { success: false, error: `Exception: ${err.message}` };
-  }
-}
 
 /**
  * Publishes a post to Google Business Profile.
@@ -165,7 +110,7 @@ export async function publishToGBP(opts: PublishOptions): Promise<PublishResult>
 
   // Image
   if (imageDataUri) {
-    const uploadResult = await resolveImageUrlDetail(imageDataUri);
+    const uploadResult = await resolveImageUrl(imageDataUri);
     if (!uploadResult.success) {
       return { 
         success: false, 

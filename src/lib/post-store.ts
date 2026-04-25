@@ -6,6 +6,7 @@
  */
 
 import prisma from "./prisma";
+import { resolveImageUrl } from "./storage";
 
 export interface PostData {
   id: string;
@@ -125,13 +126,19 @@ export async function createPost(
   data: Omit<PostData, "id" | "createdAt" | "updatedAt" | "publishedAt">,
   userId: string
 ): Promise<PostData> {
+  let mediaUrl = data.imageUrl;
+  if (mediaUrl && mediaUrl.startsWith("data:")) {
+    const upload = await resolveImageUrl(mediaUrl);
+    if (upload.success) mediaUrl = upload.url || null;
+  }
+
   const post = await prisma.post.create({
     data: {
       summary: data.summary,
       topicType: data.topicType || "STANDARD",
       ctaType: data.ctaType || null,
       ctaUrl: data.ctaUrl || null,
-      mediaUrl: data.imageUrl || null,
+      mediaUrl: mediaUrl || null,
       status: data.status || "DRAFT",
       scheduledAt: data.scheduledAt ? new Date(data.scheduledAt) : null,
       eventTitle: data.eventTitle || null,
@@ -147,6 +154,12 @@ export async function createPost(
 
 export async function updatePost(id: string, data: Partial<PostData>): Promise<PostData | null> {
   try {
+    let mediaUrl = data.imageUrl;
+    if (mediaUrl && mediaUrl.startsWith("data:")) {
+      const upload = await resolveImageUrl(mediaUrl);
+      if (upload.success) mediaUrl = upload.url || null;
+    }
+
     const post = await prisma.post.update({
       where: { id },
       data: {
@@ -154,7 +167,7 @@ export async function updatePost(id: string, data: Partial<PostData>): Promise<P
         ...(data.topicType !== undefined && { topicType: data.topicType }),
         ...(data.ctaType !== undefined && { ctaType: data.ctaType || null }),
         ...(data.ctaUrl !== undefined && { ctaUrl: data.ctaUrl || null }),
-        ...(data.imageUrl !== undefined && { mediaUrl: data.imageUrl || null }),
+        ...(mediaUrl !== undefined && { mediaUrl: mediaUrl || null }),
         ...(data.status !== undefined && { status: data.status }),
         ...(data.scheduledAt !== undefined && { scheduledAt: data.scheduledAt ? new Date(data.scheduledAt) : null }),
         ...(data.publishedAt !== undefined && { publishedAt: data.publishedAt ? new Date(data.publishedAt) : null }),
