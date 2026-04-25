@@ -23,7 +23,7 @@ function getMonthDays(year: number, month: number) {
 
 const monthNames = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
 
-export function PostEditor({ initialData = null, timelineDate, onDateChange }: { initialData?: any; timelineDate?: string; onDateChange?: (d: string) => void }) {
+export function PostEditor({ initialData = null, timelineDate, onDateChange, lockedProfileId }: { initialData?: any; timelineDate?: string; onDateChange?: (d: string) => void; lockedProfileId?: string }) {
   const router = useRouter();
   const { data: session } = useSession();
   const user = (session as any)?.user;
@@ -50,6 +50,13 @@ export function PostEditor({ initialData = null, timelineDate, onDateChange }: {
       })
       .catch(() => {});
   }, []);
+
+  // Lock profile if provided
+  useEffect(() => {
+    if (lockedProfileId) {
+      setForm(f => ({ ...f, locationId: lockedProfileId }));
+    }
+  }, [lockedProfileId]);
   const [geoEnabled, setGeoEnabled] = useState(false);
   const [geoLat, setGeoLat] = useState("");
   const [geoLatRef, setGeoLatRef] = useState("N");
@@ -167,30 +174,18 @@ export function PostEditor({ initialData = null, timelineDate, onDateChange }: {
 
   const todayStr = toLocalDateString(now);
   const tomorrowStr = toLocalDateString(new Date(now.getTime() + 86400000));
+  const dayAfterStr = toLocalDateString(new Date(now.getTime() + 2 * 86400000));
 
-  const setQuickDate = (type: "now" | "today" | "tomorrow") => {
-    let targetD = now;
-    if (type === "tomorrow") {
-      targetD = new Date(now.getTime() + 86400000);
-    }
+  const setQuickDate = (type: "tomorrow" | "dayafter") => {
+    const targetD = type === "tomorrow"
+      ? new Date(now.getTime() + 86400000)
+      : new Date(now.getTime() + 2 * 86400000);
+    const dateStr = type === "tomorrow" ? tomorrowStr : dayAfterStr;
     setCalMonth(targetD.getMonth());
     setCalYear(targetD.getFullYear());
-
-    if (type === "now") {
-      setSelectedDate(todayStr);
-      onDateChange?.(todayStr);
-      const h = String(now.getHours()).padStart(2, "0");
-      const m = String(now.getMinutes()).padStart(2, "0");
-      setSelectedTime(`${h}:${m}`);
-    } else if (type === "today") {
-      setSelectedDate(todayStr);
-      onDateChange?.(todayStr);
-      setSelectedTime("10:00");
-    } else {
-      setSelectedDate(tomorrowStr);
-      onDateChange?.(tomorrowStr);
-      setSelectedTime("10:00");
-    }
+    setSelectedDate(dateStr);
+    onDateChange?.(dateStr);
+    setSelectedTime("10:00");
   };
 
   const selectCalDay = (day: number) => {
@@ -291,13 +286,21 @@ export function PostEditor({ initialData = null, timelineDate, onDateChange }: {
             {/* Profile */}
             <div>
               <label className="block text-[13px] font-medium text-[var(--text-primary)] mb-1.5">Profile</label>
-              <select name="locationId" value={form.locationId} onChange={handleChange} disabled={isPublished}
-                className="w-full border border-[var(--border)] rounded-lg py-2.5 px-3 text-[14px] text-[var(--text-primary)] bg-white focus:outline-none focus:ring-2 focus:ring-[var(--accent)] focus:border-transparent disabled:opacity-50 disabled:bg-[var(--bg-secondary)]">
-                <option value="">Select a profile</option>
-                {locations.map((loc: any) => (
-                  <option key={loc.id} value={loc.id}>{loc.client} — {loc.name}</option>
-                ))}
-              </select>
+              {lockedProfileId ? (
+                <div className="w-full border border-[var(--border)] rounded-lg py-2.5 px-3 text-[14px] text-[var(--text-primary)] bg-[var(--bg-secondary)] flex items-center gap-2">
+                  <MapPin className="w-4 h-4 text-[var(--text-tertiary)] shrink-0" />
+                  <span className="font-medium">{locations.find(l => l.id === lockedProfileId)?.name || "Loading..."}</span>
+                  <span className="ml-auto text-[11px] text-[var(--text-tertiary)] bg-[var(--bg-elevated)] px-2 py-0.5 rounded-full">Locked</span>
+                </div>
+              ) : (
+                <select name="locationId" value={form.locationId} onChange={handleChange} disabled={isPublished}
+                  className="w-full border border-[var(--border)] rounded-lg py-2.5 px-3 text-[14px] text-[var(--text-primary)] bg-white focus:outline-none focus:ring-2 focus:ring-[var(--accent)] focus:border-transparent disabled:opacity-50 disabled:bg-[var(--bg-secondary)]">
+                  <option value="">Select a profile</option>
+                  {locations.map((loc: any) => (
+                    <option key={loc.id} value={loc.id}>{loc.name}</option>
+                  ))}
+                </select>
+              )}
             </div>
 
             {/* Image — ABOVE post content */}
@@ -593,9 +596,8 @@ export function PostEditor({ initialData = null, timelineDate, onDateChange }: {
 
               {/* Quick picks */}
               <div className="px-4 py-3 border-b border-[var(--border-light)] flex gap-2">
-                <button onClick={() => setQuickDate("now")} disabled={minScheduleDays > 0} className={`flex-1 py-1.5 text-[12px] font-medium border border-[var(--border)] rounded-md transition-colors ${minScheduleDays > 0 ? "opacity-50 cursor-not-allowed bg-[var(--bg-secondary)]" : "hover:bg-white text-[var(--text-secondary)]"}`}>Now</button>
-                <button onClick={() => setQuickDate("today")} disabled={minScheduleDays > 0} className={`flex-1 py-1.5 text-[12px] font-medium border border-[var(--border)] rounded-md transition-colors ${minScheduleDays > 0 ? "opacity-50 cursor-not-allowed bg-[var(--bg-secondary)]" : "hover:bg-white text-[var(--text-secondary)]"}`}>Today</button>
-                <button onClick={() => setQuickDate("tomorrow")} disabled={minScheduleDays > 1} className={`flex-1 py-1.5 text-[12px] font-medium border border-[var(--border)] rounded-md transition-colors ${minScheduleDays > 1 ? "opacity-50 cursor-not-allowed bg-[var(--bg-secondary)]" : "hover:bg-white text-[var(--text-secondary)]"}`}>Tomorrow</button>
+                <button onClick={() => setQuickDate("tomorrow")} disabled={minScheduleDays > 1} className={`flex-1 py-1.5 text-[12px] font-medium border border-[var(--border)] rounded-md transition-colors ${minScheduleDays > 1 ? "opacity-50 cursor-not-allowed bg-[var(--bg-secondary)] text-[var(--text-tertiary)]" : "hover:bg-white text-[var(--text-secondary)]"}`}>Tomorrow</button>
+                <button onClick={() => setQuickDate("dayafter")} disabled={minScheduleDays > 2} className={`flex-1 py-1.5 text-[12px] font-medium border border-[var(--border)] rounded-md transition-colors ${minScheduleDays > 2 ? "opacity-50 cursor-not-allowed bg-[var(--bg-secondary)] text-[var(--text-tertiary)]" : "hover:bg-white text-[var(--text-secondary)]"}`}>Day After</button>
               </div>
 
               {/* Mini calendar */}

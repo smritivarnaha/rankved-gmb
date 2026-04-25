@@ -892,3 +892,6 @@ tr:hover td { background: var(--bg-hover); }
 .group:hover .group-hover\:text-\[var\(--accent\)\] { color: var(--accent); }
 .group:hover .group-hover\:bg-\[var\(--bg-tertiary\)\] { background: var(--bg-elevated); }
 
+/* Profile cards & post thumbnails */
+.profile-card-hover:hover { box-shadow: var(--shadow-md); }
+.post-thumb-hover:hover { box-shadow: var(--shadow-sm); border-color: var(--accent) !important; }

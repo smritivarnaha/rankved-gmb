@@ -2,8 +2,9 @@
 
 import Link from "next/link";
 import { format } from "date-fns";
-import { useState, useEffect } from "react";
-import { MapPin, ArrowRight, Trash2, Loader2, X, AlertCircle, CheckCircle2, RefreshCw, ArrowUpRight } from "lucide-react";
+import { useState } from "react";
+import { MapPin, Loader2, X, AlertCircle, CheckCircle2, RefreshCw, Plus, FileText, Clock, Send, Trash2 } from "lucide-react";
+import useSWR from "swr";
 
 interface Profile {
   id: string;
@@ -15,9 +16,115 @@ interface Profile {
   fetchedAt: string;
 }
 
-import useSWR from "swr";
-
 const fetcher = (url: string) => fetch(url).then((res) => res.json());
+
+function ProfileCard({ profile, onDelete, deleting }: { profile: Profile; onDelete: (id: string) => void; deleting: boolean }) {
+  const { data: postsData } = useSWR(`/api/posts?profileId=${profile.id}`, fetcher, { revalidateOnFocus: false });
+  const posts: any[] = postsData?.data || [];
+
+  const now = new Date();
+  const thisMonth = now.getMonth();
+  const thisYear = now.getFullYear();
+
+  const monthPosts = posts.filter((p: any) => {
+    const d = new Date(p.createdAt);
+    return d.getMonth() === thisMonth && d.getFullYear() === thisYear;
+  });
+
+  const published = monthPosts.filter((p: any) => p.status === "PUBLISHED").length;
+  const scheduled = posts.filter((p: any) => p.status === "SCHEDULED").length;
+  const drafts = posts.filter((p: any) => p.status === "DRAFT").length;
+
+  return (
+    <div style={{
+      background: "var(--bg-card)",
+      border: "1px solid var(--border)",
+      borderRadius: "var(--radius-md)",
+      overflow: "hidden",
+      display: "flex",
+      flexDirection: "column",
+      transition: "box-shadow 0.15s",
+    }}
+      className="profile-card-hover"
+    >
+      {/* Card Header */}
+      <div style={{ padding: "20px 20px 16px", borderBottom: "1px solid var(--border-light)" }}>
+        <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 12 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 12, minWidth: 0 }}>
+            <div style={{
+              width: 40, height: 40, borderRadius: "var(--radius-sm)",
+              background: "var(--accent-light)", flexShrink: 0,
+              display: "flex", alignItems: "center", justifyContent: "center",
+            }}>
+              <MapPin style={{ width: 18, height: 18, color: "var(--accent)" }} />
+            </div>
+            <div style={{ minWidth: 0 }}>
+              <Link href={`/profiles/${profile.id}`}
+                style={{ fontSize: 15, fontWeight: 600, color: "var(--text-primary)", display: "block", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+                {profile.name}
+              </Link>
+              {profile.address && (
+                <p style={{ fontSize: 12, color: "var(--text-muted)", marginTop: 2, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+                  {profile.address}
+                </p>
+              )}
+            </div>
+          </div>
+          <button onClick={() => onDelete(profile.id)} disabled={deleting} title="Delete profile"
+            style={{ padding: 6, borderRadius: "var(--radius-sm)", color: "var(--text-muted)", flexShrink: 0, opacity: deleting ? 0.4 : 1 }}>
+            {deleting ? <Loader2 style={{ width: 14, height: 14 }} className="anim-spin" /> : <Trash2 style={{ width: 14, height: 14 }} />}
+          </button>
+        </div>
+      </div>
+
+      {/* Stats Row */}
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", borderBottom: "1px solid var(--border-light)" }}>
+        <div style={{ padding: "12px 16px", textAlign: "center", borderRight: "1px solid var(--border-light)" }}>
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 5, marginBottom: 2 }}>
+            <Send style={{ width: 11, height: 11, color: "var(--success)" }} />
+            <span style={{ fontSize: 11, fontWeight: 600, color: "var(--success)", textTransform: "uppercase", letterSpacing: "0.04em" }}>Published</span>
+          </div>
+          <p style={{ fontSize: 22, fontWeight: 700, color: "var(--text-primary)", lineHeight: 1 }}>{published}</p>
+          <p style={{ fontSize: 10, color: "var(--text-muted)", marginTop: 2 }}>this month</p>
+        </div>
+        <div style={{ padding: "12px 16px", textAlign: "center", borderRight: "1px solid var(--border-light)" }}>
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 5, marginBottom: 2 }}>
+            <Clock style={{ width: 11, height: 11, color: "var(--warning)" }} />
+            <span style={{ fontSize: 11, fontWeight: 600, color: "var(--warning)", textTransform: "uppercase", letterSpacing: "0.04em" }}>Scheduled</span>
+          </div>
+          <p style={{ fontSize: 22, fontWeight: 700, color: "var(--text-primary)", lineHeight: 1 }}>{scheduled}</p>
+          <p style={{ fontSize: 10, color: "var(--text-muted)", marginTop: 2 }}>upcoming</p>
+        </div>
+        <div style={{ padding: "12px 16px", textAlign: "center" }}>
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 5, marginBottom: 2 }}>
+            <FileText style={{ width: 11, height: 11, color: "var(--text-muted)" }} />
+            <span style={{ fontSize: 11, fontWeight: 600, color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: "0.04em" }}>Drafts</span>
+          </div>
+          <p style={{ fontSize: 22, fontWeight: 700, color: "var(--text-primary)", lineHeight: 1 }}>{drafts}</p>
+          <p style={{ fontSize: 10, color: "var(--text-muted)", marginTop: 2 }}>unsaved</p>
+        </div>
+      </div>
+
+      {/* Footer */}
+      <div style={{ padding: "12px 16px", display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8, marginTop: "auto" }}>
+        <Link href={`/profiles/${profile.id}`}
+          style={{ fontSize: 12, color: "var(--text-secondary)", display: "flex", alignItems: "center", gap: 4 }}>
+          View history
+        </Link>
+        <Link href={`/posts/new?profile=${profile.id}&from=profile`}
+          style={{
+            display: "inline-flex", alignItems: "center", gap: 6,
+            padding: "6px 14px", background: "var(--accent)", color: "#fff",
+            borderRadius: "var(--radius-sm)", fontSize: 13, fontWeight: 600,
+            transition: "background 0.12s",
+          }}>
+          <Plus style={{ width: 14, height: 14 }} />
+          Create Post
+        </Link>
+      </div>
+    </div>
+  );
+}
 
 export default function ProfilesPage() {
   const { data, error, isLoading, mutate } = useSWR("/api/profiles", fetcher, {
@@ -27,7 +134,6 @@ export default function ProfilesPage() {
 
   const profiles = data?.data || [];
   const [deleting, setDeleting] = useState<string | null>(null);
-  const [perfProfile, setPerfProfile] = useState<Profile | null>(null);
   const [message, setMessage] = useState<{ type: "success" | "error"; text: string } | null>(null);
 
   async function handleDelete(id: string) {
@@ -46,8 +152,6 @@ export default function ProfilesPage() {
     setDeleting(null);
   }
 
-  const loadProfiles = () => mutate();
-
   return (
     <div>
       {/* Header */}
@@ -55,20 +159,21 @@ export default function ProfilesPage() {
         <div>
           <h1 className="page-title">Profiles</h1>
           <p className="page-subtitle">
-            Google Business Profiles synced from your Google account.
-            {profiles.length > 0 && <span style={{ color: "var(--text-muted)" }}> · {profiles.length} total</span>}
+            Your Google Business Profiles
+            {profiles.length > 0 && <span style={{ color: "var(--text-muted)" }}> · {profiles.length} locations</span>}
           </p>
         </div>
-        <button onClick={loadProfiles} className="btn btn-ghost" style={{ border: "1px solid var(--border)" }}>
+        <button onClick={() => mutate()} className="btn btn-ghost" style={{ border: "1px solid var(--border)" }}>
           <RefreshCw style={{ width: 14, height: 14 }} />
           Refresh
         </button>
       </div>
 
-      {/* Message */}
+      {/* Alert */}
       {message && (
-        <div className={`badge ${message.type === "success" ? "badge-success" : "badge-error"}`} style={{ padding: "10px 16px", borderRadius: "var(--radius-md)", marginBottom: 18, fontSize: 13, display: "flex", alignItems: "center", gap: 8, width: "100%" }}>
-          {message.type === "success" ? <CheckCircle2 style={{ width: 16, height: 16, flexShrink: 0 }} /> : <AlertCircle style={{ width: 16, height: 16, flexShrink: 0 }} />}
+        <div className={`badge ${message.type === "success" ? "badge-success" : "badge-error"}`}
+          style={{ padding: "10px 16px", borderRadius: "var(--radius-md)", marginBottom: 18, fontSize: 13, display: "flex", alignItems: "center", gap: 8 }}>
+          {message.type === "success" ? <CheckCircle2 style={{ width: 16, height: 16 }} /> : <AlertCircle style={{ width: 16, height: 16 }} />}
           {message.text}
           <button onClick={() => setMessage(null)} style={{ marginLeft: "auto" }}><X style={{ width: 14, height: 14 }} /></button>
         </div>
@@ -89,222 +194,12 @@ export default function ProfilesPage() {
           </div>
         </div>
       ) : (
-        <div className="card" style={{ overflow: "hidden" }}>
-          <div className="table-wrap">
-            <table>
-              <thead>
-                <tr>
-                  <th>Profile</th>
-                  <th>Address</th>
-                  <th>Phone</th>
-                  <th>Account</th>
-                  <th>Synced</th>
-                  <th style={{ width: 80 }}></th>
-                </tr>
-              </thead>
-              <tbody>
-                {profiles.map((p: Profile) => (
-                  <tr key={p.id}>
-                    <td>
-                      <Link href={`/profiles/${p.id}`} style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                        <div style={{ width: 32, height: 32, borderRadius: "var(--radius-sm)", background: "var(--bg-elevated)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-                          <MapPin style={{ width: 16, height: 16, color: "var(--text-muted)" }} />
-                        </div>
-                        <span style={{ fontWeight: 500, color: "var(--accent)" }}>{p.name}</span>
-                      </Link>
-                    </td>
-                    <td style={{ color: "var(--text-secondary)", maxWidth: 200, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{p.address || "—"}</td>
-                    <td style={{ color: "var(--text-secondary)" }}>{p.phone || "—"}</td>
-                    <td style={{ color: "var(--text-secondary)" }}>{p.accountName || "—"}</td>
-                    <td style={{ color: "var(--text-muted)", fontSize: 12 }}>{format(new Date(p.fetchedAt), "MMM d, yyyy")}</td>
-                    <td style={{ textAlign: "right" }}>
-                      <div style={{ display: "flex", alignItems: "center", gap: 4, justifyContent: "flex-end" }}>
-                        <button onClick={() => setPerfProfile(p)} title="View Performance" style={{ padding: 6, borderRadius: "var(--radius-sm)", color: "var(--accent)", transition: "all 0.12s" }}>
-                          <ArrowUpRight style={{ width: 14, height: 14 }} />
-                        </button>
-                        <button onClick={() => handleDelete(p.id)} disabled={deleting === p.id} title="Delete profile" style={{ padding: 6, borderRadius: "var(--radius-sm)", color: "var(--text-muted)", transition: "all 0.12s" }}>
-                          {deleting === p.id ? <Loader2 className="anim-spin" style={{ width: 14, height: 14 }} /> : <Trash2 style={{ width: 14, height: 14 }} />}
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </div>
-      )}
-
-      {/* Performance Modal */}
-      {perfProfile && (
-        <PerformanceModal 
-          profile={perfProfile} 
-          onClose={() => setPerfProfile(null)} 
-        />
-      )}
-    </div>
-  );
-}
-
-function PerformanceModal({ profile, onClose }: { profile: any, onClose: () => void }) {
-  const [data, setData] = useState<any>(null);
-  const [keywords, setKeywords] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState<string>("overview");
-  const [error, setError] = useState<string | null>(null);
-
-  useEffect(() => {
-    async function loadData() {
-      setLoading(true);
-      try {
-        const [perfRes, keyRes] = await Promise.all([
-          fetch(`/api/profiles/${profile.id}/performance`),
-          fetch(`/api/profiles/${profile.id}/keywords`)
-        ]);
-        
-        const perfData = await perfRes.json();
-        const keyData = await keyRes.json();
-        
-        setData(perfData.data);
-        setKeywords(keyData.data || []);
-      } catch (e) {
-        setError("Failed to load insights");
-      }
-      setLoading(false);
-    }
-    loadData();
-  }, [profile.id]);
-
-  const tabs = [
-    { id: "overview", label: "Overview" },
-    { id: "calls", label: "Calls" },
-    { id: "directions", label: "Directions" },
-    { id: "website", label: "Website Clicks" },
-    { id: "keywords", label: "Keywords" },
-  ];
-
-  return (
-    <div className="modal-overlay anim-fade">
-      <div className="modal-content anim-scale" style={{ maxWidth: 650, height: '85vh' }}>
-        <div className="modal-header" style={{ paddingBottom: 0 }}>
-          <div style={{ paddingBottom: 16 }}>
-            <h2 className="text-2xl font-black text-slate-900 tracking-tight">{profile.name}</h2>
-            <div className="flex items-center gap-2 mt-1">
-              <span className="flex h-2 w-2 rounded-full bg-emerald-500"></span>
-              <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Real-Time Google Performance</p>
-            </div>
-          </div>
-          <button onClick={onClose} className="p-2 hover:bg-slate-100 rounded-full transition-colors text-slate-400 absolute top-4 right-4">
-            <X className="w-5 h-5" />
-          </button>
-        </div>
-
-        {/* Tab Switcher */}
-        <div className="px-6 flex gap-1 border-b border-slate-100 bg-white sticky top-0 z-10">
-          {tabs.map(tab => (
-            <button 
-              key={tab.id}
-              onClick={() => setActiveTab(tab.id)}
-              className={`px-4 py-3 text-xs font-black uppercase tracking-wider transition-all border-b-2 ${activeTab === tab.id ? "border-indigo-600 text-indigo-600" : "border-transparent text-slate-400 hover:text-slate-600"}`}
-            >
-              {tab.label}
-            </button>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(300px, 1fr))", gap: 16 }}>
+          {profiles.map((p: Profile) => (
+            <ProfileCard key={p.id} profile={p} onDelete={handleDelete} deleting={deleting === p.id} />
           ))}
         </div>
-
-        <div className="modal-body" style={{ background: '#fcfdfe' }}>
-          {loading ? (
-            <div className="flex flex-col items-center justify-center py-24">
-              <Loader2 className="w-10 h-10 animate-spin text-indigo-600 mb-4" />
-              <p className="text-xs font-bold text-slate-400 tracking-widest uppercase">Fetching Data...</p>
-            </div>
-          ) : error ? (
-            <div className="bg-red-50 p-6 rounded-3xl text-red-600 text-sm flex items-center gap-4 border border-red-100">
-              <AlertCircle className="w-5 h-5" />
-              <div>
-                <p className="font-bold">Sync Failed</p>
-                <p className="opacity-80">{error}</p>
-              </div>
-            </div>
-          ) : (
-            <div className="anim-fade-up">
-              {activeTab === "overview" && (
-                <div className="space-y-6">
-                  <div className="bg-white p-8 rounded-[32px] border border-slate-100 shadow-sm text-center">
-                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Total Interactions</p>
-                    <p className="text-5xl font-black text-slate-900 tracking-tighter">
-                      {(Object.values(data || {}).reduce((a: any, b: any) => a + b, 0) as number)}
-                    </p>
-                    <p className="text-xs text-slate-500 mt-2">Combined views and clicks across Maps & Search</p>
-                  </div>
-                  
-                  <div className="grid grid-cols-2 gap-3">
-                    <StatCard label="Desktop Maps" value={data?.BUSINESS_IMPRESSIONS_DESKTOP_MAPS} icon="💻" />
-                    <StatCard label="Mobile Maps" value={data?.BUSINESS_IMPRESSIONS_MOBILE_MAPS} icon="📱" />
-                    <StatCard label="Desktop Search" value={data?.BUSINESS_IMPRESSIONS_DESKTOP_SEARCH} icon="🔍" />
-                    <StatCard label="Mobile Search" value={data?.BUSINESS_IMPRESSIONS_MOBILE_SEARCH} icon="✨" />
-                  </div>
-                </div>
-              )}
-
-              {activeTab === "calls" && <MetricDetail label="Phone Calls" value={data?.BUSINESS_PHONE_CALLS} icon="📞" />}
-              {activeTab === "directions" && <MetricDetail label="Direction Requests" value={data?.BUSINESS_DIRECTION_REQUESTS} icon="📍" />}
-              {activeTab === "website" && <MetricDetail label="Website Clicks" value={data?.BUSINESS_WEBSITE_CLICKS} icon="🌐" />}
-
-              {activeTab === "keywords" && (
-                <div className="space-y-2">
-                  {keywords.length > 0 ? (
-                    keywords.map((k, i) => (
-                      <div key={i} className="flex items-center justify-between p-4 rounded-2xl bg-white border border-slate-100 hover:border-indigo-100 transition-colors">
-                        <div className="flex items-center gap-3">
-                          <span className="w-6 text-xs font-black text-slate-300">{(i+1).toString().padStart(2, '0')}</span>
-                          <span className="text-sm font-bold text-slate-700 capitalize">{k.keyword}</span>
-                        </div>
-                        <div className="text-xs font-black text-indigo-600 bg-indigo-50 px-3 py-1 rounded-full">
-                          {k.count}
-                        </div>
-                      </div>
-                    ))
-                  ) : (
-                    <p className="text-center py-12 text-slate-400 italic">No search keyword data available.</p>
-                  )}
-                </div>
-              )}
-            </div>
-          )}
-        </div>
-
-        <div className="modal-footer" style={{ border: 'none', background: 'white' }}>
-          <button onClick={onClose} className="w-full py-4 bg-slate-900 text-white font-black rounded-2xl hover:bg-slate-800 transition-all active:scale-95 shadow-lg shadow-slate-100">
-            Done
-          </button>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-function StatCard({ label, value, icon }: { label: string, value: number, icon: string }) {
-  return (
-    <div className="bg-white p-4 rounded-2xl border border-slate-100">
-      <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">{label}</p>
-      <div className="flex items-center justify-between">
-        <span className="text-xl font-black text-slate-900">{value || 0}</span>
-        <span className="text-lg grayscale">{icon}</span>
-      </div>
-    </div>
-  );
-}
-
-function MetricDetail({ label, value, icon }: { label: string, value: number, icon: string }) {
-  return (
-    <div className="flex flex-col items-center justify-center py-12 bg-white rounded-[32px] border border-slate-100 shadow-sm">
-      <div className="w-20 h-20 bg-indigo-50 rounded-[24px] flex items-center justify-center text-3xl mb-6">
-        {icon}
-      </div>
-      <h3 className="text-sm font-black text-slate-400 uppercase tracking-widest mb-2">{label}</h3>
-      <p className="text-6xl font-black text-slate-900 tracking-tighter">{value || 0}</p>
-      <p className="text-xs text-slate-500 mt-4">Direct customer interactions in the last 30 days</p>
+      )}
     </div>
   );
 }

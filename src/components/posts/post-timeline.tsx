@@ -14,6 +14,7 @@ interface PostSlot {
 interface Props {
   onDateSelect?: (date: string) => void;
   selectedDate?: string;
+  profileId?: string;
 }
 
 const statusConfig = {
@@ -23,14 +24,15 @@ const statusConfig = {
   FAILED:     { label: "Failed",    color: "#d93025", bg: "#fce8e6", dot: "#d93025" },
 };
 
-export function PostTimeline({ onDateSelect, selectedDate }: Props) {
+export function PostTimeline({ onDateSelect, selectedDate, profileId }: Props) {
   const [slots, setSlots] = useState<PostSlot[]>([]);
   const [activeFilter, setActiveFilter] = useState<string>("ALL");
   const scrollRef = useRef<HTMLDivElement>(null);
   const now = new Date();
 
   useEffect(() => {
-    fetch("/api/posts")
+    const url = profileId ? `/api/posts?profileId=${profileId}` : "/api/posts";
+    fetch(url)
       .then(r => r.ok ? r.json() : { data: [] })
       .then(d => {
         const mapped: PostSlot[] = (d.data || []).map((p: any) => ({
@@ -40,7 +42,7 @@ export function PostTimeline({ onDateSelect, selectedDate }: Props) {
         setSlots(mapped);
       })
       .catch(() => {});
-  }, []);
+  }, [profileId]);
 
   // Generate 52 days: 7 past + today + 44 future
   const days = [];

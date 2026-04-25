@@ -40,10 +40,6 @@ export default async function DashboardPage() {
           <h1 className="page-title">Hey, {name} 👋</h1>
           <p className="page-subtitle">Here's what's happening with your Google Business profiles today.</p>
         </div>
-        <Link href="/posts/new" className="btn btn-primary">
-          <Plus style={{ width: 16, height: 16 }} strokeWidth={2.5} />
-          Create New Post
-        </Link>
       </div>
 
       {user?.role === "AGENCY_OWNER" && !(session as any)?.accessToken && (
