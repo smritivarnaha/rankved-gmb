@@ -536,7 +536,19 @@ export default function ProfileDetailPage() {
             )}
           </div>
         </div>
-      </div>
+        </div>
+      )}
+
+      <AiGenerationModal 
+        locationId={profile.id}
+        isOpen={isAiModalOpen}
+        onClose={() => setIsAiModalOpen(false)}
+        onGenerated={() => {
+          mutatePosts();
+          setActiveTab("POSTS");
+          setStatusFilter("DRAFT");
+        }}
+      />
     </div>
   );
 }

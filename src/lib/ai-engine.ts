@@ -87,7 +87,7 @@ export async function generatePostImage(prompt: string, openaiKey: string): Prom
     quality: "standard",
   });
 
-  return response.data[0].url || "";
+  return response.data?.[0]?.url || "";
 }
 
 /**

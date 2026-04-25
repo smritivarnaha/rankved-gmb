@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/lib/auth";
+import prisma from "@/lib/prisma";
 import { generatePostContent, generatePostImage } from "@/lib/ai-engine";
 
 export async function POST(req: NextRequest) {
