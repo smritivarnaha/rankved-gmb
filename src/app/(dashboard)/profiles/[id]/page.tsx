@@ -66,7 +66,7 @@ export default function ProfileDetailPage() {
 
       {/* Profile header */}
       <div className="bg-white border border-[var(--border)] rounded-lg p-6">
-        <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-4">
+        <div className="flex flex-wrap items-start justify-between gap-4">
           <div>
             <div className="flex items-center gap-3 mb-3">
               <div className="w-10 h-10 rounded-lg bg-[var(--bg-tertiary)] flex items-center justify-center">
@@ -95,9 +95,7 @@ export default function ProfileDetailPage() {
                   <Phone className="w-3.5 h-3.5 text-[var(--text-tertiary)]" />{profile.phone}
                 </span>
               )}
-              <span className="flex items-center gap-1.5">
-                <Building2 className="w-3.5 h-3.5 text-[var(--text-tertiary)]" />{profile.accountName}
-              </span>
+
               {profile.website && (
                 <a href={profile.website} target="_blank" className="flex items-center gap-1.5 text-[var(--accent)] hover:underline">
                   <ExternalLink className="w-3.5 h-3.5" />{profile.website}
