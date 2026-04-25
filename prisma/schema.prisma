@@ -75,6 +75,7 @@ model User {
   sessions        Session[]
   clients         Client[]
   posts           Post[]
+  apiKeys         ApiKey[]
   createdAt       DateTime    @default(now())
   updatedAt       DateTime    @updatedAt
 }
@@ -155,4 +156,23 @@ model Post {
   @@index([status, scheduledAt])
   @@index([locationId])
   @@index([userId])
+}
+
+// ─── API Keys (for n8n / external integrations) ──────────
+model ApiKey {
+  id          String    @id @default(cuid())
+  label       String                          // e.g. "n8n Production"
+  keyHash     String    @unique               // SHA-256 of the raw key (never store raw)
+  keyPrefix   String                          // First 8 chars for display: "rvk_abc1..."
+  userId      String
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  scopes      String    @default("posts:write,profiles:read")  // comma-separated
+  lastUsedAt  DateTime?
+  usageCount  Int       @default(0)
+  isActive    Boolean   @default(true)
+  expiresAt   DateTime?
+  createdAt   DateTime  @default(now())
+
+  @@index([userId])
+  @@index([keyHash])
 }

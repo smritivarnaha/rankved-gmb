@@ -6,7 +6,7 @@ import { usePathname } from "next/navigation";
 import { useSession } from "next-auth/react";
 import {
   LayoutDashboard, CalendarDays, Settings, MapPin,
-  FileText, Users, Shield, BarChart3
+  FileText, Users, Shield, BarChart3, Key
 } from "lucide-react";
 
 const adminNav = [
@@ -16,6 +16,7 @@ const adminNav = [
   { name: "Posts",       href: "/posts",       icon: FileText },
   { name: "Calendar",    href: "/calendar",    icon: CalendarDays },
   { name: "Team",        href: "/team",        icon: Users },
+  { name: "API Keys",    href: "/api-keys",    icon: Key },
   { name: "Settings",    href: "/settings",    icon: Settings },
 ];
 
