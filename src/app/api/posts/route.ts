@@ -44,20 +44,24 @@ export async function POST(req: NextRequest) {
 
   try {
     const body = await req.json();
+    const profileId = body.profileId || body.locationId;
+    const imageUrl = body.imageUrl || body.mediaUrl;
+
+    if (!profileId) return NextResponse.json({ error: "Profile/Location ID is required" }, { status: 400 });
 
     // Always save to DB first (as DRAFT or SCHEDULED)
     const initialStatus = body.status === "PUBLISHED" ? "DRAFT" : (body.status || "DRAFT");
 
     const post = await createPost(
       {
-        profileId: body.profileId,
+        profileId,
         profileName: body.profileName || "",
         clientName: body.clientName || "",
         summary: body.summary,
         topicType: body.topicType || "STANDARD",
         ctaType: body.ctaType || "",
         ctaUrl: body.ctaUrl || "",
-        imageUrl: body.imageUrl || null,
+        imageUrl: imageUrl || null,
         geoLat: body.geoLat || "",
         geoLng: body.geoLng || "",
         eventTitle: body.eventTitle || "",

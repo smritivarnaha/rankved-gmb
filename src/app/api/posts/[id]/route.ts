@@ -34,15 +34,18 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
     const requestedStatus = body.status;
     const initialStatus = requestedStatus === "PUBLISHED" ? "DRAFT" : requestedStatus;
 
+    const profileId = body.profileId || body.locationId;
+    const imageUrl = body.imageUrl || body.mediaUrl;
+
     const post = await updatePost(id, {
-      profileId: body.profileId,
+      profileId,
       profileName: body.profileName,
       clientName: body.clientName,
       summary: body.summary,
       topicType: body.topicType,
       ctaType: body.ctaType,
       ctaUrl: body.ctaUrl,
-      imageUrl: body.imageUrl,
+      imageUrl: imageUrl,
       geoLat: body.geoLat,
       geoLng: body.geoLng,
       eventTitle: body.eventTitle,
