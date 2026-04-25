@@ -9,7 +9,13 @@ export async function GET(req: NextRequest) {
 
   const user = await prisma.user.findUnique({
     where: { email: session.user?.email || "" },
-    select: { anthropicApiKey: true, openaiApiKey: true, geminiApiKey: true }
+    select: { 
+      anthropicApiKey: true, 
+      openaiApiKey: true, 
+      geminiApiKey: true,
+      defaultAiContentProvider: true,
+      defaultAiImageProvider: true
+    }
   });
 
   return NextResponse.json(user);
@@ -27,6 +33,8 @@ export async function POST(req: NextRequest) {
       anthropicApiKey: body.anthropicApiKey,
       openaiApiKey:    body.openaiApiKey,
       geminiApiKey:    body.geminiApiKey,
+      defaultAiContentProvider: body.defaultAiContentProvider,
+      defaultAiImageProvider:   body.defaultAiImageProvider,
     }
   });
 

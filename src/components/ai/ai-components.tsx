@@ -106,6 +106,7 @@ export function AiSettingsTab({ locationId }: { locationId: string }) {
                 onChange={e => setFormData({ ...formData, aiContentProvider: e.target.value })}
                 style={{ width: "100%", padding: 10, borderRadius: 8, border: "1px solid #e2e8f0", fontSize: 13, fontFamily: "inherit" }}
               >
+                <option value="DEFAULT">System Default</option>
                 <option value="CLAUDE">Claude 3.5 Sonnet</option>
                 <option value="GPT">GPT-4o</option>
                 <option value="GEMINI">Gemini 1.5 Pro</option>
@@ -118,6 +119,7 @@ export function AiSettingsTab({ locationId }: { locationId: string }) {
                 onChange={e => setFormData({ ...formData, aiImageProvider: e.target.value })}
                 style={{ width: "100%", padding: 10, borderRadius: 8, border: "1px solid #e2e8f0", fontSize: 13, fontFamily: "inherit" }}
               >
+                <option value="DEFAULT">System Default</option>
                 <option value="DALL-E-3">DALL-E 3</option>
               </select>
             </div>
@@ -251,7 +253,7 @@ export function AiGenerationModal({
             <div style={{ textAlign: "center", padding: "60px 0" }}>
               <Loader2 size={48} className="anim-spin" color="#2563eb" style={{ margin: "0 auto 20px" }} />
               <p style={{ fontSize: 15, fontWeight: 600, color: "#0f172a" }}>AI is thinking...</p>
-              <p style={{ fontSize: 13, color: "#94a3b8", marginTop: 4 }}>Claude is drafting content and DALL-E is painting an image.</p>
+              <p style={{ fontSize: 13, color: "#94a3b8", marginTop: 4 }}>AI is drafting content and painting an image based on your instructions.</p>
             </div>
           )}
 

@@ -231,16 +231,24 @@ export default function SettingsPage() {
 function AiSettingsCard() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const [keys, setKeys] = useState({ anthropicApiKey: "", openaiApiKey: "", geminiApiKey: "" });
+  const [settings, setSettings] = useState({ 
+    anthropicApiKey: "", 
+    openaiApiKey: "", 
+    geminiApiKey: "",
+    defaultAiContentProvider: "CLAUDE",
+    defaultAiImageProvider: "DALL-E-3"
+  });
   const [success, setSuccess] = useState(false);
 
   useEffect(() => {
     fetch("/api/user/settings")
       .then(r => r.json())
-      .then(d => setKeys({ 
+      .then(d => setSettings({ 
         anthropicApiKey: d.anthropicApiKey || "", 
         openaiApiKey: d.openaiApiKey || "",
-        geminiApiKey: d.geminiApiKey || ""
+        geminiApiKey: d.geminiApiKey || "",
+        defaultAiContentProvider: d.defaultAiContentProvider || "CLAUDE",
+        defaultAiImageProvider: d.defaultAiImageProvider || "DALL-E-3"
       }))
       .finally(() => setLoading(false));
   }, []);
@@ -251,7 +259,7 @@ function AiSettingsCard() {
     const res = await fetch("/api/user/settings", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(keys),
+      body: JSON.stringify(settings),
     });
     if (res.ok) {
       setSuccess(true);
@@ -277,8 +285,8 @@ function AiSettingsCard() {
           <label style={{ display: "block", fontSize: 11, fontWeight: 700, color: "var(--text-secondary)", marginBottom: 6, textTransform: "uppercase" }}>Anthropic API Key (Claude)</label>
           <input 
             type="password"
-            value={keys.anthropicApiKey}
-            onChange={e => setKeys({ ...keys, anthropicApiKey: e.target.value })}
+            value={settings.anthropicApiKey}
+            onChange={e => setSettings({ ...settings, anthropicApiKey: e.target.value })}
             placeholder="sk-ant-..."
             style={{ width: "100%", padding: "8px 12px", borderRadius: 8, border: "1px solid var(--border)", fontSize: 13, background: "var(--bg-elevated)" }}
           />
@@ -288,8 +296,8 @@ function AiSettingsCard() {
           <label style={{ display: "block", fontSize: 11, fontWeight: 700, color: "var(--text-secondary)", marginBottom: 6, textTransform: "uppercase" }}>OpenAI API Key (GPT & DALL-E)</label>
           <input 
             type="password"
-            value={keys.openaiApiKey}
-            onChange={e => setKeys({ ...keys, openaiApiKey: e.target.value })}
+            value={settings.openaiApiKey}
+            onChange={e => setSettings({ ...settings, openaiApiKey: e.target.value })}
             placeholder="sk-..."
             style={{ width: "100%", padding: "8px 12px", borderRadius: 8, border: "1px solid var(--border)", fontSize: 13, background: "var(--bg-elevated)" }}
           />
@@ -299,11 +307,36 @@ function AiSettingsCard() {
           <label style={{ display: "block", fontSize: 11, fontWeight: 700, color: "var(--text-secondary)", marginBottom: 6, textTransform: "uppercase" }}>Google Gemini API Key</label>
           <input 
             type="password"
-            value={keys.geminiApiKey}
-            onChange={e => setKeys({ ...keys, geminiApiKey: e.target.value })}
+            value={settings.geminiApiKey}
+            onChange={e => setSettings({ ...settings, geminiApiKey: e.target.value })}
             placeholder="AIza..."
             style={{ width: "100%", padding: "8px 12px", borderRadius: 8, border: "1px solid var(--border)", fontSize: 13, background: "var(--bg-elevated)" }}
           />
+        </div>
+
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16, marginTop: 4 }}>
+          <div>
+            <label style={{ display: "block", fontSize: 11, fontWeight: 700, color: "var(--text-secondary)", marginBottom: 6, textTransform: "uppercase" }}>Default Content Model</label>
+            <select 
+              value={settings.defaultAiContentProvider}
+              onChange={e => setSettings({ ...settings, defaultAiContentProvider: e.target.value })}
+              style={{ width: "100%", padding: "8px 12px", borderRadius: 8, border: "1px solid var(--border)", fontSize: 13, background: "var(--bg-elevated)" }}
+            >
+              <option value="CLAUDE">Claude 3.5 Sonnet</option>
+              <option value="GPT">GPT-4o</option>
+              <option value="GEMINI">Gemini 1.5 Pro</option>
+            </select>
+          </div>
+          <div>
+            <label style={{ display: "block", fontSize: 11, fontWeight: 700, color: "var(--text-secondary)", marginBottom: 6, textTransform: "uppercase" }}>Default Image Model</label>
+            <select 
+              value={settings.defaultAiImageProvider}
+              onChange={e => setSettings({ ...settings, defaultAiImageProvider: e.target.value })}
+              style={{ width: "100%", padding: "8px 12px", borderRadius: 8, border: "1px solid var(--border)", fontSize: 13, background: "var(--bg-elevated)" }}
+            >
+              <option value="DALL-E-3">DALL-E 3</option>
+            </select>
+          </div>
         </div>
 
         <button 

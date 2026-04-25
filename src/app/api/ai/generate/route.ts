@@ -8,10 +8,13 @@ export async function POST(req: NextRequest) {
   const session = await getServerSession(authOptions);
   if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-  // Fetch the user to get their stored API keys
+  // Fetch the user to get their stored API keys and defaults
   const user = await prisma.user.findUnique({
     where: { email: session.user?.email || "" },
-    select: { anthropicApiKey: true, openaiApiKey: true, geminiApiKey: true }
+    select: { 
+      anthropicApiKey: true, openaiApiKey: true, geminiApiKey: true,
+      defaultAiContentProvider: true, defaultAiImageProvider: true 
+    }
   });
 
   const apiKeys = {
@@ -28,8 +31,20 @@ export async function POST(req: NextRequest) {
     const { locationId } = await req.json();
     if (!locationId) return NextResponse.json({ error: "locationId is required" }, { status: 400 });
 
+    const location = await prisma.location.findUnique({ where: { id: locationId } });
+    if (!location) return NextResponse.json({ error: "Location not found" }, { status: 404 });
+
+    // Resolve Providers
+    const contentProvider = location.aiContentProvider === "DEFAULT" || !location.aiContentProvider
+      ? (user?.defaultAiContentProvider || "CLAUDE")
+      : location.aiContentProvider;
+    
+    const imageProvider = location.aiImageProvider === "DEFAULT" || !location.aiImageProvider
+      ? (user?.defaultAiImageProvider || "DALL-E-3")
+      : location.aiImageProvider;
+
     // Step 1: Generate Content & Prompt
-    const postData = await generatePostContent(locationId, apiKeys);
+    const postData = await generatePostContent(locationId, apiKeys, contentProvider);
 
     // Step 2: Generate Image
     const imageUrl = await generatePostImage(postData.imagePrompt, apiKeys.openai);

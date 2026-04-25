@@ -21,7 +21,8 @@ export interface GeneratedPost {
  */
 export async function generatePostContent(
   locationId: string, 
-  apiKeys: { anthropic?: string; openai?: string; gemini?: string }
+  apiKeys: { anthropic?: string; openai?: string; gemini?: string },
+  provider: string = "CLAUDE"
 ): Promise<GeneratedPost> {
   const location = await prisma.location.findUnique({
     where: { id: locationId },
@@ -30,7 +31,6 @@ export async function generatePostContent(
 
   if (!location) throw new Error("Location not found");
 
-  const provider = location.aiContentProvider || "CLAUDE";
   const keyword = await consumeNextKeyword(locationId);
 
   const systemPrompt = `
