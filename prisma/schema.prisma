@@ -65,6 +65,13 @@ model User {
 
   defaultAiContentProvider String @default("CLAUDE")
   defaultAiImageProvider   String @default("DALL-E-3")
+
+  // Custom Model IDs
+  anthropicModel      String @default("claude-3-5-sonnet-20241022")
+  openaiContentModel  String @default("gpt-4o")
+  openaiImageModel    String @default("dall-e-3")
+  geminiContentModel  String @default("gemini-1.5-flash")
+  geminiImageModel    String @default("imagen-3.0-generate-001")
   
   // Hierarchy
   ownerId         String?

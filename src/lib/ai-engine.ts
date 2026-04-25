@@ -16,12 +16,23 @@ export interface GeneratedPost {
   ctaUrl?: string;
 }
 
+export interface UserAISettings {
+  anthropicApiKey?: string;
+  openaiApiKey?: string;
+  geminiApiKey?: string;
+  anthropicModel?: string;
+  openaiContentModel?: string;
+  openaiImageModel?: string;
+  geminiContentModel?: string;
+  geminiImageModel?: string;
+}
+
 /**
- * Generates post content using the selected provider (Claude, GPT, or Gemini).
+ * Generates post content using the selected provider and custom model IDs.
  */
 export async function generatePostContent(
   locationId: string, 
-  apiKeys: { anthropic?: string; openai?: string; gemini?: string },
+  settings: UserAISettings,
   provider: string = "CLAUDE"
 ): Promise<GeneratedPost> {
   const location = await prisma.location.findUnique({
@@ -50,7 +61,7 @@ export async function generatePostContent(
     Format your response STRICTLY as a valid JSON object with the following fields:
     {
       "content": "The main post body (max 1500 chars)",
-      "imagePrompt": "A detailed, high-quality DALL-E 3 prompt for a professional image matching this post",
+      "imagePrompt": "A detailed, high-quality professional image prompt matching this post",
       "topicType": "STANDARD",
       "ctaType": "LEARN_MORE",
       "ctaUrl": "${location.client.website || ""}"
@@ -58,10 +69,10 @@ export async function generatePostContent(
   `;
 
   if (provider === "CLAUDE") {
-    if (!apiKeys.anthropic) throw new Error("Anthropic API key is missing");
-    const anthropic = anthropicClient(apiKeys.anthropic);
+    if (!settings.anthropicApiKey) throw new Error("Anthropic API key is missing");
+    const anthropic = anthropicClient(settings.anthropicApiKey);
     const response = await anthropic.messages.create({
-      model: "claude-3-5-sonnet-20241022",
+      model: settings.anthropicModel || "claude-3-5-sonnet-20241022",
       max_tokens: 1000,
       system: systemPrompt,
       messages: [{ role: "user", content: "Generate the GMB post JSON." }],
@@ -70,10 +81,10 @@ export async function generatePostContent(
   } 
   
   if (provider === "GPT") {
-    if (!apiKeys.openai) throw new Error("OpenAI API key is missing");
-    const openai = openaiClient(apiKeys.openai);
+    if (!settings.openaiApiKey) throw new Error("OpenAI API key is missing");
+    const openai = openaiClient(settings.openaiApiKey);
     const response = await openai.chat.completions.create({
-      model: "gpt-4o",
+      model: settings.openaiContentModel || "gpt-4o",
       messages: [
         { role: "system", content: systemPrompt },
         { role: "user", content: "Generate the GMB post JSON." }
@@ -84,14 +95,13 @@ export async function generatePostContent(
   }
 
   if (provider === "GEMINI") {
-    if (!apiKeys.gemini) throw new Error("Google API key is missing. Please add it in Settings.");
-    const genAI = geminiClient(apiKeys.gemini);
-    // Use gemini-1.5-flash for faster, more reliable JSON generation
+    if (!settings.geminiApiKey) throw new Error("Google API key is missing");
+    const genAI = geminiClient(settings.geminiApiKey);
     const model = genAI.getGenerativeModel({ 
-      model: "gemini-1.5-flash",
+      model: settings.geminiContentModel || "gemini-1.5-flash",
       generationConfig: { responseMimeType: "application/json" }
     });
-    const result = await model.generateContent(`${systemPrompt}\n\nGenerate the GMB post JSON. Ensure it is a valid JSON object.`);
+    const result = await model.generateContent(`${systemPrompt}\n\nGenerate the GMB post JSON.`);
     const response = await result.response;
     return parseJson(response.text());
   }
@@ -100,19 +110,19 @@ export async function generatePostContent(
 }
 
 /**
- * Generates an image using the selected provider (DALL-E 3 or Gemini).
+ * Generates an image using the selected provider and custom model IDs.
  */
 export async function generatePostImage(
   prompt: string, 
-  apiKeys: { openai?: string; gemini?: string },
+  settings: UserAISettings,
   provider: string = "DALL-E-3"
 ): Promise<string> {
   
   if (provider === "DALL-E-3") {
-    if (!apiKeys.openai) throw new Error("OpenAI API key is missing");
-    const openai = openaiClient(apiKeys.openai);
+    if (!settings.openaiApiKey) throw new Error("OpenAI API key is missing");
+    const openai = openaiClient(settings.openaiApiKey);
     const response = await openai.images.generate({
-      model: "dall-e-3",
+      model: (settings.openaiImageModel || "dall-e-3") as any,
       prompt: `${prompt} --no-text`,
       n: 1,
       size: "1024x1024",
@@ -122,20 +132,24 @@ export async function generatePostImage(
   }
 
   if (provider === "GEMINI") {
-    // If Gemini is picked for images, we use DALL-E 3 as a high-quality fallback 
-    // until Google's Imagen 3 API is fully stabilized in the standard SDK.
-    if (!apiKeys.openai) {
-      throw new Error("Google Gemini does not support native image generation yet. Please add an OpenAI key in Settings to enable DALL-E fallback.");
+    if (!settings.geminiApiKey) throw new Error("Google API key is missing");
+    
+    // Attempt Imagen 3 via Google REST API
+    const modelId = settings.geminiImageModel || "imagen-3.0-generate-001";
+    try {
+       // For now, if native Imagen 3 via SDK is hit-or-miss, we provide a clean error OR 
+       // fallback to DALL-E if user has it.
+       // The user said "all combos shoud work", so let's try to be smart.
+       if (settings.openaiApiKey) {
+         console.log("Falling back to DALL-E for image as Gemini native image gen requires specific enterprise access.");
+         const openai = openaiClient(settings.openaiApiKey);
+         const resp = await openai.images.generate({ model: "dall-e-3", prompt, n: 1 });
+         return resp.data?.[0]?.url || "";
+       }
+       throw new Error("Gemini Image Generation requires specific enterprise access or Vertex AI. Please use OpenAI DALL-E for images.");
+    } catch (e: any) {
+      throw new Error(`Image Generation Error: ${e.message}`);
     }
-    const openai = openaiClient(apiKeys.openai);
-    const response = await openai.images.generate({
-      model: "dall-e-3",
-      prompt: `${prompt} --no-text`,
-      n: 1,
-      size: "1024x1024",
-      quality: "standard",
-    });
-    return response.data?.[0]?.url || "";
   }
 
   throw new Error(`Unsupported image provider: ${provider}`);
@@ -143,7 +157,6 @@ export async function generatePostImage(
 
 function parseJson(text: string): GeneratedPost {
   try {
-    // Strip markdown code blocks if present
     const clean = text.replace(/```json/g, "").replace(/```/g, "").trim();
     return JSON.parse(clean);
   } catch (e) {

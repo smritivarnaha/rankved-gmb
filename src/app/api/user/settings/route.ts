@@ -14,7 +14,12 @@ export async function GET(req: NextRequest) {
       openaiApiKey: true, 
       geminiApiKey: true,
       defaultAiContentProvider: true,
-      defaultAiImageProvider: true
+      defaultAiImageProvider: true,
+      anthropicModel: true,
+      openaiContentModel: true,
+      openaiImageModel: true,
+      geminiContentModel: true,
+      geminiImageModel: true,
     }
   });
 
@@ -35,6 +40,11 @@ export async function POST(req: NextRequest) {
       geminiApiKey:    body.geminiApiKey,
       defaultAiContentProvider: body.defaultAiContentProvider,
       defaultAiImageProvider:   body.defaultAiImageProvider,
+      anthropicModel:     body.anthropicModel,
+      openaiContentModel: body.openaiContentModel,
+      openaiImageModel:   body.openaiImageModel,
+      geminiContentModel: body.geminiContentModel,
+      geminiImageModel:   body.geminiImageModel,
     }
   });
 
