@@ -70,9 +70,7 @@ input, select, textarea { font-family: inherit; border: none; outline: none; }
   inset: 0;
   width: 100vw;
   height: 100vh;
-  background: rgba(15, 23, 42, 0.6);
-  backdrop-filter: blur(8px);
-  -webkit-backdrop-filter: blur(8px);
+  background: rgba(15, 23, 42, 0.75);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -478,9 +476,13 @@ input, select, textarea { font-family: inherit; border: none; outline: none; }
 }
 .btn-primary {
   background: var(--accent);
-  color: white;
+  color: #ffffff !important;
 }
-.btn-primary:hover { background: var(--accent-hover); box-shadow: 0 1px 2px 0 rgba(60,64,67,0.3), 0 1px 3px 1px rgba(60,64,67,0.15); }
+.btn-primary:hover { 
+  background: var(--accent-hover); 
+  color: #ffffff !important;
+  box-shadow: 0 4px 12px rgba(37, 99, 235, 0.3);
+}
 .btn-outline {
   background: transparent;
   color: var(--accent);

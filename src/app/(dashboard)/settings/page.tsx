@@ -293,43 +293,6 @@ function AiSettingsCard() {
           </div>
         </div>
 
-        {/* Step 3: Specific Model Strings */}
-        <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
-          <h3 style={{ fontSize: 12, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.05em", color: "var(--text-secondary)", display: "flex", alignItems: "center", gap: 8 }}>
-            <Cpu size={14} /> 3. Advanced Model IDs
-          </h3>
-          <div style={{ padding: 20, background: "rgba(37, 99, 235, 0.03)", borderRadius: 16, border: "1px dashed #bfdbfe" }}>
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 24 }}>
-              <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-                <p style={{ fontSize: 11, fontWeight: 600, color: "#3b82f6", display: "flex", alignItems: "center", gap: 4 }}><Sparkles size={12} /> Content Models</p>
-                <div className="form-group">
-                  <label style={{ display: "block", fontSize: 11, color: "#64748b", marginBottom: 4 }}>Anthropic String</label>
-                  <input value={settings.anthropicModel} onChange={e => setSettings({ ...settings, anthropicModel: e.target.value })} style={{ width: "100%", padding: "10px", borderRadius: 8, border: "1px solid #e2e8f0", fontSize: 13 }} />
-                </div>
-                <div className="form-group">
-                  <label style={{ display: "block", fontSize: 11, color: "#64748b", marginBottom: 4 }}>OpenAI String</label>
-                  <input value={settings.openaiContentModel} onChange={e => setSettings({ ...settings, openaiContentModel: e.target.value })} style={{ width: "100%", padding: "10px", borderRadius: 8, border: "1px solid #e2e8f0", fontSize: 13 }} />
-                </div>
-                <div className="form-group">
-                  <label style={{ display: "block", fontSize: 11, color: "#64748b", marginBottom: 4 }}>Google String</label>
-                  <input value={settings.geminiContentModel} onChange={e => setSettings({ ...settings, geminiContentModel: e.target.value })} style={{ width: "100%", padding: "10px", borderRadius: 8, border: "1px solid #e2e8f0", fontSize: 13 }} />
-                </div>
-              </div>
-              <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-                <p style={{ fontSize: 11, fontWeight: 600, color: "#3b82f6", display: "flex", alignItems: "center", gap: 4 }}><ImageIcon size={12} /> Image Models</p>
-                <div className="form-group">
-                  <label style={{ display: "block", fontSize: 11, color: "#64748b", marginBottom: 4 }}>DALL-E String</label>
-                  <input value={settings.openaiImageModel} onChange={e => setSettings({ ...settings, openaiImageModel: e.target.value })} style={{ width: "100%", padding: "10px", borderRadius: 8, border: "1px solid #e2e8f0", fontSize: 13 }} />
-                </div>
-                <div className="form-group">
-                  <label style={{ display: "block", fontSize: 11, color: "#64748b", marginBottom: 4 }}>Imagen String</label>
-                  <input value={settings.geminiImageModel} onChange={e => setSettings({ ...settings, geminiImageModel: e.target.value })} style={{ width: "100%", padding: "10px", borderRadius: 8, border: "1px solid #e2e8f0", fontSize: 13 }} />
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-
         <div style={{ display: "flex", justifyContent: "flex-end", marginTop: 10 }}>
           <button 
             onClick={handleSave} 
