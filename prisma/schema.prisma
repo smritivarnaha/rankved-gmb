@@ -132,6 +132,7 @@ model Location {
   
   aiContentProvider      String    @default("DEFAULT") // CLAUDE, GPT, GEMINI
   aiImageProvider        String    @default("DEFAULT") // DALL-E-3
+  aiImageEnabled         Boolean   @default(true)
   
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt

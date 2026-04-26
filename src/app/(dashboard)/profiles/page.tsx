@@ -3,8 +3,9 @@
 import Link from "next/link";
 import { format } from "date-fns";
 import { useState } from "react";
-import { MapPin, Loader2, X, AlertCircle, CheckCircle2, RefreshCw, Plus, FileText, Clock, Send, Trash2 } from "lucide-react";
+import { MapPin, Loader2, X, AlertCircle, CheckCircle2, RefreshCw, Plus, FileText, Clock, Send, Trash2, Wand2 } from "lucide-react";
 import useSWR from "swr";
+import { AiGenerationModal } from "@/components/ai/ai-components";
 
 interface Profile {
   id: string;
@@ -18,7 +19,11 @@ interface Profile {
 
 const fetcher = (url: string) => fetch(url).then((res) => res.json());
 
-function ProfileCard({ profile, onDelete, deleting }: { profile: Profile; onDelete: (id: string) => void; deleting: boolean }) {
+function ProfileCard({ 
+  profile, onDelete, deleting, onAiCreate 
+}: { 
+  profile: Profile; onDelete: (id: string) => void; deleting: boolean; onAiCreate: (id: string) => void 
+}) {
   const { data: postsData } = useSWR(`/api/posts?profileId=${profile.id}`, fetcher, { revalidateOnFocus: false });
   const posts: any[] = postsData?.data || [];
 
@@ -111,16 +116,29 @@ function ProfileCard({ profile, onDelete, deleting }: { profile: Profile; onDele
           style={{ fontSize: 12, color: "var(--text-secondary)", display: "flex", alignItems: "center", gap: 4 }}>
           View history
         </Link>
-        <Link href={`/posts/new?profile=${profile.id}&from=profile`}
-          style={{
-            display: "inline-flex", alignItems: "center", gap: 6,
-            padding: "6px 14px", background: "var(--accent)", color: "#fff",
-            borderRadius: "var(--radius-sm)", fontSize: 13, fontWeight: 600,
-            transition: "background 0.12s",
-          }}>
-          <Plus style={{ width: 14, height: 14 }} />
-          Create Post
-        </Link>
+        <div style={{ display: "flex", gap: 8 }}>
+          <button 
+            onClick={() => onAiCreate(profile.id)}
+            style={{
+              display: "inline-flex", alignItems: "center", gap: 6,
+              padding: "6px 12px", background: "#f8fafc", color: "#2563eb",
+              border: "1px solid #dbeafe", borderRadius: "var(--radius-sm)", fontSize: 13, fontWeight: 600,
+              cursor: "pointer"
+            }}>
+            <Wand2 style={{ width: 14, height: 14 }} />
+            AI Create
+          </button>
+          <Link href={`/posts/new?profile=${profile.id}&from=profile`}
+            style={{
+              display: "inline-flex", alignItems: "center", gap: 6,
+              padding: "6px 14px", background: "var(--accent)", color: "#fff",
+              borderRadius: "var(--radius-sm)", fontSize: 13, fontWeight: 600,
+              transition: "background 0.12s",
+            }}>
+            <Plus style={{ width: 14, height: 14 }} />
+            Create Post
+          </Link>
+        </div>
       </div>
     </div>
   );
@@ -135,6 +153,7 @@ export default function ProfilesPage() {
   const profiles = data?.data || [];
   const [deleting, setDeleting] = useState<string | null>(null);
   const [message, setMessage] = useState<{ type: "success" | "error"; text: string } | null>(null);
+  const [aiLocationId, setAiLocationId] = useState<string | null>(null);
 
   async function handleDelete(id: string) {
     if (!confirm("Delete this profile? Any posts linked to it will lose their location reference.")) return;
@@ -196,10 +215,26 @@ export default function ProfilesPage() {
       ) : (
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(300px, 1fr))", gap: 16 }}>
           {profiles.map((p: Profile) => (
-            <ProfileCard key={p.id} profile={p} onDelete={handleDelete} deleting={deleting === p.id} />
+            <ProfileCard 
+              key={p.id} 
+              profile={p} 
+              onDelete={handleDelete} 
+              deleting={deleting === p.id} 
+              onAiCreate={setAiLocationId}
+            />
           ))}
         </div>
       )}
+
+      <AiGenerationModal 
+        locationId={aiLocationId || ""}
+        isOpen={!!aiLocationId}
+        onClose={() => setAiLocationId(null)}
+        onGenerated={() => {
+          mutate();
+          setAiLocationId(null);
+        }}
+      />
     </div>
   );
 }

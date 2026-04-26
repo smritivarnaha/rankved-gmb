@@ -20,6 +20,7 @@ export function AiSettingsTab({ locationId }: { locationId: string }) {
     aiCurrentSequenceIndex: 0,
     aiContentProvider: "CLAUDE",
     aiImageProvider: "DALL-E-3",
+    aiImageEnabled: true,
   });
 
   useEffect(() => {
@@ -33,6 +34,7 @@ export function AiSettingsTab({ locationId }: { locationId: string }) {
         aiCurrentSequenceIndex: settings.aiCurrentSequenceIndex || 0,
         aiContentProvider: settings.aiContentProvider || "CLAUDE",
         aiImageProvider: settings.aiImageProvider || "DALL-E-3",
+        aiImageEnabled: settings.aiImageEnabled ?? true,
       });
     }
   }, [settings]);
@@ -126,6 +128,19 @@ export function AiSettingsTab({ locationId }: { locationId: string }) {
             </div>
           </div>
 
+          <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "8px 0" }}>
+            <input 
+              type="checkbox"
+              id="aiImageEnabled"
+              checked={formData.aiImageEnabled}
+              onChange={e => setFormData({ ...formData, aiImageEnabled: e.target.checked })}
+              style={{ width: 16, height: 16, cursor: "pointer" }}
+            />
+            <label htmlFor="aiImageEnabled" style={{ fontSize: 13, fontWeight: 600, color: "#334155", cursor: "pointer" }}>
+              Enable Image Generation by Default
+            </label>
+          </div>
+
           <div>
             <label style={{ display: "block", fontSize: 12, fontWeight: 600, color: "#334155", marginBottom: 6 }}>Competitor Data (Reference Content)</label>
             <textarea 
@@ -166,6 +181,7 @@ export function AiGenerationModal({
   const [saving, setSaving] = useState(false);
   const [preview, setPreview] = useState<any>(null);
   const [error, setError] = useState<string | null>(null);
+  const [generationMode, setGenerationMode] = useState<"BOTH" | "CONTENT" | "IMAGE">("BOTH");
 
   const triggerGenerate = async () => {
     setGenerating(true);
@@ -174,7 +190,7 @@ export function AiGenerationModal({
       const res = await fetch("/api/ai/generate", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ locationId }),
+        body: JSON.stringify({ locationId, mode: generationMode }),
       });
       const data = await res.json();
       if (res.ok) setPreview(data);
@@ -239,13 +255,35 @@ export function AiGenerationModal({
               </div>
               <p style={{ fontSize: 15, fontWeight: 600, color: "#0f172a", marginBottom: 8 }}>Ready to generate?</p>
               <p style={{ fontSize: 13, color: "#64748b", marginBottom: 24, maxWidth: 400, margin: "0 auto 24px" }}>
-                The AI will use your profile instructions, competitor style, and keyword sequence to create a post and a professional image.
+                The AI will use your profile instructions, competitor style, and keyword sequence to create your post.
               </p>
+
+              <div style={{ display: "flex", justifyContent: "center", gap: 8, marginBottom: 24 }}>
+                {[
+                  { id: "BOTH", label: "Content & Image" },
+                  { id: "CONTENT", label: "Content Only" },
+                  { id: "IMAGE", label: "Image Only" },
+                ].map(mode => (
+                  <button
+                    key={mode.id}
+                    onClick={() => setGenerationMode(mode.id as any)}
+                    style={{
+                      padding: "8px 16px", borderRadius: 8, fontSize: 13, fontWeight: 600, cursor: "pointer",
+                      background: generationMode === mode.id ? "#0f172a" : "#fff",
+                      color: generationMode === mode.id ? "#fff" : "#64748b",
+                      border: "1px solid " + (generationMode === mode.id ? "#0f172a" : "#e2e8f0"),
+                    }}
+                  >
+                    {mode.label}
+                  </button>
+                ))}
+              </div>
+
               <button 
                 onClick={triggerGenerate}
                 style={{ background: "#2563eb", color: "#fff", padding: "10px 24px", borderRadius: 8, border: "none", fontSize: 14, fontWeight: 600, cursor: "pointer", display: "inline-flex", alignItems: "center", gap: 8 }}
               >
-                <Wand2 size={16} /> Generate Post
+                <Wand2 size={16} /> Generate {generationMode === "BOTH" ? "Post" : generationMode === "CONTENT" ? "Content" : "Image"}
               </button>
             </div>
           )}
@@ -269,34 +307,38 @@ export function AiGenerationModal({
           )}
 
           {preview && !generating && (
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 300px", gap: 24 }}>
-              <div>
-                <label style={{ display: "block", fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.05em", color: "#64748b", marginBottom: 8 }}>Generated Content</label>
-                <div style={{ padding: 16, background: "#f8fafc", border: "1px solid #e2e8f0", borderRadius: 10, fontSize: 14, lineHeight: 1.6, color: "#0f172a", whiteSpace: "pre-wrap" }}>
-                  {preview.content}
-                </div>
-                
-                <div style={{ marginTop: 20, display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
-                  <div>
-                    <label style={{ display: "block", fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.05em", color: "#64748b", marginBottom: 6 }}>Post Type</label>
-                    <div style={{ padding: "8px 12px", background: "#f1f5f9", borderRadius: 6, fontSize: 12, fontWeight: 600 }}>{preview.topicType}</div>
+            <div style={{ display: "grid", gridTemplateColumns: preview.imageUrl && preview.content ? "1fr 300px" : "1fr", gap: 24 }}>
+              {preview.content && (
+                <div>
+                  <label style={{ display: "block", fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.05em", color: "#64748b", marginBottom: 8 }}>Generated Content</label>
+                  <div style={{ padding: 16, background: "#f8fafc", border: "1px solid #e2e8f0", borderRadius: 10, fontSize: 14, lineHeight: 1.6, color: "#0f172a", whiteSpace: "pre-wrap" }}>
+                    {preview.content}
                   </div>
-                  <div>
-                    <label style={{ display: "block", fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.05em", color: "#64748b", marginBottom: 6 }}>Call to Action</label>
-                    <div style={{ padding: "8px 12px", background: "#f1f5f9", borderRadius: 6, fontSize: 12, fontWeight: 600 }}>{preview.ctaType || "None"}</div>
+                  
+                  <div style={{ marginTop: 20, display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
+                    <div>
+                      <label style={{ display: "block", fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.05em", color: "#64748b", marginBottom: 6 }}>Post Type</label>
+                      <div style={{ padding: "8px 12px", background: "#f1f5f9", borderRadius: 6, fontSize: 12, fontWeight: 600 }}>{preview.topicType}</div>
+                    </div>
+                    <div>
+                      <label style={{ display: "block", fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.05em", color: "#64748b", marginBottom: 6 }}>Call to Action</label>
+                      <div style={{ padding: "8px 12px", background: "#f1f5f9", borderRadius: 6, fontSize: 12, fontWeight: 600 }}>{preview.ctaType || "None"}</div>
+                    </div>
                   </div>
                 </div>
-              </div>
+              )}
 
-              <div>
-                <label style={{ display: "block", fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.05em", color: "#64748b", marginBottom: 8 }}>AI Image</label>
-                <div style={{ width: "100%", aspectRatio: "1/1", borderRadius: 10, background: "#f1f5f9", overflow: "hidden", border: "1px solid #e2e8f0" }}>
-                  <img src={preview.imageUrl} alt="AI Preview" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+              {preview.imageUrl && (
+                <div>
+                  <label style={{ display: "block", fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.05em", color: "#64748b", marginBottom: 8 }}>AI Image</label>
+                  <div style={{ width: "100%", aspectRatio: "1/1", borderRadius: 10, background: "#f1f5f9", overflow: "hidden", border: "1px solid #e2e8f0" }}>
+                    <img src={preview.imageUrl} alt="AI Preview" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                  </div>
+                  <p style={{ fontSize: 11, color: "#94a3b8", marginTop: 8, fontStyle: "italic" }}>
+                    AI generated image based on the content brief.
+                  </p>
                 </div>
-                <p style={{ fontSize: 11, color: "#94a3b8", marginTop: 8, fontStyle: "italic" }}>
-                  AI generated image based on the content brief.
-                </p>
-              </div>
+              )}
             </div>
           )}
         </div>
