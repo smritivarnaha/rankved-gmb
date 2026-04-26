@@ -112,10 +112,9 @@ function ProfileCard({
 
       {/* Footer */}
       <div style={{ padding: "12px 16px", display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8, marginTop: "auto" }}>
-        <Link href={`/profiles/${profile.id}`}
-          style={{ fontSize: 12, color: "var(--text-secondary)", display: "flex", alignItems: "center", gap: 5 }}>
-          <Clock style={{ width: 13, height: 13 }} />
-          View history
+        <Link href={`/profiles/${profile.id}`} title="View history"
+          style={{ fontSize: 12, color: "var(--text-secondary)", display: "flex", alignItems: "center", gap: 5, padding: "6px", borderRadius: "var(--radius-sm)", background: "var(--bg-elevated)", border: "1px solid var(--border-light)" }}>
+          <Clock style={{ width: 14, height: 14 }} />
         </Link>
           <Link 
             href={`/profiles/${profile.id}?tab=ai`}
