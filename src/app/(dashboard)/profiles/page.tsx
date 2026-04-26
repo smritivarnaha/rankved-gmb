@@ -151,7 +151,6 @@ function ProfileCard({
           </Link>
         </div>
       </div>
-    </div>
   );
 }
 
