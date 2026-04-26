@@ -110,46 +110,44 @@ function ProfileCard({
         </div>
       </div>
 
-      {/* Footer */}
-      <div style={{ padding: "12px 16px", display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8, marginTop: "auto" }}>
+      {/* Footer — 2×2 grid */}
+      <div style={{ padding: "10px 12px", marginTop: "auto", display: "grid", gridTemplateColumns: "1fr 1fr", gap: 6 }}>
+        {/* Row 1 */}
         <Link href={`/profiles/${profile.id}`} title="View history"
-          style={{ fontSize: 12, color: "var(--text-secondary)", display: "flex", alignItems: "center", gap: 5, padding: "6px", borderRadius: "var(--radius-sm)", background: "var(--bg-elevated)", border: "1px solid var(--border-light)" }}>
-          <Clock style={{ width: 14, height: 14 }} />
+          style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", gap: 6,
+            padding: "7px 0", fontSize: 12, fontWeight: 500, color: "var(--text-secondary)",
+            background: "var(--bg-elevated)", border: "1px solid var(--border-light)",
+            borderRadius: "var(--radius-sm)", cursor: "pointer" }}>
+          <Clock style={{ width: 13, height: 13 }} />
         </Link>
-          <Link 
-            href={`/profiles/${profile.id}?tab=ai`}
-            style={{
-              display: "inline-flex", alignItems: "center", gap: 6,
-              padding: "6px 12px", background: "#f8fafc", color: "#2563eb",
-              border: "1px solid #dbeafe", borderRadius: "var(--radius-sm)", fontSize: 13, fontWeight: 600,
-              cursor: "pointer"
-            }}>
-            <Brain style={{ width: 14, height: 14 }} />
-            Train
-          </Link>
-          <button 
-            onClick={() => onAiCreate(profile.id)}
-            style={{
-              display: "inline-flex", alignItems: "center", gap: 6,
-              padding: "6px 12px", background: "#f8fafc", color: "#2563eb",
-              border: "1px solid #dbeafe", borderRadius: "var(--radius-sm)", fontSize: 13, fontWeight: 600,
-              cursor: "pointer"
-            }}>
-            <Wand2 style={{ width: 14, height: 14 }} />
-            AI
-          </button>
-          <Link href={`/posts/new?profile=${profile.id}&from=profile`}
-            style={{
-              display: "inline-flex", alignItems: "center", gap: 6,
-              padding: "6px 14px", background: "var(--accent)", color: "#fff",
-              borderRadius: "var(--radius-sm)", fontSize: 13, fontWeight: 600,
-              transition: "background 0.12s",
-            }}>
-            <Plus style={{ width: 14, height: 14 }} />
-            Create
-          </Link>
-        </div>
+        <Link href={`/profiles/${profile.id}?tab=ai`}
+          style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", gap: 6,
+            padding: "7px 0", fontSize: 12, fontWeight: 600, color: "#2563eb",
+            background: "#f8fafc", border: "1px solid #dbeafe",
+            borderRadius: "var(--radius-sm)", cursor: "pointer" }}>
+          <Brain style={{ width: 13, height: 13 }} />
+          Train
+        </Link>
+
+        {/* Row 2 */}
+        <button onClick={() => onAiCreate(profile.id)}
+          style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", gap: 6,
+            padding: "7px 0", fontSize: 12, fontWeight: 600, color: "#2563eb",
+            background: "#f8fafc", border: "1px solid #dbeafe",
+            borderRadius: "var(--radius-sm)", cursor: "pointer" }}>
+          <Wand2 style={{ width: 13, height: 13 }} />
+          AI Create
+        </button>
+        <Link href={`/posts/new?profile=${profile.id}&from=profile`}
+          style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", gap: 6,
+            padding: "7px 0", fontSize: 12, fontWeight: 600, color: "#fff",
+            background: "var(--accent)", borderRadius: "var(--radius-sm)", border: "none",
+            transition: "background 0.12s" }}>
+          <Plus style={{ width: 13, height: 13 }} />
+          Create
+        </Link>
       </div>
+    </div>
   );
 }
 
