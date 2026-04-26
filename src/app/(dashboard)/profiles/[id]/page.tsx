@@ -11,7 +11,8 @@ import { useParams } from "next/navigation";
 import useSWR from "swr";
 import { useSession } from "next-auth/react";
 import { AiSettingsTab, AiGenerationModal } from "@/components/ai/ai-components";
-import { Wand2 } from "lucide-react";
+import { Wand2, Clock } from "lucide-react";
+import { useSearchParams } from "next/navigation";
 
 const fetcher = (url: string) => fetch(url).then(r => r.json());
 
@@ -307,7 +308,9 @@ export default function ProfileDetailPage() {
   const [profile, setProfile] = useState<Profile | null>(null);
   const [profileLoading, setProfileLoading] = useState(true);
   const [statusFilter, setStatusFilter] = useState("ALL");
-  const [activeTab, setActiveTab] = useState<"POSTS" | "AI_SETTINGS">("POSTS");
+  const searchParamsHook = useSearchParams();
+  const initialTab = searchParamsHook.get("tab") === "ai" ? "AI_SETTINGS" : "POSTS";
+  const [activeTab, setActiveTab] = useState<"POSTS" | "AI_SETTINGS">(initialTab);
   const [isAiModalOpen, setIsAiModalOpen] = useState(false);
 
   const { data: postsData, isLoading: postsLoading, mutate: mutatePosts } = useSWR(
@@ -445,7 +448,7 @@ export default function ProfileDetailPage() {
 
       {activeTab === "AI_SETTINGS" ? (
         <div style={{ background: "#fff", border: "1px solid #e2e8f0", borderRadius: 12, overflow: "hidden" }}>
-          <AiSettingsTab locationId={profile.id} />
+          <AiSettingsTab locationId={profile.id} profileName={profile.name} />
         </div>
       ) : (
         /* Original Two-Column Layout */

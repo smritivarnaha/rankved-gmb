@@ -113,10 +113,21 @@ function ProfileCard({
       {/* Footer */}
       <div style={{ padding: "12px 16px", display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8, marginTop: "auto" }}>
         <Link href={`/profiles/${profile.id}`}
-          style={{ fontSize: 12, color: "var(--text-secondary)", display: "flex", alignItems: "center", gap: 4 }}>
+          style={{ fontSize: 12, color: "var(--text-secondary)", display: "flex", alignItems: "center", gap: 5 }}>
+          <Clock style={{ width: 13, height: 13 }} />
           View history
         </Link>
-        <div style={{ display: "flex", gap: 8 }}>
+          <Link 
+            href={`/profiles/${profile.id}?tab=ai`}
+            style={{
+              display: "inline-flex", alignItems: "center", gap: 6,
+              padding: "6px 12px", background: "#f8fafc", color: "#2563eb",
+              border: "1px solid #dbeafe", borderRadius: "var(--radius-sm)", fontSize: 13, fontWeight: 600,
+              cursor: "pointer"
+            }}>
+            <Wand2 style={{ width: 14, height: 14 }} />
+            Train AI
+          </Link>
           <button 
             onClick={() => onAiCreate(profile.id)}
             style={{

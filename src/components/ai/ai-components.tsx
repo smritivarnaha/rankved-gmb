@@ -7,7 +7,7 @@ import useSWR from "swr";
 const fetcher = (url: string) => fetch(url).then(r => r.json());
 
 /* ─── AI Settings Tab ────────────────────────────────────────── */
-export function AiSettingsTab({ locationId }: { locationId: string }) {
+export function AiSettingsTab({ locationId, profileName }: { locationId: string; profileName?: string }) {
   const { data: settings, mutate } = useSWR(`/api/profiles/${locationId}/ai-settings`, fetcher);
   
   const [saving, setSaving] = useState(false);
@@ -54,6 +54,14 @@ export function AiSettingsTab({ locationId }: { locationId: string }) {
 
   return (
     <div style={{ padding: 24, display: "flex", flexDirection: "column", gap: 24 }}>
+      <div style={{ padding: "12px 16px", background: "#f8fafc", border: "1px solid #e2e8f0", borderRadius: 8, display: "flex", alignItems: "center", gap: 10 }}>
+        <Wand2 size={18} color="#2563eb" />
+        <div>
+          <p style={{ fontSize: 11, fontWeight: 700, color: "#64748b", textTransform: "uppercase", letterSpacing: "0.05em" }}>Configuring AI for</p>
+          <p style={{ fontSize: 15, fontWeight: 700, color: "#0f172a" }}>{profileName || "this location"}</p>
+        </div>
+      </div>
+
       <div>
         <h2 style={{ fontSize: 16, fontWeight: 700, color: "#0f172a", marginBottom: 4 }}>AI Profile Brief</h2>
         <p style={{ fontSize: 13, color: "#64748b" }}>Train the AI on how to write for this specific location.</p>
