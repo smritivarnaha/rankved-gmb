@@ -5,7 +5,7 @@ import { format, startOfMonth, endOfMonth, eachDayOfInterval, getDay, isSameMont
 import { useState, useEffect } from "react";
 import {
   ArrowLeft, MapPin, Plus, FileText, Clock, Send, Loader2, Lock,
-  ThumbsUp, Edit3, ExternalLink, AlertTriangle, ChevronLeft, ChevronRight, Trash2
+  ThumbsUp, Edit3, ExternalLink, AlertTriangle, ChevronLeft, ChevronRight, Trash2, Wand2, Brain
 } from "lucide-react";
 import { useParams } from "next/navigation";
 import useSWR from "swr";
@@ -408,10 +408,9 @@ export default function ProfileDetailPage() {
         </div>
         
         <div style={{ display: "flex", gap: 10 }}>
-          <button 
-            onClick={() => setIsAiModalOpen(true)}
-            style={{ display: "inline-flex", alignItems: "center", gap: 8, padding: "9px 18px", background: "#f8fafc", color: "#2563eb", border: "1px solid #dbeafe", borderRadius: 8, fontSize: 13, fontWeight: 600, cursor: "pointer" }}>
-            <Wand2 style={{ width: 15, height: 15 }} /> AI Create
+          <button onClick={() => setIsAiModalOpen(true)} className="btn btn-ghost" style={{ gap: 8, color: "var(--accent)", background: "var(--accent-light)" }}>
+            <Wand2 style={{ width: 16, height: 16 }} />
+            AI
           </button>
           <Link href={`/posts/new?profile=${profile.id}&from=profile`}
             style={{ display: "inline-flex", alignItems: "center", gap: 8, padding: "9px 20px", background: "#2563eb", color: "#fff", borderRadius: 8, fontSize: 13, fontWeight: 600 }}>
@@ -431,7 +430,7 @@ export default function ProfileDetailPage() {
             transition: "all 0.2s"
           }}
         >
-          Post Workspace
+          Posts
         </button>
         <button 
           onClick={() => setActiveTab("AI_SETTINGS")}
@@ -442,7 +441,10 @@ export default function ProfileDetailPage() {
             transition: "all 0.2s"
           }}
         >
-          AI Config & Training
+          <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+            <Brain style={{ width: 14, height: 14 }} />
+            Train
+          </div>
         </button>
       </div>
 

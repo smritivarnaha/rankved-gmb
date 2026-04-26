@@ -32,7 +32,7 @@ function NewPostContent() {
         </Link>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end" }}>
           <div>
-            <h1 style={{ fontSize: 22, fontWeight: 600, color: "var(--text-primary)", marginBottom: 4 }}>Create Post</h1>
+            <h1 style={{ fontSize: 22, fontWeight: 600, color: "var(--text-primary)", marginBottom: 4 }}>Create</h1>
             <p style={{ fontSize: 13, color: "var(--text-secondary)" }}>
               {profileId ? "Creating for the selected profile." : "Compose a new update for a Google Business Profile."}
             </p>
@@ -41,7 +41,7 @@ function NewPostContent() {
             <button 
               onClick={() => setIsAiModalOpen(true)}
               style={{ display: "inline-flex", alignItems: "center", gap: 8, padding: "9px 18px", background: "#f8fafc", color: "#2563eb", border: "1px solid #dbeafe", borderRadius: 8, fontSize: 13, fontWeight: 600, cursor: "pointer" }}>
-              <Wand2 style={{ width: 15, height: 15 }} /> AI Create
+              <Wand2 style={{ width: 15, height: 15 }} /> AI
             </button>
           )}
         </div>

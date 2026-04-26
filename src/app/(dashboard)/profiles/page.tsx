@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { format } from "date-fns";
 import { useState } from "react";
-import { MapPin, Loader2, X, AlertCircle, CheckCircle2, RefreshCw, Plus, FileText, Clock, Send, Trash2, Wand2 } from "lucide-react";
+import { MapPin, Loader2, X, AlertCircle, CheckCircle2, RefreshCw, Plus, FileText, Clock, Send, Trash2, Wand2, Brain } from "lucide-react";
 import useSWR from "swr";
 import { AiGenerationModal } from "@/components/ai/ai-components";
 
@@ -124,8 +124,8 @@ function ProfileCard({
               border: "1px solid #dbeafe", borderRadius: "var(--radius-sm)", fontSize: 13, fontWeight: 600,
               cursor: "pointer"
             }}>
-            <Wand2 style={{ width: 14, height: 14 }} />
-            Train AI
+            <Brain style={{ width: 14, height: 14 }} />
+            Train
           </Link>
           <button 
             onClick={() => onAiCreate(profile.id)}
@@ -136,7 +136,7 @@ function ProfileCard({
               cursor: "pointer"
             }}>
             <Wand2 style={{ width: 14, height: 14 }} />
-            AI Create
+            AI
           </button>
           <Link href={`/posts/new?profile=${profile.id}&from=profile`}
             style={{
@@ -146,7 +146,7 @@ function ProfileCard({
               transition: "background 0.12s",
             }}>
             <Plus style={{ width: 14, height: 14 }} />
-            Create Post
+            Create
           </Link>
         </div>
       </div>
