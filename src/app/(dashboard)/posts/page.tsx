@@ -41,9 +41,16 @@ export default function PostsPage() {
 
   const handleDelete = async (id: string) => {
     if (!confirm("Permanently delete this post?")) return;
+    // Optimistic remove
     mutate({ ...data, data: posts.filter((p: any) => p.id !== id) }, false);
-    await fetch(`/api/posts?id=${id}`, { method: "DELETE" });
-    mutate();
+    const res = await fetch(`/api/posts?id=${id}`, { method: "DELETE" });
+    if (!res.ok) {
+      // Server rejected — restore by re-fetching
+      mutate();
+      const err = await res.json().catch(() => ({}));
+      alert(err.error || "Failed to delete post. Please try again.");
+    }
+    // If ok, optimistic state is already correct — no need to re-fetch
   };
 
   const handleApprove = async (post: any) => {

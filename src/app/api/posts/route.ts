@@ -130,10 +130,12 @@ export async function DELETE(req: NextRequest) {
   if (!(session as any).user.isApproved) {
     return NextResponse.json({ error: "Your account is pending approval by rankved.business@gmail.com." }, { status: 403 });
   }
-  
+
   const role = (session as any)?.user?.role;
-  if (role !== "ADMIN") {
-    return NextResponse.json({ error: "Only admins can delete posts" }, { status: 403 });
+  // Allow any approved/signed-in user to delete posts (owners, team members, super admins)
+  const allowedRoles = ["SUPER_ADMIN", "AGENCY_OWNER", "TEAM_MEMBER"];
+  if (!allowedRoles.includes(role)) {
+    return NextResponse.json({ error: "You do not have permission to delete posts." }, { status: 403 });
   }
 
   const { searchParams } = new URL(req.url);
@@ -141,5 +143,6 @@ export async function DELETE(req: NextRequest) {
   if (!id) return NextResponse.json({ error: "Post ID required" }, { status: 400 });
 
   const success = await deletePost(id);
-  return NextResponse.json({ success });
+  if (!success) return NextResponse.json({ error: "Post not found or already deleted." }, { status: 404 });
+  return NextResponse.json({ success: true });
 }

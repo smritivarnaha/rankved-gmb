@@ -13,7 +13,6 @@ const adminNav = [
   { name: "Dashboard",   href: "/dashboard",   icon: LayoutDashboard },
   { name: "Performance", href: "/performance", icon: BarChart3 },
   { name: "Profiles",    href: "/profiles",    icon: MapPin },
-  { name: "Posts",       href: "/posts",       icon: FileText },
   { name: "Calendar",    href: "/calendar",    icon: CalendarDays },
   { name: "Team",        href: "/team",        icon: Users },
   { name: "API Keys",    href: "/api-keys",    icon: Key },
@@ -29,7 +28,6 @@ const teamNav = [
   { name: "Dashboard",   href: "/dashboard",   icon: LayoutDashboard },
   { name: "Performance", href: "/performance", icon: BarChart3 },
   { name: "Profiles",    href: "/profiles",    icon: MapPin },
-  { name: "Posts",       href: "/posts",       icon: FileText },
   { name: "Calendar",    href: "/calendar",    icon: CalendarDays },
 ];
 

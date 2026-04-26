@@ -331,9 +331,15 @@ export default function ProfileDetailPage() {
   const handleDelete = async (post: Post) => {
     if (post.status === "PUBLISHED") return; // Never delete published
     if (!confirm("Delete this post permanently?")) return;
+    // Optimistic remove
     mutatePosts({ ...postsData, data: posts.filter(p => p.id !== post.id) }, false);
-    await fetch(`/api/posts?id=${post.id}`, { method: "DELETE" });
-    mutatePosts();
+    const res = await fetch(`/api/posts?id=${post.id}`, { method: "DELETE" });
+    if (!res.ok) {
+      mutatePosts(); // restore
+      const err = await res.json().catch(() => ({}));
+      alert(err.error || "Failed to delete post. Please try again.");
+    }
+    // If ok, optimistic state is already correct
   };
 
   useEffect(() => {
