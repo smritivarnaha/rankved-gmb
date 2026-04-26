@@ -11,7 +11,6 @@ import { useParams } from "next/navigation";
 import useSWR from "swr";
 import { useSession } from "next-auth/react";
 import { AiSettingsTab, AiGenerationModal } from "@/components/ai/ai-components";
-import { Wand2 } from "lucide-react";
 import { useSearchParams } from "next/navigation";
 
 const fetcher = (url: string) => fetch(url).then(r => r.json());
