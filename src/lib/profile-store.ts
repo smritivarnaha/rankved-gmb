@@ -48,10 +48,11 @@ function locationToProfile(loc: any): ProfileData {
   };
 }
 
-export async function getAllProfiles(userId: string, role: string): Promise<ProfileData[]> {
-  // Even for Super Admin, we should only show THEIR profiles on the main page
-  // to avoid confusion with other agency profiles.
-  const client = await prisma.client.findFirst({ where: { userId } });
+export async function getAllProfiles(userId: string, role: string, ownerId?: string): Promise<ProfileData[]> {
+  // Use the ownerId if available to find the correct client context
+  const targetUserId = ownerId || userId;
+  
+  const client = await prisma.client.findFirst({ where: { userId: targetUserId } });
   if (!client) return [];
   
   const locations = await prisma.location.findMany({
@@ -75,8 +76,9 @@ export async function getProfileById(id: string, userId: string, role: string): 
   return undefined;
 }
 
-export async function saveProfiles(profiles: ProfileData[], userId: string): Promise<void> {
-  const clientId = await ensureDefaultClient(userId);
+export async function saveProfiles(profiles: ProfileData[], userId: string, ownerId?: string): Promise<void> {
+  const targetUserId = ownerId || userId;
+  const clientId = await ensureDefaultClient(targetUserId);
 
   for (const p of profiles) {
     // We update the clientId on EVERY sync to ensure the current user 

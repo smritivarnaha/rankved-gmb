@@ -60,15 +60,18 @@ function mapPost(p: any): PostData {
   };
 }
 
-export async function getAllPosts(userId: string, role: string): Promise<PostData[]> {
+export async function getAllPosts(userId: string, role: string, ownerId?: string): Promise<PostData[]> {
+  const targetUserId = ownerId || userId;
+
   if (role === "SUPER_ADMIN") {
     const posts = await prisma.post.findMany({
       orderBy: { createdAt: "desc" },
       include: { location: { include: { client: true } }, user: true },
     });
     return posts.map(mapPost);
-  } else if (role === "AGENCY_OWNER") {
-    const client = await prisma.client.findFirst({ where: { userId } });
+  } else if (role === "AGENCY_OWNER" || (role === "TEAM_MEMBER" && ownerId)) {
+    // If it's a team member, they should see all posts for the agency owner's client
+    const client = await prisma.client.findFirst({ where: { userId: targetUserId } });
     if (!client) return [];
     const posts = await prisma.post.findMany({
       where: { location: { clientId: client.id } },
@@ -77,6 +80,7 @@ export async function getAllPosts(userId: string, role: string): Promise<PostDat
     });
     return posts.map(mapPost);
   } else {
+    // Fallback for standalone team members or others
     const posts = await prisma.post.findMany({
       where: { location: { assignedUsers: { some: { id: userId } } } },
       orderBy: { createdAt: "desc" },
@@ -94,13 +98,16 @@ export async function getPostById(id: string): Promise<PostData | undefined> {
   return post ? mapPost(post) : undefined;
 }
 
-export async function getPostsByProfile(profileId: string, userId: string, role: string): Promise<PostData[]> {
+export async function getPostsByProfile(profileId: string, userId: string, role: string, ownerId?: string): Promise<PostData[]> {
+  // Use the ownerId context
+  const targetUserId = ownerId || userId;
+
   // Simple check to ensure they have access to this profile first
   let hasAccess = false;
   if (role === "SUPER_ADMIN") {
     hasAccess = true;
-  } else if (role === "AGENCY_OWNER") {
-    const client = await prisma.client.findFirst({ where: { userId } });
+  } else if (role === "AGENCY_OWNER" || (role === "TEAM_MEMBER" && ownerId)) {
+    const client = await prisma.client.findFirst({ where: { userId: targetUserId } });
     if (client) {
       const loc = await prisma.location.findUnique({ where: { id: profileId } });
       if (loc && loc.clientId === client.id) hasAccess = true;

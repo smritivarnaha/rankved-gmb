@@ -15,15 +15,16 @@ export async function GET(req: NextRequest) {
 
   const userId = (session as any).user.id;
   const role = (session as any).user.role;
+  const ownerId = (session as any).user.ownerId;
 
   const { searchParams } = new URL(req.url);
   const profileId = searchParams.get("profileId");
 
   let posts = [];
   if (profileId) {
-    posts = await getPostsByProfile(profileId, userId, role);
+    posts = await getPostsByProfile(profileId, userId, role, ownerId);
   } else {
-    posts = await getAllPosts(userId, role);
+    posts = await getAllPosts(userId, role, ownerId);
   }
 
   return NextResponse.json({ data: posts });

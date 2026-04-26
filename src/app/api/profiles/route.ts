@@ -35,8 +35,9 @@ export async function GET(req: NextRequest) {
 
   const userId = (session as any).user.id;
   const role = (session as any).user.role;
+  const ownerId = (session as any).user.ownerId;
 
-  const profiles = await getAllProfiles(userId, role);
+  const profiles = await getAllProfiles(userId, role, ownerId);
   return NextResponse.json({ data: profiles });
 }
 
@@ -128,7 +129,9 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "No profiles found on this Google account." }, { status: 404 });
     }
 
-    await saveProfiles(fetchedProfiles, userId);
+    const userId = (session as any)?.user?.id;
+    const ownerId = (session as any)?.user?.ownerId;
+    await saveProfiles(fetchedProfiles, userId, ownerId);
 
     return NextResponse.json({ data: fetchedProfiles, message: `${fetchedProfiles.length} profiles fetched from Google.` });
   } catch (err: any) {
