@@ -1,77 +1,32 @@
-"use client";
+import { LoginForm } from "@/components/auth/LoginForm";
+import prisma from "@/lib/prisma";
 
-import { signIn, useSession } from "next-auth/react";
-import { useState, useEffect } from "react";
-import { Loader2, AlertCircle, MapPin } from "lucide-react";
-import { useRouter } from "next/navigation";
+async function getSettings() {
+  try {
+    const settings = await prisma.globalSetting.findUnique({
+      where: { id: "settings" }
+    });
+    
+    if (settings) return settings;
 
-const RECAPTCHA_SITE_KEY = "6Lf1lrwsAAAAAMSCfj2I-Hrusva3fWQ0mfGE8V3b";
-
-export default function LoginPage() {
-  const { data: session, status } = useSession();
-  const router = useRouter();
-  const [identifier, setIdentifier] = useState("");
-  const [password, setPassword] = useState("");
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState("");
-  const [captchaToken, setCaptchaToken] = useState<string | null>(null);
-  const [focusedField, setFocusedField] = useState<string | null>(null);
-  const [settings, setSettings] = useState({
-    loginBgUrl: "/login-bg.jpg",
-    loginHeading: "Your Google Business, Managed in One Place.",
-    loginDescription: "Connect your Google account and manage all your business profiles from a single dashboard.",
-    loginBgOpacity: 0.5
-  });
-
-  useEffect(() => {
-    fetch("/api/admin/login-settings")
-      .then(res => res.json())
-      .then(data => {
-        if (data.loginBgUrl) setSettings(data);
-      })
-      .catch(err => console.error("Failed to fetch login settings", err));
-  }, []);
-
-  useEffect(() => {
-    if (status === "authenticated") {
-      router.push("/dashboard");
-    }
-  }, [status, router]);
-
-  useEffect(() => {
-    const render = () => {
-      const el = document.getElementById("g-recaptcha");
-      if (!el || el.childElementCount > 0) return;
-      try {
-        (window as any).grecaptcha.render("g-recaptcha", {
-          sitekey: RECAPTCHA_SITE_KEY,
-          callback: (t: string) => setCaptchaToken(t),
-          "expired-callback": () => setCaptchaToken(null),
-          theme: "light",
-          size: "normal",
-        });
-      } catch {}
+    return {
+      loginBgUrl: "/login-bg.jpg",
+      loginHeading: "Your Google Business, Managed in One Place.",
+      loginDescription: "Connect your Google account and manage all your business profiles from a single dashboard.",
+      loginBgOpacity: 0.5
     };
-    if ((window as any).grecaptcha?.render) {
-      render();
-    } else {
-      const s = document.createElement("script");
-      s.src = "https://www.google.com/recaptcha/api.js?render=explicit";
-      s.async = true;
-      s.onload = () => (window as any).grecaptcha?.ready(render);
-      document.head.appendChild(s);
-    }
-  }, []);
+  } catch (error) {
+    return {
+      loginBgUrl: "/login-bg.jpg",
+      loginHeading: "Your Google Business, Managed in One Place.",
+      loginDescription: "Connect your Google account and manage all your business profiles from a single dashboard.",
+      loginBgOpacity: 0.5
+    };
+  }
+}
 
-  const handleLogin = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!captchaToken) { setError("Please complete the captcha verification below."); return; }
-    setLoading(true);
-    setError("");
-    const result = await signIn("credentials", { email: identifier, password, redirect: false });
-    if (result?.error) { setError("Invalid username/email or password."); setLoading(false); }
-    else window.location.href = "/dashboard";
-  };
+export default async function LoginPage() {
+  const settings = await getSettings();
 
   return (
     <>
@@ -190,25 +145,6 @@ export default function LoginPage() {
           max-width: 380px;
         }
 
-        /* Geometric accent block */
-        .left-geo {
-          position: relative;
-          z-index: 1;
-          margin-top: 48px;
-          display: grid;
-          grid-template-columns: repeat(3, 1fr);
-          gap: 8px;
-          max-width: 260px;
-        }
-        .geo-block {
-          height: 6px;
-          border-radius: 3px;
-          background: rgba(255,255,255,0.08);
-        }
-        .geo-block:nth-child(1) { background: rgba(37,99,235,0.7); }
-        .geo-block:nth-child(2) { background: rgba(37,99,235,0.35); }
-        .geo-block:nth-child(4) { background: rgba(255,255,255,0.15); }
-
         .left-footer {
           position: relative;
           z-index: 1;
@@ -246,13 +182,6 @@ export default function LoginPage() {
         }
 
         /* Logo & heading */
-        .form-logo {
-          width: 44px;
-          height: 44px;
-          object-fit: contain;
-          display: block;
-          margin-bottom: 24px;
-        }
         .form-heading {
           font-size: 24px;
           font-weight: 600;
@@ -425,140 +354,7 @@ export default function LoginPage() {
         }
       `}</style>
 
-      <div className="login-shell">
-
-        {/* ── LEFT PANEL ── */}
-        <div className="login-left" style={{ backgroundImage: `url(${settings.loginBgUrl})` }}>
-          {/* Subtle overlay to ensure text readability */}
-          <div style={{ 
-            position: "absolute", 
-            inset: 0, 
-            background: `linear-gradient(to bottom, rgba(0,0,0,${settings.loginBgOpacity * 0.5}) 0%, rgba(0,0,0,${settings.loginBgOpacity}) 100%)`, 
-            zIndex: 0 
-          }} />
-          
-          {/* Logo */}
-          <div className="left-logo">
-            <div className="left-logo-icon">
-              <MapPin style={{ width: 16, height: 16, color: "#fff" }} />
-            </div>
-            <span className="left-logo-name">RankVed</span>
-          </div>
-          
-          {/* Tagline */}
-          <div className="left-body">
-            <h1 className="left-tagline" style={{ color: "#fff", zIndex: 1 }}>
-              {settings.loginHeading}
-            </h1>
-            <p className="left-sub" style={{ color: "rgba(255,255,255,0.9)", zIndex: 1, fontWeight: 500 }}>
-              {settings.loginDescription}
-            </p>
-          </div>
-
-          {/* Footer stat */}
-          <div className="left-footer">
-            <p className="left-stat">
-              <strong>Trusted by 100+ healthcare practices</strong><br />
-              across India · UAE · UK · United States
-            </p>
-          </div>
-        </div>
-
-        {/* ── RIGHT PANEL (form) ── */}
-        <div className="login-right">
-          <div className="login-form-wrap">
-
-            {/* Logo + heading */}
-            <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 24 }}>
-              <img 
-                src="https://rankved.com/wp-content/uploads/2025/04/Rankved-Logo-Official-Black.avif" 
-                alt="RankVed" 
-                style={{ height: 32, width: "auto", display: "block" }} 
-              />
-              <span style={{ fontSize: 18, fontWeight: 700, color: "#0A0A0A", letterSpacing: "-0.02em" }}>
-                GMB Manager
-              </span>
-            </div>
-            <p className="form-subheading">Sign in to your account</p>
-
-            {/* Error */}
-            {error && (
-              <div className="form-error">
-                <AlertCircle style={{ width: 15, height: 15, flexShrink: 0 }} />
-                <span>{error}</span>
-              </div>
-            )}
-
-            <form onSubmit={handleLogin}>
-              {/* Email */}
-              <div className="field-group">
-                <div className="field-label-row">
-                  <label className="field-label" htmlFor="login-identifier">Email or Username</label>
-                </div>
-                <input
-                  id="login-identifier"
-                  className="field-input"
-                  type="text"
-                  value={identifier}
-                  onChange={e => setIdentifier(e.target.value)}
-                  placeholder="you@practice.com"
-                  required
-                  autoComplete="username"
-                />
-              </div>
-
-              {/* Password */}
-              <div className="field-group">
-                <div className="field-label-row">
-                  <label className="field-label" htmlFor="login-password">Password</label>
-                  <a href="#" className="field-forgot">Forgot password?</a>
-                </div>
-                <input
-                  id="login-password"
-                  className="field-input"
-                  type="password"
-                  value={password}
-                  onChange={e => setPassword(e.target.value)}
-                  placeholder="••••••••"
-                  required
-                  autoComplete="current-password"
-                />
-              </div>
-
-              {/* Remember me */}
-              <div className="checkbox-row">
-                <input
-                  type="checkbox"
-                  id="remember"
-                  className="checkbox-custom"
-                  defaultChecked
-                />
-                <label htmlFor="remember" className="checkbox-label">
-                  Remember me for 30 days
-                </label>
-              </div>
-
-              {/* reCAPTCHA */}
-              <div className="recaptcha-wrap">
-                <div id="g-recaptcha" />
-              </div>
-
-              {/* Submit */}
-              <button type="submit" className="btn-signin" disabled={loading}>
-                {loading && <Loader2 style={{ width: 15, height: 15 }} className="spin" />}
-                {loading ? "Signing in…" : "Sign in"}
-              </button>
-
-              {/* Footer */}
-              <div className="form-divider" />
-              <p className="form-footer-text">
-                Don't have access?{" "}
-                <span style={{ color: "#27272A", fontWeight: 500 }}>Contact your admin.</span>
-              </p>
-            </form>
-          </div>
-        </div>
-      </div>
+      <LoginForm settings={settings} />
     </>
   );
 }
