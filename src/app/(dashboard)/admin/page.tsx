@@ -1,12 +1,17 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Shield, ShieldAlert, Users, Database, FileText, Loader2, UserPlus, UserCircle, Search, Trash2, X, Image as ImageIcon, Upload, Save, CheckCircle } from "lucide-react";
+import { Shield, ShieldAlert, Users, Database, FileText, Loader2, UserPlus, UserCircle, Search, Trash2, X, Image as ImageIcon, Upload, Save, CheckCircle, Settings } from "lucide-react";
 import useSWR from "swr";
+import { useSession } from "next-auth/react";
 
 const fetcher = (url: string) => fetch(url).then((res) => res.json());
 
 export default function AdminDashboard() {
+  const { data: session } = useSession();
+  const userRole = (session as any)?.user?.role;
+  const isSuperAdmin = userRole === "SUPER_ADMIN";
+
   const { data, error: fetchError, isLoading, mutate } = useSWR("/api/admin/users", fetcher, {
     revalidateOnFocus: false,
     dedupingInterval: 5000,
@@ -291,86 +296,95 @@ export default function AdminDashboard() {
         </div>
       </div>
 
-      {/* Display Settings Section */}
-      <div className="bg-white border border-[var(--border)] rounded-2xl overflow-hidden shadow-sm">
-        <div className="px-6 py-4 border-b border-[var(--border-light)] bg-[var(--bg-secondary)]/50 flex items-center gap-2">
-          <ImageIcon className="w-5 h-5 text-[var(--accent)]" />
-          <h2 className="text-lg font-bold text-[var(--text-primary)]">Display Settings</h2>
-        </div>
-        
-        <div className="p-6">
-          <form onSubmit={handleSaveLoginSettings} className="space-y-8">
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-              {/* Image Upload */}
-              <div className="space-y-4">
-                <label className="block text-sm font-semibold text-slate-700">Login Page Background Image</label>
-                <div className="relative aspect-video rounded-xl border-2 border-dashed border-slate-200 bg-slate-50 overflow-hidden group">
-                  {previewUrl ? (
-                    <>
-                      <img src={previewUrl} alt="Preview" className="w-full h-full object-cover" />
-                      <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-                        <label className="cursor-pointer bg-white/20 hover:bg-white/30 backdrop-blur-md text-white px-4 py-2 rounded-lg font-semibold text-sm flex items-center gap-2 transition-all">
-                          <Upload className="w-4 h-4" />
-                          Change Image
+      {isSuperAdmin && (
+        <>
+          {/* Display Settings Section */}
+          <div id="display-settings" className="bg-white border border-[var(--border)] rounded-2xl overflow-hidden shadow-sm">
+            <div className="px-6 py-4 border-b border-[var(--border-light)] bg-[var(--bg-secondary)]/50 flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Settings className="w-5 h-5 text-[var(--accent)]" />
+                <h2 className="text-lg font-bold text-[var(--text-primary)]">Login Page Customization</h2>
+              </div>
+              <span className="text-xs font-bold text-[var(--accent)] uppercase tracking-wider bg-[var(--accent-light)]/20 px-3 py-1 rounded-full">
+                Super Admin Only
+              </span>
+            </div>
+            
+            <div className="p-6">
+              <form onSubmit={handleSaveLoginSettings} className="space-y-8">
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                  {/* Image Upload */}
+                  <div className="space-y-4">
+                    <label className="block text-sm font-semibold text-slate-700">Background Image</label>
+                    <div className="relative aspect-video rounded-xl border-2 border-dashed border-slate-200 bg-slate-50 overflow-hidden group">
+                      {previewUrl ? (
+                        <>
+                          <img src={previewUrl} alt="Preview" className="w-full h-full object-cover" />
+                          <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                            <label className="cursor-pointer bg-white/20 hover:bg-white/30 backdrop-blur-md text-white px-4 py-2 rounded-lg font-semibold text-sm flex items-center gap-2 transition-all">
+                              <Upload className="w-4 h-4" />
+                              Change Image
+                              <input type="file" className="hidden" accept="image/*" onChange={handleImageChange} />
+                            </label>
+                          </div>
+                        </>
+                      ) : (
+                        <label className="absolute inset-0 cursor-pointer flex flex-col items-center justify-center gap-2 text-slate-400 hover:text-[var(--accent)] transition-colors">
+                          <Upload className="w-8 h-8" />
+                          <span className="text-sm font-medium">Click to upload image</span>
                           <input type="file" className="hidden" accept="image/*" onChange={handleImageChange} />
                         </label>
-                      </div>
-                    </>
-                  ) : (
-                    <label className="absolute inset-0 cursor-pointer flex flex-col items-center justify-center gap-2 text-slate-400 hover:text-[var(--accent)] transition-colors">
-                      <Upload className="w-8 h-8" />
-                      <span className="text-sm font-medium">Click to upload image</span>
-                      <input type="file" className="hidden" accept="image/*" onChange={handleImageChange} />
-                    </label>
-                  )}
-                </div>
-                <p className="text-xs text-[var(--text-tertiary)]">Recommended size: 1920x1080px. Supported formats: JPG, PNG, WebP.</p>
-              </div>
+                      )}
+                    </div>
+                    <p className="text-xs text-[var(--text-tertiary)]">This image will appear on the left side of the login page.</p>
+                  </div>
 
-              {/* Text Inputs */}
-              <div className="space-y-4">
-                <div>
-                  <label className="block text-sm font-semibold text-slate-700 mb-1.5">Login Heading</label>
-                  <input 
-                    type="text" 
-                    value={loginSettings.loginHeading} 
-                    onChange={e => setLoginSettings({...loginSettings, loginHeading: e.target.value})} 
-                    className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none transition-all" 
-                    placeholder="Enter heading for login page" 
-                  />
+                  {/* Text Inputs */}
+                  <div className="space-y-4">
+                    <div>
+                      <label className="block text-sm font-semibold text-slate-700 mb-1.5">Heading</label>
+                      <input 
+                        type="text" 
+                        value={loginSettings.loginHeading} 
+                        onChange={e => setLoginSettings({...loginSettings, loginHeading: e.target.value})} 
+                        className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none transition-all" 
+                        placeholder="e.g. Your Google Business, Managed." 
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-semibold text-slate-700 mb-1.5">Description</label>
+                      <textarea 
+                        rows={4}
+                        value={loginSettings.loginDescription} 
+                        onChange={e => setLoginSettings({...loginSettings, loginDescription: e.target.value})} 
+                        className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none transition-all resize-none" 
+                        placeholder="Enter the sub-text for the login page..." 
+                      />
+                    </div>
+                  </div>
                 </div>
-                <div>
-                  <label className="block text-sm font-semibold text-slate-700 mb-1.5">Login Description</label>
-                  <textarea 
-                    rows={4}
-                    value={loginSettings.loginDescription} 
-                    onChange={e => setLoginSettings({...loginSettings, loginDescription: e.target.value})} 
-                    className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none transition-all resize-none" 
-                    placeholder="Enter description for login page" 
-                  />
-                </div>
-              </div>
-            </div>
 
-            <div className="flex justify-end pt-4 border-t border-slate-100">
-              <button 
-                type="submit" 
-                disabled={savingSettings} 
-                className="btn btn-primary px-8 h-12 rounded-xl flex items-center justify-center gap-2 transition-all active:scale-95 disabled:opacity-70"
-              >
-                {savingSettings ? (
-                  <Loader2 className="w-5 h-5 animate-spin" />
-                ) : saveSuccess ? (
-                  <CheckCircle className="w-5 h-5" />
-                ) : (
-                  <Save className="w-5 h-5" />
-                )}
-                {savingSettings ? "Saving..." : saveSuccess ? "Saved!" : "Save Display Settings"}
-              </button>
+                <div className="flex justify-end pt-4 border-t border-slate-100">
+                  <button 
+                    type="submit" 
+                    disabled={savingSettings} 
+                    className="btn btn-primary px-8 h-12 rounded-xl flex items-center justify-center gap-2 transition-all active:scale-95 disabled:opacity-70"
+                  >
+                    {savingSettings ? (
+                      <Loader2 className="w-5 h-5 animate-spin" />
+                    ) : saveSuccess ? (
+                      <CheckCircle className="w-5 h-5" />
+                    ) : (
+                      <Save className="w-5 h-5" />
+                    )}
+                    {savingSettings ? "Saving..." : saveSuccess ? "Saved!" : "Save Changes"}
+                  </button>
+                </div>
+              </form>
             </div>
-          </form>
-        </div>
-      </div>
+          </div>
+        </>
+      )}
 
       {/* Create User Modal */}
       {showCreateModal && (
