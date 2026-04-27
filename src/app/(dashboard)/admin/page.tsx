@@ -370,6 +370,7 @@ export default function AdminDashboard() {
             </div>
           </form>
         </div>
+      </div>
 
       {/* Create User Modal */}
       {showCreateModal && (

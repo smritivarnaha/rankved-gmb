@@ -429,7 +429,7 @@ export default function LoginPage() {
         {/* ── LEFT PANEL ── */}
         <div className="login-left" style={{ backgroundImage: `url(${settings.loginBgUrl})` }}>
           {/* Subtle overlay to ensure text readability */}
-          <div style={{ position: "absolute", inset: 0, background: "linear-gradient(to bottom, rgba(0,0,0,0.3) 0%, rgba(0,0,0,0.7) 100%)", z-index: 0 }} />
+          <div style={{ position: "absolute", inset: 0, background: "linear-gradient(to bottom, rgba(0,0,0,0.3) 0%, rgba(0,0,0,0.7) 100%)", zIndex: 0 }} />
           
           {/* Logo */}
           <div className="left-logo">
