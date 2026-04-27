@@ -16,6 +16,20 @@ export default function LoginPage() {
   const [error, setError] = useState("");
   const [captchaToken, setCaptchaToken] = useState<string | null>(null);
   const [focusedField, setFocusedField] = useState<string | null>(null);
+  const [settings, setSettings] = useState({
+    loginBgUrl: "/login-bg.jpg",
+    loginHeading: "Your Google Business, Managed in One Place.",
+    loginDescription: "Connect your Google account and manage all your business profiles from a single dashboard."
+  });
+
+  useEffect(() => {
+    fetch("/api/admin/login-settings")
+      .then(res => res.json())
+      .then(data => {
+        if (data.loginBgUrl) setSettings(data);
+      })
+      .catch(err => console.error("Failed to fetch login settings", err));
+  }, []);
 
   useEffect(() => {
     if (status === "authenticated") {
@@ -92,12 +106,14 @@ export default function LoginPage() {
         /* ── Left panel (dark) ── */
         .login-left {
           flex: 1;
-          background: #0A0A0A;
           display: flex;
           flex-direction: column;
           padding: 48px;
           position: relative;
           overflow: hidden;
+          background-size: cover;
+          background-position: center;
+          background-repeat: no-repeat;
         }
 
         /* Dot grid background pattern */
@@ -411,7 +427,10 @@ export default function LoginPage() {
       <div className="login-shell">
 
         {/* ── LEFT PANEL ── */}
-        <div className="login-left">
+        <div className="login-left" style={{ backgroundImage: `url(${settings.loginBgUrl})` }}>
+          {/* Subtle overlay to ensure text readability */}
+          <div style={{ position: "absolute", inset: 0, background: "linear-gradient(to bottom, rgba(0,0,0,0.3) 0%, rgba(0,0,0,0.7) 100%)", z-index: 0 }} />
+          
           {/* Logo */}
           <div className="left-logo">
             <div className="left-logo-icon">
@@ -419,25 +438,15 @@ export default function LoginPage() {
             </div>
             <span className="left-logo-name">RankVed</span>
           </div>
-
+          
           {/* Tagline */}
           <div className="left-body">
-            <h1 className="left-tagline">
-              The command centre<br />
-              <span>for healthcare</span><br />
-              GMB profiles.
+            <h1 className="left-tagline" style={{ color: "#fff", zIndex: 1 }}>
+              {settings.loginHeading}
             </h1>
-            <p className="left-sub">
-              Schedule, publish, and manage Google Business Profile posts
-              across every location — from one workspace.
+            <p className="left-sub" style={{ color: "rgba(255,255,255,0.9)", zIndex: 1, fontWeight: 500 }}>
+              {settings.loginDescription}
             </p>
-
-            {/* Geometric accent */}
-            <div className="left-geo">
-              {Array.from({ length: 9 }).map((_, i) => (
-                <div key={i} className="geo-block" />
-              ))}
-            </div>
           </div>
 
           {/* Footer stat */}
