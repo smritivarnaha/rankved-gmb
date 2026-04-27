@@ -316,27 +316,27 @@ export default function AdminDashboard() {
                   {/* Image Upload */}
                   <div className="space-y-4">
                     <label className="block text-sm font-semibold text-slate-700">Background Image</label>
-                    <div className="relative aspect-video rounded-xl border-2 border-dashed border-slate-200 bg-slate-50 overflow-hidden group">
+                    <div className="relative w-full max-w-sm aspect-video rounded-xl border-2 border-dashed border-slate-200 bg-slate-50 overflow-hidden group">
                       {previewUrl ? (
                         <>
                           <img src={previewUrl} alt="Preview" className="w-full h-full object-cover" />
                           <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
                             <label className="cursor-pointer bg-white/20 hover:bg-white/30 backdrop-blur-md text-white px-4 py-2 rounded-lg font-semibold text-sm flex items-center gap-2 transition-all">
                               <Upload className="w-4 h-4" />
-                              Change Image
+                              Change
                               <input type="file" className="hidden" accept="image/*" onChange={handleImageChange} />
                             </label>
                           </div>
                         </>
                       ) : (
                         <label className="absolute inset-0 cursor-pointer flex flex-col items-center justify-center gap-2 text-slate-400 hover:text-[var(--accent)] transition-colors">
-                          <Upload className="w-8 h-8" />
-                          <span className="text-sm font-medium">Click to upload image</span>
+                          <Upload className="w-6 h-6" />
+                          <span className="text-xs font-medium">Click to upload</span>
                           <input type="file" className="hidden" accept="image/*" onChange={handleImageChange} />
                         </label>
                       )}
                     </div>
-                    <p className="text-xs text-[var(--text-tertiary)]">This image will appear on the left side of the login page.</p>
+                    <p className="text-[10px] text-[var(--text-tertiary)] uppercase font-bold">Recommended: 1920x1080px · JPG/PNG</p>
                   </div>
 
                   {/* Text Inputs */}
