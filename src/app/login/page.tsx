@@ -19,7 +19,8 @@ export default function LoginPage() {
   const [settings, setSettings] = useState({
     loginBgUrl: "/login-bg.jpg",
     loginHeading: "Your Google Business, Managed in One Place.",
-    loginDescription: "Connect your Google account and manage all your business profiles from a single dashboard."
+    loginDescription: "Connect your Google account and manage all your business profiles from a single dashboard.",
+    loginBgOpacity: 0.5
   });
 
   useEffect(() => {
@@ -429,7 +430,12 @@ export default function LoginPage() {
         {/* ── LEFT PANEL ── */}
         <div className="login-left" style={{ backgroundImage: `url(${settings.loginBgUrl})` }}>
           {/* Subtle overlay to ensure text readability */}
-          <div style={{ position: "absolute", inset: 0, background: "linear-gradient(to bottom, rgba(0,0,0,0.3) 0%, rgba(0,0,0,0.7) 100%)", zIndex: 0 }} />
+          <div style={{ 
+            position: "absolute", 
+            inset: 0, 
+            background: `linear-gradient(to bottom, rgba(0,0,0,${settings.loginBgOpacity * 0.5}) 0%, rgba(0,0,0,${settings.loginBgOpacity}) 100%)`, 
+            zIndex: 0 
+          }} />
           
           {/* Logo */}
           <div className="left-logo">

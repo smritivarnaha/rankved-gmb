@@ -34,7 +34,8 @@ export default function AdminDashboard() {
   const [loginSettings, setLoginSettings] = useState({
     loginBgUrl: "",
     loginHeading: "",
-    loginDescription: ""
+    loginDescription: "",
+    loginBgOpacity: 0.5
   });
   const [selectedImage, setSelectedImage] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState("");
@@ -94,6 +95,7 @@ export default function AdminDashboard() {
       const formData = new FormData();
       formData.append("heading", loginSettings.loginHeading);
       formData.append("description", loginSettings.loginDescription);
+      formData.append("opacity", loginSettings.loginBgOpacity.toString());
       if (selectedImage) {
         formData.append("image", selectedImage);
       }
@@ -337,6 +339,26 @@ export default function AdminDashboard() {
                       )}
                     </div>
                     <p className="text-[10px] text-[var(--text-tertiary)] uppercase font-bold">Recommended: 1920x1080px · JPG/PNG</p>
+                  </div>
+
+                  {/* Opacity Slider */}
+                  <div className="space-y-4">
+                    <div className="flex items-center justify-between">
+                      <label className="block text-sm font-semibold text-slate-700">Overlay Darkness</label>
+                      <span className="text-xs font-bold text-[var(--accent)] bg-[var(--accent-light)]/20 px-2 py-0.5 rounded">
+                        {Math.round(loginSettings.loginBgOpacity * 100)}%
+                      </span>
+                    </div>
+                    <input 
+                      type="range" 
+                      min="0" 
+                      max="1" 
+                      step="0.05" 
+                      value={loginSettings.loginBgOpacity} 
+                      onChange={e => setLoginSettings({...loginSettings, loginBgOpacity: parseFloat(e.target.value)})} 
+                      className="w-full h-2 bg-slate-100 rounded-lg appearance-none cursor-pointer accent-[var(--accent)]"
+                    />
+                    <p className="text-[10px] text-[var(--text-tertiary)]">Adjust to ensure text is readable against your background image.</p>
                   </div>
 
                   {/* Text Inputs */}

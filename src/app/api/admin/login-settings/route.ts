@@ -46,11 +46,13 @@ export async function POST(req: NextRequest) {
     const formData = await req.formData();
     const heading = formData.get("heading") as string;
     const description = formData.get("description") as string;
+    const opacity = formData.get("opacity") as string;
     const file = formData.get("image") as File | null;
 
     const updateData: any = {};
     if (heading) updateData.loginHeading = heading;
     if (description) updateData.loginDescription = description;
+    if (opacity) updateData.loginBgOpacity = parseFloat(opacity);
 
     if (file && file.size > 0) {
       // Store image as Base64 for persistence on Vercel

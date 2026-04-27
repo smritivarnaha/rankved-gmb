@@ -207,5 +207,6 @@ model GlobalSetting {
   loginBgUrl       String   @default("/login-bg.jpg")
   loginHeading     String   @default("Your Google Business, Managed in One Place.")
   loginDescription String   @default("Connect your Google account and manage all your business profiles from a single dashboard.")
+  loginBgOpacity   Float    @default(0.5)
   updatedAt        DateTime @updatedAt
 }
