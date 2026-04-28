@@ -1,9 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { format } from "date-fns";
 import { useState } from "react";
-import { MapPin, Loader2, X, AlertCircle, CheckCircle2, RefreshCw, Plus, FileText, Clock, Send, Trash2, Wand2, Brain } from "lucide-react";
+import { Loader2, X, AlertCircle, CheckCircle2, RefreshCw, Plus, Clock, Trash2, Wand2, Brain, AlertTriangle } from "lucide-react";
 import useSWR from "swr";
 import { AiGenerationModal } from "@/components/ai/ai-components";
 
@@ -19,6 +18,38 @@ interface Profile {
 
 const fetcher = (url: string) => fetch(url).then((res) => res.json());
 
+// Deterministic color palette — muted, professional, distinct
+const AVATAR_PALETTES = [
+  { bg: "#1e3a5f", text: "#fff" }, // deep navy
+  { bg: "#2d4a3e", text: "#fff" }, // forest
+  { bg: "#4a1942", text: "#fff" }, // plum
+  { bg: "#5c3317", text: "#fff" }, // espresso
+  { bg: "#1a3d4d", text: "#fff" }, // teal-dark
+  { bg: "#3d2b1f", text: "#fff" }, // dark brown
+  { bg: "#2c2c54", text: "#fff" }, // indigo-dark
+  { bg: "#1b4332", text: "#fff" }, // emerald-dark
+  { bg: "#7c2d12", text: "#fff" }, // rust-dark
+  { bg: "#374151", text: "#fff" }, // slate
+  { bg: "#312e81", text: "#fff" }, // violet-dark
+  { bg: "#134e4a", text: "#fff" }, // cyan-dark
+];
+
+function getAvatarStyle(name: string) {
+  let hash = 0;
+  for (let i = 0; i < name.length; i++) {
+    hash = name.charCodeAt(i) + ((hash << 5) - hash);
+    hash |= 0;
+  }
+  const idx = Math.abs(hash) % AVATAR_PALETTES.length;
+  return AVATAR_PALETTES[idx];
+}
+
+function getInitials(name: string): string {
+  const words = name.trim().split(/\s+/);
+  if (words.length === 1) return words[0].slice(0, 2).toUpperCase();
+  return (words[0][0] + words[1][0]).toUpperCase();
+}
+
 function ProfileCard({ 
   profile, onDelete, deleting, onAiCreate 
 }: { 
@@ -28,46 +59,57 @@ function ProfileCard({
   const posts: any[] = postsData?.data || [];
 
   const now = new Date();
-  const thisMonth = now.getMonth();
-  const thisYear = now.getFullYear();
-
-  const monthPosts = posts.filter((p: any) => {
-    const d = new Date(p.createdAt);
-    return d.getMonth() === thisMonth && d.getFullYear() === thisYear;
-  });
-
-  const published = monthPosts.filter((p: any) => p.status === "PUBLISHED").length;
+  const published = posts.filter((p: any) => {
+    if (p.status !== "PUBLISHED" || !p.publishedAt) return false;
+    const d = new Date(p.publishedAt);
+    return d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear();
+  }).length;
   const scheduled = posts.filter((p: any) => p.status === "SCHEDULED").length;
   const drafts = posts.filter((p: any) => p.status === "DRAFT").length;
+
+  const avatarStyle = getAvatarStyle(profile.name);
+  const initials = getInitials(profile.name);
+
+  // Extract a short category from accountName
+  const category = profile.accountName
+    ? profile.accountName.split(" ").slice(0, 2).join(" ")
+    : null;
 
   return (
     <div
       style={{
         background: "#fff",
         border: "1px solid #e8eaed",
-        borderRadius: 12,
+        borderRadius: 14,
         overflow: "hidden",
         display: "flex",
         flexDirection: "column",
-        transition: "box-shadow 0.15s, border-color 0.15s",
+        transition: "box-shadow 0.2s",
       }}
       className="profile-card-hover"
     >
+      {/* Thin top accent bar derived from avatar color */}
+      <div style={{ height: 3, background: avatarStyle.bg, opacity: 0.85 }} />
+
       {/* Header */}
-      <div style={{ padding: "18px 18px 14px" }}>
+      <div style={{ padding: "16px 16px 12px" }}>
         <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 10 }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 11, minWidth: 0 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 12, minWidth: 0 }}>
+            {/* Initials avatar */}
             <div style={{
-              width: 36, height: 36, borderRadius: 8,
-              background: "#f3f4f6", flexShrink: 0,
+              width: 40, height: 40, borderRadius: 10, flexShrink: 0,
+              background: avatarStyle.bg,
               display: "flex", alignItems: "center", justifyContent: "center",
+              fontSize: 14, fontWeight: 700, color: avatarStyle.text,
+              letterSpacing: "0.03em",
+              userSelect: "none",
             }}>
-              <MapPin style={{ width: 16, height: 16, color: "#6b7280" }} />
+              {initials}
             </div>
             <div style={{ minWidth: 0 }}>
               <Link
                 href={`/profiles/${profile.id}`}
-                style={{ fontSize: 14, fontWeight: 600, color: "#111827", display: "block", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", lineHeight: 1.3 }}
+                style={{ fontSize: 14, fontWeight: 700, color: "#111827", display: "block", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", lineHeight: 1.3 }}
               >
                 {profile.name}
               </Link>
@@ -82,61 +124,79 @@ function ProfileCard({
             onClick={() => onDelete(profile.id)}
             disabled={deleting}
             title="Delete profile"
-            style={{ padding: 4, borderRadius: 6, color: "#d1d5db", flexShrink: 0, opacity: deleting ? 0.4 : 1, background: "none", border: "none", cursor: "pointer", lineHeight: 0 }}
+            style={{ padding: 4, borderRadius: 6, color: "#d1d5db", flexShrink: 0, opacity: deleting ? 0.4 : 1, background: "none", border: "none", cursor: "pointer", lineHeight: 0, marginTop: 2 }}
           >
             {deleting ? <Loader2 style={{ width: 13, height: 13 }} className="anim-spin" /> : <Trash2 style={{ width: 13, height: 13 }} />}
           </button>
+        </div>
+
+        {/* Status chips */}
+        <div style={{ display: "flex", alignItems: "center", gap: 6, marginTop: 10, flexWrap: "wrap" }}>
+          <span style={{ display: "inline-flex", alignItems: "center", gap: 4, fontSize: 11, fontWeight: 600, color: "#16a34a", background: "#f0fdf4", border: "1px solid #bbf7d0", borderRadius: 20, padding: "2px 9px" }}>
+            <span style={{ width: 6, height: 6, borderRadius: "50%", background: "#22c55e", display: "inline-block" }} />
+            Active
+          </span>
+          {category && (
+            <span style={{ fontSize: 11, fontWeight: 500, color: "#6b7280", background: "#f3f4f6", border: "1px solid #e5e7eb", borderRadius: 20, padding: "2px 9px" }}>
+              {category}
+            </span>
+          )}
+          {drafts > 0 && (
+            <span style={{ display: "inline-flex", alignItems: "center", gap: 4, fontSize: 11, fontWeight: 600, color: "#b45309", background: "#fffbeb", border: "1px solid #fde68a", borderRadius: 20, padding: "2px 9px" }}>
+              <AlertTriangle style={{ width: 10, height: 10 }} />
+              {drafts} draft{drafts > 1 ? "s" : ""}
+            </span>
+          )}
         </div>
       </div>
 
       {/* Stats */}
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", borderTop: "1px solid #f3f4f6", borderBottom: "1px solid #f3f4f6" }}>
         {[
-          { value: published, label: "Published", sub: "this month" },
-          { value: scheduled, label: "Scheduled", sub: "queued" },
-          { value: drafts, label: "Drafts", sub: "unsaved" },
+          { value: published, label: "Published" },
+          { value: scheduled, label: "Scheduled" },
+          { value: drafts, label: "Drafts", highlight: drafts > 0 },
         ].map((s, i) => (
-          <div key={i} style={{ padding: "12px 10px", textAlign: "center", borderRight: i < 2 ? "1px solid #f3f4f6" : "none" }}>
-            <p style={{ fontSize: 22, fontWeight: 700, color: "#111827", lineHeight: 1, marginBottom: 3 }}>{s.value}</p>
-            <p style={{ fontSize: 10, fontWeight: 600, color: "#6b7280", textTransform: "uppercase", letterSpacing: "0.04em" }}>{s.label}</p>
-            <p style={{ fontSize: 10, color: "#d1d5db", marginTop: 1 }}>{s.sub}</p>
+          <div key={i} style={{ padding: "12px 8px", textAlign: "center", borderRight: i < 2 ? "1px solid #f3f4f6" : "none" }}>
+            <p style={{ fontSize: 22, fontWeight: 700, color: s.highlight ? "#d97706" : "#111827", lineHeight: 1, marginBottom: 3 }}>{s.value}</p>
+            <p style={{ fontSize: 9, fontWeight: 600, color: "#9ca3af", textTransform: "uppercase", letterSpacing: "0.06em" }}>{s.label}</p>
           </div>
         ))}
       </div>
 
-      {/* Actions — 2×2 grid */}
+      {/* Actions */}
       <div style={{ padding: "10px 12px", display: "grid", gridTemplateColumns: "1fr 1fr", gap: 6 }}>
         <Link
           href={`/profiles/${profile.id}`}
           style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", gap: 5,
-            padding: "7px 0", fontSize: 12, fontWeight: 500, color: "#6b7280",
-            background: "#f9fafb", border: "1px solid #e5e7eb", borderRadius: 7, textDecoration: "none" }}
+            padding: "8px 0", fontSize: 12, fontWeight: 500, color: "#6b7280",
+            background: "#f9fafb", border: "1px solid #e5e7eb", borderRadius: 8, textDecoration: "none" }}
         >
           <Clock style={{ width: 12, height: 12 }} /> History
         </Link>
         <Link
           href={`/profiles/${profile.id}?tab=ai`}
           style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", gap: 5,
-            padding: "7px 0", fontSize: 12, fontWeight: 500, color: "#374151",
-            background: "#f9fafb", border: "1px solid #e5e7eb", borderRadius: 7, textDecoration: "none" }}
+            padding: "8px 0", fontSize: 12, fontWeight: 500, color: "#374151",
+            background: "#f9fafb", border: "1px solid #e5e7eb", borderRadius: 8, textDecoration: "none" }}
         >
           <Brain style={{ width: 12, height: 12 }} /> Train AI
         </Link>
         <button
           onClick={() => onAiCreate(profile.id)}
           style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", gap: 5,
-            padding: "7px 0", fontSize: 12, fontWeight: 500, color: "#374151",
-            background: "#f9fafb", border: "1px solid #e5e7eb", borderRadius: 7, cursor: "pointer" }}
+            padding: "8px 0", fontSize: 12, fontWeight: 500, color: "#374151",
+            background: "#f9fafb", border: "1px solid #e5e7eb", borderRadius: 8, cursor: "pointer" }}
         >
           <Wand2 style={{ width: 12, height: 12 }} /> AI Create
         </button>
         <Link
           href={`/posts/new?profile=${profile.id}&from=profile`}
           style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", gap: 5,
-            padding: "7px 0", fontSize: 12, fontWeight: 600, color: "#fff",
-            background: "#111827", borderRadius: 7, border: "none", textDecoration: "none" }}
+            padding: "8px 0", fontSize: 12, fontWeight: 700, color: "#fff",
+            background: avatarStyle.bg, borderRadius: 8, border: "none", textDecoration: "none" }}
         >
-          <Plus style={{ width: 12, height: 12 }} /> Create
+          <Plus style={{ width: 12, height: 12 }} /> Create Post
         </Link>
       </div>
     </div>
@@ -205,7 +265,6 @@ export default function ProfilesPage() {
       ) : profiles.length === 0 ? (
         <div className="card">
           <div className="empty-state">
-            <div className="empty-icon"><MapPin style={{ width: 28, height: 28 }} /></div>
             <h3 className="empty-title">No profiles synced yet</h3>
             <p className="empty-text">Go to <strong>Settings</strong> and connect your Google account, then click <strong>Fetch profiles</strong> to sync.</p>
             <Link href="/settings" className="btn btn-primary">Go to Settings</Link>
@@ -214,18 +273,18 @@ export default function ProfilesPage() {
       ) : (
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(300px, 1fr))", gap: 14 }}>
           {profiles.map((p: Profile) => (
-            <ProfileCard 
-              key={p.id} 
-              profile={p} 
-              onDelete={handleDelete} 
-              deleting={deleting === p.id} 
+            <ProfileCard
+              key={p.id}
+              profile={p}
+              onDelete={handleDelete}
+              deleting={deleting === p.id}
               onAiCreate={setAiLocationId}
             />
           ))}
         </div>
       )}
 
-      <AiGenerationModal 
+      <AiGenerationModal
         locationId={aiLocationId || ""}
         isOpen={!!aiLocationId}
         onClose={() => setAiLocationId(null)}
