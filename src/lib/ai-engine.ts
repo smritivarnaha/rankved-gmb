@@ -73,7 +73,7 @@ export async function generatePostContent(
     The JSON must have exactly these fields:
     {
       "content": "The main post body (max 1500 chars, written entirely around the keyword topic, human-friendly and local)",
-      "imagePrompt": "A professional business photography description related to the keyword topic, no people, logos, or text",
+      "imagePrompt": "A professional business photography description related to the keyword topic, no people, logos, or text${location.aiImageInstructions ? `. Additional image style requirements: ${location.aiImageInstructions}` : ""}",
       "topicType": "STANDARD",
       "ctaType": "${(location.aiPhone || location.phone) ? 'CALL' : 'LEARN_MORE'}",
       "ctaUrl": "${(location.aiPhone || location.phone) ? (location.aiPhone || location.phone) : (location.aiWebsite || location.client.website || '')}"

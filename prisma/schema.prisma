@@ -138,6 +138,7 @@ model Location {
   
   aiWebsite              String?
   aiPhone                String?
+  aiImageInstructions    String?   @db.Text   // Custom instructions for image generation
   
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt

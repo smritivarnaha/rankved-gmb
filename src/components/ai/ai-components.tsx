@@ -21,6 +21,7 @@ export function AiSettingsTab({ locationId, profileName }: { locationId: string;
     aiCurrentSequenceIndex: 0,
     aiWebsite: "",
     aiPhone: "",
+    aiImageInstructions: "",
   });
 
   useEffect(() => {
@@ -34,6 +35,7 @@ export function AiSettingsTab({ locationId, profileName }: { locationId: string;
         aiCurrentSequenceIndex: settings.aiCurrentSequenceIndex || 0,
         aiWebsite: settings.aiWebsite || "",
         aiPhone: settings.aiPhone || "",
+        aiImageInstructions: settings.aiImageInstructions || "",
       });
     }
   }, [settings]);
@@ -153,7 +155,22 @@ export function AiSettingsTab({ locationId, profileName }: { locationId: string;
               value={formData.aiCompetitorData}
               onChange={e => setFormData({ ...formData, aiCompetitorData: e.target.value })}
               placeholder="Paste snippets of high-performing competitor posts here for style reference."
-              style={{ width: "100%", height: 120, padding: 12, borderRadius: 8, border: "1px solid #e2e8f0", fontSize: 13, fontFamily: "inherit" }}
+              style={{ width: "100%", height: 100, padding: 12, borderRadius: 8, border: "1px solid #e2e8f0", fontSize: 13, fontFamily: "inherit" }}
+            />
+          </div>
+
+          <div>
+            <label style={{ display: "block", fontSize: 12, fontWeight: 600, color: "#334155", marginBottom: 4 }}>
+              Image Generation Instructions
+            </label>
+            <p style={{ fontSize: 11, color: "#94a3b8", marginBottom: 6 }}>
+              Describe the visual style, setting, or elements you always want in generated images for this profile. E.g. "modern clinic interior with soft lighting", "bright outdoor signage", "close-up of equipment".
+            </p>
+            <textarea 
+              value={formData.aiImageInstructions}
+              onChange={e => setFormData({ ...formData, aiImageInstructions: e.target.value })}
+              placeholder="E.g. Always show a clean, modern clinic interior. Use warm lighting. No text or logos visible."
+              style={{ width: "100%", height: 90, padding: 12, borderRadius: 8, border: "1px solid #e2e8f0", fontSize: 13, fontFamily: "inherit" }}
             />
           </div>
         </div>

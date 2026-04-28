@@ -19,6 +19,7 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
       aiCurrentSequenceIndex: true,
       aiWebsite: true,
       aiPhone: true,
+      aiImageInstructions: true,
       phone: true,
       client: { select: { website: true } }
     },
@@ -47,6 +48,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
       aiCurrentSequenceIndex: body.aiCurrentSequenceIndex ?? 0,
       aiWebsite: body.aiWebsite,
       aiPhone: body.aiPhone,
+      aiImageInstructions: body.aiImageInstructions ?? null,
     },
   });
 
