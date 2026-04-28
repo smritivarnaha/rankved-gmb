@@ -398,29 +398,6 @@ export function LoginForm({ settings }: LoginFormProps) {
           background: `linear-gradient(to bottom, rgba(0,0,0,${settings.loginBgOpacity * 0.5}) 0%, rgba(0,0,0,${settings.loginBgOpacity}) 100%)`, 
           zIndex: 0 
         }} />
-        
-        <div className="left-logo">
-          <div className="left-logo-icon">
-            <MapPin style={{ width: 16, height: 16, color: "#fff" }} />
-          </div>
-          <span className="left-logo-name">RankVed</span>
-        </div>
-        
-        <div className="left-body">
-          <h1 className="left-tagline" style={{ color: "#fff", zIndex: 1 }}>
-            {settings.loginHeading}
-          </h1>
-          <p className="left-sub" style={{ color: "rgba(255,255,255,0.9)", zIndex: 1, fontWeight: 500 }}>
-            {settings.loginDescription}
-          </p>
-        </div>
-
-        <div className="left-footer">
-          <p className="left-stat">
-            <strong>Trusted by 100+ healthcare practices</strong><br />
-            across India · UAE · UK · United States
-          </p>
-        </div>
       </div>
 
       {/* ── RIGHT PANEL (form) ── */}
@@ -432,7 +409,8 @@ export function LoginForm({ settings }: LoginFormProps) {
               alt="RankVed" 
               style={{ height: 32, width: "auto", display: "block" }} 
             />
-            <span style={{ fontSize: 18, fontWeight: 700, color: "#0A0A0A", letterSpacing: "-0.02em" }}>
+            <div style={{ width: 1, height: 24, background: "rgba(0,0,0,0.1)" }} />
+            <span style={{ fontSize: 16, fontWeight: 700, color: "#0A0A0A", letterSpacing: "-0.01em", textTransform: "uppercase" }}>
               GMB Manager
             </span>
           </div>
