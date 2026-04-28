@@ -41,110 +41,102 @@ function ProfileCard({
   const drafts = posts.filter((p: any) => p.status === "DRAFT").length;
 
   return (
-    <div style={{
-      background: "var(--bg-card)",
-      border: "1px solid var(--border)",
-      borderRadius: "var(--radius-md)",
-      overflow: "hidden",
-      display: "flex",
-      flexDirection: "column",
-      transition: "box-shadow 0.15s",
-    }}
+    <div
+      style={{
+        background: "#fff",
+        border: "1px solid #e8eaed",
+        borderRadius: 12,
+        overflow: "hidden",
+        display: "flex",
+        flexDirection: "column",
+        transition: "box-shadow 0.15s, border-color 0.15s",
+      }}
       className="profile-card-hover"
     >
-      {/* Card Header */}
-      <div style={{ padding: "20px 20px 16px", borderBottom: "1px solid var(--border-light)" }}>
-        <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 12 }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 12, minWidth: 0 }}>
+      {/* Header */}
+      <div style={{ padding: "18px 18px 14px" }}>
+        <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 10 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 11, minWidth: 0 }}>
             <div style={{
-              width: 40, height: 40, borderRadius: "var(--radius-sm)",
-              background: "var(--accent-light)", flexShrink: 0,
+              width: 36, height: 36, borderRadius: 8,
+              background: "#f3f4f6", flexShrink: 0,
               display: "flex", alignItems: "center", justifyContent: "center",
             }}>
-              <MapPin style={{ width: 18, height: 18, color: "var(--accent)" }} />
+              <MapPin style={{ width: 16, height: 16, color: "#6b7280" }} />
             </div>
             <div style={{ minWidth: 0 }}>
-              <Link href={`/profiles/${profile.id}`}
-                style={{ fontSize: 15, fontWeight: 600, color: "var(--text-primary)", display: "block", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+              <Link
+                href={`/profiles/${profile.id}`}
+                style={{ fontSize: 14, fontWeight: 600, color: "#111827", display: "block", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", lineHeight: 1.3 }}
+              >
                 {profile.name}
               </Link>
               {profile.address && (
-                <p style={{ fontSize: 12, color: "var(--text-muted)", marginTop: 2, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+                <p style={{ fontSize: 11, color: "#9ca3af", marginTop: 2, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
                   {profile.address}
                 </p>
               )}
             </div>
           </div>
-          <button onClick={() => onDelete(profile.id)} disabled={deleting} title="Delete profile"
-            style={{ padding: 6, borderRadius: "var(--radius-sm)", color: "var(--text-muted)", flexShrink: 0, opacity: deleting ? 0.4 : 1 }}>
-            {deleting ? <Loader2 style={{ width: 14, height: 14 }} className="anim-spin" /> : <Trash2 style={{ width: 14, height: 14 }} />}
+          <button
+            onClick={() => onDelete(profile.id)}
+            disabled={deleting}
+            title="Delete profile"
+            style={{ padding: 4, borderRadius: 6, color: "#d1d5db", flexShrink: 0, opacity: deleting ? 0.4 : 1, background: "none", border: "none", cursor: "pointer", lineHeight: 0 }}
+          >
+            {deleting ? <Loader2 style={{ width: 13, height: 13 }} className="anim-spin" /> : <Trash2 style={{ width: 13, height: 13 }} />}
           </button>
         </div>
       </div>
 
-      {/* Stats Row */}
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", borderBottom: "1px solid var(--border-light)" }}>
-        <div style={{ padding: "12px 16px", textAlign: "center", borderRight: "1px solid var(--border-light)" }}>
-          <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 5, marginBottom: 2 }}>
-            <Send style={{ width: 11, height: 11, color: "var(--success)" }} />
-            <span style={{ fontSize: 11, fontWeight: 600, color: "var(--success)", textTransform: "uppercase", letterSpacing: "0.04em" }}>Published</span>
+      {/* Stats */}
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", borderTop: "1px solid #f3f4f6", borderBottom: "1px solid #f3f4f6" }}>
+        {[
+          { value: published, label: "Published", sub: "this month" },
+          { value: scheduled, label: "Scheduled", sub: "queued" },
+          { value: drafts, label: "Drafts", sub: "unsaved" },
+        ].map((s, i) => (
+          <div key={i} style={{ padding: "12px 10px", textAlign: "center", borderRight: i < 2 ? "1px solid #f3f4f6" : "none" }}>
+            <p style={{ fontSize: 22, fontWeight: 700, color: "#111827", lineHeight: 1, marginBottom: 3 }}>{s.value}</p>
+            <p style={{ fontSize: 10, fontWeight: 600, color: "#6b7280", textTransform: "uppercase", letterSpacing: "0.04em" }}>{s.label}</p>
+            <p style={{ fontSize: 10, color: "#d1d5db", marginTop: 1 }}>{s.sub}</p>
           </div>
-          <p style={{ fontSize: 22, fontWeight: 700, color: "var(--text-primary)", lineHeight: 1 }}>{published}</p>
-          <p style={{ fontSize: 10, color: "var(--text-muted)", marginTop: 2 }}>this month</p>
-        </div>
-        <div style={{ padding: "12px 16px", textAlign: "center", borderRight: "1px solid var(--border-light)" }}>
-          <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 5, marginBottom: 2 }}>
-            <Clock style={{ width: 11, height: 11, color: "var(--warning)" }} />
-            <span style={{ fontSize: 11, fontWeight: 600, color: "var(--warning)", textTransform: "uppercase", letterSpacing: "0.04em" }}>Scheduled</span>
-          </div>
-          <p style={{ fontSize: 22, fontWeight: 700, color: "var(--text-primary)", lineHeight: 1 }}>{scheduled}</p>
-          <p style={{ fontSize: 10, color: "var(--text-muted)", marginTop: 2 }}>upcoming</p>
-        </div>
-        <div style={{ padding: "12px 16px", textAlign: "center" }}>
-          <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 5, marginBottom: 2 }}>
-            <FileText style={{ width: 11, height: 11, color: "var(--text-muted)" }} />
-            <span style={{ fontSize: 11, fontWeight: 600, color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: "0.04em" }}>Drafts</span>
-          </div>
-          <p style={{ fontSize: 22, fontWeight: 700, color: "var(--text-primary)", lineHeight: 1 }}>{drafts}</p>
-          <p style={{ fontSize: 10, color: "var(--text-muted)", marginTop: 2 }}>unsaved</p>
-        </div>
+        ))}
       </div>
 
-      {/* Footer — 2×2 grid */}
-      <div style={{ padding: "10px 12px", marginTop: "auto", display: "grid", gridTemplateColumns: "1fr 1fr", gap: 6 }}>
-        {/* Row 1 */}
-        <Link href={`/profiles/${profile.id}`} title="View history"
-          style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", gap: 6,
-            padding: "7px 0", fontSize: 12, fontWeight: 500, color: "var(--text-secondary)",
-            background: "var(--bg-elevated)", border: "1px solid var(--border-light)",
-            borderRadius: "var(--radius-sm)", cursor: "pointer" }}>
-          <Clock style={{ width: 13, height: 13 }} />
+      {/* Actions — 2×2 grid */}
+      <div style={{ padding: "10px 12px", display: "grid", gridTemplateColumns: "1fr 1fr", gap: 6 }}>
+        <Link
+          href={`/profiles/${profile.id}`}
+          style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", gap: 5,
+            padding: "7px 0", fontSize: 12, fontWeight: 500, color: "#6b7280",
+            background: "#f9fafb", border: "1px solid #e5e7eb", borderRadius: 7, textDecoration: "none" }}
+        >
+          <Clock style={{ width: 12, height: 12 }} /> History
         </Link>
-        <Link href={`/profiles/${profile.id}?tab=ai`}
-          style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", gap: 6,
-            padding: "7px 0", fontSize: 12, fontWeight: 600, color: "#2563eb",
-            background: "#f8fafc", border: "1px solid #dbeafe",
-            borderRadius: "var(--radius-sm)", cursor: "pointer" }}>
-          <Brain style={{ width: 13, height: 13 }} />
-          Train
+        <Link
+          href={`/profiles/${profile.id}?tab=ai`}
+          style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", gap: 5,
+            padding: "7px 0", fontSize: 12, fontWeight: 500, color: "#374151",
+            background: "#f9fafb", border: "1px solid #e5e7eb", borderRadius: 7, textDecoration: "none" }}
+        >
+          <Brain style={{ width: 12, height: 12 }} /> Train AI
         </Link>
-
-        {/* Row 2 */}
-        <button onClick={() => onAiCreate(profile.id)}
-          style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", gap: 6,
-            padding: "7px 0", fontSize: 12, fontWeight: 600, color: "#2563eb",
-            background: "#f8fafc", border: "1px solid #dbeafe",
-            borderRadius: "var(--radius-sm)", cursor: "pointer" }}>
-          <Wand2 style={{ width: 13, height: 13 }} />
-          AI Create
+        <button
+          onClick={() => onAiCreate(profile.id)}
+          style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", gap: 5,
+            padding: "7px 0", fontSize: 12, fontWeight: 500, color: "#374151",
+            background: "#f9fafb", border: "1px solid #e5e7eb", borderRadius: 7, cursor: "pointer" }}
+        >
+          <Wand2 style={{ width: 12, height: 12 }} /> AI Create
         </button>
-        <Link href={`/posts/new?profile=${profile.id}&from=profile`}
-          style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", gap: 6,
+        <Link
+          href={`/posts/new?profile=${profile.id}&from=profile`}
+          style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", gap: 5,
             padding: "7px 0", fontSize: 12, fontWeight: 600, color: "#fff",
-            background: "var(--accent)", borderRadius: "var(--radius-sm)", border: "none",
-            transition: "background 0.12s" }}>
-          <Plus style={{ width: 13, height: 13 }} />
-          Create
+            background: "#111827", borderRadius: 7, border: "none", textDecoration: "none" }}
+        >
+          <Plus style={{ width: 12, height: 12 }} /> Create
         </Link>
       </div>
     </div>
@@ -220,7 +212,7 @@ export default function ProfilesPage() {
           </div>
         </div>
       ) : (
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(300px, 1fr))", gap: 16 }}>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(300px, 1fr))", gap: 14 }}>
           {profiles.map((p: Profile) => (
             <ProfileCard 
               key={p.id} 

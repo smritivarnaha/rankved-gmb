@@ -332,6 +332,7 @@ export default function ProfileDetailPage() {
   const [selectedPosts, setSelectedPosts] = useState<Set<string>>(new Set());
   const [selectMode, setSelectMode] = useState(false);
   const [bulkScheduleDate, setBulkScheduleDate] = useState("");
+  const [bulkScheduleFrequency, setBulkScheduleFrequency] = useState(1);
   const [showBulkSchedule, setShowBulkSchedule] = useState(false);
   const [bulkActionLoading, setBulkActionLoading] = useState(false);
 
@@ -404,20 +405,25 @@ export default function ProfileDetailPage() {
   };
 
   const handleBulkSchedule = async () => {
-    if (!bulkScheduleDate) return alert("Please pick a date first.");
+    if (!bulkScheduleDate) return alert("Please pick a start date first.");
     setBulkActionLoading(true);
     const ids = [...selectedPosts];
-    // Spread each one across hours starting at 10:00
-    await Promise.all(ids.map((id, i) =>
-      fetch(`/api/posts/${id}`, {
+    // Spread posts: each post goes on startDate + (index * frequencyDays), at 10:00 AM
+    await Promise.all(ids.map((id, i) => {
+      const d = new Date(bulkScheduleDate);
+      d.setDate(d.getDate() + i * bulkScheduleFrequency);
+      const yyyy = d.getFullYear();
+      const mm = String(d.getMonth() + 1).padStart(2, "0");
+      const dd = String(d.getDate()).padStart(2, "0");
+      return fetch(`/api/posts/${id}`, {
         method: "PUT",
-        headers: {"Content-Type":"application/json"},
+        headers: {"Content-Type": "application/json"},
         body: JSON.stringify({
           status: "SCHEDULED",
-          scheduledAt: `${bulkScheduleDate}T${String(10 + (i % 8)).padStart(2,"0")}:00:00`
+          scheduledAt: `${yyyy}-${mm}-${dd}T10:00:00`
         })
-      })
-    ));
+      });
+    }));
     setSelectedPosts(new Set());
     setSelectMode(false);
     setShowBulkSchedule(false);
@@ -647,22 +653,38 @@ export default function ProfileDetailPage() {
             </div>
           )}
 
-          {/* Bulk Schedule Date Picker */}
+          {/* Bulk Schedule Date + Frequency Picker */}
           {selectMode && selectedPosts.size > 0 && showBulkSchedule && (
-            <div style={{ padding: "12px 16px", background: "#f8fafc", borderBottom: "1px solid #e2e8f0", display: "flex", alignItems: "center", gap: 10 }}>
-              <label style={{ fontSize: 12, fontWeight: 600, color: "#334155" }}>Start scheduling from:</label>
+            <div style={{ padding: "12px 16px", background: "#f8fafc", borderBottom: "1px solid #e2e8f0", display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
+              <label style={{ fontSize: 12, fontWeight: 600, color: "#334155" }}>Start from:</label>
               <input
                 type="date"
                 value={bulkScheduleDate}
                 onChange={e => setBulkScheduleDate(e.target.value)}
                 style={{ padding: "6px 10px", borderRadius: 8, border: "1px solid #e2e8f0", fontSize: 13 }}
               />
+              <label style={{ fontSize: 12, fontWeight: 600, color: "#334155" }}>Frequency:</label>
+              <select
+                value={bulkScheduleFrequency}
+                onChange={e => setBulkScheduleFrequency(Number(e.target.value))}
+                style={{ padding: "6px 10px", borderRadius: 8, border: "1px solid #e2e8f0", fontSize: 13 }}
+              >
+                <option value={1}>Daily</option>
+                <option value={2}>Alternate Days</option>
+                <option value={3}>Every 3 Days</option>
+                <option value={7}>Weekly</option>
+              </select>
               <button
                 onClick={handleBulkSchedule}
                 disabled={!bulkScheduleDate}
-                style={{ padding: "6px 16px", borderRadius: 8, background: bulkScheduleDate ? "#2563eb" : "#e2e8f0", color: bulkScheduleDate ? "#fff" : "#94a3b8", border: "none", fontSize: 12, fontWeight: 700, cursor: bulkScheduleDate ? "pointer" : "not-allowed" }}>
+                style={{ padding: "6px 16px", borderRadius: 8, background: bulkScheduleDate ? "#0f172a" : "#e2e8f0", color: bulkScheduleDate ? "#fff" : "#94a3b8", border: "none", fontSize: 12, fontWeight: 700, cursor: bulkScheduleDate ? "pointer" : "not-allowed" }}>
                 Confirm Schedule
               </button>
+              {bulkScheduleDate && bulkScheduleFrequency > 0 && (
+                <span style={{ fontSize: 11, color: "#64748b", fontStyle: "italic" }}>
+                  {selectedPosts.size} posts · {bulkScheduleFrequency === 1 ? "daily" : bulkScheduleFrequency === 2 ? "alternate days" : `every ${bulkScheduleFrequency} days`} from {bulkScheduleDate}
+                </span>
+              )}
             </div>
           )}
 
