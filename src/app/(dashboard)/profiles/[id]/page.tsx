@@ -5,12 +5,12 @@ import { format, startOfMonth, endOfMonth, eachDayOfInterval, getDay, isSameMont
 import { useState, useEffect } from "react";
 import {
   ArrowLeft, MapPin, Plus, FileText, Clock, Send, Loader2, Lock,
-  ThumbsUp, Edit3, ExternalLink, AlertTriangle, ChevronLeft, ChevronRight, Trash2, Wand2, Brain
+  ThumbsUp, Edit3, ExternalLink, AlertTriangle, ChevronLeft, ChevronRight, Trash2, Wand2, Brain, Layers
 } from "lucide-react";
 import { useParams } from "next/navigation";
 import useSWR from "swr";
 import { useSession } from "next-auth/react";
-import { AiSettingsTab, AiGenerationModal } from "@/components/ai/ai-components";
+import { AiSettingsTab, AiGenerationModal, AiBulkGenerationModal } from "@/components/ai/ai-components";
 import { useSearchParams } from "next/navigation";
 
 const fetcher = (url: string) => fetch(url).then(r => r.json());
@@ -311,6 +311,7 @@ export default function ProfileDetailPage() {
   const initialTab = searchParamsHook.get("tab") === "ai" ? "AI_SETTINGS" : "POSTS";
   const [activeTab, setActiveTab] = useState<"POSTS" | "AI_SETTINGS">(initialTab);
   const [isAiModalOpen, setIsAiModalOpen] = useState(false);
+  const [isBulkAiModalOpen, setIsBulkAiModalOpen] = useState(false);
 
   const { data: postsData, isLoading: postsLoading, mutate: mutatePosts } = useSWR(
     params.id ? `/api/posts?profileId=${params.id}` : null,
@@ -413,6 +414,10 @@ export default function ProfileDetailPage() {
         </div>
         
         <div style={{ display: "flex", gap: 10 }}>
+          <button onClick={() => setIsBulkAiModalOpen(true)} className="btn btn-ghost" style={{ gap: 8, color: "#8b5cf6", background: "#f3e8ff", border: "1px solid #d8b4fe" }}>
+            <Layers style={{ width: 16, height: 16 }} />
+            Bulk AI
+          </button>
           <button onClick={() => setIsAiModalOpen(true)} className="btn btn-ghost" style={{ gap: 8, color: "var(--accent)", background: "var(--accent-light)" }}>
             <Wand2 style={{ width: 16, height: 16 }} />
             AI
@@ -557,6 +562,16 @@ export default function ProfileDetailPage() {
           mutatePosts();
           setActiveTab("POSTS");
           setStatusFilter("DRAFT");
+        }}
+      />
+      <AiBulkGenerationModal 
+        locationId={profile.id}
+        isOpen={isBulkAiModalOpen}
+        onClose={() => setIsBulkAiModalOpen(false)}
+        onGenerated={() => {
+          mutatePosts();
+          setActiveTab("POSTS");
+          setStatusFilter("ALL"); // or DRAFT/SCHEDULED
         }}
       />
     </div>

@@ -33,7 +33,8 @@ export interface UserAISettings {
 export async function generatePostContent(
   locationId: string, 
   settings: UserAISettings,
-  provider: string = "CLAUDE"
+  provider: string = "CLAUDE",
+  customKeyword?: string
 ): Promise<GeneratedPost> {
   const location = await prisma.location.findUnique({
     where: { id: locationId },
@@ -42,7 +43,7 @@ export async function generatePostContent(
 
   if (!location) throw new Error("Location not found");
 
-  const keyword = await consumeNextKeyword(locationId);
+  const keyword = customKeyword || await consumeNextKeyword(locationId);
 
   const systemPrompt = `
     You are an expert Google Business Profile content creator for "${location.name}".

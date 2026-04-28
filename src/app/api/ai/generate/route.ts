@@ -22,7 +22,7 @@ export async function POST(req: NextRequest) {
   if (!user) return NextResponse.json({ error: "User not found" }, { status: 404 });
 
   try {
-    const { locationId, mode } = await req.json(); // mode: "BOTH", "CONTENT", "IMAGE"
+    const { locationId, mode, customKeyword } = await req.json(); // mode: "BOTH", "CONTENT", "IMAGE"
     if (!locationId) return NextResponse.json({ error: "locationId is required" }, { status: 400 });
 
     const location = await prisma.location.findUnique({ where: { id: locationId } });
@@ -50,7 +50,7 @@ export async function POST(req: NextRequest) {
       : location.aiImageProvider;
 
     // Step 1: Generate Content & Prompt (always needed as it provides the image prompt)
-    const postData = await generatePostContent(locationId, aiSettings, contentProvider);
+    const postData = await generatePostContent(locationId, aiSettings, contentProvider, customKeyword);
 
     // Step 2: Generate Image (conditional)
     // Mode explicitly "CONTENT" -> skip

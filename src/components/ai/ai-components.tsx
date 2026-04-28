@@ -1,7 +1,8 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Loader2, Save, Wand2, RefreshCw, Check, AlertCircle, X, ExternalLink } from "lucide-react";
+import { Loader2, Save, Wand2, RefreshCw, Check, AlertCircle, X, ExternalLink, Calendar, Layers } from "lucide-react";
+import { addDays, format } from "date-fns";
 import useSWR from "swr";
 
 const fetcher = (url: string) => fetch(url).then(r => r.json());
@@ -456,6 +457,241 @@ export function AiGenerationModal({
             </div>
           </div>
         )}
+      </div>
+    </div>
+  );
+}
+
+/* ─── AI Bulk Generation Modal ────────────────────────────────────── */
+export function AiBulkGenerationModal({ 
+  locationId, isOpen, onClose, onGenerated 
+}: { 
+  locationId: string; isOpen: boolean; onClose: () => void; onGenerated: () => void 
+}) {
+  const [numPosts, setNumPosts] = useState(15);
+  const [frequency, setFrequency] = useState(1);
+  const [startDate, setStartDate] = useState(format(addDays(new Date(), 1), "yyyy-MM-dd"));
+  const [keywords, setKeywords] = useState<string[]>(Array(15).fill(""));
+  const [step, setStep] = useState<1|2|3>(1);
+  const [currentIndex, setCurrentIndex] = useState(0);
+  const [results, setResults] = useState<{status: 'success'|'error', msg: string}[]>([]);
+
+  useEffect(() => {
+    setKeywords(prev => {
+      const next = [...prev];
+      if (next.length < numPosts) {
+        return [...next, ...Array(numPosts - next.length).fill("")];
+      }
+      return next.slice(0, numPosts);
+    });
+  }, [numPosts]);
+
+  const handleStartGeneration = async () => {
+    setStep(3);
+    setCurrentIndex(0);
+    setResults([]);
+    
+    let currentResults: {status: 'success'|'error', msg: string}[] = [];
+
+    for (let i = 0; i < numPosts; i++) {
+      setCurrentIndex(i);
+      const postDate = addDays(new Date(startDate), i * frequency);
+      const customKeyword = keywords[i]?.trim();
+
+      try {
+        const genRes = await fetch("/api/ai/generate", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ locationId, mode: "BOTH", customKeyword: customKeyword || undefined }),
+        });
+        
+        const genData = await genRes.json();
+        
+        if (!genRes.ok) {
+          currentResults.push({ status: "error", msg: `Post ${i+1}: ${genData.error || "Generation failed"}` });
+          setResults([...currentResults]);
+          continue;
+        }
+
+        const saveRes = await fetch("/api/posts", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            profileId: locationId,
+            summary: genData.content,
+            topicType: genData.topicType || "STANDARD",
+            status: "DRAFT",
+            scheduledAt: postDate.toISOString(),
+            imageUrl: genData.imageUrl,
+            ctaType: genData.ctaType,
+            ctaUrl: genData.ctaUrl,
+          }),
+        });
+
+        if (!saveRes.ok) {
+          currentResults.push({ status: "error", msg: `Post ${i+1}: Failed to save` });
+        } else {
+          currentResults.push({ status: "success", msg: `Post ${i+1}: Drafted for ${format(postDate, "MMM d")}` });
+        }
+      } catch (err: any) {
+         currentResults.push({ status: "error", msg: `Post ${i+1}: ${err.message}` });
+      }
+      setResults([...currentResults]);
+    }
+    setCurrentIndex(numPosts);
+  };
+
+  const resetAndClose = () => {
+    setStep(1);
+    setCurrentIndex(0);
+    setResults([]);
+    onClose();
+  };
+
+  if (!isOpen) return null;
+
+  return (
+    <div style={{ 
+      position: "fixed", inset: 0, background: "rgba(0,0,0,0.5)", backdropFilter: "blur(4px)",
+      display: "flex", alignItems: "center", justifyContent: "center", zIndex: 9999, padding: 20
+    }}>
+      <div style={{ 
+        background: "#fff", width: "100%", maxWidth: 600, borderRadius: 16, 
+        boxShadow: "0 20px 25px -5px rgba(0,0,0,0.1)", overflow: "hidden", display: "flex", flexDirection: "column", maxHeight: "90vh"
+      }}>
+        {/* Header */}
+        <div style={{ padding: "20px 24px", borderBottom: "1px solid #f1f5f9", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+            <Layers size={20} color="#8b5cf6" />
+            <h3 style={{ fontSize: 16, fontWeight: 700, color: "#0f172a" }}>Bulk AI Post Generator</h3>
+          </div>
+          <button onClick={step === 3 && currentIndex < numPosts ? undefined : resetAndClose} style={{ background: "none", border: "none", cursor: "pointer", color: "#94a3b8" }}>
+            <X size={20} />
+          </button>
+        </div>
+
+        {/* Content */}
+        <div style={{ padding: 24, overflowY: "auto", flex: 1 }}>
+          {step === 1 && (
+            <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
+              <div>
+                <label style={{ display: "block", fontSize: 13, fontWeight: 600, color: "#334155", marginBottom: 6 }}>Number of Posts to Generate</label>
+                <input 
+                  type="number" min={1} max={30} value={numPosts}
+                  onChange={e => setNumPosts(Number(e.target.value))}
+                  style={{ width: "100%", padding: 10, borderRadius: 8, border: "1px solid #e2e8f0", fontSize: 14 }}
+                />
+              </div>
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
+                <div>
+                  <label style={{ display: "block", fontSize: 13, fontWeight: 600, color: "#334155", marginBottom: 6 }}>Start Date</label>
+                  <input 
+                    type="date" value={startDate}
+                    onChange={e => setStartDate(e.target.value)}
+                    style={{ width: "100%", padding: 10, borderRadius: 8, border: "1px solid #e2e8f0", fontSize: 14 }}
+                  />
+                </div>
+                <div>
+                  <label style={{ display: "block", fontSize: 13, fontWeight: 600, color: "#334155", marginBottom: 6 }}>Frequency</label>
+                  <select 
+                    value={frequency}
+                    onChange={e => setFrequency(Number(e.target.value))}
+                    style={{ width: "100%", padding: 10, borderRadius: 8, border: "1px solid #e2e8f0", fontSize: 14 }}
+                  >
+                    <option value={1}>Daily</option>
+                    <option value={2}>Alternate Days</option>
+                    <option value={3}>Every 3 Days</option>
+                    <option value={7}>Weekly</option>
+                  </select>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {step === 2 && (
+            <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+              <p style={{ fontSize: 13, color: "#64748b", marginBottom: 8 }}>
+                Provide a primary keyword or topic for each post. Leave blank to let the AI decide based on your sequence.
+              </p>
+              {keywords.map((kw, idx) => {
+                const pDate = addDays(new Date(startDate), idx * frequency);
+                return (
+                  <div key={idx} style={{ display: "flex", alignItems: "center", gap: 12 }}>
+                    <div style={{ width: 100, fontSize: 12, fontWeight: 600, color: "#94a3b8", display: "flex", alignItems: "center", gap: 6 }}>
+                      <Calendar size={12} /> {format(pDate, "MMM d")}
+                    </div>
+                    <input 
+                      type="text"
+                      placeholder={`Post ${idx + 1} Keyword`}
+                      value={kw}
+                      onChange={e => {
+                        const next = [...keywords];
+                        next[idx] = e.target.value;
+                        setKeywords(next);
+                      }}
+                      style={{ flex: 1, padding: "8px 12px", borderRadius: 8, border: "1px solid #e2e8f0", fontSize: 13 }}
+                    />
+                  </div>
+                );
+              })}
+            </div>
+          )}
+
+          {step === 3 && (
+            <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+              {currentIndex < numPosts ? (
+                <div style={{ textAlign: "center", padding: "20px 0" }}>
+                  <Loader2 size={40} className="anim-spin" color="#8b5cf6" style={{ margin: "0 auto 16px" }} />
+                  <h4 style={{ fontSize: 15, fontWeight: 600, color: "#0f172a" }}>Generating Post {currentIndex + 1} of {numPosts}...</h4>
+                  <p style={{ fontSize: 13, color: "#64748b", marginTop: 4 }}>Please don't close this window.</p>
+                </div>
+              ) : (
+                <div style={{ textAlign: "center", padding: "20px 0" }}>
+                  <div style={{ width: 48, height: 48, borderRadius: "50%", background: "#dcfce7", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 16px" }}>
+                    <Check size={24} color="#16a34a" />
+                  </div>
+                  <h4 style={{ fontSize: 16, fontWeight: 700, color: "#0f172a" }}>Generation Complete</h4>
+                  <p style={{ fontSize: 13, color: "#64748b", marginTop: 4 }}>All posts have been drafted and scheduled.</p>
+                </div>
+              )}
+
+              <div style={{ background: "#f8fafc", borderRadius: 8, border: "1px solid #e2e8f0", padding: 12, maxHeight: 200, overflowY: "auto", display: "flex", flexDirection: "column", gap: 8 }}>
+                {results.map((r, idx) => (
+                  <div key={idx} style={{ fontSize: 12, color: r.status === 'success' ? "#16a34a" : "#dc2626", display: "flex", alignItems: "center", gap: 6 }}>
+                    {r.status === 'success' ? <Check size={12} /> : <AlertCircle size={12} />}
+                    {r.msg}
+                  </div>
+                ))}
+                {currentIndex < numPosts && (
+                  <div style={{ fontSize: 12, color: "#94a3b8", display: "flex", alignItems: "center", gap: 6 }}>
+                    <Loader2 size={12} className="anim-spin" /> In progress...
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Footer */}
+        <div style={{ padding: "16px 24px", borderTop: "1px solid #f1f5f9", background: "#f8fafc", display: "flex", justifyContent: "flex-end", gap: 12 }}>
+          {step === 1 && (
+            <>
+              <button onClick={resetAndClose} style={{ padding: "9px 16px", background: "none", border: "1px solid #e2e8f0", borderRadius: 8, fontSize: 13, fontWeight: 600, color: "#64748b", cursor: "pointer" }}>Cancel</button>
+              <button onClick={() => setStep(2)} style={{ padding: "9px 24px", background: "#0f172a", color: "#fff", borderRadius: 8, border: "none", fontSize: 13, fontWeight: 700, cursor: "pointer" }}>Next</button>
+            </>
+          )}
+          {step === 2 && (
+            <>
+              <button onClick={() => setStep(1)} style={{ padding: "9px 16px", background: "none", border: "1px solid #e2e8f0", borderRadius: 8, fontSize: 13, fontWeight: 600, color: "#64748b", cursor: "pointer" }}>Back</button>
+              <button onClick={handleStartGeneration} style={{ padding: "9px 24px", background: "#8b5cf6", color: "#fff", borderRadius: 8, border: "none", fontSize: 13, fontWeight: 700, cursor: "pointer", display: "flex", alignItems: "center", gap: 8 }}>
+                <Wand2 size={16} /> Generate & Draft All
+              </button>
+            </>
+          )}
+          {step === 3 && currentIndex === numPosts && (
+            <button onClick={() => { onGenerated(); resetAndClose(); }} style={{ padding: "9px 24px", background: "#0f172a", color: "#fff", borderRadius: 8, border: "none", fontSize: 13, fontWeight: 700, cursor: "pointer" }}>Done</button>
+          )}
+        </div>
       </div>
     </div>
   );
