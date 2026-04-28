@@ -91,15 +91,27 @@ function ProfileCard({
                   <GbpIcon size={24} />
                 </div>
               )}
-              <div style={{ minWidth: 0 }}>
+              <div style={{ minWidth: 0, flex: 1 }}>
                 <Link
                   href={`/profiles/${profile.id}`}
-                  style={{ fontSize: 13, fontWeight: 700, color: "#111827", display: "block", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", lineHeight: 1.35 }}
+                  title={profile.name}
+                  style={{ 
+                    fontSize: 13, fontWeight: 700, color: "#111827", 
+                    display: "block", whiteSpace: "nowrap", overflow: "hidden", 
+                    textOverflow: "ellipsis", lineHeight: 1.35 
+                  }}
                 >
                   {profile.name}
                 </Link>
                 {profile.address && (
-                  <p style={{ fontSize: 11, color: "#9ca3af", marginTop: 2, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+                  <p 
+                    title={profile.address}
+                    style={{ 
+                      fontSize: 11, color: "#9ca3af", marginTop: 2, 
+                      whiteSpace: "nowrap", overflow: "hidden", 
+                      textOverflow: "ellipsis" 
+                    }}
+                  >
                     {profile.address}
                   </p>
                 )}
