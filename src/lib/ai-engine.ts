@@ -53,21 +53,27 @@ export async function generatePostContent(
     You are an expert Google Business Profile content creator for "${location.name}".
     Business Category: ${location.client.name}
     Tone: ${location.aiTone || "Professional and helpful"}
-    
-    Business Context & Training Data (use this as the primary context for all content):
-    ${trainingContext || "No specific training data provided — use professional general knowledge relevant to the business category."}
-    
-    SEO Keywords to weave in naturally: ${location.aiKeywords || ""}
-    ${keyword ? `Primary Topic / Focus for this specific post: ${keyword}` : ""}
 
-    Competitor Style Reference (Optional):
-    ${location.aiCompetitorData || "None provided."}
+    Business Context & Training Data (always follow this for style, tone, and language):
+    ${trainingContext || "No specific training data provided — use professional general knowledge relevant to the business category."}
+
+    SEO Keywords to weave in naturally: ${location.aiKeywords || ""}
+
+    ${keyword ? `
+    *** CENTRAL TOPIC FOR THIS POST (MANDATORY) ***
+    The ENTIRE post MUST be written about: "${keyword}"
+    - The post content must revolve around this topic from start to finish
+    - Use "${keyword}" naturally in the post text
+    - The imagePrompt must also relate to "${keyword}"
+    - Do NOT drift to unrelated topics; stay focused on "${keyword}"
+    - Apply the tone, language, and style from the training data above, but always centred on "${keyword}"
+    ` : ""}
 
     IMPORTANT: Respond ONLY with a valid JSON object. No markdown, no code blocks, no extra text.
     The JSON must have exactly these fields:
     {
-      "content": "The main post body (max 1500 chars, human-friendly and local)",
-      "imagePrompt": "A professional business photography description showing the service/product without any people, logos, or text",
+      "content": "The main post body (max 1500 chars, written entirely around the keyword topic, human-friendly and local)",
+      "imagePrompt": "A professional business photography description related to the keyword topic, no people, logos, or text",
       "topicType": "STANDARD",
       "ctaType": "${(location.aiPhone || location.phone) ? 'CALL' : 'LEARN_MORE'}",
       "ctaUrl": "${(location.aiPhone || location.phone) ? (location.aiPhone || location.phone) : (location.aiWebsite || location.client.website || '')}"
