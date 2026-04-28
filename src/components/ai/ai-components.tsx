@@ -475,6 +475,7 @@ export function AiBulkGenerationModal({
   const [numPosts, setNumPosts] = useState(15);
   const [frequency, setFrequency] = useState(1);
   const [startDate, setStartDate] = useState(format(addDays(new Date(), 1), "yyyy-MM-dd"));
+  const [generateMode, setGenerateMode] = useState<"BOTH"|"CONTENT_ONLY">("BOTH");
   const [keywords, setKeywords] = useState<string[]>(Array(15).fill(""));
   const [step, setStep] = useState<1|2|3>(1);
   const [currentIndex, setCurrentIndex] = useState(0);
@@ -506,7 +507,7 @@ export function AiBulkGenerationModal({
         const genRes = await fetch("/api/ai/generate", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ locationId, mode: "BOTH", customKeyword: customKeyword || undefined }),
+          body: JSON.stringify({ locationId, mode: generateMode, customKeyword: customKeyword || undefined }),
         });
         
         const genData = await genRes.json();
@@ -609,13 +610,24 @@ export function AiBulkGenerationModal({
                   </select>
                 </div>
               </div>
+              <div>
+                <label style={{ display: "block", fontSize: 13, fontWeight: 600, color: "#334155", marginBottom: 6 }}>Generation Mode</label>
+                <select 
+                  value={generateMode}
+                  onChange={e => setGenerateMode(e.target.value as "BOTH"|"CONTENT_ONLY")}
+                  style={{ width: "100%", padding: 10, borderRadius: 8, border: "1px solid #e2e8f0", fontSize: 14 }}
+                >
+                  <option value="BOTH">Content + Image (Uses more credits/time)</option>
+                  <option value="CONTENT_ONLY">Content Only (Faster)</option>
+                </select>
+              </div>
             </div>
           )}
 
           {step === 2 && (
             <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
               <p style={{ fontSize: 13, color: "#64748b", marginBottom: 8 }}>
-                Provide a primary keyword or topic for each post. Leave blank to let the AI decide based on your sequence.
+                Provide a primary keyword or topic for each post. <strong>Tip: Paste comma-separated keywords</strong> to auto-fill multiple boxes at once!
               </p>
               {keywords.map((kw, idx) => {
                 const pDate = addDays(new Date(startDate), idx * frequency);
@@ -629,11 +641,21 @@ export function AiBulkGenerationModal({
                       placeholder={`Post ${idx + 1} Keyword`}
                       value={kw}
                       onChange={e => {
-                        const next = [...keywords];
-                        next[idx] = e.target.value;
-                        setKeywords(next);
+                        const value = e.target.value;
+                        if (value.includes(",")) {
+                          const parts = value.split(",").map(s => s.trim()).filter(s => s);
+                          const next = [...keywords];
+                          for (let i = 0; i < parts.length && idx + i < numPosts; i++) {
+                            next[idx + i] = parts[i];
+                          }
+                          setKeywords(next);
+                        } else {
+                          const next = [...keywords];
+                          next[idx] = value;
+                          setKeywords(next);
+                        }
                       }}
-                      style={{ flex: 1, padding: "8px 12px", borderRadius: 8, border: "1px solid #e2e8f0", fontSize: 13 }}
+                      style={{ flex: 1, padding: "8px 12px", borderRadius: 8, border: "1px solid #e2e8f0", fontSize: 13, borderColor: !kw.trim() ? "#ef4444" : "#e2e8f0" }}
                     />
                   </div>
                 );
@@ -687,7 +709,16 @@ export function AiBulkGenerationModal({
           {step === 2 && (
             <>
               <button onClick={() => setStep(1)} style={{ padding: "9px 16px", background: "none", border: "1px solid #e2e8f0", borderRadius: 8, fontSize: 13, fontWeight: 600, color: "#64748b", cursor: "pointer" }}>Back</button>
-              <button onClick={handleStartGeneration} style={{ padding: "9px 24px", background: "#8b5cf6", color: "#fff", borderRadius: 8, border: "none", fontSize: 13, fontWeight: 700, cursor: "pointer", display: "flex", alignItems: "center", gap: 8 }}>
+              <button 
+                onClick={() => {
+                  if (keywords.some(k => !k.trim())) {
+                    alert("Please provide a keyword for every post, or reduce the number of posts.");
+                    return;
+                  }
+                  handleStartGeneration();
+                }} 
+                disabled={keywords.some(k => !k.trim())}
+                style={{ padding: "9px 24px", background: keywords.some(k => !k.trim()) ? "#cbd5e1" : "#8b5cf6", color: "#fff", borderRadius: 8, border: "none", fontSize: 13, fontWeight: 700, cursor: keywords.some(k => !k.trim()) ? "not-allowed" : "pointer", display: "flex", alignItems: "center", gap: 8 }}>
                 <Wand2 size={16} /> Generate & Draft All
               </button>
             </>
