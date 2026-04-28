@@ -145,8 +145,14 @@ export default function SettingsPage() {
                       <MapPin style={{ width: 22, height: 22, color: "#64748b" }} />
                     </div>
                     <div style={{ flex: 1, minWidth: 0 }}>
-                      <p title={p.name} style={{ fontSize: 13, fontWeight: 600, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{p.name}</p>
-                      <p title={p.address || ""} style={{ fontSize: 11, color: "var(--text-muted)", marginTop: 2, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{p.address || "No address on file"}</p>
+                      <p title={p.name} style={{ 
+                        fontSize: 13, fontWeight: 600, color: "#111827",
+                        display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical", overflow: "hidden", lineHeight: 1.3
+                      }}>{p.name}</p>
+                      <p title={p.address || ""} style={{ 
+                        fontSize: 11, color: "var(--text-muted)", marginTop: 4,
+                        display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical", overflow: "hidden", lineHeight: 1.3
+                      }}>{p.address || "No address on file"}</p>
                     </div>
                   </div>
                 ))}

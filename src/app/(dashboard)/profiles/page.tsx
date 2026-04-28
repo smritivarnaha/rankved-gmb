@@ -97,8 +97,13 @@ function ProfileCard({
                   title={profile.name}
                   style={{ 
                     fontSize: 13, fontWeight: 700, color: "#111827", 
-                    display: "block", whiteSpace: "nowrap", overflow: "hidden", 
-                    textOverflow: "ellipsis", lineHeight: 1.35 
+                    display: "-webkit-box", 
+                    WebkitLineClamp: 2,
+                    WebkitBoxOrient: "vertical",
+                    overflow: "hidden",
+                    lineHeight: 1.3,
+                    maxHeight: "2.6em",
+                    textDecoration: "none"
                   }}
                 >
                   {profile.name}
@@ -107,9 +112,13 @@ function ProfileCard({
                   <p 
                     title={profile.address}
                     style={{ 
-                      fontSize: 11, color: "#9ca3af", marginTop: 2, 
-                      whiteSpace: "nowrap", overflow: "hidden", 
-                      textOverflow: "ellipsis" 
+                      fontSize: 11, color: "#9ca3af", marginTop: 4,
+                      display: "-webkit-box", 
+                      WebkitLineClamp: 2,
+                      WebkitBoxOrient: "vertical",
+                      overflow: "hidden",
+                      lineHeight: 1.3,
+                      maxHeight: "2.6em"
                     }}
                   >
                     {profile.address}
