@@ -20,6 +20,8 @@ export async function GET(req: NextRequest) {
       openaiImageModel: true,
       geminiContentModel: true,
       geminiImageModel: true,
+      openrouterApiKey: true,
+      openrouterModel: true,
     }
   });
 
@@ -45,6 +47,8 @@ export async function POST(req: NextRequest) {
       openaiImageModel:   body.openaiImageModel,
       geminiContentModel: body.geminiContentModel,
       geminiImageModel:   body.geminiImageModel,
+      openrouterApiKey:   body.openrouterApiKey,
+      openrouterModel:    body.openrouterModel,
     }
   });
 

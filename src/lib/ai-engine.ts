@@ -25,6 +25,8 @@ export interface UserAISettings {
   openaiImageModel?: string;
   geminiContentModel?: string;
   geminiImageModel?: string;
+  openrouterApiKey?: string;
+  openrouterModel?: string;
 }
 
 /**
@@ -105,6 +107,23 @@ export async function generatePostContent(
     const result = await model.generateContent(`${systemPrompt}\n\nGenerate the GMB post JSON.`);
     const response = await result.response;
     return parseJson(response.text());
+  }
+
+  if (provider === "OPENROUTER") {
+    if (!settings.openrouterApiKey) throw new Error("OpenRouter API key is missing");
+    const openai = new OpenAI({ 
+      baseURL: "https://openrouter.ai/api/v1",
+      apiKey: settings.openrouterApiKey 
+    });
+    const response = await openai.chat.completions.create({
+      model: settings.openrouterModel || "openrouter/auto",
+      messages: [
+        { role: "system", content: systemPrompt },
+        { role: "user", content: "Generate the GMB post JSON." }
+      ],
+      response_format: { type: "json_object" }
+    });
+    return parseJson(response.choices[0].message.content || "");
   }
 
   throw new Error(`Unsupported provider: ${provider}`);

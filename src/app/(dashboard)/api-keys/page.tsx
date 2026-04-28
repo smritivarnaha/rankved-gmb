@@ -7,6 +7,7 @@ import {
   Zap, Clock, Activity, ChevronRight, Shield, ExternalLink
 } from "lucide-react";
 import { format } from "date-fns";
+import { ProviderSettingsCard } from "./ProviderSettingsCard";
 
 const fetcher = (url: string) => fetch(url).then(r => r.json());
 
@@ -50,6 +51,7 @@ function CopyButton({ text }: { text: string }) {
 }
 
 export default function ApiKeysPage() {
+  const [activeTab, setActiveTab] = useState<"PROVIDERS" | "WEBHOOKS">("PROVIDERS");
   const { data, mutate } = useSWR("/api/keys", fetcher);
   const keys: ApiKey[] = data?.data || [];
 
@@ -97,24 +99,55 @@ export default function ApiKeysPage() {
   return (
     <div style={{ maxWidth: 860, margin: "0 auto" }}>
       {/* Header */}
-      <div style={{ marginBottom: 28, display: "flex", alignItems: "flex-start", justifyContent: "space-between", flexWrap: "wrap", gap: 12 }}>
-        <div>
-          <h1 style={{ fontSize: 22, fontWeight: 700, color: "#0A0A0A", letterSpacing: "-0.025em", marginBottom: 4 }}>
-            API Keys
-          </h1>
-          <p style={{ fontSize: 14, color: "#71717A" }}>
-            Connect n8n, Make, Zapier, or any HTTP client to automate post creation.
-          </p>
-        </div>
-        <button onClick={() => { setShowCreate(true); setNewKey(null); }}
-          style={{
-            display: "inline-flex", alignItems: "center", gap: 7,
-            padding: "9px 18px", background: "#0A0A0A", color: "#fff",
-            borderRadius: 8, fontSize: 14, fontWeight: 600, border: "none", cursor: "pointer",
-          }}>
-          <Plus style={{ width: 15, height: 15 }} /> Generate Key
+      <div style={{ marginBottom: 28 }}>
+        <h1 style={{ fontSize: 22, fontWeight: 700, color: "#0A0A0A", letterSpacing: "-0.025em", marginBottom: 4 }}>
+          API & Integrations
+        </h1>
+        <p style={{ fontSize: 14, color: "#71717A" }}>
+          Manage your AI provider keys and create Webhook keys for external automation.
+        </p>
+      </div>
+
+      {/* Tabs */}
+      <div style={{ display: "flex", gap: 24, marginBottom: 24, borderBottom: "1px solid #e2e8f0" }}>
+        <button 
+          onClick={() => setActiveTab("PROVIDERS")}
+          style={{ 
+            padding: "0 0 12px 0", fontSize: 14, fontWeight: 600, background: "none", border: "none", cursor: "pointer",
+            borderBottom: activeTab === "PROVIDERS" ? "2px solid #0A0A0A" : "2px solid transparent",
+            color: activeTab === "PROVIDERS" ? "#0A0A0A" : "#71717A",
+            transition: "all 0.15s"
+          }}
+        >
+          AI Providers
+        </button>
+        <button 
+          onClick={() => setActiveTab("WEBHOOKS")}
+          style={{ 
+            padding: "0 0 12px 0", fontSize: 14, fontWeight: 600, background: "none", border: "none", cursor: "pointer",
+            borderBottom: activeTab === "WEBHOOKS" ? "2px solid #0A0A0A" : "2px solid transparent",
+            color: activeTab === "WEBHOOKS" ? "#0A0A0A" : "#71717A",
+            transition: "all 0.15s"
+          }}
+        >
+          Webhook Keys
         </button>
       </div>
+
+      {activeTab === "PROVIDERS" && <ProviderSettingsCard />}
+
+      {activeTab === "WEBHOOKS" && (
+        <>
+          <div style={{ marginBottom: 28, display: "flex", justifyContent: "flex-end" }}>
+            <button onClick={() => { setShowCreate(true); setNewKey(null); }}
+              style={{
+                display: "inline-flex", alignItems: "center", gap: 7,
+                padding: "9px 18px", background: "#0A0A0A", color: "#fff",
+                borderRadius: 8, fontSize: 14, fontWeight: 600, border: "none", cursor: "pointer",
+              }}>
+              <Plus style={{ width: 15, height: 15 }} /> Generate Webhook Key
+            </button>
+          </div>
 
       {/* Newly created key — one-time reveal */}
       {newKey && (
@@ -415,6 +448,8 @@ export default function ApiKeysPage() {
             ))}
           </div>
         </details>
+      )}
+        </>
       )}
     </div>
   );

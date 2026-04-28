@@ -59,9 +59,10 @@ model User {
   isApproved      Boolean     @default(true)
   
   // AI API Keys
-  anthropicApiKey String?
-  openaiApiKey    String?
-  geminiApiKey    String?
+  anthropicApiKey  String?
+  openaiApiKey     String?
+  geminiApiKey     String?
+  openrouterApiKey String?
 
   defaultAiContentProvider String @default("CLAUDE")
   defaultAiImageProvider   String @default("DALL-E-3")
@@ -72,6 +73,7 @@ model User {
   openaiImageModel    String @default("dall-e-3")
   geminiContentModel  String @default("gemini-1.5-flash")
   geminiImageModel    String @default("imagen-3.0-generate-001")
+  openrouterModel     String @default("openrouter/auto")
   
   // Hierarchy
   ownerId         String?

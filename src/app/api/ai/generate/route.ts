@@ -12,10 +12,10 @@ export async function POST(req: NextRequest) {
   const user = await prisma.user.findUnique({
     where: { email: session.user?.email || "" },
     select: { 
-      anthropicApiKey: true, openaiApiKey: true, geminiApiKey: true,
+      anthropicApiKey: true, openaiApiKey: true, geminiApiKey: true, openrouterApiKey: true,
       defaultAiContentProvider: true, defaultAiImageProvider: true,
       anthropicModel: true, openaiContentModel: true, openaiImageModel: true,
-      geminiContentModel: true, geminiImageModel: true
+      geminiContentModel: true, geminiImageModel: true, openrouterModel: true
     }
   });
 
@@ -38,6 +38,8 @@ export async function POST(req: NextRequest) {
       openaiImageModel:   user.openaiImageModel,
       geminiContentModel: user.geminiContentModel,
       geminiImageModel:   user.geminiImageModel,
+      openrouterApiKey:   user.openrouterApiKey || undefined,
+      openrouterModel:    user.openrouterModel,
     };
 
     // Resolve Providers

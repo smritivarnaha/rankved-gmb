@@ -41,6 +41,19 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ success: true, message: "Google connection successful!" });
     }
 
+    if (provider === "OPENROUTER") {
+      const openai = new OpenAI({ 
+        baseURL: "https://openrouter.ai/api/v1",
+        apiKey 
+      });
+      await openai.chat.completions.create({
+        model: "openrouter/auto", // Use auto or any lightweight model just to test
+        max_tokens: 1,
+        messages: [{ role: "user", content: "hi" }],
+      });
+      return NextResponse.json({ success: true, message: "OpenRouter connection successful!" });
+    }
+
     return NextResponse.json({ error: "Invalid provider" }, { status: 400 });
   } catch (err: any) {
     console.error(`[API Test Error - ${provider}]`, err);
