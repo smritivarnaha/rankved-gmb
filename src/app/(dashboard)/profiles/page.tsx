@@ -19,17 +19,16 @@ interface Profile {
 
 const fetcher = (url: string) => fetch(url).then((r) => r.json());
 
-// Deterministic muted palette — professional, calm
-const PALETTE = [
-  "#3d5a80","#5c4a72","#2d6a4f","#8b5e3c","#1a535c",
-  "#4a4e69","#6b4c11","#23395b","#5a3825","#2b4141",
-  "#4d6a4a","#6b3737",
-];
-function getColor(name: string) {
+// Uniform brand blue and neutral grey variations for sidebar
+const BRAND_BLUE = "#2563eb";
+const GREY_VARIANTS = ["#f3f4f6", "#e5e7eb", "#d1d5db", "#9ca3af", "#cbd5e1"];
+
+function getGrey(name: string) {
   let h = 0;
   for (let i = 0; i < name.length; i++) h = name.charCodeAt(i) + ((h << 5) - h) | 0;
-  return PALETTE[Math.abs(h) % PALETTE.length];
+  return GREY_VARIANTS[Math.abs(h) % GREY_VARIANTS.length];
 }
+
 function getInitials(name: string) {
   const w = name.trim().split(/\s+/);
   return w.length === 1 ? w[0].slice(0, 2).toUpperCase() : (w[0][0] + w[1][0]).toUpperCase();
@@ -52,7 +51,7 @@ function ProfileCard({
   const scheduled = posts.filter((p: any) => p.status === "SCHEDULED").length;
   const drafts    = posts.filter((p: any) => p.status === "DRAFT").length;
 
-  const color    = getColor(profile.name);
+  const sidebarGrey = getGrey(profile.name);
   const initials = getInitials(profile.name);
 
   return (
@@ -69,10 +68,10 @@ function ProfileCard({
       }}
       className="profile-card-hover"
     >
-      {/* Left-color identity accent + header */}
+      {/* Left-grey identity accent + header */}
       <div style={{ display: "flex", gap: 0 }}>
-        {/* Vertical accent strip */}
-        <div style={{ width: 4, background: color, flexShrink: 0 }} />
+        {/* Vertical accent strip - grey variation */}
+        <div style={{ width: 4, background: sidebarGrey, flexShrink: 0 }} />
 
         {/* Header content */}
         <div style={{ flex: 1, padding: "16px 14px 14px" }}>
@@ -90,7 +89,7 @@ function ProfileCard({
               ) : (
                 <div style={{
                   width: 42, height: 42, borderRadius: 10, flexShrink: 0,
-                  background: color,
+                  background: BRAND_BLUE,
                   display: "flex", alignItems: "center", justifyContent: "center",
                   fontSize: 14, fontWeight: 700, color: "#fff", letterSpacing: "0.04em", userSelect: "none",
                 }}>
@@ -123,19 +122,15 @@ function ProfileCard({
             </button>
           </div>
 
-          {/* Inline status row */}
-          <div style={{ display: "flex", alignItems: "center", gap: 6, marginTop: 10 }}>
-            <span style={{ display: "inline-flex", alignItems: "center", gap: 4, fontSize: 10, fontWeight: 600, color: "#15803d", background: "#f0fdf4", border: "1px solid #bbf7d0", borderRadius: 20, padding: "2px 8px" }}>
-              <span style={{ width: 5, height: 5, borderRadius: "50%", background: "#22c55e", display: "inline-block" }} />
-              Active
-            </span>
-            {drafts > 0 && (
+          {/* Inline status row - Active removed, only drafts show if any */}
+          {drafts > 0 && (
+            <div style={{ display: "flex", alignItems: "center", gap: 6, marginTop: 10 }}>
               <span style={{ display: "inline-flex", alignItems: "center", gap: 4, fontSize: 10, fontWeight: 600, color: "#92400e", background: "#fffbeb", border: "1px solid #fde68a", borderRadius: 20, padding: "2px 8px" }}>
                 <AlertTriangle style={{ width: 9, height: 9 }} />
                 {drafts} draft{drafts !== 1 ? "s" : ""}
               </span>
-            )}
-          </div>
+            </div>
+          )}
         </div>
       </div>
 
@@ -186,7 +181,7 @@ function ProfileCard({
           href={`/posts/new?profile=${profile.id}&from=profile`}
           style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", gap: 5,
             padding: "8px 0", fontSize: 12, fontWeight: 600, color: "#fff",
-            background: color, borderRadius: 8, border: "none", textDecoration: "none" }}
+            background: BRAND_BLUE, borderRadius: 8, border: "none", textDecoration: "none" }}
         >
           <Plus style={{ width: 12, height: 12 }} /> Create Post
         </Link>
