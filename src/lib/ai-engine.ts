@@ -76,8 +76,9 @@ export async function generatePostContent(
       "imagePrompt": "A professional business photography description related to the keyword topic, no people, logos, or text${location.aiImageInstructions ? `. Additional image style requirements: ${location.aiImageInstructions}` : ""}",
       "topicType": "STANDARD",
       "ctaType": "${(location.aiPhone || location.phone) ? 'CALL' : 'LEARN_MORE'}",
-      "ctaUrl": "${(location.aiPhone || location.phone) ? (location.aiPhone || location.phone) : (location.aiWebsite || location.client.website || '')}"
+      "ctaUrl": "${(location.aiPhone || location.phone) ? '' : (location.aiWebsite || location.client.website || '')}"
     }
+    NOTE: If "ctaType" is "CALL", the "ctaUrl" should be an empty string "" as Google uses the profile's phone number automatically.
   `;
 
   if (provider === "CLAUDE") {

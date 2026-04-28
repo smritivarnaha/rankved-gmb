@@ -791,8 +791,13 @@ export function AiBulkGenerationModal({
                           }}
                         />
                       ) : (
-                        <span style={{ fontSize: 11, color: "#d1d5db", paddingLeft: 4 }}>
-                          {rowCta.type === "AI_DEFAULT" ? "auto" : rowCta.type === "NONE" ? "—" : "from profile"}
+                        <span style={{ 
+                          fontSize: 10, 
+                          color: rowCta.type === "CALL" ? "#2563eb" : "#d1d5db", 
+                          paddingLeft: 4,
+                          fontWeight: rowCta.type === "CALL" ? 600 : 400
+                        }}>
+                          {rowCta.type === "AI_DEFAULT" ? "auto" : rowCta.type === "NONE" ? "—" : rowCta.type === "CALL" ? "No URL needed" : "from profile"}
                         </span>
                       )}
                     </div>
