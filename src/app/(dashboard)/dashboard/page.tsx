@@ -53,10 +53,10 @@ export default async function DashboardPage() {
   const name = user?.name?.split(" ")[0] || "User";
 
   const statCards = [
-    { label: "Profiles", value: stats.locations, dot: "#2563eb", href: "/profiles", sub: "synced" },
-    { label: "Published", value: stats.published, dot: "#16a34a", href: "/posts", sub: "all time" },
-    { label: "Scheduled", value: stats.scheduled, dot: "#f59e0b", href: "/posts", sub: "upcoming" },
-    { label: "Drafts", value: stats.drafts, dot: "#94a3b8", href: "/posts", sub: "in progress" },
+    { label: "Profiles",  value: stats.locations, dot: "#2563eb", href: "/profiles", sub: "synced" },
+    { label: "Published", value: stats.published, dot: "#16a34a", href: "/calendar", sub: "all time" },
+    { label: "Scheduled", value: stats.scheduled, dot: "#f59e0b", href: "/calendar", sub: "upcoming" },
+    { label: "Drafts",    value: stats.drafts,    dot: "#94a3b8", href: "/calendar", sub: "in progress" },
   ];
 
   return (
@@ -100,7 +100,7 @@ export default async function DashboardPage() {
           <p style={{ fontSize: 13, fontWeight: 600, color: "#92400e", flex: 1 }}>
             {stats.pending} post{stats.pending > 1 ? "s" : ""} awaiting your approval
           </p>
-          <Link href="/posts" style={{ fontSize: 13, color: "#d97706", fontWeight: 600, display: "flex", alignItems: "center", gap: 4 }}>
+          <Link href="/calendar" style={{ fontSize: 13, color: "#d97706", fontWeight: 600, display: "flex", alignItems: "center", gap: 4 }}>
             Review <ArrowRight style={{ width: 13, height: 13 }} />
           </Link>
         </div>
@@ -236,7 +236,7 @@ export default async function DashboardPage() {
         <div style={{ padding: 16, display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(200px, 1fr))", gap: 10 }}>
           {[
             { href: "/profiles", label: "Manage Profiles", desc: "View, sync and post to GBP locations", icon: MapPin, color: "#eff6ff", dot: "#2563eb" },
-            { href: "/posts", label: "Posts Workspace", desc: "Review drafts, scheduled & published", icon: FileText, color: "#f0fdf4", dot: "#16a34a" },
+            { href: "/calendar", label: "Calendar View", desc: "Review drafts, scheduled & published", icon: FileText, color: "#f0fdf4", dot: "#16a34a" },
             { href: "/settings", label: "Settings & Google", desc: "Account and Google connection setup", icon: CheckCircle2, color: "#fefce8", dot: "#eab308" },
           ].map(item => (
             <Link key={item.href} href={item.href} style={{
