@@ -388,29 +388,33 @@ export function AiGenerationModal({
                           style={{ width: "100%", padding: "8px 12px", background: "#f1f5f9", borderRadius: 6, fontSize: 12, fontWeight: 600, border: "1px solid #e2e8f0", outline: "none" }}
                         >
                           <option value="">None</option>
-                          <option value="LEARN_MORE">Learn More</option>
-                          <option value="CALL">Call Now</option>
                           <option value="BOOK">Book</option>
-                          <option value="ORDER">Order</option>
-                          <option value="SHOP">Shop</option>
-                          <option value="SIGN_UP">Sign Up</option>
+                          <option value="ORDER">Order online</option>
+                          <option value="LEARN_MORE">Learn more</option>
+                          <option value="SIGN_UP">Sign up</option>
+                          <option value="CALL">Call now</option>
                         </select>
                       </div>
                     </div>
-                    {preview.ctaType && preview.ctaType !== "" && (
+                    {preview.ctaType === "CALL" ? (
+                      <div style={{ display: "flex", alignItems: "flex-start", gap: 8, padding: "10px 12px", background: "#eff6ff", border: "1px solid #bfdbfe", borderRadius: 8, fontSize: 12, color: "#1e3a8a" }}>
+                        <span style={{ fontWeight: 600, flexShrink: 0 }}>📞 Call Now:</span>
+                        <span>Google will use the phone number already on your Business Profile. No URL needed.</span>
+                      </div>
+                    ) : preview.ctaType && preview.ctaType !== "" ? (
                       <div>
                         <label style={{ display: "block", fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.05em", color: "#64748b", marginBottom: 6 }}>
-                          {preview.ctaType === "CALL" ? "Phone Number" : "Action Link URL"}
+                          Action Link URL
                         </label>
                         <input 
                           type="text"
                           value={preview.ctaUrl || ""}
                           onChange={e => setPreview({ ...preview, ctaUrl: e.target.value })}
-                          placeholder={preview.ctaType === "CALL" ? "e.g. +1234567890" : "https://..."}
+                          placeholder="https://..."
                           style={{ width: "100%", padding: "8px 12px", background: "#f1f5f9", borderRadius: 6, fontSize: 12, fontWeight: 600, border: "1px solid #e2e8f0", outline: "none" }}
                         />
                       </div>
-                    )}
+                    ) : null}
                   </div>
                 </div>
               )}
