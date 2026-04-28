@@ -107,6 +107,22 @@ export async function POST(req: NextRequest) {
               addressParts.postalCode || "",
             ].filter(Boolean);
 
+            // Try to fetch profile logo from GBP Media API
+            let logoUrl: string | undefined;
+            try {
+              const mediaRes = await fetch(
+                `https://mybusiness.googleapis.com/v4/${loc.name}/media?maxResults=10`,
+                { headers: { Authorization: `Bearer ${accessToken}` } }
+              );
+              if (mediaRes.ok) {
+                const mediaData = await mediaRes.json();
+                const items: any[] = mediaData.mediaItems || [];
+                const logo = items.find((m: any) => m.category === "LOGO") 
+                          || items.find((m: any) => m.category === "PROFILE");
+                if (logo?.googleUrl) logoUrl = logo.googleUrl;
+              }
+            } catch { /* non-blocking */ }
+
             fetchedProfiles.push({
               id: crypto.randomUUID(),
               name: loc.title || loc.name || "Unnamed Location",
@@ -116,6 +132,7 @@ export async function POST(req: NextRequest) {
               phone: loc.phoneNumbers?.primaryPhone || "",
               website: loc.websiteUri || "",
               googleName: loc.name || "",
+              logoUrl,
               fetchedAt: new Date().toISOString(),
             });
           }

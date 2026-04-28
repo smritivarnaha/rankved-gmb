@@ -13,42 +13,32 @@ interface Profile {
   address: string;
   phone: string;
   website: string;
+  logoUrl?: string;
   fetchedAt: string;
 }
 
-const fetcher = (url: string) => fetch(url).then((res) => res.json());
+const fetcher = (url: string) => fetch(url).then((r) => r.json());
 
-// Deterministic, dark, professional palette — one per profile
-const PALETTES = [
-  "#1e3a5f", // deep navy
-  "#2d4a3e", // forest
-  "#4a2040", // plum
-  "#5a3317", // espresso
-  "#1a3d4d", // teal-dark
-  "#3b2f2f", // dark brown
-  "#2c2c54", // indigo-dark
-  "#1b4332", // emerald-dark
-  "#7c2d12", // rust-dark
-  "#374151", // slate
-  "#312e81", // violet-dark
-  "#134e4a", // cyan-dark
+// Deterministic muted palette — professional, calm
+const PALETTE = [
+  "#3d5a80","#5c4a72","#2d6a4f","#8b5e3c","#1a535c",
+  "#4a4e69","#6b4c11","#23395b","#5a3825","#2b4141",
+  "#4d6a4a","#6b3737",
 ];
-
-function getColor(name: string): string {
+function getColor(name: string) {
   let h = 0;
   for (let i = 0; i < name.length; i++) h = name.charCodeAt(i) + ((h << 5) - h) | 0;
-  return PALETTES[Math.abs(h) % PALETTES.length];
+  return PALETTE[Math.abs(h) % PALETTE.length];
 }
-
-function getInitials(name: string): string {
+function getInitials(name: string) {
   const w = name.trim().split(/\s+/);
   return w.length === 1 ? w[0].slice(0, 2).toUpperCase() : (w[0][0] + w[1][0]).toUpperCase();
 }
 
 function ProfileCard({
-  profile, onDelete, deleting, onAiCreate
+  profile, onDelete, deleting, onAiCreate,
 }: {
-  profile: Profile; onDelete: (id: string) => void; deleting: boolean; onAiCreate: (id: string) => void
+  profile: Profile; onDelete: (id: string) => void; deleting: boolean; onAiCreate: (id: string) => void;
 }) {
   const { data: postsData } = useSWR(`/api/posts?profileId=${profile.id}`, fetcher, { revalidateOnFocus: false });
   const posts: any[] = postsData?.data || [];
@@ -68,124 +58,135 @@ function ProfileCard({
   return (
     <div
       style={{
-        background: "#fff",
-        border: "1px solid #e5e7eb",
-        borderRadius: 12,
+        background: "#ffffff",
+        borderRadius: 14,
+        boxShadow: "0 1px 4px rgba(0,0,0,0.07), 0 4px 16px rgba(0,0,0,0.04)",
         overflow: "hidden",
         display: "flex",
         flexDirection: "column",
-        transition: "box-shadow 0.18s",
+        transition: "box-shadow 0.2s, transform 0.15s",
+        border: "1px solid rgba(0,0,0,0.07)",
       }}
       className="profile-card-hover"
     >
-      {/* Header */}
-      <div style={{ padding: "16px 16px 12px" }}>
-        <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 8 }}>
+      {/* Left-color identity accent + header */}
+      <div style={{ display: "flex", gap: 0 }}>
+        {/* Vertical accent strip */}
+        <div style={{ width: 4, background: color, flexShrink: 0 }} />
 
-          {/* Avatar + name */}
-          <div style={{ display: "flex", alignItems: "center", gap: 11, minWidth: 0 }}>
-            <div style={{
-              width: 40, height: 40, borderRadius: 10, flexShrink: 0,
-              background: color,
-              display: "flex", alignItems: "center", justifyContent: "center",
-              fontSize: 13, fontWeight: 700, color: "#fff", letterSpacing: "0.04em", userSelect: "none",
-            }}>
-              {initials}
-            </div>
-            <div style={{ minWidth: 0 }}>
-              <Link
-                href={`/profiles/${profile.id}`}
-                style={{ fontSize: 13, fontWeight: 700, color: "#111827", display: "block", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", lineHeight: 1.35 }}
-              >
-                {profile.name}
-              </Link>
-              {profile.address && (
-                <p style={{ fontSize: 11, color: "#9ca3af", marginTop: 2, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
-                  {profile.address}
-                </p>
+        {/* Header content */}
+        <div style={{ flex: 1, padding: "16px 14px 14px" }}>
+          <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 10 }}>
+            {/* Avatar + name */}
+            <div style={{ display: "flex", alignItems: "center", gap: 12, minWidth: 0 }}>
+              {/* Logo or initials */}
+              {profile.logoUrl ? (
+                <img
+                  src={profile.logoUrl}
+                  alt={profile.name}
+                  style={{ width: 42, height: 42, borderRadius: 10, objectFit: "cover", flexShrink: 0, border: "1px solid rgba(0,0,0,0.08)" }}
+                  onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }}
+                />
+              ) : (
+                <div style={{
+                  width: 42, height: 42, borderRadius: 10, flexShrink: 0,
+                  background: color,
+                  display: "flex", alignItems: "center", justifyContent: "center",
+                  fontSize: 14, fontWeight: 700, color: "#fff", letterSpacing: "0.04em", userSelect: "none",
+                }}>
+                  {initials}
+                </div>
               )}
+              <div style={{ minWidth: 0 }}>
+                <Link
+                  href={`/profiles/${profile.id}`}
+                  style={{ fontSize: 13, fontWeight: 700, color: "#111827", display: "block", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", lineHeight: 1.35 }}
+                >
+                  {profile.name}
+                </Link>
+                {profile.address && (
+                  <p style={{ fontSize: 11, color: "#9ca3af", marginTop: 2, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+                    {profile.address}
+                  </p>
+                )}
+              </div>
             </div>
+
+            {/* Delete */}
+            <button
+              onClick={() => onDelete(profile.id)}
+              disabled={deleting}
+              title="Remove"
+              style={{ padding: 4, borderRadius: 6, color: "#d1d5db", background: "none", border: "none", cursor: "pointer", lineHeight: 0, flexShrink: 0, opacity: deleting ? 0.4 : 1 }}
+            >
+              {deleting ? <Loader2 style={{ width: 13, height: 13 }} className="anim-spin" /> : <Trash2 style={{ width: 13, height: 13 }} />}
+            </button>
           </div>
 
-          {/* Delete */}
-          <button
-            onClick={() => onDelete(profile.id)}
-            disabled={deleting}
-            title="Remove profile"
-            style={{ padding: 4, borderRadius: 6, color: "#d1d5db", background: "none", border: "none", cursor: "pointer", lineHeight: 0, flexShrink: 0, marginTop: 2, opacity: deleting ? 0.4 : 1 }}
-          >
-            {deleting ? <Loader2 style={{ width: 13, height: 13 }} className="anim-spin" /> : <Trash2 style={{ width: 13, height: 13 }} />}
-          </button>
-        </div>
-
-        {/* Status chips — only meaningful info */}
-        <div style={{ display: "flex", alignItems: "center", gap: 6, marginTop: 10 }}>
-          <span style={{ display: "inline-flex", alignItems: "center", gap: 4, fontSize: 11, fontWeight: 600, color: "#15803d", background: "#f0fdf4", border: "1px solid #bbf7d0", borderRadius: 20, padding: "2px 8px" }}>
-            <span style={{ width: 5, height: 5, borderRadius: "50%", background: "#22c55e", display: "inline-block" }} />
-            Active
-          </span>
-          {drafts > 0 && (
-            <span style={{ display: "inline-flex", alignItems: "center", gap: 4, fontSize: 11, fontWeight: 600, color: "#92400e", background: "#fffbeb", border: "1px solid #fde68a", borderRadius: 20, padding: "2px 8px" }}>
-              <AlertTriangle style={{ width: 9, height: 9 }} />
-              {drafts} draft{drafts !== 1 ? "s" : ""}
+          {/* Inline status row */}
+          <div style={{ display: "flex", alignItems: "center", gap: 6, marginTop: 10 }}>
+            <span style={{ display: "inline-flex", alignItems: "center", gap: 4, fontSize: 10, fontWeight: 600, color: "#15803d", background: "#f0fdf4", border: "1px solid #bbf7d0", borderRadius: 20, padding: "2px 8px" }}>
+              <span style={{ width: 5, height: 5, borderRadius: "50%", background: "#22c55e", display: "inline-block" }} />
+              Active
             </span>
-          )}
+            {drafts > 0 && (
+              <span style={{ display: "inline-flex", alignItems: "center", gap: 4, fontSize: 10, fontWeight: 600, color: "#92400e", background: "#fffbeb", border: "1px solid #fde68a", borderRadius: 20, padding: "2px 8px" }}>
+                <AlertTriangle style={{ width: 9, height: 9 }} />
+                {drafts} draft{drafts !== 1 ? "s" : ""}
+              </span>
+            )}
+          </div>
         </div>
       </div>
 
-      {/* Stats */}
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", borderTop: "1px solid #f3f4f6", borderBottom: "1px solid #f3f4f6" }}>
+      {/* Stats strip */}
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", background: "#fafafa", borderTop: "1px solid #f3f4f6", borderBottom: "1px solid #f3f4f6" }}>
         {[
           { value: published, label: "Published" },
           { value: scheduled, label: "Scheduled" },
           { value: drafts,    label: "Drafts" },
         ].map((s, i) => (
-          <div key={i} style={{ padding: "11px 8px", textAlign: "center", borderRight: i < 2 ? "1px solid #f3f4f6" : "none" }}>
-            <p style={{ fontSize: 20, fontWeight: 700, color: "#111827", lineHeight: 1, marginBottom: 3 }}>{s.value}</p>
-            <p style={{ fontSize: 9, fontWeight: 600, color: "#9ca3af", textTransform: "uppercase", letterSpacing: "0.06em" }}>{s.label}</p>
+          <div key={i} style={{ padding: "10px 8px", textAlign: "center", borderRight: i < 2 ? "1px solid #f3f4f6" : "none" }}>
+            <p style={{ fontSize: 20, fontWeight: 700, color: "#111827", lineHeight: 1, marginBottom: 2 }}>{s.value}</p>
+            <p style={{ fontSize: 9, fontWeight: 600, color: "#9ca3af", textTransform: "uppercase", letterSpacing: "0.07em" }}>{s.label}</p>
           </div>
         ))}
       </div>
 
-      {/* 2×2 Action Grid */}
+      {/* Actions — 2×2 */}
       <div style={{ padding: "10px 12px", display: "grid", gridTemplateColumns: "1fr 1fr", gap: 6 }}>
-
-        {/* View (was History) */}
         <Link
           href={`/profiles/${profile.id}`}
           style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", gap: 5,
-            padding: "8px 0", fontSize: 12, fontWeight: 500, color: "#6b7280",
+            padding: "8px 0", fontSize: 12, fontWeight: 500, color: "#4b5563",
             background: "#f9fafb", border: "1px solid #e5e7eb", borderRadius: 8, textDecoration: "none" }}
         >
           <Eye style={{ width: 12, height: 12 }} /> View
         </Link>
 
-        {/* Train AI */}
         <Link
           href={`/profiles/${profile.id}?tab=ai`}
           style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", gap: 5,
-            padding: "8px 0", fontSize: 12, fontWeight: 500, color: "#6b7280",
+            padding: "8px 0", fontSize: 12, fontWeight: 500, color: "#4b5563",
             background: "#f9fafb", border: "1px solid #e5e7eb", borderRadius: 8, textDecoration: "none" }}
         >
           <Brain style={{ width: 12, height: 12 }} /> Train AI
         </Link>
 
-        {/* AI Create */}
         <button
           onClick={() => onAiCreate(profile.id)}
           style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", gap: 5,
-            padding: "8px 0", fontSize: 12, fontWeight: 500, color: "#6b7280",
+            padding: "8px 0", fontSize: 12, fontWeight: 500, color: "#4b5563",
             background: "#f9fafb", border: "1px solid #e5e7eb", borderRadius: 8, cursor: "pointer" }}
         >
           <Wand2 style={{ width: 12, height: 12 }} /> AI Create
         </button>
 
-        {/* Create Post — single dark CTA, same for all cards */}
         <Link
           href={`/posts/new?profile=${profile.id}&from=profile`}
           style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", gap: 5,
             padding: "8px 0", fontSize: 12, fontWeight: 600, color: "#fff",
-            background: "#111827", borderRadius: 8, border: "none", textDecoration: "none" }}
+            background: color, borderRadius: 8, border: "none", textDecoration: "none" }}
         >
           <Plus style={{ width: 12, height: 12 }} /> Create Post
         </Link>
@@ -196,8 +197,7 @@ function ProfileCard({
 
 export default function ProfilesPage() {
   const { data, isLoading, mutate } = useSWR("/api/profiles", fetcher, {
-    revalidateOnFocus: false,
-    dedupingInterval: 5000,
+    revalidateOnFocus: false, dedupingInterval: 5000,
   });
 
   const profiles = data?.data || [];
@@ -211,13 +211,14 @@ export default function ProfilesPage() {
     try {
       const res = await fetch(`/api/profiles?id=${id}`, { method: "DELETE" });
       if (res.ok) { setMessage({ type: "success", text: "Profile deleted." }); mutate(); }
-      else { const d = await res.json(); setMessage({ type: "error", text: d.error || "Failed to delete." }); }
+      else { const d = await res.json(); setMessage({ type: "error", text: d.error || "Failed." }); }
     } catch { setMessage({ type: "error", text: "Network error." }); }
     setDeleting(null);
   }
 
   return (
     <div>
+      {/* Header */}
       <div className="page-header">
         <div>
           <h1 className="page-title">Profiles</h1>
@@ -231,14 +232,15 @@ export default function ProfilesPage() {
         </button>
       </div>
 
+      {/* Alert */}
       {message && (
-        <div
-          style={{ padding: "10px 16px", borderRadius: 8, marginBottom: 18, fontSize: 13,
-            display: "flex", alignItems: "center", gap: 8,
-            background: message.type === "success" ? "#f0fdf4" : "#fef2f2",
-            border: `1px solid ${message.type === "success" ? "#bbf7d0" : "#fecaca"}`,
-            color: message.type === "success" ? "#15803d" : "#dc2626",
-          }}>
+        <div style={{
+          padding: "10px 16px", borderRadius: 8, marginBottom: 18, fontSize: 13,
+          display: "flex", alignItems: "center", gap: 8,
+          background: message.type === "success" ? "#f0fdf4" : "#fef2f2",
+          border: `1px solid ${message.type === "success" ? "#bbf7d0" : "#fecaca"}`,
+          color: message.type === "success" ? "#15803d" : "#dc2626",
+        }}>
           {message.type === "success" ? <CheckCircle2 style={{ width: 15, height: 15 }} /> : <AlertCircle style={{ width: 15, height: 15 }} />}
           {message.text}
           <button onClick={() => setMessage(null)} style={{ marginLeft: "auto", background: "none", border: "none", cursor: "pointer", color: "inherit" }}>
@@ -247,6 +249,7 @@ export default function ProfilesPage() {
         </div>
       )}
 
+      {/* Grid */}
       {isLoading ? (
         <div style={{ padding: "80px 0", display: "flex", justifyContent: "center" }}>
           <Loader2 className="anim-spin" style={{ width: 20, height: 20, color: "#9ca3af" }} />
@@ -260,7 +263,7 @@ export default function ProfilesPage() {
           </div>
         </div>
       ) : (
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(300px, 1fr))", gap: 14 }}>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(290px, 1fr))", gap: 16 }}>
           {profiles.map((p: Profile) => (
             <ProfileCard key={p.id} profile={p} onDelete={handleDelete} deleting={deleting === p.id} onAiCreate={setAiLocationId} />
           ))}

@@ -13,13 +13,14 @@ import prisma from "./prisma";
 
 export interface ProfileData {
   id: string;
-  name: string;         // location name e.g. "Downtown Office"
-  accountId: string;    // Google account ID
-  accountName: string;  // e.g. "Sunrise Dental"
+  name: string;
+  accountId: string;
+  accountName: string;
   address: string;
   phone: string;
   website: string;
-  googleName: string;   // full Google resource name e.g. "locations/123"
+  googleName: string;
+  logoUrl?: string;
   fetchedAt: string;
 }
 
@@ -44,6 +45,7 @@ function locationToProfile(loc: any): ProfileData {
     phone: loc.phone || "",
     website: "",
     googleName: loc.gbpLocationId,
+    logoUrl: loc.logoUrl || undefined,
     fetchedAt: loc.createdAt.toISOString(),
   };
 }
@@ -89,13 +91,15 @@ export async function saveProfiles(profiles: ProfileData[], userId: string, owne
         name: p.name,
         address: p.address || null,
         phone: p.phone || null,
-        clientId: clientId, // FORCE ownership to current user
+        logoUrl: p.logoUrl || null,
+        clientId: clientId,
       },
       create: {
         id: p.id,
         name: p.name,
         address: p.address || null,
         phone: p.phone || null,
+        logoUrl: p.logoUrl || null,
         gbpAccountId: p.accountId,
         gbpLocationId: p.googleName || p.id,
         clientId,

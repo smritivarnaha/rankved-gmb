@@ -138,7 +138,8 @@ model Location {
   
   aiWebsite              String?
   aiPhone                String?
-  aiImageInstructions    String?   @db.Text   // Custom instructions for image generation
+  aiImageInstructions    String?   @db.Text
+  logoUrl                String?   // GBP profile/logo photo URL (fetched during sync)
   
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
