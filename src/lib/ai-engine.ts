@@ -47,24 +47,27 @@ export async function generatePostContent(
 
   const keyword = customKeyword || await consumeNextKeyword(locationId);
 
+  const trainingContext = [location.aiInstructions, location.aiCompetitorData].filter(Boolean).join("\n");
+
   const systemPrompt = `
     You are an expert Google Business Profile content creator for "${location.name}".
-    Category: ${location.client.name}
+    Business Category: ${location.client.name}
     Tone: ${location.aiTone || "Professional and helpful"}
     
-    Instructions:
-    ${location.aiInstructions || "Create engaging posts that drive local engagement."}
+    Business Context & Training Data (use this as the primary context for all content):
+    ${trainingContext || "No specific training data provided — use professional general knowledge relevant to the business category."}
     
-    Keywords to include: ${location.aiKeywords || ""}
-    ${keyword ? `Primary Topic for this post: ${keyword}` : ""}
+    SEO Keywords to weave in naturally: ${location.aiKeywords || ""}
+    ${keyword ? `Primary Topic / Focus for this specific post: ${keyword}` : ""}
 
     Competitor Style Reference (Optional):
     ${location.aiCompetitorData || "None provided."}
 
-    Format your response STRICTLY as a valid JSON object with the following fields:
+    IMPORTANT: Respond ONLY with a valid JSON object. No markdown, no code blocks, no extra text.
+    The JSON must have exactly these fields:
     {
-      "content": "The main post body (max 1500 chars)",
-      "imagePrompt": "A detailed, high-quality professional image prompt matching this post",
+      "content": "The main post body (max 1500 chars, human-friendly and local)",
+      "imagePrompt": "A professional business photography description showing the service/product without any people, logos, or text",
       "topicType": "STANDARD",
       "ctaType": "${(location.aiPhone || location.phone) ? 'CALL' : 'LEARN_MORE'}",
       "ctaUrl": "${(location.aiPhone || location.phone) ? (location.aiPhone || location.phone) : (location.aiWebsite || location.client.website || '')}"
@@ -141,9 +144,11 @@ export async function generatePostImage(
   if (provider === "DALL-E-3") {
     if (!settings.openaiApiKey) throw new Error("OpenAI API key is missing");
     const openai = openaiClient(settings.openaiApiKey);
+    // Sanitize prompt: strip any potentially flagged language, keep it professional
+    const safePrompt = `Professional business photography, commercial style: ${prompt.replace(/blood|gore|violence|nude|naked|explicit|weapon|death|kill|drug/gi, "").trim()} --no-text --no-people --no-logos`;
     const response = await openai.images.generate({
       model: (settings.openaiImageModel || "dall-e-3") as any,
-      prompt: `${prompt} --no-text`,
+      prompt: safePrompt,
       n: 1,
       size: "1024x1024",
       quality: "standard",
@@ -199,8 +204,17 @@ export async function generatePostImage(
 
 function parseJson(text: string): GeneratedPost {
   try {
-    const clean = text.replace(/```json/g, "").replace(/```/g, "").trim();
-    return JSON.parse(clean);
+    // Try to extract JSON block if wrapped in markdown code fences
+    const fenceMatch = text.match(/```(?:json)?\s*([\s\S]*?)```/);
+    const cleaned = fenceMatch ? fenceMatch[1].trim() : text.trim();
+    
+    // Find the first { and last } to isolate the JSON object
+    const start = cleaned.indexOf("{");
+    const end = cleaned.lastIndexOf("}");
+    if (start === -1 || end === -1) throw new Error("No JSON object found");
+    const jsonStr = cleaned.slice(start, end + 1);
+    
+    return JSON.parse(jsonStr);
   } catch (e) {
     console.error("Failed to parse AI response:", text);
     throw new Error("AI returned invalid JSON. Please try again.");

@@ -5,7 +5,7 @@ import { format, startOfMonth, endOfMonth, eachDayOfInterval, getDay, isSameMont
 import { useState, useEffect } from "react";
 import {
   ArrowLeft, MapPin, Plus, FileText, Clock, Send, Loader2, Lock,
-  ThumbsUp, Edit3, ExternalLink, AlertTriangle, ChevronLeft, ChevronRight, Trash2, Wand2, Brain, Layers
+  ThumbsUp, Edit3, ExternalLink, AlertTriangle, ChevronLeft, ChevronRight, Trash2, Wand2, Brain, Layers, CheckSquare, Square, CalendarDays
 } from "lucide-react";
 import { useParams } from "next/navigation";
 import useSWR from "swr";
@@ -42,11 +42,14 @@ const STATUS_LABEL: Record<string, string> = {
 
 /* ─── Post Card ──────────────────────────────────────────────── */
 function PostCard({
-  post, canApprove, onApprove, onDelete,
+  post, canApprove, onApprove, onDelete, selected, onToggleSelect, selectMode,
 }: {
   post: Post; canApprove: boolean;
   onApprove: (p: Post) => void;
   onDelete: (p: Post) => void;
+  selected: boolean;
+  onToggleSelect: (id: string) => void;
+  selectMode: boolean;
 }) {
   const isPublished = post.status === "PUBLISHED";
   const isDraft = post.status === "DRAFT";
@@ -65,12 +68,26 @@ function PostCard({
   const cardShadow = isPending ? "0 0 0 3px #fef3c7" : "none";
 
   return (
-    <div style={{
-      background: "var(--bg-card)", border: cardBorder,
-      borderRadius: 10, overflow: "hidden",
-      boxShadow: cardShadow, display: "flex", flexDirection: "column",
-      transition: "box-shadow 0.15s",
-    }}>
+    <div
+      onClick={() => selectMode && onToggleSelect(post.id)}
+      style={{
+        background: "var(--bg-card)", border: selected ? "2px solid #2563eb" : cardBorder,
+        borderRadius: 10, overflow: "hidden",
+        boxShadow: selected ? "0 0 0 3px #dbeafe" : cardShadow, display: "flex", flexDirection: "column",
+        transition: "box-shadow 0.15s", cursor: selectMode ? "pointer" : "default",
+        position: "relative"
+      }}>
+      {/* Select checkbox overlay */}
+      {selectMode && (
+        <div style={{ position: "absolute", top: 8, right: 8, zIndex: 10 }}>
+          <div style={{
+            width: 22, height: 22, borderRadius: 6, background: selected ? "#2563eb" : "rgba(255,255,255,0.9)",
+            border: `2px solid ${selected ? "#2563eb" : "#cbd5e1"}`, display: "flex", alignItems: "center", justifyContent: "center"
+          }}>
+            {selected && <CheckSquare size={14} color="white" />}
+          </div>
+        </div>
+      )}
       {/* Image */}
       <Link href={`/posts/${post.id}`}
         style={{ display: "block", height: 108, background: "#f1f5f9", overflow: "hidden", position: "relative" }}>
@@ -312,6 +329,11 @@ export default function ProfileDetailPage() {
   const [activeTab, setActiveTab] = useState<"POSTS" | "AI_SETTINGS">(initialTab);
   const [isAiModalOpen, setIsAiModalOpen] = useState(false);
   const [isBulkAiModalOpen, setIsBulkAiModalOpen] = useState(false);
+  const [selectedPosts, setSelectedPosts] = useState<Set<string>>(new Set());
+  const [selectMode, setSelectMode] = useState(false);
+  const [bulkScheduleDate, setBulkScheduleDate] = useState("");
+  const [showBulkSchedule, setShowBulkSchedule] = useState(false);
+  const [bulkActionLoading, setBulkActionLoading] = useState(false);
 
   const { data: postsData, isLoading: postsLoading, mutate: mutatePosts } = useSWR(
     params.id ? `/api/posts?profileId=${params.id}` : null,
@@ -330,17 +352,77 @@ export default function ProfileDetailPage() {
   };
 
   const handleDelete = async (post: Post) => {
-    if (post.status === "PUBLISHED") return; // Never delete published
+    if (post.status === "PUBLISHED") return;
     if (!confirm("Delete this post permanently?")) return;
-    // Optimistic remove
     mutatePosts({ ...postsData, data: posts.filter(p => p.id !== post.id) }, false);
     const res = await fetch(`/api/posts?id=${post.id}`, { method: "DELETE" });
     if (!res.ok) {
-      mutatePosts(); // restore
+      mutatePosts();
       const err = await res.json().catch(() => ({}));
       alert(err.error || "Failed to delete post. Please try again.");
     }
-    // If ok, optimistic state is already correct
+  };
+
+  const toggleSelectMode = () => {
+    setSelectMode(s => !s);
+    setSelectedPosts(new Set());
+    setShowBulkSchedule(false);
+  };
+
+  const togglePostSelect = (id: string) => {
+    setSelectedPosts(prev => {
+      const next = new Set(prev);
+      next.has(id) ? next.delete(id) : next.add(id);
+      return next;
+    });
+  };
+
+  const selectAll = () => {
+    const nonPublished = sortedPosts.filter(p => p.status !== "PUBLISHED").map(p => p.id);
+    setSelectedPosts(new Set(nonPublished));
+  };
+
+  const handleBulkDelete = async () => {
+    if (!confirm(`Delete ${selectedPosts.size} posts permanently?`)) return;
+    setBulkActionLoading(true);
+    await Promise.all([...selectedPosts].map(id => fetch(`/api/posts?id=${id}`, { method: "DELETE" })));
+    setSelectedPosts(new Set());
+    setSelectMode(false);
+    mutatePosts();
+    setBulkActionLoading(false);
+  };
+
+  const handleBulkDraft = async () => {
+    setBulkActionLoading(true);
+    await Promise.all([...selectedPosts].map(id =>
+      fetch(`/api/posts/${id}`, { method: "PUT", headers: {"Content-Type":"application/json"}, body: JSON.stringify({ status: "DRAFT" }) })
+    ));
+    setSelectedPosts(new Set());
+    setSelectMode(false);
+    mutatePosts();
+    setBulkActionLoading(false);
+  };
+
+  const handleBulkSchedule = async () => {
+    if (!bulkScheduleDate) return alert("Please pick a date first.");
+    setBulkActionLoading(true);
+    const ids = [...selectedPosts];
+    // Spread each one across hours starting at 10:00
+    await Promise.all(ids.map((id, i) =>
+      fetch(`/api/posts/${id}`, {
+        method: "PUT",
+        headers: {"Content-Type":"application/json"},
+        body: JSON.stringify({
+          status: "SCHEDULED",
+          scheduledAt: `${bulkScheduleDate}T${String(10 + (i % 8)).padStart(2,"0")}:00:00`
+        })
+      })
+    ));
+    setSelectedPosts(new Set());
+    setSelectMode(false);
+    setShowBulkSchedule(false);
+    mutatePosts();
+    setBulkActionLoading(false);
   };
 
   useEffect(() => {
@@ -504,28 +586,85 @@ export default function ProfileDetailPage() {
 
         {/* RIGHT — Post Cards */}
         <div style={{ background: "#fff", border: "1px solid #e2e8f0", borderRadius: 12, overflow: "hidden" }}>
-          {/* Filter tabs */}
-          <div style={{ padding: "14px 16px", borderBottom: "1px solid #f1f5f9", display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap" }}>
-            {tabs.map(t => (
-              <button key={t.key} onClick={() => setStatusFilter(t.key)}
-                style={{
-                  padding: "5px 12px", borderRadius: 20, border: "none", cursor: "pointer",
-                  fontSize: 12, fontWeight: 600,
-                  background: statusFilter === t.key ? "#0f172a" : "transparent",
-                  color: statusFilter === t.key ? "#fff" : "#64748b",
-                  display: "flex", alignItems: "center", gap: 5,
-                }}>
-                {t.label}
-                {t.count > 0 && (
-                  <span style={{
-                    fontSize: 10, background: statusFilter === t.key ? "rgba(255,255,255,0.25)" : "#e2e8f0",
+          {/* Filter tabs + Select Mode toggle */}
+          <div style={{ padding: "14px 16px", borderBottom: "1px solid #f1f5f9", display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap", justifyContent: "space-between" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap" }}>
+              {tabs.map(t => (
+                <button key={t.key} onClick={() => setStatusFilter(t.key)}
+                  style={{
+                    padding: "5px 12px", borderRadius: 20, border: "none", cursor: "pointer",
+                    fontSize: 12, fontWeight: 600,
+                    background: statusFilter === t.key ? "#0f172a" : "transparent",
                     color: statusFilter === t.key ? "#fff" : "#64748b",
-                    borderRadius: 10, padding: "0 5px", fontWeight: 700,
-                  }}>{t.count}</span>
-                )}
-              </button>
-            ))}
+                    display: "flex", alignItems: "center", gap: 5,
+                  }}>
+                  {t.label}
+                  {t.count > 0 && (
+                    <span style={{
+                      fontSize: 10, background: statusFilter === t.key ? "rgba(255,255,255,0.25)" : "#e2e8f0",
+                      color: statusFilter === t.key ? "#fff" : "#64748b",
+                      borderRadius: 10, padding: "0 5px", fontWeight: 700,
+                    }}>{t.count}</span>
+                  )}
+                </button>
+              ))}
+            </div>
+            <button
+              onClick={toggleSelectMode}
+              style={{ padding: "5px 12px", borderRadius: 20, border: "1px solid #e2e8f0", cursor: "pointer", fontSize: 12, fontWeight: 600, display: "flex", alignItems: "center", gap: 5, background: selectMode ? "#0f172a" : "#f8fafc", color: selectMode ? "#fff" : "#64748b" }}>
+              <CheckSquare style={{ width: 12, height: 12 }} />
+              {selectMode ? "Exit Select" : "Select"}
+            </button>
           </div>
+
+          {/* Bulk Action Bar */}
+          {selectMode && selectedPosts.size > 0 && (
+            <div style={{ padding: "10px 16px", background: "#eff6ff", borderBottom: "1px solid #bfdbfe", display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
+              <span style={{ fontSize: 12, fontWeight: 700, color: "#1e40af" }}>{selectedPosts.size} selected</span>
+              <button onClick={selectAll} style={{ fontSize: 11, color: "#2563eb", background: "none", border: "none", cursor: "pointer", fontWeight: 600 }}>Select All</button>
+              <div style={{ flex: 1 }} />
+              {bulkActionLoading ? (
+                <Loader2 style={{ width: 16, height: 16, color: "#2563eb" }} className="anim-spin" />
+              ) : (
+                <>
+                  <button
+                    onClick={handleBulkDraft}
+                    style={{ padding: "5px 12px", borderRadius: 8, border: "1px solid #e2e8f0", background: "#fff", fontSize: 12, fontWeight: 600, color: "#334155", cursor: "pointer" }}>
+                    → Draft
+                  </button>
+                  <button
+                    onClick={() => setShowBulkSchedule(s => !s)}
+                    style={{ padding: "5px 12px", borderRadius: 8, border: "1px solid #dbeafe", background: "#eff6ff", fontSize: 12, fontWeight: 600, color: "#2563eb", cursor: "pointer", display: "flex", alignItems: "center", gap: 5 }}>
+                    <CalendarDays style={{ width: 12, height: 12 }} /> Schedule
+                  </button>
+                  <button
+                    onClick={handleBulkDelete}
+                    style={{ padding: "5px 12px", borderRadius: 8, border: "1px solid #fca5a5", background: "#fef2f2", fontSize: 12, fontWeight: 600, color: "#dc2626", cursor: "pointer" }}>
+                    Delete
+                  </button>
+                </>
+              )}
+            </div>
+          )}
+
+          {/* Bulk Schedule Date Picker */}
+          {selectMode && selectedPosts.size > 0 && showBulkSchedule && (
+            <div style={{ padding: "12px 16px", background: "#f8fafc", borderBottom: "1px solid #e2e8f0", display: "flex", alignItems: "center", gap: 10 }}>
+              <label style={{ fontSize: 12, fontWeight: 600, color: "#334155" }}>Start scheduling from:</label>
+              <input
+                type="date"
+                value={bulkScheduleDate}
+                onChange={e => setBulkScheduleDate(e.target.value)}
+                style={{ padding: "6px 10px", borderRadius: 8, border: "1px solid #e2e8f0", fontSize: 13 }}
+              />
+              <button
+                onClick={handleBulkSchedule}
+                disabled={!bulkScheduleDate}
+                style={{ padding: "6px 16px", borderRadius: 8, background: bulkScheduleDate ? "#2563eb" : "#e2e8f0", color: bulkScheduleDate ? "#fff" : "#94a3b8", border: "none", fontSize: 12, fontWeight: 700, cursor: bulkScheduleDate ? "pointer" : "not-allowed" }}>
+                Confirm Schedule
+              </button>
+            </div>
+          )}
 
           {/* Cards Grid */}
           <div style={{ padding: 16, minHeight: 300, background: "#f8fafc" }}>
@@ -545,7 +684,16 @@ export default function ProfileDetailPage() {
             ) : (
               <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(190px, 1fr))", gap: 12 }}>
                 {sortedPosts.map(post => (
-                  <PostCard key={post.id} post={post} canApprove={canApprove} onApprove={handleApprove} onDelete={handleDelete} />
+                  <PostCard
+                    key={post.id}
+                    post={post}
+                    canApprove={canApprove}
+                    onApprove={handleApprove}
+                    onDelete={handleDelete}
+                    selected={selectedPosts.has(post.id)}
+                    onToggleSelect={togglePostSelect}
+                    selectMode={selectMode}
+                  />
                 ))}
               </div>
             )}

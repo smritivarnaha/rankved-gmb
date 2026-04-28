@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Loader2, Save, Wand2, RefreshCw, Check, AlertCircle, X, ExternalLink, Calendar, Layers } from "lucide-react";
 import { addDays, format } from "date-fns";
 import useSWR from "swr";
@@ -480,6 +480,8 @@ export function AiBulkGenerationModal({
   const [step, setStep] = useState<1|2|3>(1);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [results, setResults] = useState<{status: 'success'|'error', msg: string}[]>([]);
+  const [isGenerating, setIsGenerating] = useState(false);
+  const cancelledRef = useRef(false);
 
   useEffect(() => {
     setKeywords(prev => {
@@ -492,6 +494,8 @@ export function AiBulkGenerationModal({
   }, [numPosts]);
 
   const handleStartGeneration = async () => {
+    cancelledRef.current = false;
+    setIsGenerating(true);
     setStep(3);
     setCurrentIndex(0);
     setResults([]);
@@ -499,57 +503,85 @@ export function AiBulkGenerationModal({
     let currentResults: {status: 'success'|'error', msg: string}[] = [];
 
     for (let i = 0; i < numPosts; i++) {
+      if (cancelledRef.current) {
+        currentResults.push({ status: "error", msg: `Generation cancelled at post ${i + 1}.` });
+        setResults([...currentResults]);
+        break;
+      }
+
       setCurrentIndex(i);
       const postDate = addDays(new Date(startDate), i * frequency);
       const customKeyword = keywords[i]?.trim();
 
-      try {
-        const genRes = await fetch("/api/ai/generate", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ locationId, mode: generateMode, customKeyword: customKeyword || undefined }),
-        });
-        
-        const genData = await genRes.json();
-        
-        if (!genRes.ok) {
-          currentResults.push({ status: "error", msg: `Post ${i+1}: ${genData.error || "Generation failed"}` });
-          setResults([...currentResults]);
-          continue;
-        }
+      let success = false;
+      let lastError = "";
 
-        const saveRes = await fetch("/api/posts", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            profileId: locationId,
-            summary: genData.content,
-            topicType: genData.topicType || "STANDARD",
-            status: "DRAFT",
-            scheduledAt: postDate.toISOString(),
-            imageUrl: genData.imageUrl,
-            ctaType: genData.ctaType,
-            ctaUrl: genData.ctaUrl,
-          }),
-        });
+      // Up to 3 retries per post
+      for (let attempt = 0; attempt < 3 && !success && !cancelledRef.current; attempt++) {
+        try {
+          const genRes = await fetch("/api/ai/generate", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ locationId, mode: generateMode, customKeyword: customKeyword || undefined }),
+          });
+          
+          const genData = await genRes.json();
+          
+          if (!genRes.ok) {
+            lastError = genData.error || "Generation failed";
+            continue; // retry
+          }
 
-        if (!saveRes.ok) {
-          currentResults.push({ status: "error", msg: `Post ${i+1}: Failed to save` });
-        } else {
+          const saveRes = await fetch("/api/posts", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              profileId: locationId,
+              summary: genData.content,
+              topicType: genData.topicType || "STANDARD",
+              status: "DRAFT",
+              scheduledAt: postDate.toISOString(),
+              imageUrl: genData.imageUrl,
+              ctaType: genData.ctaType,
+              ctaUrl: genData.ctaUrl,
+            }),
+          });
+
+          if (!saveRes.ok) {
+            lastError = "Failed to save to drafts";
+            continue; // retry
+          }
+
           currentResults.push({ status: "success", msg: `Post ${i+1}: Drafted for ${format(postDate, "MMM d")}` });
+          success = true;
+        } catch (err: any) {
+          lastError = err.message;
         }
-      } catch (err: any) {
-         currentResults.push({ status: "error", msg: `Post ${i+1}: ${err.message}` });
       }
+
+      if (!success && !cancelledRef.current) {
+        currentResults.push({ status: "error", msg: `Post ${i+1}: ${lastError} (3 retries exhausted)` });
+      }
+
       setResults([...currentResults]);
     }
+
     setCurrentIndex(numPosts);
+    setIsGenerating(false);
+  };
+
+  const handleCancel = () => {
+    cancelledRef.current = true;
   };
 
   const resetAndClose = () => {
+    if (isGenerating) {
+      cancelledRef.current = true;
+    }
     setStep(1);
     setCurrentIndex(0);
     setResults([]);
+    setIsGenerating(false);
     onClose();
   };
 
@@ -665,19 +697,19 @@ export function AiBulkGenerationModal({
 
           {step === 3 && (
             <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
-              {currentIndex < numPosts ? (
+              {isGenerating ? (
                 <div style={{ textAlign: "center", padding: "20px 0" }}>
                   <Loader2 size={40} className="anim-spin" color="#8b5cf6" style={{ margin: "0 auto 16px" }} />
                   <h4 style={{ fontSize: 15, fontWeight: 600, color: "#0f172a" }}>Generating Post {currentIndex + 1} of {numPosts}...</h4>
-                  <p style={{ fontSize: 13, color: "#64748b", marginTop: 4 }}>Please don't close this window.</p>
+                  <p style={{ fontSize: 13, color: "#64748b", marginTop: 4 }}>Each post retries up to 3 times automatically.</p>
                 </div>
               ) : (
                 <div style={{ textAlign: "center", padding: "20px 0" }}>
-                  <div style={{ width: 48, height: 48, borderRadius: "50%", background: "#dcfce7", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 16px" }}>
-                    <Check size={24} color="#16a34a" />
+                  <div style={{ width: 48, height: 48, borderRadius: "50%", background: cancelledRef.current ? "#fef9c3" : "#dcfce7", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 16px" }}>
+                    {cancelledRef.current ? <X size={24} color="#d97706" /> : <Check size={24} color="#16a34a" />}
                   </div>
-                  <h4 style={{ fontSize: 16, fontWeight: 700, color: "#0f172a" }}>Generation Complete</h4>
-                  <p style={{ fontSize: 13, color: "#64748b", marginTop: 4 }}>All posts have been drafted and scheduled.</p>
+                  <h4 style={{ fontSize: 16, fontWeight: 700, color: "#0f172a" }}>{cancelledRef.current ? "Generation Cancelled" : "Generation Complete"}</h4>
+                  <p style={{ fontSize: 13, color: "#64748b", marginTop: 4 }}>{results.filter(r => r.status === "success").length} of {numPosts} posts drafted successfully.</p>
                 </div>
               )}
 
@@ -723,7 +755,14 @@ export function AiBulkGenerationModal({
               </button>
             </>
           )}
-          {step === 3 && currentIndex === numPosts && (
+          {step === 3 && isGenerating && (
+            <button 
+              onClick={handleCancel}
+              style={{ padding: "9px 20px", background: "#fee2e2", color: "#dc2626", border: "1px solid #fca5a5", borderRadius: 8, fontSize: 13, fontWeight: 700, cursor: "pointer", display: "flex", alignItems: "center", gap: 6 }}>
+              <X size={14} /> Cancel Generation
+            </button>
+          )}
+          {step === 3 && !isGenerating && (
             <button onClick={() => { onGenerated(); resetAndClose(); }} style={{ padding: "9px 24px", background: "#0f172a", color: "#fff", borderRadius: 8, border: "none", fontSize: 13, fontWeight: 700, cursor: "pointer" }}>Done</button>
           )}
         </div>
