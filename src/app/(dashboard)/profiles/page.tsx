@@ -5,6 +5,7 @@ import { useState } from "react";
 import { Loader2, X, AlertCircle, CheckCircle2, RefreshCw, Plus, Eye, Trash2, Wand2, Brain, AlertTriangle } from "lucide-react";
 import useSWR from "swr";
 import { AiGenerationModal } from "@/components/ai/ai-components";
+import { GbpIcon } from "@/components/gbp-icon";
 
 interface Profile {
   id: string;
@@ -29,11 +30,6 @@ function getGrey(name: string) {
   return GREY_VARIANTS[Math.abs(h) % GREY_VARIANTS.length];
 }
 
-function getInitials(name: string) {
-  const w = name.trim().split(/\s+/);
-  return w.length === 1 ? w[0].slice(0, 2).toUpperCase() : (w[0][0] + w[1][0]).toUpperCase();
-}
-
 function ProfileCard({
   profile, onDelete, deleting, onAiCreate,
 }: {
@@ -52,7 +48,6 @@ function ProfileCard({
   const drafts    = posts.filter((p: any) => p.status === "DRAFT").length;
 
   const sidebarGrey = getGrey(profile.name);
-  const initials = getInitials(profile.name);
 
   return (
     <div
@@ -78,7 +73,7 @@ function ProfileCard({
           <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 10 }}>
             {/* Avatar + name */}
             <div style={{ display: "flex", alignItems: "center", gap: 12, minWidth: 0 }}>
-              {/* Logo or initials */}
+              {/* Logo or GBP Icon fallback */}
               {profile.logoUrl ? (
                 <img
                   src={profile.logoUrl}
@@ -89,11 +84,11 @@ function ProfileCard({
               ) : (
                 <div style={{
                   width: 42, height: 42, borderRadius: 10, flexShrink: 0,
-                  background: BRAND_BLUE,
+                  background: "#f8fafc",
                   display: "flex", alignItems: "center", justifyContent: "center",
-                  fontSize: 14, fontWeight: 700, color: "#fff", letterSpacing: "0.04em", userSelect: "none",
+                  border: "1px solid #e2e8f0",
                 }}>
-                  {initials}
+                  <GbpIcon size={24} />
                 </div>
               )}
               <div style={{ minWidth: 0 }}>
