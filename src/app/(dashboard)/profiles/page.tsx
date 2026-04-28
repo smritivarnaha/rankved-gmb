@@ -78,17 +78,17 @@ function ProfileCard({
                 <img
                   src={profile.logoUrl}
                   alt={profile.name}
-                  style={{ width: 42, height: 42, borderRadius: 10, objectFit: "cover", flexShrink: 0, border: "1px solid rgba(0,0,0,0.08)" }}
+                  style={{ width: 52, height: 52, borderRadius: 10, objectFit: "cover", flexShrink: 0, border: "1px solid rgba(0,0,0,0.08)" }}
                   onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }}
                 />
               ) : (
                 <div style={{
-                  width: 42, height: 42, borderRadius: 10, flexShrink: 0,
+                  width: 52, height: 52, borderRadius: 10, flexShrink: 0,
                   background: "#f8fafc",
                   display: "flex", alignItems: "center", justifyContent: "center",
                   border: "1px solid #e2e8f0",
                 }}>
-                  <GbpIcon size={24} />
+                  <GbpIcon size={32} />
                 </div>
               )}
               <div style={{ minWidth: 0, flex: 1 }}>
