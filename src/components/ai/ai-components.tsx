@@ -432,18 +432,41 @@ export function AiBulkGenerationModal({
   const [startDate, setStartDate] = useState(format(addDays(new Date(), 1), "yyyy-MM-dd"));
   const [generateMode, setGenerateMode] = useState<"BOTH"|"CONTENT_ONLY">("BOTH");
   const [keywords, setKeywords] = useState<string[]>(Array(15).fill(""));
+  const [ctas, setCtas] = useState<{type: string; url: string}[]>(Array(15).fill(null).map(() => ({ type: "AI_DEFAULT", url: "" })));
+  const [applyAllCta, setApplyAllCta] = useState("AI_DEFAULT");
+  const [applyAllUrl, setApplyAllUrl] = useState("");
   const [step, setStep] = useState<1|2|3>(1);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [results, setResults] = useState<{status: 'success'|'error', msg: string}[]>([]);
   const [isGenerating, setIsGenerating] = useState(false);
   const cancelledRef = useRef(false);
 
+  // CTA options matching GBP standards
+  const CTA_OPTIONS = [
+    { value: "AI_DEFAULT",   label: "AI decides" },
+    { value: "CALL",         label: "Call now" },
+    { value: "LEARN_MORE",   label: "Learn more" },
+    { value: "BOOK",         label: "Book" },
+    { value: "ORDER",        label: "Order online" },
+    { value: "SIGN_UP",      label: "Sign up" },
+    { value: "SHOP",         label: "Shop" },
+    { value: "NONE",         label: "No button" },
+  ];
+  const URL_REQUIRED = ["LEARN_MORE", "BOOK", "ORDER", "SIGN_UP", "SHOP"];
+
+  const applyToAll = () => {
+    setCtas(prev => prev.map(() => ({ type: applyAllCta, url: applyAllUrl })));
+  };
+
   useEffect(() => {
     setKeywords(prev => {
       const next = [...prev];
-      if (next.length < numPosts) {
-        return [...next, ...Array(numPosts - next.length).fill("")];
-      }
+      if (next.length < numPosts) return [...next, ...Array(numPosts - next.length).fill("")];
+      return next.slice(0, numPosts);
+    });
+    setCtas(prev => {
+      const next = [...prev];
+      if (next.length < numPosts) return [...next, ...Array(numPosts - next.length).fill(null).map(() => ({ type: "AI_DEFAULT", url: "" }))];
       return next.slice(0, numPosts);
     });
   }, [numPosts]);
@@ -497,8 +520,9 @@ export function AiBulkGenerationModal({
               status: "DRAFT",
               scheduledAt: postDate.toISOString(),
               imageUrl: genData.imageUrl,
-              ctaType: genData.ctaType,
-              ctaUrl: genData.ctaUrl,
+              // Per-row CTA overrides AI default if set
+              ctaType:  ctas[i]?.type && ctas[i].type !== "AI_DEFAULT" && ctas[i].type !== "NONE" ? ctas[i].type : ctas[i]?.type === "NONE" ? null : genData.ctaType,
+              ctaUrl:   ctas[i]?.type && ctas[i].type !== "AI_DEFAULT" && ctas[i].type !== "NONE" ? ctas[i].url || genData.ctaUrl : ctas[i]?.type === "NONE" ? null : genData.ctaUrl,
             }),
           });
 
@@ -548,7 +572,7 @@ export function AiBulkGenerationModal({
       display: "flex", alignItems: "center", justifyContent: "center", zIndex: 9999, padding: 20
     }}>
       <div style={{ 
-        background: "#fff", width: "100%", maxWidth: 600, borderRadius: 16, 
+        background: "#fff", width: "100%", maxWidth: 820, borderRadius: 16, 
         boxShadow: "0 20px 25px -5px rgba(0,0,0,0.1)", overflow: "hidden", display: "flex", flexDirection: "column", maxHeight: "90vh"
       }}>
         {/* Header */}
@@ -612,38 +636,111 @@ export function AiBulkGenerationModal({
           )}
 
           {step === 2 && (
-            <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-              <p style={{ fontSize: 13, color: "#64748b", marginBottom: 8 }}>
-                Provide a primary keyword or topic for each post. <strong>Tip: Paste comma-separated keywords</strong> to auto-fill multiple boxes at once!
+            <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+              
+              {/* Tip */}
+              <p style={{ fontSize: 13, color: "#64748b", marginBottom: 2 }}>
+                Provide a keyword per post. <strong>Tip: Paste comma-separated keywords</strong> to auto-fill multiple boxes!
               </p>
+
+              {/* Apply to all bar */}
+              <div style={{ background: "#f8fafc", border: "1px solid #e2e8f0", borderRadius: 10, padding: "10px 14px", display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+                <span style={{ fontSize: 11, fontWeight: 700, color: "#64748b", textTransform: "uppercase", letterSpacing: "0.05em", whiteSpace: "nowrap" }}>Apply to all:</span>
+                <select
+                  value={applyAllCta}
+                  onChange={e => setApplyAllCta(e.target.value)}
+                  style={{ padding: "6px 8px", borderRadius: 7, border: "1px solid #e2e8f0", fontSize: 12, color: "#334155", background: "#fff" }}
+                >
+                  {CTA_OPTIONS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
+                </select>
+                {URL_REQUIRED.includes(applyAllCta) && (
+                  <input
+                    type="text"
+                    placeholder="URL for all"
+                    value={applyAllUrl}
+                    onChange={e => setApplyAllUrl(e.target.value)}
+                    style={{ flex: 1, minWidth: 120, padding: "6px 10px", borderRadius: 7, border: "1px solid #e2e8f0", fontSize: 12 }}
+                  />
+                )}
+                <button
+                  onClick={applyToAll}
+                  style={{ padding: "6px 14px", borderRadius: 7, background: "#0f172a", color: "#fff", border: "none", fontSize: 12, fontWeight: 600, cursor: "pointer", whiteSpace: "nowrap" }}
+                >
+                  Apply
+                </button>
+              </div>
+
+              {/* Column headers */}
+              <div style={{ display: "grid", gridTemplateColumns: "80px 1fr 130px 120px", gap: 8, padding: "0 2px" }}>
+                <span style={{ fontSize: 10, fontWeight: 700, color: "#94a3b8", textTransform: "uppercase" }}>Date</span>
+                <span style={{ fontSize: 10, fontWeight: 700, color: "#94a3b8", textTransform: "uppercase" }}>Keyword</span>
+                <span style={{ fontSize: 10, fontWeight: 700, color: "#94a3b8", textTransform: "uppercase" }}>CTA</span>
+                <span style={{ fontSize: 10, fontWeight: 700, color: "#94a3b8", textTransform: "uppercase" }}>URL</span>
+              </div>
+
+              {/* Per-row inputs */}
               {keywords.map((kw, idx) => {
                 const pDate = addDays(new Date(startDate), idx * frequency);
+                const rowCta = ctas[idx] || { type: "AI_DEFAULT", url: "" };
+                const needsUrl = URL_REQUIRED.includes(rowCta.type);
                 return (
-                  <div key={idx} style={{ display: "flex", alignItems: "center", gap: 12 }}>
-                    <div style={{ width: 100, fontSize: 12, fontWeight: 600, color: "#94a3b8", display: "flex", alignItems: "center", gap: 6 }}>
-                      <Calendar size={12} /> {format(pDate, "MMM d")}
+                  <div key={idx} style={{ display: "grid", gridTemplateColumns: "80px 1fr 130px 120px", gap: 8, alignItems: "center" }}>
+                    {/* Date */}
+                    <div style={{ fontSize: 12, fontWeight: 600, color: "#64748b", display: "flex", alignItems: "center", gap: 5 }}>
+                      <Calendar size={11} />
+                      {format(pDate, "MMM d")}
                     </div>
-                    <input 
+
+                    {/* Keyword */}
+                    <input
                       type="text"
-                      placeholder={`Post ${idx + 1} Keyword`}
+                      placeholder={`Post ${idx + 1} keyword`}
                       value={kw}
                       onChange={e => {
                         const value = e.target.value;
                         if (value.includes(",")) {
                           const parts = value.split(",").map(s => s.trim()).filter(s => s);
                           const next = [...keywords];
-                          for (let i = 0; i < parts.length && idx + i < numPosts; i++) {
-                            next[idx + i] = parts[i];
-                          }
+                          for (let i = 0; i < parts.length && idx + i < numPosts; i++) next[idx + i] = parts[i];
                           setKeywords(next);
                         } else {
-                          const next = [...keywords];
-                          next[idx] = value;
-                          setKeywords(next);
+                          const next = [...keywords]; next[idx] = value; setKeywords(next);
                         }
                       }}
-                      style={{ flex: 1, padding: "8px 12px", borderRadius: 8, border: "1px solid #e2e8f0", fontSize: 13, borderColor: !kw.trim() ? "#ef4444" : "#e2e8f0" }}
+                      style={{ padding: "7px 10px", borderRadius: 7, border: `1px solid ${!kw.trim() ? "#fca5a5" : "#e2e8f0"}`, fontSize: 12 }}
                     />
+
+                    {/* CTA dropdown */}
+                    <select
+                      value={rowCta.type}
+                      onChange={e => {
+                        const next = [...ctas];
+                        next[idx] = { ...next[idx], type: e.target.value, url: "" };
+                        setCtas(next);
+                      }}
+                      style={{ padding: "7px 6px", borderRadius: 7, border: "1px solid #e2e8f0", fontSize: 12, color: rowCta.type === "AI_DEFAULT" ? "#94a3b8" : "#334155", background: "#fff" }}
+                    >
+                      {CTA_OPTIONS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
+                    </select>
+
+                    {/* URL — only if CTA needs it */}
+                    {needsUrl ? (
+                      <input
+                        type="text"
+                        placeholder="https://..."
+                        value={rowCta.url}
+                        onChange={e => {
+                          const next = [...ctas];
+                          next[idx] = { ...next[idx], url: e.target.value };
+                          setCtas(next);
+                        }}
+                        style={{ padding: "7px 8px", borderRadius: 7, border: "1px solid #e2e8f0", fontSize: 11 }}
+                      />
+                    ) : (
+                      <div style={{ fontSize: 11, color: "#cbd5e1", paddingLeft: 4 }}>
+                        {rowCta.type === "AI_DEFAULT" ? "auto" : rowCta.type === "NONE" ? "—" : "phone"}
+                      </div>
+                    )}
                   </div>
                 );
               })}
