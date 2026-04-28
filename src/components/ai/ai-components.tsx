@@ -19,9 +19,6 @@ export function AiSettingsTab({ locationId, profileName }: { locationId: string;
     aiCompetitorData: "",
     aiKeywordSequence: "",
     aiCurrentSequenceIndex: 0,
-    aiContentProvider: "CLAUDE",
-    aiImageProvider: "DALL-E-3",
-    aiImageEnabled: true,
     aiWebsite: "",
     aiPhone: "",
   });
@@ -35,9 +32,6 @@ export function AiSettingsTab({ locationId, profileName }: { locationId: string;
         aiCompetitorData: settings.aiCompetitorData || "",
         aiKeywordSequence: settings.aiKeywordSequence || "",
         aiCurrentSequenceIndex: settings.aiCurrentSequenceIndex || 0,
-        aiContentProvider: settings.aiContentProvider || "CLAUDE",
-        aiImageProvider: settings.aiImageProvider || "DALL-E-3",
-        aiImageEnabled: settings.aiImageEnabled ?? true,
         aiWebsite: settings.aiWebsite || "",
         aiPhone: settings.aiPhone || "",
       });
@@ -123,46 +117,7 @@ export function AiSettingsTab({ locationId, profileName }: { locationId: string;
             </select>
           </div>
 
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
-            <div>
-              <label style={{ display: "block", fontSize: 12, fontWeight: 600, color: "#334155", marginBottom: 6 }}>Content Engine</label>
-              <select 
-                value={formData.aiContentProvider}
-                onChange={e => setFormData({ ...formData, aiContentProvider: e.target.value })}
-                style={{ width: "100%", padding: 10, borderRadius: 8, border: "1px solid #e2e8f0", fontSize: 13, fontFamily: "inherit" }}
-              >
-                <option value="DEFAULT">System Default</option>
-                <option value="CLAUDE">Anthropic Claude</option>
-                <option value="GPT">OpenAI GPT</option>
-                <option value="GEMINI">Google Gemini</option>
-              </select>
-            </div>
-            <div>
-              <label style={{ display: "block", fontSize: 12, fontWeight: 600, color: "#334155", marginBottom: 6 }}>Image Engine</label>
-              <select 
-                value={formData.aiImageProvider}
-                onChange={e => setFormData({ ...formData, aiImageProvider: e.target.value })}
-                style={{ width: "100%", padding: 10, borderRadius: 8, border: "1px solid #e2e8f0", fontSize: 13, fontFamily: "inherit" }}
-              >
-                <option value="DEFAULT">System Default</option>
-                <option value="DALL-E-3">OpenAI DALL-E</option>
-                <option value="GEMINI">Google Gemini</option>
-              </select>
-            </div>
-          </div>
-
-          <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "8px 0" }}>
-            <input 
-              type="checkbox"
-              id="aiImageEnabled"
-              checked={formData.aiImageEnabled}
-              onChange={e => setFormData({ ...formData, aiImageEnabled: e.target.checked })}
-              style={{ width: 16, height: 16, cursor: "pointer" }}
-            />
-            <label htmlFor="aiImageEnabled" style={{ fontSize: 13, fontWeight: 600, color: "#334155", cursor: "pointer" }}>
-              Enable Image Generation by Default
-            </label>
-          </div>
+          {/* No AI Engine controls here — manage via API Keys in sidebar */}
 
           <div>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
