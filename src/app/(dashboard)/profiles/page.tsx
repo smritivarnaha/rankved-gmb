@@ -136,15 +136,7 @@ function ProfileCard({
             </button>
           </div>
 
-          {/* Inline status row - Active removed, only drafts show if any */}
-          {drafts > 0 && (
-            <div style={{ display: "flex", alignItems: "center", gap: 6, marginTop: 10 }}>
-              <span style={{ display: "inline-flex", alignItems: "center", gap: 4, fontSize: 10, fontWeight: 600, color: "#92400e", background: "#fffbeb", border: "1px solid #fde68a", borderRadius: 20, padding: "2px 8px" }}>
-                <AlertTriangle style={{ width: 9, height: 9 }} />
-                {drafts} draft{drafts !== 1 ? "s" : ""}
-              </span>
-            </div>
-          )}
+          {/* Inline status row removed to avoid redundancy with stats row below */}
         </div>
       </div>
 
