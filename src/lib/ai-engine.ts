@@ -63,8 +63,8 @@ export async function generatePostContent(
       "content": "The main post body (max 1500 chars)",
       "imagePrompt": "A detailed, high-quality professional image prompt matching this post",
       "topicType": "STANDARD",
-      "ctaType": "LEARN_MORE",
-      "ctaUrl": "${location.client.website || ""}"
+      "ctaType": "${(location.aiPhone || location.phone) ? 'CALL' : 'LEARN_MORE'}",
+      "ctaUrl": "${(location.aiPhone || location.phone) ? (location.aiPhone || location.phone) : (location.aiWebsite || location.client.website || '')}"
     }
   `;
 

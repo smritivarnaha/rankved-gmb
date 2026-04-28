@@ -509,5 +509,6 @@ export function LoginForm({ settings }: LoginFormProps) {
         </div>
       </div>
     </div>
+    </>
   );
 }

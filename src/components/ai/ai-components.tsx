@@ -21,6 +21,8 @@ export function AiSettingsTab({ locationId, profileName }: { locationId: string;
     aiContentProvider: "CLAUDE",
     aiImageProvider: "DALL-E-3",
     aiImageEnabled: true,
+    aiWebsite: "",
+    aiPhone: "",
   });
 
   useEffect(() => {
@@ -35,6 +37,8 @@ export function AiSettingsTab({ locationId, profileName }: { locationId: string;
         aiContentProvider: settings.aiContentProvider || "CLAUDE",
         aiImageProvider: settings.aiImageProvider || "DALL-E-3",
         aiImageEnabled: settings.aiImageEnabled ?? true,
+        aiWebsite: settings.aiWebsite || "",
+        aiPhone: settings.aiPhone || "",
       });
     }
   }, [settings]);
@@ -48,6 +52,16 @@ export function AiSettingsTab({ locationId, profileName }: { locationId: string;
     });
     mutate();
     setSaving(false);
+  };
+
+  const fetchFromProfile = () => {
+    if (settings) {
+      setFormData(prev => ({
+        ...prev,
+        aiWebsite: settings.client?.website || settings.aiWebsite || "",
+        aiPhone: settings.phone || settings.aiPhone || "",
+      }));
+    }
   };
 
   if (!settings) return <div style={{ padding: 40, textAlign: "center" }}><Loader2 className="anim-spin" /></div>;
@@ -147,6 +161,34 @@ export function AiSettingsTab({ locationId, profileName }: { locationId: string;
             <label htmlFor="aiImageEnabled" style={{ fontSize: 13, fontWeight: 600, color: "#334155", cursor: "pointer" }}>
               Enable Image Generation by Default
             </label>
+          </div>
+
+          <div>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
+              <label style={{ fontSize: 12, fontWeight: 600, color: "#334155" }}>Default Website & Phone</label>
+              <button 
+                onClick={fetchFromProfile}
+                style={{ background: "none", border: "none", color: "#2563eb", fontSize: 11, fontWeight: 600, cursor: "pointer", textDecoration: "underline" }}
+              >
+                Fetch from Profile
+              </button>
+            </div>
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+              <input 
+                type="text"
+                placeholder="Website URL"
+                value={formData.aiWebsite}
+                onChange={e => setFormData({ ...formData, aiWebsite: e.target.value })}
+                style={{ width: "100%", padding: 10, borderRadius: 8, border: "1px solid #e2e8f0", fontSize: 13, fontFamily: "inherit" }}
+              />
+              <input 
+                type="text"
+                placeholder="Phone Number"
+                value={formData.aiPhone}
+                onChange={e => setFormData({ ...formData, aiPhone: e.target.value })}
+                style={{ width: "100%", padding: 10, borderRadius: 8, border: "1px solid #e2e8f0", fontSize: 13, fontFamily: "inherit" }}
+              />
+            </div>
           </div>
 
           <div>
@@ -323,15 +365,51 @@ export function AiGenerationModal({
                     {preview.content}
                   </div>
                   
-                  <div style={{ marginTop: 20, display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
-                    <div>
-                      <label style={{ display: "block", fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.05em", color: "#64748b", marginBottom: 6 }}>Post Type</label>
-                      <div style={{ padding: "8px 12px", background: "#f1f5f9", borderRadius: 6, fontSize: 12, fontWeight: 600 }}>{preview.topicType}</div>
+                  <div style={{ marginTop: 20, display: "flex", flexDirection: "column", gap: 16 }}>
+                    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
+                      <div>
+                        <label style={{ display: "block", fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.05em", color: "#64748b", marginBottom: 6 }}>Post Type</label>
+                        <select 
+                          value={preview.topicType || "STANDARD"}
+                          onChange={e => setPreview({ ...preview, topicType: e.target.value })}
+                          style={{ width: "100%", padding: "8px 12px", background: "#f1f5f9", borderRadius: 6, fontSize: 12, fontWeight: 600, border: "1px solid #e2e8f0", outline: "none" }}
+                        >
+                          <option value="STANDARD">Standard</option>
+                          <option value="EVENT">Event</option>
+                          <option value="OFFER">Offer</option>
+                        </select>
+                      </div>
+                      <div>
+                        <label style={{ display: "block", fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.05em", color: "#64748b", marginBottom: 6 }}>Call to Action</label>
+                        <select 
+                          value={preview.ctaType || ""}
+                          onChange={e => setPreview({ ...preview, ctaType: e.target.value })}
+                          style={{ width: "100%", padding: "8px 12px", background: "#f1f5f9", borderRadius: 6, fontSize: 12, fontWeight: 600, border: "1px solid #e2e8f0", outline: "none" }}
+                        >
+                          <option value="">None</option>
+                          <option value="LEARN_MORE">Learn More</option>
+                          <option value="CALL">Call Now</option>
+                          <option value="BOOK">Book</option>
+                          <option value="ORDER">Order</option>
+                          <option value="SHOP">Shop</option>
+                          <option value="SIGN_UP">Sign Up</option>
+                        </select>
+                      </div>
                     </div>
-                    <div>
-                      <label style={{ display: "block", fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.05em", color: "#64748b", marginBottom: 6 }}>Call to Action</label>
-                      <div style={{ padding: "8px 12px", background: "#f1f5f9", borderRadius: 6, fontSize: 12, fontWeight: 600 }}>{preview.ctaType || "None"}</div>
-                    </div>
+                    {preview.ctaType && preview.ctaType !== "" && (
+                      <div>
+                        <label style={{ display: "block", fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.05em", color: "#64748b", marginBottom: 6 }}>
+                          {preview.ctaType === "CALL" ? "Phone Number" : "Action Link URL"}
+                        </label>
+                        <input 
+                          type="text"
+                          value={preview.ctaUrl || ""}
+                          onChange={e => setPreview({ ...preview, ctaUrl: e.target.value })}
+                          placeholder={preview.ctaType === "CALL" ? "e.g. +1234567890" : "https://..."}
+                          style={{ width: "100%", padding: "8px 12px", background: "#f1f5f9", borderRadius: 6, fontSize: 12, fontWeight: 600, border: "1px solid #e2e8f0", outline: "none" }}
+                        />
+                      </div>
+                    )}
                   </div>
                 </div>
               )}

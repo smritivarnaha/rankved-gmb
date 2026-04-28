@@ -17,6 +17,10 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
       aiCompetitorData: true,
       aiKeywordSequence: true,
       aiCurrentSequenceIndex: true,
+      aiWebsite: true,
+      aiPhone: true,
+      phone: true,
+      client: { select: { website: true } }
     },
   });
 
@@ -41,6 +45,8 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
       aiCompetitorData: body.aiCompetitorData,
       aiKeywordSequence: body.aiKeywordSequence,
       aiCurrentSequenceIndex: body.aiCurrentSequenceIndex ?? 0,
+      aiWebsite: body.aiWebsite,
+      aiPhone: body.aiPhone,
     },
   });
 
