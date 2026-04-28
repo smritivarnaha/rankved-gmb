@@ -410,7 +410,7 @@ export function LoginForm({ settings }: LoginFormProps) {
               style={{ height: 32, width: "auto", display: "block" }} 
             />
             <div style={{ width: 1, height: 24, background: "rgba(0,0,0,0.1)" }} />
-            <span style={{ fontSize: 16, fontWeight: 700, color: "#0A0A0A", letterSpacing: "-0.01em", textTransform: "uppercase" }}>
+            <span style={{ fontSize: 16, fontWeight: 700, color: "#0A0A0A", letterSpacing: "-0.01em", textTransform: "uppercase", marginTop: 4 }}>
               GMB Manager
             </span>
           </div>
