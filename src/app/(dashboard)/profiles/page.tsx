@@ -102,7 +102,6 @@ function ProfileCard({
                     WebkitBoxOrient: "vertical",
                     overflow: "hidden",
                     lineHeight: 1.3,
-                    maxHeight: "2.6em",
                     textDecoration: "none"
                   }}
                 >
@@ -114,11 +113,10 @@ function ProfileCard({
                     style={{ 
                       fontSize: 11, color: "#9ca3af", marginTop: 4,
                       display: "-webkit-box", 
-                      WebkitLineClamp: 2,
+                      WebkitLineClamp: 3,
                       WebkitBoxOrient: "vertical",
                       overflow: "hidden",
-                      lineHeight: 1.3,
-                      maxHeight: "2.6em"
+                      lineHeight: 1.4,
                     }}
                   >
                     {profile.address}
