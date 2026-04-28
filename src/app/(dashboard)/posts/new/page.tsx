@@ -51,7 +51,7 @@ function NewPostContent() {
       <PostTimeline onDateSelect={setSharedDate} selectedDate={sharedDate} profileId={profileId} />
 
       {/* Editor — locked to profile if given */}
-      <PostEditor timelineDate={sharedDate} onDateChange={setSharedDate} lockedProfileId={profileId} />
+      <PostEditor timelineDate={sharedDate} onDateChange={setSharedDate} lockedProfileId={profileId} returnUrl={backHref} />
 
       {profileId && (
         <AiGenerationModal 

@@ -23,7 +23,7 @@ function getMonthDays(year: number, month: number) {
 
 const monthNames = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
 
-export function PostEditor({ initialData = null, timelineDate, onDateChange, lockedProfileId }: { initialData?: any; timelineDate?: string; onDateChange?: (d: string) => void; lockedProfileId?: string }) {
+export function PostEditor({ initialData = null, timelineDate, onDateChange, lockedProfileId, returnUrl }: { initialData?: any; timelineDate?: string; onDateChange?: (d: string) => void; lockedProfileId?: string; returnUrl?: string }) {
   const router = useRouter();
   const { data: session } = useSession();
   const user = (session as any)?.user;
@@ -258,11 +258,11 @@ export function PostEditor({ initialData = null, timelineDate, onDateChange, loc
       });
       const responseData = await res.json();
       if (res.status === 201 || res.status === 200) {
-        router.push("/posts");
+        router.push(returnUrl || "/posts");
       } else if (res.status === 207) {
         // Partial success — saved to DB but GBP publish failed
         alert(`⚠️ Post saved but could not publish to Google:\n\n${responseData.error}\n\nCheck Settings to reconnect your Google account.`);
-        router.push("/posts");
+        router.push(returnUrl || "/posts");
       } else {
         alert(responseData.error || "Failed to save post");
       }
