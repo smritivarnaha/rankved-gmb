@@ -146,7 +146,7 @@ export default function SettingsPage() {
                     </div>
                     <div style={{ flex: 1, minWidth: 0 }}>
                       <p style={{ fontSize: 13, fontWeight: 600, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{p.name}</p>
-                      <p style={{ fontSize: 11, color: "var(--text-muted)", marginTop: 2 }}>{p.accountName}</p>
+                      <p style={{ fontSize: 11, color: "var(--text-muted)", marginTop: 2, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{p.address || "No address on file"}</p>
                     </div>
                   </div>
                 ))}
