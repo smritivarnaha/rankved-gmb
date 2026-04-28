@@ -110,18 +110,38 @@ export async function POST(req: NextRequest) {
             // Try to fetch profile logo from GBP Media API
             let logoUrl: string | undefined;
             try {
-              const mediaRes = await fetch(
-                `https://mybusiness.googleapis.com/v4/${loc.name}/media?maxResults=10`,
-                { headers: { Authorization: `Bearer ${accessToken}` } }
-              );
+              // The media endpoint needs the full resource name: accounts/{acc}/locations/{loc}/media
+              const mediaUrl = `https://mybusiness.googleapis.com/v4/${accountName}/${loc.name}/media?maxResults=20`;
+              console.log(`[LogoSync] Fetching media for ${loc.title}: ${mediaUrl}`);
+              
+              const mediaRes = await fetch(mediaUrl, { 
+                headers: { Authorization: `Bearer ${accessToken}` } 
+              });
+              
               if (mediaRes.ok) {
                 const mediaData = await mediaRes.json();
                 const items: any[] = mediaData.mediaItems || [];
-                const logo = items.find((m: any) => m.category === "LOGO") 
+                console.log(`[LogoSync] Found ${items.length} media items for ${loc.title}`);
+                
+                // Categories are typically uppercase: LOGO, PROFILE, COVER, etc.
+                const logo = items.find((m: any) => m.locationAssociation?.category === "LOGO") 
+                          || items.find((m: any) => m.locationAssociation?.category === "PROFILE")
+                          || items.find((m: any) => m.category === "LOGO")
                           || items.find((m: any) => m.category === "PROFILE");
-                if (logo?.googleUrl) logoUrl = logo.googleUrl;
+                
+                if (logo?.googleUrl) {
+                  logoUrl = logo.googleUrl;
+                  console.log(`[LogoSync] Success! Logo found for ${loc.title}: ${logo.googleUrl.slice(0, 50)}...`);
+                } else {
+                  console.log(`[LogoSync] No LOGO or PROFILE category found in items for ${loc.title}`);
+                }
+              } else {
+                const errText = await mediaRes.text();
+                console.error(`[LogoSync] Media API failed for ${loc.title}: ${mediaRes.status} ${errText}`);
               }
-            } catch { /* non-blocking */ }
+            } catch (err: any) {
+              console.error(`[LogoSync] Exception fetching logo for ${loc.title}:`, err.message);
+            }
 
             fetchedProfiles.push({
               id: crypto.randomUUID(),
