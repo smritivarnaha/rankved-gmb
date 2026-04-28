@@ -14,6 +14,7 @@ const adminNav = [
   { name: "Performance", href: "/performance", icon: BarChart3 },
   { name: "Profiles",    href: "/profiles",    icon: MapPin },
   { name: "Calendar",    href: "/calendar",    icon: CalendarDays },
+  { name: "Prompts",     href: "/prompts",     icon: FileText },
   { name: "Team",        href: "/team",        icon: Users },
   { name: "API Keys",    href: "/api-keys",    icon: Key },
   { name: "Settings",    href: "/settings",    icon: Settings },
@@ -29,6 +30,7 @@ const teamNav = [
   { name: "Performance", href: "/performance", icon: BarChart3 },
   { name: "Profiles",    href: "/profiles",    icon: MapPin },
   { name: "Calendar",    href: "/calendar",    icon: CalendarDays },
+  { name: "Prompts",     href: "/prompts",     icon: FileText },
 ];
 
 export function Sidebar() {

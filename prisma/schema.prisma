@@ -93,6 +93,7 @@ model User {
   clients         Client[]
   posts           Post[]
   apiKeys         ApiKey[]
+  prompts         PromptTemplate[]
   createdAt       DateTime    @default(now())
   updatedAt       DateTime    @updatedAt
 }
@@ -216,4 +217,16 @@ model GlobalSetting {
   loginDescription String   @default("Connect your Google account and manage all your business profiles from a single dashboard.")
   loginBgOpacity   Float    @default(0.5)
   updatedAt        DateTime @updatedAt
+}
+
+model PromptTemplate {
+  id        String   @id @default(cuid())
+  title     String
+  content   String   @db.Text
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([userId])
 }
