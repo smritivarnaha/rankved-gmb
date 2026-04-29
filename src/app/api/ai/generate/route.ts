@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/lib/auth";
 import prisma from "@/lib/prisma";
-import { generatePostContent, generatePostImage, UserAISettings } from "@/lib/ai-engine";
+import { generatePostContent, generateImagePrompt, generatePostImage, UserAISettings } from "@/lib/ai-engine";
 
 export async function POST(req: NextRequest) {
   const session = await getServerSession(authOptions);
@@ -22,7 +22,7 @@ export async function POST(req: NextRequest) {
   if (!user) return NextResponse.json({ error: "User not found" }, { status: 404 });
 
   try {
-    const { locationId, mode, customKeyword } = await req.json(); // mode: "BOTH", "CONTENT", "IMAGE"
+    const { locationId, mode, customKeyword, ctaType } = await req.json(); // mode: "BOTH", "CONTENT", "IMAGE"
     if (!locationId) return NextResponse.json({ error: "locationId is required" }, { status: 400 });
 
     const location = await prisma.location.findUnique({ where: { id: locationId } });
@@ -52,7 +52,7 @@ export async function POST(req: NextRequest) {
       : location.aiImageProvider;
 
     // Step 1: Generate Content & Prompt (always needed as it provides the image prompt)
-    const postData = await generatePostContent(locationId, aiSettings, contentProvider, customKeyword);
+    const postData = await generatePostContent(locationId, aiSettings, contentProvider, customKeyword, ctaType);
 
     // Step 2: Generate Image (conditional)
     // Mode explicitly "CONTENT" -> skip
@@ -65,7 +65,12 @@ export async function POST(req: NextRequest) {
       : location.aiImageEnabled;
 
     if (shouldGenImage) {
-      imageUrl = await generatePostImage(postData.imagePrompt, aiSettings, imageProvider);
+      // Step 2: Generate Image Prompt based on content (new logic)
+      const imagePrompt = await generateImagePrompt(postData.content, postData.keyword, locationId, aiSettings, contentProvider);
+      postData.imagePrompt = imagePrompt;
+
+      // Step 3: Generate Image
+      imageUrl = await generatePostImage(imagePrompt, aiSettings, imageProvider);
     }
 
     return NextResponse.json({

@@ -113,6 +113,7 @@ export function AiSettingsTab({ locationId, profileName }: { locationId: string;
             >
               <option>Professional</option>
               <option>Friendly & Approachable</option>
+              <option>Doctor-to-Patient (Conversational)</option>
               <option>Expert / Authoritative</option>
               <option>Clinical & Precise</option>
               <option>Energetic & Promotional</option>
@@ -205,6 +206,27 @@ export function AiGenerationModal({
   const [preview, setPreview] = useState<any>(null);
   const [error, setError] = useState<string | null>(null);
   const [generationMode, setGenerationMode] = useState<"BOTH" | "CONTENT" | "IMAGE">("BOTH");
+  const [keyword, setKeyword] = useState("");
+  const [ctaType, setCtaType] = useState("AI_DEFAULT");
+
+  // Reset state when modal opens
+  useEffect(() => {
+    if (isOpen) {
+      setPreview(null);
+      setError(null);
+      setGenerating(false);
+      setSaving(false);
+      setKeyword("");
+      setCtaType("AI_DEFAULT");
+    }
+  }, [isOpen]);
+
+  const handleClose = () => {
+    setPreview(null);
+    setError(null);
+    setGenerating(false);
+    onClose();
+  };
 
   const triggerGenerate = async () => {
     setGenerating(true);
@@ -213,7 +235,12 @@ export function AiGenerationModal({
       const res = await fetch("/api/ai/generate", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ locationId, mode: generationMode }),
+        body: JSON.stringify({ 
+          locationId, 
+          mode: generationMode,
+          customKeyword: keyword.trim() || undefined,
+          ctaType: ctaType !== "AI_DEFAULT" ? ctaType : undefined
+        }),
       });
       const data = await res.json();
       if (res.ok) setPreview(data);
@@ -242,7 +269,7 @@ export function AiGenerationModal({
     });
     if (res.ok) {
       onGenerated();
-      onClose();
+      handleClose();
     } else {
       alert("Failed to save draft.");
     }
@@ -266,7 +293,7 @@ export function AiGenerationModal({
             <Wand2 size={20} color="#2563eb" />
             <h3 style={{ fontSize: 16, fontWeight: 700, color: "#0f172a" }}>AI Post Generator</h3>
           </div>
-          <button onClick={onClose} style={{ background: "none", border: "none", cursor: "pointer", color: "#94a3b8" }}><X size={20} /></button>
+          <button onClick={handleClose} style={{ background: "none", border: "none", cursor: "pointer", color: "#94a3b8" }}><X size={20} /></button>
         </div>
 
         {/* Content */}
@@ -300,6 +327,37 @@ export function AiGenerationModal({
                     {mode.label}
                   </button>
                 ))}
+              </div>
+
+              <div style={{ maxWidth: 400, margin: "0 auto 24px", display: "flex", flexDirection: "column", gap: 16, textAlign: "left" }}>
+                <div>
+                  <label style={{ display: "block", fontSize: 12, fontWeight: 600, color: "#334155", marginBottom: 6 }}>Focus Keyword (Optional)</label>
+                  <input 
+                    type="text"
+                    placeholder="e.g. Dental Implants in Gwalior"
+                    value={keyword}
+                    onChange={e => setKeyword(e.target.value)}
+                    style={{ width: "100%", padding: "10px 12px", borderRadius: 8, border: "1px solid #e2e8f0", fontSize: 14 }}
+                  />
+                </div>
+                <div>
+                  <label style={{ display: "block", fontSize: 12, fontWeight: 600, color: "#334155", marginBottom: 6 }}>Call to Action Button</label>
+                  <select 
+                    value={ctaType}
+                    onChange={e => setCtaType(e.target.value)}
+                    style={{ width: "100%", padding: "10px 12px", borderRadius: 8, border: "1px solid #e2e8f0", fontSize: 14, background: "#fff" }}
+                  >
+                    <option value="AI_DEFAULT">AI selects automatically</option>
+                    <option value="CALL">Call now</option>
+                    <option value="BOOK">Book</option>
+                    <option value="ORDER">Order online</option>
+                    <option value="BUY">Buy</option>
+                    <option value="LEARN_MORE">Learn more</option>
+                    <option value="SIGN_UP">Sign up</option>
+                    <option value="GET_OFFER">Get offer</option>
+                    <option value="NONE">No button</option>
+                  </select>
+                </div>
               </div>
 
               <button 
@@ -417,7 +475,7 @@ export function AiGenerationModal({
             </button>
             <div style={{ display: "flex", gap: 12 }}>
               <button 
-                onClick={onClose}
+                onClick={handleClose}
                 style={{ padding: "9px 16px", background: "none", border: "1px solid #e2e8f0", borderRadius: 8, fontSize: 13, fontWeight: 600, color: "#64748b", cursor: "pointer" }}
               >
                 Cancel
@@ -518,7 +576,12 @@ export function AiBulkGenerationModal({
           const genRes = await fetch("/api/ai/generate", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ locationId, mode: generateMode, customKeyword: customKeyword || undefined }),
+            body: JSON.stringify({ 
+              locationId, 
+              mode: generateMode === "BOTH" ? "BOTH" : "CONTENT", 
+              customKeyword: customKeyword || undefined,
+              ctaType: ctas[i]?.type && ctas[i].type !== "AI_DEFAULT" ? ctas[i].type : undefined
+            }),
           });
           
           const genData = await genRes.json();
