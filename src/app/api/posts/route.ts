@@ -9,9 +9,6 @@ import prisma from "@/lib/prisma";
 export async function GET(req: NextRequest) {
   const session = await getServerSession(authOptions);
   if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  if (!(session as any).user.isApproved) {
-    return NextResponse.json({ error: "Your account is pending approval by rankved.business@gmail.com." }, { status: 403 });
-  }
 
   const userId = (session as any).user.id;
   const role = (session as any).user.role;
@@ -34,9 +31,6 @@ export async function GET(req: NextRequest) {
 export async function POST(req: NextRequest) {
   const session = await getServerSession(authOptions);
   if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  if (!(session as any).user.isApproved) {
-    return NextResponse.json({ error: "Your account is pending approval by rankved.business@gmail.com." }, { status: 403 });
-  }
 
   const userId = (session as any)?.user?.id;
   if (!userId) return NextResponse.json({ error: "Could not determine user ID." }, { status: 401 });
@@ -127,9 +121,6 @@ export async function POST(req: NextRequest) {
 export async function DELETE(req: NextRequest) {
   const session = await getServerSession(authOptions);
   if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  if (!(session as any).user.isApproved) {
-    return NextResponse.json({ error: "Your account is pending approval by rankved.business@gmail.com." }, { status: 403 });
-  }
 
   const role = (session as any)?.user?.role;
   // Allow any approved/signed-in user to delete posts (owners, team members, super admins)
