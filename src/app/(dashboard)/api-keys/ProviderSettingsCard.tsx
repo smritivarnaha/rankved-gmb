@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Loader2, CheckCircle2, FlaskConical, XCircle, Sparkles, Wand2, Key, ChevronDown, Globe } from "lucide-react";
+import { Loader2, CheckCircle2, FlaskConical, XCircle, Sparkles, Wand2, Key, ChevronDown, Globe, Eye, EyeOff } from "lucide-react";
 
 export function ProviderSettingsCard() {
   const [loading, setLoading] = useState(true);
@@ -19,6 +19,7 @@ export function ProviderSettingsCard() {
   
   const [testing, setTesting] = useState<Record<string, boolean>>({});
   const [testResults, setTestResults] = useState<Record<string, { success?: boolean; error?: string }>>({});
+  const [showKey, setShowKey] = useState<Record<string, boolean>>({});
 
   useEffect(() => {
     fetch("/api/user/settings")
@@ -160,7 +161,12 @@ export function ProviderSettingsCard() {
                 {testResults.OPENROUTER?.success && <CheckCircle2 size={14} style={{ color: "#16a34a" }} />}
                 {testResults.OPENROUTER?.error && <XCircle size={14} style={{ color: "#dc2626" }} />}
               </div>
-              <input type="password" value={settings.openrouterApiKey} onChange={e => setSettings({ ...settings, openrouterApiKey: e.target.value })} placeholder="sk-or-v1-..." style={{ width: "100%", padding: "10px", borderRadius: 10, border: "1px solid #cbd5e1", fontSize: 13 }} />
+              <div style={{ position: "relative" }}>
+                <input type={showKey.openrouter ? "text" : "password"} value={settings.openrouterApiKey} onChange={e => setSettings({ ...settings, openrouterApiKey: e.target.value })} placeholder="sk-or-v1-..." style={{ width: "100%", padding: "10px", paddingRight: "40px", borderRadius: 10, border: "1px solid #cbd5e1", fontSize: 13 }} />
+                <button type="button" onClick={() => setShowKey({ ...showKey, openrouter: !showKey.openrouter })} style={{ position: "absolute", right: "12px", top: "50%", transform: "translateY(-50%)", background: "none", border: "none", cursor: "pointer", color: "#94a3b8", display: "flex" }}>
+                  {showKey.openrouter ? <EyeOff size={16} /> : <Eye size={16} />}
+                </button>
+              </div>
               <input type="text" value={settings.openrouterModel} onChange={e => setSettings({ ...settings, openrouterModel: e.target.value })} placeholder="openrouter/auto" style={{ width: "100%", padding: "10px", borderRadius: 10, border: "1px solid #cbd5e1", fontSize: 13 }} />
               <button 
                 onClick={() => handleTestKey("OPENROUTER", settings.openrouterApiKey)} 
@@ -180,7 +186,12 @@ export function ProviderSettingsCard() {
                 {testResults.GPT?.success && <CheckCircle2 size={14} style={{ color: "#16a34a" }} />}
                 {testResults.GPT?.error && <XCircle size={14} style={{ color: "#dc2626" }} />}
               </div>
-              <input type="password" value={settings.openaiApiKey} onChange={e => setSettings({ ...settings, openaiApiKey: e.target.value })} placeholder="sk-..." style={{ width: "100%", padding: "10px", borderRadius: 10, border: "1px solid #cbd5e1", fontSize: 13 }} />
+              <div style={{ position: "relative" }}>
+                <input type={showKey.openai ? "text" : "password"} value={settings.openaiApiKey} onChange={e => setSettings({ ...settings, openaiApiKey: e.target.value })} placeholder="sk-..." style={{ width: "100%", padding: "10px", paddingRight: "40px", borderRadius: 10, border: "1px solid #cbd5e1", fontSize: 13 }} />
+                <button type="button" onClick={() => setShowKey({ ...showKey, openai: !showKey.openai })} style={{ position: "absolute", right: "12px", top: "50%", transform: "translateY(-50%)", background: "none", border: "none", cursor: "pointer", color: "#94a3b8", display: "flex" }}>
+                  {showKey.openai ? <EyeOff size={16} /> : <Eye size={16} />}
+                </button>
+              </div>
               <button 
                 onClick={() => handleTestKey("GPT", settings.openaiApiKey)} 
                 disabled={testing.GPT || !settings.openaiApiKey}
@@ -199,7 +210,12 @@ export function ProviderSettingsCard() {
                 {testResults.CLAUDE?.success && <CheckCircle2 size={14} style={{ color: "#16a34a" }} />}
                 {testResults.CLAUDE?.error && <XCircle size={14} style={{ color: "#dc2626" }} />}
               </div>
-              <input type="password" value={settings.anthropicApiKey} onChange={e => setSettings({ ...settings, anthropicApiKey: e.target.value })} placeholder="sk-ant-..." style={{ width: "100%", padding: "10px", borderRadius: 10, border: "1px solid #cbd5e1", fontSize: 13 }} />
+              <div style={{ position: "relative" }}>
+                <input type={showKey.anthropic ? "text" : "password"} value={settings.anthropicApiKey} onChange={e => setSettings({ ...settings, anthropicApiKey: e.target.value })} placeholder="sk-ant-..." style={{ width: "100%", padding: "10px", paddingRight: "40px", borderRadius: 10, border: "1px solid #cbd5e1", fontSize: 13 }} />
+                <button type="button" onClick={() => setShowKey({ ...showKey, anthropic: !showKey.anthropic })} style={{ position: "absolute", right: "12px", top: "50%", transform: "translateY(-50%)", background: "none", border: "none", cursor: "pointer", color: "#94a3b8", display: "flex" }}>
+                  {showKey.anthropic ? <EyeOff size={16} /> : <Eye size={16} />}
+                </button>
+              </div>
               <button 
                 onClick={() => handleTestKey("CLAUDE", settings.anthropicApiKey)} 
                 disabled={testing.CLAUDE || !settings.anthropicApiKey}
@@ -218,7 +234,12 @@ export function ProviderSettingsCard() {
                 {testResults.GEMINI?.success && <CheckCircle2 size={14} style={{ color: "#16a34a" }} />}
                 {testResults.GEMINI?.error && <XCircle size={14} style={{ color: "#dc2626" }} />}
               </div>
-              <input type="password" value={settings.geminiApiKey} onChange={e => setSettings({ ...settings, geminiApiKey: e.target.value })} placeholder="AIza..." style={{ width: "100%", padding: "10px", borderRadius: 10, border: "1px solid #cbd5e1", fontSize: 13 }} />
+              <div style={{ position: "relative" }}>
+                <input type={showKey.gemini ? "text" : "password"} value={settings.geminiApiKey} onChange={e => setSettings({ ...settings, geminiApiKey: e.target.value })} placeholder="AIza..." style={{ width: "100%", padding: "10px", paddingRight: "40px", borderRadius: 10, border: "1px solid #cbd5e1", fontSize: 13 }} />
+                <button type="button" onClick={() => setShowKey({ ...showKey, gemini: !showKey.gemini })} style={{ position: "absolute", right: "12px", top: "50%", transform: "translateY(-50%)", background: "none", border: "none", cursor: "pointer", color: "#94a3b8", display: "flex" }}>
+                  {showKey.gemini ? <EyeOff size={16} /> : <Eye size={16} />}
+                </button>
+              </div>
               <button 
                 onClick={() => handleTestKey("GEMINI", settings.geminiApiKey)} 
                 disabled={testing.GEMINI || !settings.geminiApiKey}

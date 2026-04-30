@@ -2,7 +2,7 @@
 
 import { useSession } from "next-auth/react";
 import { useState, useEffect } from "react";
-import { Users, Plus, Trash2, Loader2, ShieldAlert, X, Shield, Search, UserCircle, MapPin, Mail, Settings, UserPlus } from "lucide-react";
+import { Users, Plus, Trash2, Loader2, ShieldAlert, X, Shield, Search, UserCircle, MapPin, Mail, Settings, UserPlus, Eye, EyeOff } from "lucide-react";
 import useSWR from "swr";
 
 const fetcher = (url: string) => fetch(url).then((res) => res.json());
@@ -23,6 +23,7 @@ export default function TeamPage() {
   
   // Modal State
   const [showForm, setShowForm] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
   const [saving, setSaving] = useState(false);
   const [form, setForm] = useState({ 
     name: "", username: "", email: "", password: "", 
@@ -274,7 +275,12 @@ export default function TeamPage() {
                   </div>
                   <div>
                     <label className="block text-sm font-semibold text-slate-700 mb-1.5">Initial Password <span className="text-red-500">*</span></label>
-                    <input required type="text" value={form.password} onChange={e => setForm({...form, password: e.target.value})} className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none transition-all" placeholder="Set a password" />
+                    <div className="relative w-full">
+                      <input required type={showPassword ? "text" : "password"} value={form.password} onChange={e => setForm({...form, password: e.target.value})} className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none transition-all pr-10" placeholder="Set a password" />
+                      <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 focus:outline-none">
+                        {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                      </button>
+                    </div>
                   </div>
                 </div>
 
