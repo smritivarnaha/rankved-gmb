@@ -734,14 +734,19 @@ export function PostEditor({ initialData = null, timelineDate, onDateChange, loc
             ) : (
               <>
                 <button onClick={() => handleSave("DRAFT")} disabled={saving || !form.locationId || !form.summary}
-                  className="px-4 py-2 border border-[var(--border)] text-[13px] font-medium text-[var(--text-secondary)] rounded-lg hover:bg-white transition-colors disabled:opacity-50 flex items-center gap-2">
+                  className="px-4 py-2 border border-[var(--border)] text-[13px] font-medium text-[var(--text-secondary)] rounded-lg hover:bg-[var(--bg-elevated)] transition-colors disabled:opacity-50 flex items-center gap-2"
+                  style={{ background: "#f8fafc", color: "#374151" }}>
                   {saving && savingType === "DRAFT" ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Save className="w-3.5 h-3.5" />}
                   Save draft
                 </button>
 
                 {canPublishNow ? (
                   <button onClick={() => { clearSchedule(); handleSave("PUBLISH"); }} disabled={saving || !form.locationId || !form.summary}
-                    className={`px-4 py-2 text-[13px] font-medium rounded-lg transition-colors disabled:opacity-50 flex items-center gap-2 ${getScheduledAt() ? 'border border-[var(--accent)] text-[var(--accent)] hover:bg-white' : 'bg-[var(--accent)] hover:bg-[var(--accent-hover)] text-white'}`}>
+                    className="px-4 py-2 text-[13px] font-medium rounded-lg transition-colors disabled:opacity-50 flex items-center gap-2"
+                    style={getScheduledAt()
+                      ? { background: "#eff6ff", color: "#2563eb", border: "1px solid #bfdbfe" }
+                      : { background: "#2563eb", color: "#ffffff", border: "1px solid #2563eb" }
+                    }>
                     {saving && savingType === "PUBLISH" ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Send className="w-3.5 h-3.5" />}
                     Publish now
                   </button>
