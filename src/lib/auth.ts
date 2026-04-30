@@ -89,7 +89,8 @@ export const authOptions: NextAuthOptions = {
       // Check for manual linking cookie
       let linkUserId: string | undefined;
       try {
-        linkUserId = cookies().get("linkUserId")?.value;
+        const cookieStore = await cookies();
+        linkUserId = cookieStore.get("linkUserId")?.value;
       } catch (e) {}
 
       // 1. Initial sign-in (Credentials or Google)
