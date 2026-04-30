@@ -20,7 +20,14 @@ export default function SettingsPage() {
   const [profiles, setProfiles] = useState<any[]>([]);
   const [loadingProfiles, setLoadingProfiles] = useState(true);
 
-  const handleGoogleConnect = async () => { setConnecting(true); await signIn("google", { callbackUrl: "/settings" }); };
+  const handleGoogleConnect = async () => { 
+    setConnecting(true); 
+    const userId = (session as any)?.user?.id;
+    if (userId) {
+      document.cookie = `linkUserId=${userId}; path=/; max-age=300; SameSite=Lax`;
+    }
+    await signIn("google", { callbackUrl: "/settings" }); 
+  };
   const hasGoogleToken = !!(session as any)?.accessToken;
 
   const [resetting, setResetting] = useState(false);

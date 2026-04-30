@@ -2,6 +2,7 @@ import { NextAuthOptions } from "next-auth";
 import GoogleProvider from "next-auth/providers/google";
 import CredentialsProvider from "next-auth/providers/credentials";
 import prisma from "./prisma";
+import { cookies } from "next/headers";
 import { findUserByCredentials, verifyPassword } from "./user-store";
 
 async function refreshAccessToken(token: any) {
@@ -85,6 +86,12 @@ export const authOptions: NextAuthOptions = {
       return true;
     },
     async jwt({ token, account, user }) {
+      // Check for manual linking cookie
+      let linkUserId: string | undefined;
+      try {
+        linkUserId = cookies().get("linkUserId")?.value;
+      } catch (e) {}
+
       // 1. Initial sign-in (Credentials or Google)
       if (user) {
         // If it's a credentials login, user is our DB user object
@@ -113,8 +120,22 @@ export const authOptions: NextAuthOptions = {
         } 
         // If it's a Google login (either first time or linking)
         else if (account?.provider === "google") {
+          // If we have a linking cookie, restore the user's original session details
+          if (linkUserId) {
+            try {
+              const dbUser = await prisma.user.findUnique({ where: { id: linkUserId } });
+              if (dbUser) {
+                token.userId = dbUser.id;
+                token.role = dbUser.role;
+                token.username = dbUser.username;
+                token.ownerId = dbUser.ownerId;
+                token.isApproved = dbUser.isApproved;
+                token.email = dbUser.email; // Preserve their DB email, not the generic Google email
+              }
+            } catch (e) {}
+          }
           // If we don't have a userId yet, this is a Google-first login
-          if (!token.userId) {
+          else if (!token.userId) {
             try {
               const dbUser = await prisma.user.findUnique({ where: { email: user.email?.toLowerCase() || "" } });
               if (dbUser) {
