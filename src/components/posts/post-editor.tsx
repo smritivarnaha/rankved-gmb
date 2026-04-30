@@ -35,6 +35,7 @@ export function PostEditor({ initialData = null, timelineDate, onDateChange, loc
   const fileRef = useRef<HTMLInputElement>(null);
   const [saving, setSaving] = useState(false);
   const [savingType, setSavingType] = useState("");
+  const [successMessage, setSuccessMessage] = useState("");
   const [imagePreview, setImagePreview] = useState<string | null>(initialData?.imageUrl || null);
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [locations, setLocations] = useState<{id:string;name:string;client:string}[]>(fallbackLocations);
@@ -258,11 +259,21 @@ export function PostEditor({ initialData = null, timelineDate, onDateChange, loc
       });
       const responseData = await res.json();
       if (res.status === 201 || res.status === 200) {
-        router.push(returnUrl || "/posts");
+        let msg = "Post saved successfully!";
+        if (type === "PUBLISH") msg = "Post published successfully!";
+        else if (type === "SCHEDULED") msg = "Post scheduled successfully!";
+        else if (type === "DRAFT") msg = "Draft saved successfully!";
+        setSuccessMessage(msg);
+        setSaving(false);
+        setSavingType("");
+        setTimeout(() => {
+          router.push(returnUrl || (form.locationId ? `/profiles/${form.locationId}` : "/profiles"));
+        }, 2200);
+        return;
       } else if (res.status === 207) {
         // Partial success — saved to DB but GBP publish failed
         alert(`⚠️ Post saved but could not publish to Google:\n\n${responseData.error}\n\nCheck Settings to reconnect your Google account.`);
-        router.push(returnUrl || "/posts");
+        router.push(returnUrl || (form.locationId ? `/profiles/${form.locationId}` : "/profiles"));
       } else {
         alert(responseData.error || "Failed to save post");
       }
@@ -278,7 +289,38 @@ export function PostEditor({ initialData = null, timelineDate, onDateChange, loc
   const todayDay = now.getDate();
 
   return (
-    <div className="bg-white border border-[var(--border)] rounded-lg">
+    <>
+      {(saving || successMessage) && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/40 backdrop-blur-sm transition-all duration-300">
+          <div className="bg-white rounded-2xl shadow-2xl p-8 flex flex-col items-center justify-center max-w-sm w-full mx-4 transform transition-all duration-300 scale-100">
+            {successMessage ? (
+              <>
+                <div className="w-16 h-16 bg-[var(--success-bg)] rounded-full flex items-center justify-center mb-4">
+                  <Check className="w-8 h-8 text-[var(--success)]" />
+                </div>
+                <h3 className="text-xl font-semibold text-[var(--text-primary)] mb-1 text-center">{successMessage}</h3>
+                <p className="text-[14px] text-[var(--text-secondary)] text-center">
+                  Redirecting back to profile...
+                </p>
+              </>
+            ) : (
+              <>
+                <Loader2 className="w-12 h-12 text-[var(--accent)] animate-spin mb-4" />
+                <h3 className="text-xl font-semibold text-[var(--text-primary)] mb-1 text-center">
+                  {savingType === "PUBLISH" ? "Publishing Post..." : 
+                   savingType === "SCHEDULED" ? "Scheduling Post..." : 
+                   savingType === "PENDING_APPROVAL" ? "Submitting Post..." :
+                   "Saving Draft..."}
+                </h3>
+                <p className="text-[14px] text-[var(--text-secondary)] text-center">
+                  Please wait while we process your request.
+                </p>
+              </>
+            )}
+          </div>
+        </div>
+      )}
+      <div className="bg-white border border-[var(--border)] rounded-lg relative z-[10]">
       <div className="p-6 space-y-6">
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           {/* Main content */}
@@ -728,5 +770,6 @@ export function PostEditor({ initialData = null, timelineDate, onDateChange, loc
         )}
       </div>
     </div>
+    </>
   );
 }

@@ -42,7 +42,7 @@ export default function EditPostPage({ params }: { params: Promise<{ id: string 
       <div className="text-center py-20">
         <p className="text-[16px] font-semibold text-[var(--text-primary)] mb-1">Post not found</p>
         <p className="text-[13px] text-[var(--text-tertiary)] mb-4">This post may have been deleted.</p>
-        <Link href="/posts" className="text-[13px] text-[var(--accent)] hover:underline">← Back to posts</Link>
+        <Link href="/profiles" className="text-[13px] text-[var(--accent)] hover:underline">← Back to profiles</Link>
       </div>
     );
   }
@@ -56,8 +56,8 @@ export default function EditPostPage({ params }: { params: Promise<{ id: string 
   return (
     <div className="space-y-5 max-w-[900px] mx-auto">
       <div>
-        <Link href="/posts" className="inline-flex items-center gap-1.5 text-[13px] text-[var(--text-tertiary)] hover:text-[var(--text-primary)] mb-3 transition-colors">
-          <ArrowLeft className="w-3.5 h-3.5" /> Back to posts
+        <Link href={post.profileId ? `/profiles/${post.profileId}` : "/profiles"} className="inline-flex items-center gap-1.5 text-[13px] text-[var(--text-tertiary)] hover:text-[var(--text-primary)] mb-3 transition-colors">
+          <ArrowLeft className="w-3.5 h-3.5" /> Back to profile
         </Link>
         <div className="flex items-center gap-3">
           <h1 className="text-[20px] font-semibold text-[var(--text-primary)]">Edit post</h1>
