@@ -7,15 +7,23 @@ import Link from "next/link";
 export default async function DashboardPage() {
   const session = await getServerSession(authOptions);
   const user = (session as any)?.user;
-  const isAdmin = user?.role === "SUPER_ADMIN" || user?.role === "AGENCY_OWNER";
+  const isSuperAdmin = user?.role === "SUPER_ADMIN";
+  const isAgencyOwner = user?.role === "AGENCY_OWNER";
+  const isAdmin = isSuperAdmin || isAgencyOwner;
+
+  const targetUserId = user?.ownerId || user?.id;
+  const client = await prisma.client.findFirst({ where: { userId: targetUserId } });
+
+  const locationWhere = isSuperAdmin ? {} : client ? { clientId: client.id } : { id: "none" };
+  const postWhereBase = isSuperAdmin ? {} : client ? { location: { clientId: client.id } } : { id: "none" };
 
   // Core stats
   const stats = await prisma.$transaction(async (tx) => {
-    const locations = await tx.location.count();
-    const scheduled = await tx.post.count({ where: { status: "SCHEDULED" } });
-    const published = await tx.post.count({ where: { status: "PUBLISHED" } });
-    const drafts = await tx.post.count({ where: { status: "DRAFT" } });
-    const pending = await tx.post.count({ where: { status: "PENDING_APPROVAL" } });
+    const locations = await tx.location.count({ where: locationWhere });
+    const scheduled = await tx.post.count({ where: { ...postWhereBase, status: "SCHEDULED" } });
+    const published = await tx.post.count({ where: { ...postWhereBase, status: "PUBLISHED" } });
+    const drafts = await tx.post.count({ where: { ...postWhereBase, status: "DRAFT" } });
+    const pending = await tx.post.count({ where: { ...postWhereBase, status: "PENDING_APPROVAL" } });
     return { locations, scheduled, published, drafts, pending };
   });
 
@@ -23,7 +31,7 @@ export default async function DashboardPage() {
   let teamMembers: any[] = [];
   if (isAdmin) {
     const members = await prisma.user.findMany({
-      where: { role: "TEAM_MEMBER" },
+      where: isSuperAdmin ? { role: "TEAM_MEMBER" } : { role: "TEAM_MEMBER", ownerId: user?.id },
       select: {
         id: true, name: true, email: true, isApproved: true,
         canPublishNow: true, canSchedule: true, minScheduleDays: true,

@@ -176,8 +176,9 @@ export async function DELETE(req: NextRequest) {
   if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   const role = (session as any)?.user?.role;
-  if (role !== "ADMIN") {
-    return NextResponse.json({ error: "Only admins can delete profiles" }, { status: 403 });
+  const allowedRoles = ["SUPER_ADMIN", "AGENCY_OWNER", "TEAM_MEMBER"];
+  if (!allowedRoles.includes(role)) {
+    return NextResponse.json({ error: "You do not have permission to delete profiles." }, { status: 403 });
   }
 
   const { searchParams } = new URL(req.url);
