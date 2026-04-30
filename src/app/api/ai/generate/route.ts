@@ -8,9 +8,17 @@ export async function POST(req: NextRequest) {
   const session = await getServerSession(authOptions);
   if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
+  const sessionUser = (session as any).user;
+  const sessionUserId = sessionUser?.id;
+  const sessionOwnerId = sessionUser?.ownerId;
+
+  // For TEAM_MEMBER accounts, AI keys are stored on the owner account.
+  // For all other roles, use their own account.
+  const apiKeyHolderId = sessionOwnerId || sessionUserId;
+
   // Fetch the user to get their stored API keys and defaults
-  const user = await prisma.user.findUnique({
-    where: { email: session.user?.email || "" },
+  const user = await prisma.user.findFirst({
+    where: apiKeyHolderId ? { id: apiKeyHolderId } : { email: sessionUser?.email || "" },
     select: { 
       anthropicApiKey: true, openaiApiKey: true, geminiApiKey: true, openrouterApiKey: true,
       defaultAiContentProvider: true, defaultAiImageProvider: true,
