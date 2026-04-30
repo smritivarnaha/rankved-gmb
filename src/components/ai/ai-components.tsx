@@ -784,7 +784,7 @@ export function AiBulkGenerationModal({
                 <input 
                   type="number" min={1} max={30} value={numPosts}
                   onChange={e => setNumPosts(Number(e.target.value))}
-                  style={{ width: "100%", padding: 10, borderRadius: 8, border: "1px solid #e2e8f0", fontSize: 14 }}
+                  style={{ width: "100%", padding: 10, borderRadius: 8, border: "1px solid #e2e8f0", fontSize: 14, background: "#fff", color: "#0f172a" }}
                 />
               </div>
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
@@ -793,7 +793,7 @@ export function AiBulkGenerationModal({
                   <input 
                     type="date" value={startDate}
                     onChange={e => setStartDate(e.target.value)}
-                    style={{ width: "100%", padding: 10, borderRadius: 8, border: "1px solid #e2e8f0", fontSize: 14 }}
+                    style={{ width: "100%", padding: 10, borderRadius: 8, border: "1px solid #e2e8f0", fontSize: 14, background: "#fff", color: "#0f172a" }}
                   />
                 </div>
                 <div>
@@ -801,7 +801,7 @@ export function AiBulkGenerationModal({
                   <select 
                     value={frequency}
                     onChange={e => setFrequency(Number(e.target.value))}
-                    style={{ width: "100%", padding: 10, borderRadius: 8, border: "1px solid #e2e8f0", fontSize: 14 }}
+                    style={{ width: "100%", padding: 10, borderRadius: 8, border: "1px solid #e2e8f0", fontSize: 14, background: "#fff", color: "#0f172a" }}
                   >
                     <option value={1}>Daily</option>
                     <option value={2}>Alternate Days</option>
@@ -815,7 +815,7 @@ export function AiBulkGenerationModal({
                 <select 
                   value={generateMode}
                   onChange={e => setGenerateMode(e.target.value as "BOTH"|"CONTENT_ONLY")}
-                  style={{ width: "100%", padding: 10, borderRadius: 8, border: "1px solid #e2e8f0", fontSize: 14 }}
+                  style={{ width: "100%", padding: 10, borderRadius: 8, border: "1px solid #e2e8f0", fontSize: 14, background: "#fff", color: "#0f172a" }}
                 >
                   <option value="BOTH">Content + Image (Uses more credits/time)</option>
                   <option value="CONTENT_ONLY">Content Only (Faster)</option>
