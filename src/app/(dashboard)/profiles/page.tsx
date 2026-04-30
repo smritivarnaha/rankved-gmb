@@ -264,7 +264,7 @@ export default function ProfilesPage() {
           </div>
         </div>
       ) : (
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(290px, 1fr))", gap: 16 }}>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(290px, 1fr))", gap: 16 }}>
           {profiles.map((p: Profile) => (
             <ProfileCard key={p.id} profile={p} onDelete={handleDelete} deleting={deleting === p.id} onAiCreate={setAiLocationId} />
           ))}

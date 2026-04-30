@@ -814,6 +814,20 @@ tr:hover td { background: var(--bg-hover); }
 .bg-emerald-100 { background: #d1fae5; }
 .text-emerald-700 { color: #047857; }
 
+/* Slate & Indigo Forms Utilities */
+.bg-slate-50 { background-color: #ffffff; } /* explicitly white for forms */
+.bg-slate-100 { background-color: #f1f5f9; }
+.text-slate-400 { color: #94a3b8; }
+.text-slate-600 { color: #475569; }
+.text-slate-700 { color: #334155; }
+.text-slate-900 { color: #0f172a; }
+.border-slate-100 { border-color: #f1f5f9; }
+.border-slate-200 { border-color: #e2e8f0; }
+.bg-indigo-50 { background-color: #eef2ff; }
+.text-indigo-600 { color: #4f46e5; }
+.border-indigo-500 { border-color: #6366f1; }
+.focus\:ring-indigo-500\/20:focus { box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.2); }
+
 /* ── Animations (also needed for inline animate-spin) ── */
 .animate-spin { animation: spin 0.8s linear infinite; }
 .animate-fade-in-up { animation: fadeIn 0.15s ease-out both; }

@@ -22,7 +22,7 @@ export async function POST(req: NextRequest) {
   if (!user) return NextResponse.json({ error: "User not found" }, { status: 404 });
 
   try {
-    const { locationId, mode, customKeyword, ctaType } = await req.json(); // mode: "BOTH", "CONTENT", "IMAGE"
+    const { locationId, mode, customKeyword, ctaType, action, generatedContent, generatedKeyword, generatedImagePrompt } = await req.json(); // action: "CONTENT", "PROMPT", "IMAGE"
     if (!locationId) return NextResponse.json({ error: "locationId is required" }, { status: 400 });
 
     const location = await prisma.location.findUnique({ where: { id: locationId } });
@@ -51,25 +51,32 @@ export async function POST(req: NextRequest) {
       ? (user.defaultAiImageProvider || "DALL-E-3")
       : location.aiImageProvider;
 
-    // Step 1: Generate Content & Prompt (always needed as it provides the image prompt)
-    const postData = await generatePostContent(locationId, aiSettings, contentProvider, customKeyword, ctaType);
+    // --- Granular Steps for Progressive UI ---
+    if (action === "CONTENT") {
+      const postData = await generatePostContent(locationId, aiSettings, contentProvider, customKeyword, ctaType);
+      return NextResponse.json({ ...postData, status: "DRAFT" });
+    }
 
-    // Step 2: Generate Image (conditional)
-    // Mode explicitly "CONTENT" -> skip
-    // Mode not provided -> check location.aiImageEnabled
-    // Mode "IMAGE" or "BOTH" -> generate
-    
+    if (action === "PROMPT") {
+      if (!generatedContent) return NextResponse.json({ error: "generatedContent required for PROMPT" }, { status: 400 });
+      const imagePrompt = await generateImagePrompt(generatedContent, generatedKeyword || "", locationId, aiSettings, contentProvider);
+      return NextResponse.json({ imagePrompt });
+    }
+
+    if (action === "IMAGE") {
+      if (!generatedImagePrompt) return NextResponse.json({ error: "generatedImagePrompt required for IMAGE" }, { status: 400 });
+      const imageUrl = await generatePostImage(generatedImagePrompt, aiSettings, imageProvider);
+      return NextResponse.json({ imageUrl });
+    }
+
+    // --- Legacy / Complete Flow (if action is omitted) ---
+    const postData = await generatePostContent(locationId, aiSettings, contentProvider, customKeyword, ctaType);
     let imageUrl = null;
-    const shouldGenImage = mode 
-      ? (mode === "BOTH" || mode === "IMAGE")
-      : location.aiImageEnabled;
+    const shouldGenImage = mode ? (mode === "BOTH" || mode === "IMAGE") : location.aiImageEnabled;
 
     if (shouldGenImage) {
-      // Step 2: Generate Image Prompt based on content (new logic)
       const imagePrompt = await generateImagePrompt(postData.content, postData.keyword, locationId, aiSettings, contentProvider);
       postData.imagePrompt = imagePrompt;
-
-      // Step 3: Generate Image
       imageUrl = await generatePostImage(imagePrompt, aiSettings, imageProvider);
     }
 

@@ -87,7 +87,7 @@ export function AiSettingsTab({ locationId, profileName }: { locationId: string;
               value={formData.aiInstructions}
               onChange={e => setFormData({ ...formData, aiInstructions: e.target.value })}
               placeholder="Example: Always mention our specific expertise in dental implants. Focus on local families in Gwalior. Avoid clinical jargon."
-              style={{ width: "100%", height: 120, padding: 12, borderRadius: 8, border: "1px solid #e2e8f0", fontSize: 13, fontFamily: "inherit" }}
+              style={{ width: "100%", height: 120, padding: 12, borderRadius: 8, border: "1px solid #e2e8f0", background: "#fff", fontSize: 13, fontFamily: "inherit" }}
             />
           </div>
           <div>
@@ -96,7 +96,7 @@ export function AiSettingsTab({ locationId, profileName }: { locationId: string;
               value={formData.aiKeywordSequence}
               onChange={e => setFormData({ ...formData, aiKeywordSequence: e.target.value })}
               placeholder="Topic 1, Topic 2, Topic 3..."
-              style={{ width: "100%", height: 80, padding: 12, borderRadius: 8, border: "1px solid #e2e8f0", fontSize: 13, fontFamily: "inherit" }}
+              style={{ width: "100%", height: 80, padding: 12, borderRadius: 8, border: "1px solid #e2e8f0", background: "#fff", fontSize: 13, fontFamily: "inherit" }}
             />
             <p style={{ fontSize: 11, color: "#94a3b8", marginTop: 4 }}>AI will use these keywords in order for subsequent posts.</p>
           </div>
@@ -109,7 +109,7 @@ export function AiSettingsTab({ locationId, profileName }: { locationId: string;
             <select 
               value={formData.aiTone}
               onChange={e => setFormData({ ...formData, aiTone: e.target.value })}
-              style={{ width: "100%", padding: 10, borderRadius: 8, border: "1px solid #e2e8f0", fontSize: 13, fontFamily: "inherit" }}
+              style={{ width: "100%", padding: 10, borderRadius: 8, border: "1px solid #e2e8f0", background: "#fff", fontSize: 13, fontFamily: "inherit" }}
             >
               <option>Professional</option>
               <option>Friendly & Approachable</option>
@@ -138,14 +138,14 @@ export function AiSettingsTab({ locationId, profileName }: { locationId: string;
                 placeholder="Website URL"
                 value={formData.aiWebsite}
                 onChange={e => setFormData({ ...formData, aiWebsite: e.target.value })}
-                style={{ width: "100%", padding: 10, borderRadius: 8, border: "1px solid #e2e8f0", fontSize: 13, fontFamily: "inherit" }}
+                style={{ width: "100%", padding: 10, borderRadius: 8, border: "1px solid #e2e8f0", background: "#fff", fontSize: 13, fontFamily: "inherit" }}
               />
               <input 
                 type="text"
                 placeholder="Phone Number"
                 value={formData.aiPhone}
                 onChange={e => setFormData({ ...formData, aiPhone: e.target.value })}
-                style={{ width: "100%", padding: 10, borderRadius: 8, border: "1px solid #e2e8f0", fontSize: 13, fontFamily: "inherit" }}
+                style={{ width: "100%", padding: 10, borderRadius: 8, border: "1px solid #e2e8f0", background: "#fff", fontSize: 13, fontFamily: "inherit" }}
               />
             </div>
           </div>
@@ -156,7 +156,7 @@ export function AiSettingsTab({ locationId, profileName }: { locationId: string;
               value={formData.aiCompetitorData}
               onChange={e => setFormData({ ...formData, aiCompetitorData: e.target.value })}
               placeholder="Paste snippets of high-performing competitor posts here for style reference."
-              style={{ width: "100%", height: 100, padding: 12, borderRadius: 8, border: "1px solid #e2e8f0", fontSize: 13, fontFamily: "inherit" }}
+              style={{ width: "100%", height: 100, padding: 12, borderRadius: 8, border: "1px solid #e2e8f0", background: "#fff", fontSize: 13, fontFamily: "inherit" }}
             />
           </div>
 
@@ -171,7 +171,7 @@ export function AiSettingsTab({ locationId, profileName }: { locationId: string;
               value={formData.aiImageInstructions}
               onChange={e => setFormData({ ...formData, aiImageInstructions: e.target.value })}
               placeholder="E.g. Always show a clean, modern clinic interior. Use warm lighting. No text or logos visible."
-              style={{ width: "100%", height: 90, padding: 12, borderRadius: 8, border: "1px solid #e2e8f0", fontSize: 13, fontFamily: "inherit" }}
+              style={{ width: "100%", height: 90, padding: 12, borderRadius: 8, border: "1px solid #e2e8f0", background: "#fff", fontSize: 13, fontFamily: "inherit" }}
             />
           </div>
         </div>
@@ -202,6 +202,7 @@ export function AiGenerationModal({
   locationId: string; isOpen: boolean; onClose: () => void; onGenerated: () => void 
 }) {
   const [generating, setGenerating] = useState(false);
+  const [generationStep, setGenerationStep] = useState(0);
   const [saving, setSaving] = useState(false);
   const [preview, setPreview] = useState<any>(null);
   const [error, setError] = useState<string | null>(null);
@@ -215,6 +216,7 @@ export function AiGenerationModal({
       setPreview(null);
       setError(null);
       setGenerating(false);
+      setGenerationStep(0);
       setSaving(false);
       setKeyword("");
       setCtaType("AI_DEFAULT");
@@ -225,13 +227,16 @@ export function AiGenerationModal({
     setPreview(null);
     setError(null);
     setGenerating(false);
+    setGenerationStep(0);
     onClose();
   };
 
   const triggerGenerate = async () => {
     setGenerating(true);
+    setGenerationStep(1);
     setError(null);
     try {
+      // Step 1: Generate Content
       const res = await fetch("/api/ai/generate", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -239,14 +244,53 @@ export function AiGenerationModal({
           locationId, 
           mode: generationMode,
           customKeyword: keyword.trim() || undefined,
-          ctaType: ctaType !== "AI_DEFAULT" ? ctaType : undefined
+          ctaType: ctaType !== "AI_DEFAULT" ? ctaType : undefined,
+          action: "CONTENT"
         }),
       });
-      const data = await res.json();
-      if (res.ok) setPreview(data);
-      else setError(data.error || "Generation failed");
-    } catch {
-      setError("Network error. Check your API keys.");
+      const contentData = await res.json();
+      if (!res.ok) throw new Error(contentData.error || "Generation failed at content step");
+
+      if (generationMode === "CONTENT") {
+        setPreview(contentData);
+        setGenerationStep(4);
+        setGenerating(false);
+        return;
+      }
+
+      // Step 2: Generate Image Prompt
+      setGenerationStep(2);
+      const promptRes = await fetch("/api/ai/generate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ 
+          locationId, 
+          action: "PROMPT",
+          generatedContent: contentData.content,
+          generatedKeyword: contentData.keyword
+        }),
+      });
+      const promptData = await promptRes.json();
+      if (!promptRes.ok) throw new Error(promptData.error || "Generation failed at image prompt step");
+
+      // Step 3: Generate Image
+      setGenerationStep(3);
+      const imageRes = await fetch("/api/ai/generate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ 
+          locationId, 
+          action: "IMAGE",
+          generatedImagePrompt: promptData.imagePrompt
+        }),
+      });
+      const imageData = await imageRes.json();
+      if (!imageRes.ok) throw new Error(imageData.error || "Generation failed at image generation step");
+
+      setPreview({ ...contentData, imageUrl: imageData.imageUrl, imagePrompt: promptData.imagePrompt });
+      setGenerationStep(4);
+    } catch (err: any) {
+      setError(err.message || "Network error. Check your API keys.");
     }
     setGenerating(false);
   };
@@ -370,10 +414,51 @@ export function AiGenerationModal({
           )}
 
           {generating && (
-            <div style={{ textAlign: "center", padding: "60px 0" }}>
-              <Loader2 size={48} className="anim-spin" color="#2563eb" style={{ margin: "0 auto 20px" }} />
-              <p style={{ fontSize: 15, fontWeight: 600, color: "#0f172a" }}>AI is thinking...</p>
-              <p style={{ fontSize: 13, color: "#94a3b8", marginTop: 4 }}>AI is drafting content and painting an image based on your instructions.</p>
+            <div style={{ padding: "60px 20px", maxWidth: 440, margin: "0 auto" }}>
+              <div style={{ textAlign: "center", marginBottom: 32 }}>
+                <Loader2 size={40} className="anim-spin" color="#2563eb" style={{ margin: "0 auto 16px" }} />
+                <p style={{ fontSize: 16, fontWeight: 700, color: "#0f172a" }}>AI is crafting your post...</p>
+                <p style={{ fontSize: 13, color: "#64748b", marginTop: 4 }}>This usually takes 10-15 seconds.</p>
+              </div>
+
+              <div style={{ display: "flex", flexDirection: "column", gap: 18 }}>
+                {[
+                  { step: 1, label: "Drafting engaging content & topics" },
+                  { step: 2, label: "Writing optimized image prompt" },
+                  { step: 3, label: "Painting high-quality image" }
+                ].map(item => {
+                  const isDone = generationStep > item.step;
+                  const isActive = generationStep === item.step;
+                  const isPending = generationStep < item.step;
+                  
+                  if (generationMode === "CONTENT" && item.step > 1) return null;
+
+                  return (
+                    <div key={item.step} style={{ display: "flex", alignItems: "center", gap: 12, opacity: isPending ? 0.4 : 1, transition: "opacity 0.3s" }}>
+                      <div style={{ 
+                        width: 24, height: 24, borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center",
+                        background: isDone ? "#10b981" : isActive ? "#2563eb" : "#e2e8f0",
+                        color: isDone || isActive ? "#fff" : "#94a3b8", flexShrink: 0,
+                        transition: "all 0.3s"
+                      }}>
+                        {isDone ? <Check size={14} strokeWidth={3} /> : isActive ? <Loader2 size={12} className="anim-spin" /> : <span style={{ fontSize: 11, fontWeight: 700 }}>{item.step}</span>}
+                      </div>
+                      <div style={{ flex: 1 }}>
+                        <p style={{ fontSize: 13, fontWeight: isActive ? 700 : 500, color: isActive ? "#0f172a" : "#64748b", transition: "all 0.3s" }}>
+                          {item.label}
+                        </p>
+                        <div style={{ height: 3, background: "#f1f5f9", borderRadius: 3, marginTop: 6, overflow: "hidden" }}>
+                          <div style={{ 
+                            height: "100%", background: isDone ? "#10b981" : isActive ? "#2563eb" : "transparent",
+                            width: isDone ? "100%" : isActive ? "50%" : "0%",
+                            transition: "width 0.4s ease, background 0.3s",
+                          }} />
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
             </div>
           )}
 
@@ -514,6 +599,7 @@ export function AiBulkGenerationModal({
   const [currentIndex, setCurrentIndex] = useState(0);
   const [results, setResults] = useState<{status: 'success'|'error', msg: string}[]>([]);
   const [isGenerating, setIsGenerating] = useState(false);
+  const [currentSubStep, setCurrentSubStep] = useState(0);
   const cancelledRef = useRef(false);
 
   // Exact GBP API action types — matches CTA_MAP in gbp-publisher.ts
@@ -573,6 +659,7 @@ export function AiBulkGenerationModal({
       // Up to 3 retries per post
       for (let attempt = 0; attempt < 3 && !success && !cancelledRef.current; attempt++) {
         try {
+          setCurrentSubStep(1);
           const genRes = await fetch("/api/ai/generate", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
@@ -580,17 +667,38 @@ export function AiBulkGenerationModal({
               locationId, 
               mode: generateMode === "BOTH" ? "BOTH" : "CONTENT", 
               customKeyword: customKeyword || undefined,
-              ctaType: ctas[i]?.type && ctas[i].type !== "AI_DEFAULT" ? ctas[i].type : undefined
+              ctaType: ctas[i]?.type && ctas[i].type !== "AI_DEFAULT" ? ctas[i].type : undefined,
+              action: "CONTENT"
             }),
           });
           
           const genData = await genRes.json();
-          
-          if (!genRes.ok) {
-            lastError = genData.error || "Generation failed";
-            continue; // retry
+          if (!genRes.ok) { lastError = genData.error || "Generation failed"; continue; }
+
+          let finalImageUrl = null;
+          let finalCtaType = genData.ctaType;
+          let finalCtaUrl = genData.ctaUrl;
+
+          if (generateMode === "BOTH") {
+            setCurrentSubStep(2);
+            const promptRes = await fetch("/api/ai/generate", {
+              method: "POST", headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ locationId, action: "PROMPT", generatedContent: genData.content, generatedKeyword: genData.keyword })
+            });
+            const promptData = await promptRes.json();
+            if (!promptRes.ok) { lastError = promptData.error || "Failed at image prompt"; continue; }
+
+            setCurrentSubStep(3);
+            const imgRes = await fetch("/api/ai/generate", {
+              method: "POST", headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ locationId, action: "IMAGE", generatedImagePrompt: promptData.imagePrompt })
+            });
+            const imgData = await imgRes.json();
+            if (!imgRes.ok) { lastError = imgData.error || "Failed at image gen"; continue; }
+            finalImageUrl = imgData.imageUrl;
           }
 
+          setCurrentSubStep(4);
           const saveRes = await fetch("/api/posts", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
@@ -600,10 +708,10 @@ export function AiBulkGenerationModal({
               topicType: genData.topicType || "STANDARD",
               status: "DRAFT",
               scheduledAt: postDate.toISOString(),
-              imageUrl: genData.imageUrl,
+              imageUrl: finalImageUrl,
               // Per-row CTA overrides AI default if set
-              ctaType:  ctas[i]?.type && ctas[i].type !== "AI_DEFAULT" && ctas[i].type !== "NONE" ? ctas[i].type : ctas[i]?.type === "NONE" ? null : genData.ctaType,
-              ctaUrl:   ctas[i]?.type && ctas[i].type !== "AI_DEFAULT" && ctas[i].type !== "NONE" ? ctas[i].url || genData.ctaUrl : ctas[i]?.type === "NONE" ? null : genData.ctaUrl,
+              ctaType:  ctas[i]?.type && ctas[i].type !== "AI_DEFAULT" && ctas[i].type !== "NONE" ? ctas[i].type : ctas[i]?.type === "NONE" ? null : finalCtaType,
+              ctaUrl:   ctas[i]?.type && ctas[i].type !== "AI_DEFAULT" && ctas[i].type !== "NONE" ? ctas[i].url || finalCtaUrl : ctas[i]?.type === "NONE" ? null : finalCtaUrl,
             }),
           });
 
@@ -876,7 +984,25 @@ export function AiBulkGenerationModal({
                 <div style={{ textAlign: "center", padding: "20px 0" }}>
                   <Loader2 size={40} className="anim-spin" color="#8b5cf6" style={{ margin: "0 auto 16px" }} />
                   <h4 style={{ fontSize: 15, fontWeight: 600, color: "#0f172a" }}>Generating Post {currentIndex + 1} of {numPosts}...</h4>
-                  <p style={{ fontSize: 13, color: "#64748b", marginTop: 4 }}>Each post retries up to 3 times automatically.</p>
+                  
+                  {/* Miniature progress bar for current post */}
+                  <div style={{ maxWidth: 320, margin: "16px auto 0", textAlign: "left" }}>
+                     <div style={{ display: "flex", justifyContent: "space-between", fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.05em", color: "#64748b", marginBottom: 6 }}>
+                       <span>
+                         {currentSubStep === 1 ? "Drafting Content..." : 
+                          currentSubStep === 2 ? "Writing Image Prompt..." : 
+                          currentSubStep === 3 ? "Painting Image..." : 
+                          currentSubStep === 4 ? "Saving Draft..." : "Preparing..."}
+                       </span>
+                       <span>{currentSubStep}/4</span>
+                     </div>
+                     <div style={{ height: 4, background: "#f1f5f9", borderRadius: 2, overflow: "hidden" }}>
+                        <div style={{ 
+                          height: "100%", background: "#8b5cf6", 
+                          width: `${(currentSubStep / 4) * 100}%`, transition: "width 0.3s ease" 
+                        }} />
+                     </div>
+                  </div>
                 </div>
               ) : (
                 <div style={{ textAlign: "center", padding: "20px 0" }}>
