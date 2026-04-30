@@ -506,6 +506,11 @@ export function LoginForm({ settings }: LoginFormProps) {
               Don't have access?{" "}
               <span style={{ color: "#27272A", fontWeight: 500 }}>Contact your admin.</span>
             </p>
+            <div style={{ display: "flex", justifyContent: "center", gap: "16px", marginTop: "24px", fontSize: "12px", color: "#A1A1AA" }}>
+              <a href="/privacy-policy" target="_blank" rel="noopener noreferrer" style={{ color: "inherit", textDecoration: "none", transition: "color 0.1s" }} onMouseOver={e => e.currentTarget.style.color = "#71717A"} onMouseOut={e => e.currentTarget.style.color = "#A1A1AA"}>Privacy Policy</a>
+              <span>&bull;</span>
+              <a href="/terms" target="_blank" rel="noopener noreferrer" style={{ color: "inherit", textDecoration: "none", transition: "color 0.1s" }} onMouseOver={e => e.currentTarget.style.color = "#71717A"} onMouseOut={e => e.currentTarget.style.color = "#A1A1AA"}>Terms & Conditions</a>
+            </div>
           </form>
         </div>
       </div>
