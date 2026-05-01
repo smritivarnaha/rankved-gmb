@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useState } from "react";
-import { Loader2, X, AlertCircle, CheckCircle2, RefreshCw, Plus, Eye, Trash2, Wand2, Brain, AlertTriangle } from "lucide-react";
+import { Loader2, X, AlertCircle, CheckCircle2, RefreshCw, Plus, Eye, Trash2, Wand2, Brain, AlertTriangle, Upload } from "lucide-react";
 import useSWR from "swr";
 import { AiGenerationModal } from "@/components/ai/ai-components";
 import { GbpIcon } from "@/components/gbp-icon";
@@ -154,7 +154,7 @@ function ProfileCard({
         ))}
       </div>
 
-      {/* Actions — 2×2 */}
+      {/* Actions */}
       <div style={{ padding: "10px 12px", display: "grid", gridTemplateColumns: "1fr 1fr", gap: 6 }}>
         <Link
           href={`/profiles/${profile.id}`}
@@ -184,10 +184,20 @@ function ProfileCard({
         </button>
 
         <Link
+          href={`/profiles/${profile.id}/bulk`}
+          style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", gap: 5,
+            padding: "8px 0", fontSize: 12, fontWeight: 500, color: "#4b5563",
+            background: "#f9fafb", border: "1px solid #e5e7eb", borderRadius: 8, textDecoration: "none" }}
+        >
+          <Upload style={{ width: 12, height: 12 }} /> Bulk Upload
+        </Link>
+
+        <Link
           href={`/posts/new?profile=${profile.id}&from=profile`}
           style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", gap: 5,
             padding: "8px 0", fontSize: 12, fontWeight: 600, color: "#fff",
-            background: BRAND_BLUE, borderRadius: 8, border: "none", textDecoration: "none" }}
+            background: BRAND_BLUE, borderRadius: 8, border: "none", textDecoration: "none",
+            gridColumn: "span 2" }}
         >
           <Plus style={{ width: 12, height: 12 }} /> Create Post
         </Link>
