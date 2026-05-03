@@ -268,7 +268,7 @@ export function BulkImportModal({ locationId, isOpen, onClose, onSuccess, viewDr
               )}
             </div>
           </div>
-        ) : (
+        ) : (<>
         <div style={{ padding: 24, overflowY: "auto", flex: 1 }}>
 
           {/* Column reference + download */}
@@ -525,7 +525,7 @@ export function BulkImportModal({ locationId, isOpen, onClose, onSuccess, viewDr
             </button>
           </div>
         </div>
-        )} {/* end ternary: success state vs import form */}
+        </>)}
       </div>
     </div>
   );
