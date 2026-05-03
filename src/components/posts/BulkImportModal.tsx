@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useRef, useCallback } from "react";
+import Link from "next/link";
 import {
   Upload, X, AlertCircle, FileText, CheckCircle2,
   Download, Loader2, AlertTriangle, TableProperties,
@@ -12,6 +13,7 @@ interface BulkImportModalProps {
   isOpen: boolean;
   onClose: () => void;
   onSuccess: () => void;
+  viewDraftsHref?: string;
 }
 
 interface ParsedRow {
@@ -23,12 +25,13 @@ interface ParsedRow {
 
 const MAX_CHARS = 1500;
 
-export function BulkImportModal({ locationId, isOpen, onClose, onSuccess }: BulkImportModalProps) {
+export function BulkImportModal({ locationId, isOpen, onClose, onSuccess, viewDraftsHref }: BulkImportModalProps) {
   const [file, setFile] = useState<File | null>(null);
   const [parsedRows, setParsedRows] = useState<ParsedRow[]>([]);
   const [globalError, setGlobalError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
+  const [importedCount, setImportedCount] = useState<number | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const reset = useCallback(() => {
@@ -36,6 +39,7 @@ export function BulkImportModal({ locationId, isOpen, onClose, onSuccess }: Bulk
     setParsedRows([]);
     setGlobalError(null);
     setIsDragging(false);
+    setImportedCount(null);
     if (fileInputRef.current) fileInputRef.current.value = "";
   }, []);
 
@@ -117,7 +121,6 @@ export function BulkImportModal({ locationId, isOpen, onClose, onSuccess }: Bulk
     setGlobalError(null);
 
     try {
-      // CTA fields are intentionally null — set manually after import if needed
       const payload = toImport.map(r => ({
         summary: r.summary,
         ctaType: null,
@@ -135,7 +138,8 @@ export function BulkImportModal({ locationId, isOpen, onClose, onSuccess }: Bulk
         throw new Error(data.error || "Failed to import posts.");
       }
 
-      onSuccess();
+      setImportedCount(toImport.length);
+      onSuccess(); // refresh parent (e.g. draft counts on cards)
     } catch (err: any) {
       setGlobalError(err.message);
     } finally {
@@ -179,7 +183,7 @@ export function BulkImportModal({ locationId, isOpen, onClose, onSuccess }: Bulk
         style={{
           background: "#fff",
           width: "100%",
-          maxWidth: parsedRows.length > 0 ? 820 : 540,
+          maxWidth: importedCount !== null ? 460 : parsedRows.length > 0 ? 820 : 540,
           borderRadius: 16,
           boxShadow: "0 25px 50px -12px rgba(0,0,0,0.25), 0 0 0 1px rgba(0,0,0,0.05)",
           display: "flex",
@@ -221,8 +225,50 @@ export function BulkImportModal({ locationId, isOpen, onClose, onSuccess }: Bulk
             <X size={18} />
           </button>
         </div>
-
         {/* ── Body ── */}
+        {importedCount !== null ? (
+          /* ── SUCCESS STATE ── */
+          <div style={{ padding: 40, textAlign: "center" }}>
+            <div style={{
+              width: 64, height: 64, borderRadius: "50%",
+              background: "#F0FDF4", display: "flex",
+              alignItems: "center", justifyContent: "center",
+              margin: "0 auto 20px",
+            }}>
+              <CheckCircle2 size={32} color="#22C55E" />
+            </div>
+            <h3 style={{ fontSize: 18, fontWeight: 700, color: "#0F172A", marginBottom: 8 }}>
+              {importedCount} Post{importedCount !== 1 ? "s" : ""} Pushed to Drafts!
+            </h3>
+            <p style={{ fontSize: 13, color: "#64748B", marginBottom: 28, lineHeight: 1.6 }}>
+              Your posts have been saved as drafts. You can now schedule them or edit them individually.
+            </p>
+            <div style={{ display: "flex", gap: 10, justifyContent: "center" }}>
+              <button
+                onClick={handleClose}
+                style={{
+                  padding: "9px 20px", borderRadius: 8, fontSize: 13, fontWeight: 600,
+                  background: "#F1F5F9", border: "none", color: "#64748B", cursor: "pointer",
+                }}
+              >
+                Done
+              </button>
+              {viewDraftsHref && (
+                <Link
+                  href={viewDraftsHref}
+                  onClick={handleClose}
+                  style={{
+                    display: "inline-flex", alignItems: "center", gap: 6,
+                    padding: "9px 20px", borderRadius: 8, fontSize: 13, fontWeight: 600,
+                    background: "#2563EB", color: "#fff", textDecoration: "none",
+                  }}
+                >
+                  View Drafts →
+                </Link>
+              )}
+            </div>
+          </div>
+        ) : (
         <div style={{ padding: 24, overflowY: "auto", flex: 1 }}>
 
           {/* Column reference + download */}
@@ -479,6 +525,7 @@ export function BulkImportModal({ locationId, isOpen, onClose, onSuccess }: Bulk
             </button>
           </div>
         </div>
+        )} {/* end ternary: success state vs import form */}
       </div>
     </div>
   );

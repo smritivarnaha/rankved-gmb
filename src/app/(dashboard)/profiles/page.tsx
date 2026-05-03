@@ -2,10 +2,12 @@
 
 import Link from "next/link";
 import { useState } from "react";
-import { Loader2, X, AlertCircle, CheckCircle2, RefreshCw, Plus, Eye, Trash2, Wand2, Brain, AlertTriangle, Upload } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { Loader2, X, AlertCircle, CheckCircle2, RefreshCw, Plus, Eye, Trash2, Wand2, Brain, FileDown } from "lucide-react";
 import useSWR from "swr";
 import { AiGenerationModal } from "@/components/ai/ai-components";
 import { GbpIcon } from "@/components/gbp-icon";
+import { BulkImportModal } from "@/components/posts/BulkImportModal";
 
 interface Profile {
   id: string;
@@ -20,7 +22,6 @@ interface Profile {
 
 const fetcher = (url: string) => fetch(url).then((r) => r.json());
 
-// Uniform brand blue and neutral grey variations for sidebar
 const BRAND_BLUE = "#2563eb";
 const GREY_VARIANTS = ["#f3f4f6", "#e5e7eb", "#d1d5db", "#9ca3af", "#cbd5e1"];
 
@@ -31,9 +32,13 @@ function getGrey(name: string) {
 }
 
 function ProfileCard({
-  profile, onDelete, deleting, onAiCreate,
+  profile, onDelete, deleting, onAiCreate, onBulkImport,
 }: {
-  profile: Profile; onDelete: (id: string) => void; deleting: boolean; onAiCreate: (id: string) => void;
+  profile: Profile;
+  onDelete: (id: string) => void;
+  deleting: boolean;
+  onAiCreate: (id: string) => void;
+  onBulkImport: (id: string) => void;
 }) {
   const { data: postsData } = useSWR(`/api/posts?profileId=${profile.id}`, fetcher, { revalidateOnFocus: false });
   const posts: any[] = postsData?.data || [];
@@ -63,17 +68,14 @@ function ProfileCard({
       }}
       className="profile-card-hover"
     >
-      {/* Left-grey identity accent + header */}
+      {/* Left accent + header */}
       <div style={{ display: "flex", gap: 0 }}>
-        {/* Vertical accent strip - grey variation */}
         <div style={{ width: 4, background: sidebarGrey, flexShrink: 0 }} />
 
-        {/* Header content */}
         <div style={{ flex: 1, padding: "16px 14px 14px" }}>
           <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 10 }}>
             {/* Avatar + name */}
             <div style={{ display: "flex", alignItems: "center", gap: 12, minWidth: 0 }}>
-              {/* Logo or GBP Icon fallback */}
               {profile.logoUrl ? (
                 <img
                   src={profile.logoUrl}
@@ -95,9 +97,9 @@ function ProfileCard({
                 <Link
                   href={`/profiles/${profile.id}`}
                   title={profile.name}
-                  style={{ 
-                    fontSize: 13, fontWeight: 700, color: "#111827", 
-                    display: "-webkit-box", 
+                  style={{
+                    fontSize: 13, fontWeight: 700, color: "#111827",
+                    display: "-webkit-box",
                     WebkitLineClamp: 2,
                     WebkitBoxOrient: "vertical",
                     overflow: "hidden",
@@ -108,11 +110,11 @@ function ProfileCard({
                   {profile.name}
                 </Link>
                 {profile.address && (
-                  <p 
+                  <p
                     title={profile.address}
-                    style={{ 
+                    style={{
                       fontSize: 11, color: "#9ca3af", marginTop: 4,
-                      display: "-webkit-box", 
+                      display: "-webkit-box",
                       WebkitLineClamp: 3,
                       WebkitBoxOrient: "vertical",
                       overflow: "hidden",
@@ -135,8 +137,6 @@ function ProfileCard({
               {deleting ? <Loader2 style={{ width: 13, height: 13 }} className="anim-spin" /> : <Trash2 style={{ width: 13, height: 13 }} />}
             </button>
           </div>
-
-          {/* Inline status row removed to avoid redundancy with stats row below */}
         </div>
       </div>
 
@@ -183,14 +183,15 @@ function ProfileCard({
           <Wand2 style={{ width: 12, height: 12 }} /> AI Create
         </button>
 
-        <Link
-          href={`/profiles/${profile.id}/bulk`}
+        {/* Bulk Import — opens modal directly, no navigation */}
+        <button
+          onClick={() => onBulkImport(profile.id)}
           style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", gap: 5,
-            padding: "8px 0", fontSize: 12, fontWeight: 500, color: "#4b5563",
-            background: "#f9fafb", border: "1px solid #e5e7eb", borderRadius: 8, textDecoration: "none" }}
+            padding: "8px 0", fontSize: 12, fontWeight: 600, color: "#2563eb",
+            background: "#eff6ff", border: "1px solid #bfdbfe", borderRadius: 8, cursor: "pointer" }}
         >
-          <Upload style={{ width: 12, height: 12 }} /> Bulk Upload
-        </Link>
+          <FileDown style={{ width: 12, height: 12 }} /> Push to Drafts
+        </button>
 
         <Link
           href={`/posts/new?profile=${profile.id}&from=profile`}
@@ -214,7 +215,8 @@ export default function ProfilesPage() {
   const profiles = data?.data || [];
   const [deleting, setDeleting] = useState<string | null>(null);
   const [message, setMessage] = useState<{ type: "success" | "error"; text: string } | null>(null);
-  const [aiLocationId, setAiLocationId] = useState<string | null>(null);
+  const [aiLocationId, setAiLocationId]   = useState<string | null>(null);
+  const [bulkLocationId, setBulkLocationId] = useState<string | null>(null);
 
   async function handleDelete(id: string) {
     if (!confirm("Delete this profile? Posts linked to it will lose their location reference.")) return;
@@ -276,7 +278,14 @@ export default function ProfilesPage() {
       ) : (
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(290px, 1fr))", gap: 16 }}>
           {profiles.map((p: Profile) => (
-            <ProfileCard key={p.id} profile={p} onDelete={handleDelete} deleting={deleting === p.id} onAiCreate={setAiLocationId} />
+            <ProfileCard
+              key={p.id}
+              profile={p}
+              onDelete={handleDelete}
+              deleting={deleting === p.id}
+              onAiCreate={setAiLocationId}
+              onBulkImport={setBulkLocationId}
+            />
           ))}
         </div>
       )}
@@ -286,6 +295,18 @@ export default function ProfilesPage() {
         isOpen={!!aiLocationId}
         onClose={() => setAiLocationId(null)}
         onGenerated={() => { mutate(); setAiLocationId(null); }}
+      />
+
+      {/* Bulk Import Modal — opens directly from profile card */}
+      <BulkImportModal
+        locationId={bulkLocationId || ""}
+        isOpen={!!bulkLocationId}
+        onClose={() => setBulkLocationId(null)}
+        onSuccess={() => {
+          mutate(); // refresh draft counts on cards
+          setBulkLocationId(null);
+        }}
+        viewDraftsHref={bulkLocationId ? `/profiles/${bulkLocationId}` : undefined}
       />
     </div>
   );
