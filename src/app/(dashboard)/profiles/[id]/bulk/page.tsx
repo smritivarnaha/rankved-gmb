@@ -3,8 +3,8 @@
 import { useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import useSWR from "swr";
-import { Loader2, ArrowLeft, Upload, CalendarClock, Trash2, CheckSquare, Square } from "lucide-react";
-import Link from "next/link";
+import { Loader2, ArrowLeft, FileDown, CalendarClock, Trash2, CheckSquare, Square } from "lucide-react";
+
 import { BulkImportModal } from "@/components/posts/BulkImportModal";
 import { BulkScheduleModal } from "@/components/posts/BulkScheduleModal";
 
@@ -80,9 +80,9 @@ export default function BulkManagementPage() {
         <div style={{ display: "flex", gap: 12 }}>
           <button 
             onClick={() => setIsImportModalOpen(true)}
-            style={{ display: "inline-flex", alignItems: "center", gap: 6, padding: "8px 16px", borderRadius: 8, fontSize: 13, fontWeight: 600, background: "#fff", border: "1px solid #d1d5db", color: "#374151", cursor: "pointer" }}
+            style={{ display: "inline-flex", alignItems: "center", gap: 6, padding: "9px 18px", borderRadius: 8, fontSize: 13, fontWeight: 600, background: "#2563eb", border: "none", color: "#fff", cursor: "pointer" }}
           >
-            <Upload size={16} /> Import CSV
+            <FileDown size={16} /> Push to Drafts
           </button>
         </div>
       </div>
@@ -113,8 +113,8 @@ export default function BulkManagementPage() {
       <div style={{ background: "#fff", border: "1px solid #e5e7eb", borderRadius: 12, overflow: "hidden" }}>
         {drafts.length === 0 ? (
           <div style={{ padding: "60px 20px", textAlign: "center" }}>
-            <p style={{ fontSize: 15, fontWeight: 600, color: "#374151" }}>Queue is empty</p>
-            <p style={{ fontSize: 14, color: "#6b7280", marginTop: 4 }}>Import a CSV to queue up draft posts.</p>
+            <p style={{ fontSize: 15, fontWeight: 600, color: "#374151" }}>Draft queue is empty</p>
+            <p style={{ fontSize: 14, color: "#6b7280", marginTop: 4 }}>Click <strong>Push to Drafts</strong> to import posts from a CSV file.</p>
           </div>
         ) : (
           <table style={{ width: "100%", borderCollapse: "collapse" }}>
@@ -126,28 +126,18 @@ export default function BulkManagementPage() {
                   </button>
                 </th>
                 <th style={{ padding: "12px 16px", textAlign: "left", fontSize: 12, fontWeight: 600, color: "#6b7280", textTransform: "uppercase" }}>Post Content</th>
-                <th style={{ padding: "12px 16px", textAlign: "left", fontSize: 12, fontWeight: 600, color: "#6b7280", textTransform: "uppercase", width: 140 }}>CTA Type</th>
-                <th style={{ padding: "12px 16px", textAlign: "left", fontSize: 12, fontWeight: 600, color: "#6b7280", textTransform: "uppercase", width: 180 }}>Link</th>
               </tr>
             </thead>
             <tbody>
               {drafts.map((draft: any) => (
-                <tr key={draft.id} style={{ borderBottom: "1px solid #e5e7eb", background: selectedIds.includes(draft.id) ? "#f0fdf4" : "#fff" }}>
-                  <td style={{ padding: "12px 16px" }}>
+                <tr key={draft.id} style={{ borderBottom: "1px solid #e5e7eb", background: selectedIds.includes(draft.id) ? "#EFF6FF" : "#fff" }}>
+                  <td style={{ padding: "12px 16px", width: 40 }}>
                     <button onClick={() => toggleSelect(draft.id)} style={{ background: "none", border: "none", cursor: "pointer", color: "#6b7280" }}>
                       {selectedIds.includes(draft.id) ? <CheckSquare size={18} color="#2563eb" /> : <Square size={18} />}
                     </button>
                   </td>
-                  <td style={{ padding: "12px 16px", fontSize: 14, color: "#111827" }}>
-                    <div style={{ display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical", overflow: "hidden" }}>
-                      {draft.summary || "No content"}
-                    </div>
-                  </td>
-                  <td style={{ padding: "12px 16px", fontSize: 13, color: "#4b5563" }}>
-                    <span style={{ background: "#f3f4f6", padding: "2px 8px", borderRadius: 12, fontSize: 11, fontWeight: 600 }}>{draft.ctaType || "NONE"}</span>
-                  </td>
-                  <td style={{ padding: "12px 16px", fontSize: 13, color: "#2563eb", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                    {draft.ctaUrl ? <a href={draft.ctaUrl} target="_blank">{draft.ctaUrl}</a> : "-"}
+                  <td style={{ padding: "12px 16px", fontSize: 13, color: "#1e293b", lineHeight: 1.6 }}>
+                    {draft.summary || <em style={{ color: "#94a3b8" }}>No content</em>}
                   </td>
                 </tr>
               ))}
