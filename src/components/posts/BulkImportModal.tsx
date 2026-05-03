@@ -47,6 +47,20 @@ export function BulkImportModal({ locationId, isOpen, onClose, onSuccess, viewDr
 
   if (!isOpen) return null;
 
+  // ── Keyframe styles injected once per render ──────────────────────────────
+  const animStyles = `
+    @keyframes bim-fadeUp   { from { opacity:0; transform:translateY(12px); } to { opacity:1; transform:translateY(0); } }
+    @keyframes bim-fadeIn   { from { opacity:0; } to { opacity:1; } }
+    @keyframes bim-pop      { 0%{transform:scale(0.4);opacity:0} 60%{transform:scale(1.18)} 80%{transform:scale(0.94)} 100%{transform:scale(1);opacity:1} }
+    @keyframes bim-ring     { 0%{transform:scale(0.7);opacity:0.8} 100%{transform:scale(2.2);opacity:0} }
+    @keyframes bim-confetti { 0%{transform:translateY(0) rotate(0deg);opacity:1} 100%{transform:translateY(-120px) rotate(720deg);opacity:0} }
+    @keyframes bim-rowIn    { from{opacity:0;transform:translateX(-18px)} to{opacity:1;transform:translateX(0)} }
+    @keyframes bim-progress { from{width:0%} to{width:100%} }
+    @keyframes bim-pulse    { 0%,100%{opacity:1} 50%{opacity:0.45} }
+    @keyframes bim-spin     { to{transform:rotate(360deg)} }
+    @keyframes bim-float    { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-6px)} }
+  `;
+
   const importableCount = parsedRows.filter(r => r.summary.trim().length > 0).length;
   const skippedCount    = parsedRows.filter(r => r.summary.trim().length === 0).length;
   const truncatedCount  = parsedRows.filter(r => r.wasTruncated).length;
@@ -167,6 +181,8 @@ export function BulkImportModal({ locationId, isOpen, onClose, onSuccess, viewDr
   };
 
   return (
+    <>
+    <style>{animStyles}</style>
     <div
       style={{
         position: "fixed", inset: 0,
@@ -226,24 +242,118 @@ export function BulkImportModal({ locationId, isOpen, onClose, onSuccess, viewDr
           </button>
         </div>
         {/* ── Body ── */}
-        {importedCount !== null ? (
-          /* ── SUCCESS STATE ── */
-          <div style={{ padding: 40, textAlign: "center" }}>
-            <div style={{
-              width: 64, height: 64, borderRadius: "50%",
-              background: "#F0FDF4", display: "flex",
-              alignItems: "center", justifyContent: "center",
-              margin: "0 auto 20px",
-            }}>
-              <CheckCircle2 size={32} color="#22C55E" />
+        {/* ── IMPORTING animation state ── */}
+        {loading ? (
+          <div style={{ padding: "40px 32px", textAlign: "center" }}>
+            {/* Floating post rows animation */}
+            <div style={{ position: "relative", width: 200, height: 120, margin: "0 auto 28px", display: "flex", flexDirection: "column", gap: 8, justifyContent: "center" }}>
+              {[0, 1, 2, 3].map((i) => (
+                <div key={i} style={{
+                  height: 14, borderRadius: 7,
+                  background: i === 0 ? "#BFDBFE" : i === 1 ? "#93C5FD" : i === 2 ? "#60A5FA" : "#3B82F6",
+                  width: i === 0 ? "60%" : i === 1 ? "85%" : i === 2 ? "70%" : "45%",
+                  animation: `bim-rowIn 0.4s ease both, bim-float 2.4s ease-in-out ${i * 0.3}s infinite`,
+                  animationDelay: `${i * 0.12}s, ${i * 0.3}s`,
+                  marginLeft: "auto", marginRight: "auto",
+                  opacity: 0,
+                  animationFillMode: "both",
+                }} />
+              ))}
             </div>
-            <h3 style={{ fontSize: 18, fontWeight: 700, color: "#0F172A", marginBottom: 8 }}>
+
+            {/* Spinning upload icon */}
+            <div style={{
+              width: 52, height: 52, borderRadius: "50%",
+              background: "linear-gradient(135deg, #3B82F6, #6366F1)",
+              display: "flex", alignItems: "center", justifyContent: "center",
+              margin: "0 auto 16px",
+              animation: "bim-float 1.6s ease-in-out infinite",
+              boxShadow: "0 8px 24px rgba(59,130,246,0.35)",
+            }}>
+              <Upload size={22} color="#fff" />
+            </div>
+
+            <p style={{ fontSize: 15, fontWeight: 700, color: "#0F172A", marginBottom: 6 }}>
+              Pushing {importableCount} post{importableCount !== 1 ? "s" : ""} to Drafts…
+            </p>
+            <p style={{ fontSize: 12, color: "#94A3B8", marginBottom: 20 }}>Please wait, this only takes a moment</p>
+
+            {/* Animated progress bar */}
+            <div style={{ height: 6, borderRadius: 6, background: "#E2E8F0", overflow: "hidden", width: "80%", margin: "0 auto" }}>
+              <div style={{
+                height: "100%",
+                borderRadius: 6,
+                background: "linear-gradient(90deg, #3B82F6, #6366F1, #3B82F6)",
+                backgroundSize: "200% 100%",
+                animation: "bim-progress 1.8s ease-in-out infinite alternate, bim-pulse 1.2s ease-in-out infinite",
+                width: "60%",
+              }} />
+            </div>
+          </div>
+        ) : importedCount !== null ? (
+          /* ── SUCCESS STATE with confetti ── */
+          <div style={{ padding: "44px 32px 36px", textAlign: "center", position: "relative", overflow: "hidden" }}>
+            {/* Confetti particles */}
+            {[
+              { color: "#3B82F6", left: "15%",  delay: "0s",    size: 8,  shape: "circle" },
+              { color: "#22C55E", left: "80%",  delay: "0.1s",  size: 10, shape: "square" },
+              { color: "#F59E0B", left: "50%",  delay: "0.05s", size: 7,  shape: "circle" },
+              { color: "#EC4899", left: "25%",  delay: "0.15s", size: 9,  shape: "square" },
+              { color: "#6366F1", left: "70%",  delay: "0.08s", size: 8,  shape: "circle" },
+              { color: "#14B8A6", left: "40%",  delay: "0.2s",  size: 6,  shape: "square" },
+              { color: "#F97316", left: "60%",  delay: "0.12s", size: 10, shape: "circle" },
+              { color: "#A855F7", left: "88%",  delay: "0.06s", size: 7,  shape: "square" },
+            ].map((p, i) => (
+              <div key={i} style={{
+                position: "absolute",
+                bottom: "30%",
+                left: p.left,
+                width: p.size,
+                height: p.size,
+                borderRadius: p.shape === "circle" ? "50%" : 2,
+                background: p.color,
+                animation: `bim-confetti 1.1s cubic-bezier(0.25,0.46,0.45,0.94) ${p.delay} both`,
+                pointerEvents: "none",
+              }} />
+            ))}
+
+            {/* Pulsing ring behind checkmark */}
+            <div style={{ position: "relative", width: 80, height: 80, margin: "0 auto 24px" }}>
+              <div style={{
+                position: "absolute", inset: 0,
+                borderRadius: "50%",
+                border: "3px solid #22C55E",
+                animation: "bim-ring 1.2s ease-out 0.2s both",
+              }} />
+              <div style={{
+                position: "absolute", inset: 0,
+                borderRadius: "50%",
+                border: "2px solid #86EFAC",
+                animation: "bim-ring 1.4s ease-out 0.4s both",
+              }} />
+              <div style={{
+                width: 80, height: 80, borderRadius: "50%",
+                background: "linear-gradient(135deg, #DCFCE7, #BBF7D0)",
+                display: "flex", alignItems: "center", justifyContent: "center",
+                animation: "bim-pop 0.6s cubic-bezier(0.34,1.56,0.64,1) both",
+              }}>
+                <CheckCircle2 size={36} color="#16A34A" strokeWidth={2.5} />
+              </div>
+            </div>
+
+            <h3 style={{
+              fontSize: 20, fontWeight: 800, color: "#0F172A", marginBottom: 8,
+              animation: "bim-fadeUp 0.4s ease 0.5s both",
+            }}>
               {importedCount} Post{importedCount !== 1 ? "s" : ""} Pushed to Drafts!
             </h3>
-            <p style={{ fontSize: 13, color: "#64748B", marginBottom: 28, lineHeight: 1.6 }}>
-              Your posts have been saved as drafts. You can now schedule them or edit them individually.
+            <p style={{
+              fontSize: 13, color: "#64748B", marginBottom: 28, lineHeight: 1.65,
+              animation: "bim-fadeUp 0.4s ease 0.65s both",
+            }}>
+              Your posts have been saved as drafts.<br />You can now schedule them or edit them individually.
             </p>
-            <div style={{ display: "flex", gap: 10, justifyContent: "center" }}>
+            <div style={{ display: "flex", gap: 10, justifyContent: "center", animation: "bim-fadeUp 0.4s ease 0.75s both" }}>
               <button
                 onClick={handleClose}
                 style={{
@@ -528,5 +638,6 @@ export function BulkImportModal({ locationId, isOpen, onClose, onSuccess, viewDr
         </>)}
       </div>
     </div>
+    </>
   );
 }
