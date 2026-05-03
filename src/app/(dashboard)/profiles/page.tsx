@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { Loader2, X, AlertCircle, CheckCircle2, RefreshCw, Plus, Eye, Trash2, Wand2, Brain, FileDown } from "lucide-react";
+import { Loader2, X, AlertCircle, CheckCircle2, RefreshCw, Plus, Eye, Trash2, Wand2, Brain, FileDown, Upload } from "lucide-react";
 import useSWR from "swr";
 import { AiGenerationModal } from "@/components/ai/ai-components";
 import { GbpIcon } from "@/components/gbp-icon";
@@ -187,10 +187,10 @@ function ProfileCard({
         <button
           onClick={() => onBulkImport(profile.id)}
           style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", gap: 5,
-            padding: "8px 0", fontSize: 12, fontWeight: 600, color: "#2563eb",
-            background: "#eff6ff", border: "1px solid #bfdbfe", borderRadius: 8, cursor: "pointer" }}
+            padding: "8px 0", fontSize: 12, fontWeight: 500, color: "#4b5563",
+            background: "#f9fafb", border: "1px solid #e5e7eb", borderRadius: 8, cursor: "pointer" }}
         >
-          <FileDown style={{ width: 12, height: 12 }} /> Push to Drafts
+          <Upload style={{ width: 12, height: 12 }} /> Bulk Import
         </button>
 
         <Link
@@ -303,8 +303,7 @@ export default function ProfilesPage() {
         isOpen={!!bulkLocationId}
         onClose={() => setBulkLocationId(null)}
         onSuccess={() => {
-          mutate(); // refresh draft counts on cards
-          setBulkLocationId(null);
+          mutate(); // only refresh draft counts — do NOT close modal so success panel shows
         }}
         viewDraftsHref={bulkLocationId ? `/profiles/${bulkLocationId}` : undefined}
       />
