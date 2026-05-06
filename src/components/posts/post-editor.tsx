@@ -207,6 +207,13 @@ export function PostEditor({ initialData = null, timelineDate, onDateChange, loc
     return `${selectedDate}T${selectedTime}:00`;
   };
 
+  // True when a date+time is set AND the resulting datetime is in the future
+  const isFutureScheduled = (() => {
+    const s = getScheduledAt();
+    if (!s) return false;
+    return new Date(s).getTime() > Date.now();
+  })();
+
   const handleSave = async (type: string) => {
     setSaving(true);
     setSavingType(type);
@@ -662,12 +669,14 @@ export function PostEditor({ initialData = null, timelineDate, onDateChange, loc
                     const isSelected = selectedDate === dateStr;
                     const isToday = day === todayDay && calMonth === now.getMonth() && calYear === now.getFullYear();
                     
-                    // Min schedule logic
+                    // Block past dates — always block days before today;
+                    // for team members with minScheduleDays, block additional future days
                     const dateObj = new Date(dateStr);
                     const todayObj = new Date(todayStr);
                     const diffTime = dateObj.getTime() - todayObj.getTime();
                     const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-                    const isPast = diffDays < minScheduleDays;
+                    // diffDays < 0 = past, diffDays === 0 = today, block past always
+                    const isPast = diffDays < 0 || diffDays < minScheduleDays;
                     
                     return (
                       <button key={day} onClick={() => !isPast && selectCalDay(day)} disabled={isPast}
@@ -733,6 +742,7 @@ export function PostEditor({ initialData = null, timelineDate, onDateChange, loc
               </button>
             ) : (
               <>
+                {/* Save Draft — always visible */}
                 <button onClick={() => handleSave("DRAFT")} disabled={saving || !form.locationId || !form.summary}
                   className="px-4 py-2 border border-[var(--border)] text-[13px] font-medium text-[var(--text-secondary)] rounded-lg hover:bg-[var(--bg-elevated)] transition-colors disabled:opacity-50 flex items-center gap-2"
                   style={{ background: "#f8fafc", color: "#374151" }}>
@@ -740,23 +750,14 @@ export function PostEditor({ initialData = null, timelineDate, onDateChange, loc
                   Save draft
                 </button>
 
-                {canPublishNow ? (
-                  <button onClick={() => { clearSchedule(); handleSave("PUBLISH"); }} disabled={saving || !form.locationId || !form.summary}
-                    className="px-4 py-2 text-[13px] font-medium rounded-lg transition-colors disabled:opacity-50 flex items-center gap-2"
-                    style={getScheduledAt()
-                      ? { background: "#eff6ff", color: "#2563eb", border: "1px solid #bfdbfe" }
-                      : { background: "#2563eb", color: "#ffffff", border: "1px solid #2563eb" }
-                    }>
-                    {saving && savingType === "PUBLISH" ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Send className="w-3.5 h-3.5" />}
-                    Publish now
-                  </button>
-                ) : (
-                  <div className="px-4 py-2 bg-[var(--bg-elevated)] text-[var(--text-tertiary)] text-[13px] font-medium rounded-lg flex items-center gap-2 cursor-not-allowed border border-[var(--border)]" title={`You must schedule posts at least ${minScheduleDays} days in advance.`}>
-                    <Send className="w-3.5 h-3.5" /> Publish now (Disabled)
-                  </div>
-                )}
-
-                {getScheduledAt() && (
+                {/* 
+                  Logic:
+                  - If a FUTURE date+time is selected → show Schedule button (primary), hide Publish Now
+                  - If no date is selected → show Publish Now (primary)
+                  - Past / ambiguous dates: don't allow scheduling
+                */}
+                {isFutureScheduled ? (
+                  // Future date selected — show Schedule as the primary action only
                   canSchedule ? (
                     <button onClick={() => handleSave("SCHEDULED")} disabled={saving || !form.locationId || !form.summary}
                       className="px-4 py-2 bg-[var(--accent)] hover:bg-[var(--accent-hover)] text-white text-[13px] font-medium rounded-lg transition-colors disabled:opacity-50 flex items-center gap-2">
@@ -766,6 +767,20 @@ export function PostEditor({ initialData = null, timelineDate, onDateChange, loc
                   ) : (
                     <div className="px-4 py-2 bg-[var(--bg-elevated)] text-[var(--text-tertiary)] text-[13px] font-medium rounded-lg flex items-center gap-2 cursor-not-allowed border border-[var(--border)]" title="You do not have permission to schedule posts.">
                       <Clock className="w-3.5 h-3.5" /> Schedule (Disabled)
+                    </div>
+                  )
+                ) : (
+                  // No date selected (or past date) — show Publish Now
+                  canPublishNow ? (
+                    <button onClick={() => handleSave("PUBLISH")} disabled={saving || !form.locationId || !form.summary}
+                      className="px-4 py-2 text-[13px] font-medium rounded-lg transition-colors disabled:opacity-50 flex items-center gap-2"
+                      style={{ background: "#2563eb", color: "#ffffff", border: "1px solid #2563eb" }}>
+                      {saving && savingType === "PUBLISH" ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Send className="w-3.5 h-3.5" />}
+                      Publish now
+                    </button>
+                  ) : (
+                    <div className="px-4 py-2 bg-[var(--bg-elevated)] text-[var(--text-tertiary)] text-[13px] font-medium rounded-lg flex items-center gap-2 cursor-not-allowed border border-[var(--border)]" title={`You must schedule posts at least ${minScheduleDays} days in advance.`}>
+                      <Send className="w-3.5 h-3.5" /> Publish now (Disabled)
                     </div>
                   )
                 )}
