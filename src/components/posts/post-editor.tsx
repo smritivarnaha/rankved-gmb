@@ -177,6 +177,18 @@ export function PostEditor({ initialData = null, timelineDate, onDateChange, loc
   const tomorrowStr = toLocalDateString(new Date(now.getTime() + 86400000));
   const dayAfterStr = toLocalDateString(new Date(now.getTime() + 2 * 86400000));
 
+  // Current time as HH:MM string (local) — used as the min time when today is selected
+  const nowTimeStr = `${String(now.getHours()).padStart(2, "0")}:${String(now.getMinutes()).padStart(2, "0")}`;
+
+  // Next rounded-up 15-min slot from now (e.g. 13:47 → 14:00)
+  const getDefaultTimeForToday = () => {
+    const d = new Date(now.getTime() + 15 * 60 * 1000); // +15 min buffer
+    const h = String(d.getHours()).padStart(2, "0");
+    const m = String(Math.ceil(d.getMinutes() / 15) * 15 % 60).padStart(2, "0");
+    const hAdj = d.getMinutes() >= 45 ? String(d.getHours() + 1).padStart(2, "0") : h;
+    return `${hAdj}:${m}`;
+  };
+
   const setQuickDate = (type: "tomorrow" | "dayafter") => {
     const targetD = type === "tomorrow"
       ? new Date(now.getTime() + 86400000)
@@ -193,7 +205,12 @@ export function PostEditor({ initialData = null, timelineDate, onDateChange, loc
     const d = `${calYear}-${String(calMonth + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
     setSelectedDate(d);
     onDateChange?.(d);
-    if (!selectedTime) setSelectedTime("10:00");
+    if (d === todayStr) {
+      // For today, always default to a future time slot
+      setSelectedTime(getDefaultTimeForToday());
+    } else if (!selectedTime) {
+      setSelectedTime("10:00");
+    }
   };
 
   const clearSchedule = () => {
@@ -700,10 +717,22 @@ export function PostEditor({ initialData = null, timelineDate, onDateChange, loc
                   <label className="block text-[11px] font-medium text-[var(--text-tertiary)] uppercase tracking-wide mb-2">Time</label>
                   <input 
                     type="time" 
-                    value={selectedTime} 
-                    onChange={(e) => setSelectedTime(e.target.value)}
+                    value={selectedTime}
+                    min={selectedDate === todayStr ? nowTimeStr : undefined}
+                    onChange={(e) => {
+                      const val = e.target.value;
+                      // If today is selected, block past times
+                      if (selectedDate === todayStr && val < nowTimeStr) {
+                        setSelectedTime(getDefaultTimeForToday());
+                      } else {
+                        setSelectedTime(val);
+                      }
+                    }}
                     className="w-full border border-[var(--border)] rounded-md py-2 px-3 text-[13px] text-[var(--text-primary)] focus:outline-none focus:ring-2 focus:ring-[var(--accent)] bg-white"
                   />
+                  {selectedDate === todayStr && (
+                    <p className="text-[10px] text-[var(--text-muted)] mt-1">Only future times are allowed for today.</p>
+                  )}
                 </div>
               )}
 
