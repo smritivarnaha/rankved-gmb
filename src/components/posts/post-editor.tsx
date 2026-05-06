@@ -221,7 +221,11 @@ export function PostEditor({ initialData = null, timelineDate, onDateChange, loc
 
   const getScheduledAt = () => {
     if (!selectedDate || !selectedTime) return null;
-    return `${selectedDate}T${selectedTime}:00`;
+    // Build a Date from the local date/time strings — this correctly applies
+    // the browser's local timezone offset when converting to UTC ISO string
+    const localDt = new Date(`${selectedDate}T${selectedTime}:00`);
+    if (isNaN(localDt.getTime())) return null;
+    return localDt.toISOString(); // always UTC, e.g. "2026-05-06T09:15:00.000Z"
   };
 
   // True when a date+time is set AND the resulting datetime is in the future

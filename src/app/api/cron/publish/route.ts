@@ -40,10 +40,42 @@ export async function GET(req: NextRequest) {
   const results: { id: string; status: string; error?: string }[] = [];
 
   for (const dbPost of duePosts) {
-    // Get the access token for the post's owner
-    const userAccount = await prisma.account.findFirst({
+    // Get the location to check which Google account the profile belongs to
+    const location = dbPost.location as any;
+    const profileGoogleEmail = location?.googleEmail as string | undefined;
+
+    // Find all Google accounts for the post owner
+    const allAccounts = await prisma.account.findMany({
       where: { userId: dbPost.userId, provider: "google" },
     });
+
+    if (allAccounts.length === 0) {
+      await prisma.post.update({
+        where: { id: dbPost.id },
+        data: {
+          status: "FAILED",
+          failureReason: "User's Google access token not found. They need to reconnect their Google account.",
+        },
+      });
+      results.push({ id: dbPost.id, status: "FAILED", error: "No access token" });
+      continue;
+    }
+
+    // Try to match the profile's googleEmail to the correct Google account
+    let userAccount = allAccounts[0];
+    if (profileGoogleEmail) {
+      for (const acc of allAccounts) {
+        if (acc.id_token) {
+          try {
+            const payload = JSON.parse(Buffer.from(acc.id_token.split(".")[1], "base64").toString());
+            if (payload.email === profileGoogleEmail) {
+              userAccount = acc;
+              break;
+            }
+          } catch {}
+        }
+      }
+    }
 
     if (!userAccount?.access_token) {
       await prisma.post.update({
