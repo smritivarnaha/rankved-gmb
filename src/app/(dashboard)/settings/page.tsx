@@ -210,7 +210,10 @@ export default function SettingsPage() {
                       <p title={p.name} style={{ 
                         fontSize: 13, fontWeight: 600, color: "#111827",
                         display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical", overflow: "hidden", lineHeight: 1.3
-                      }}>{p.name}</p>
+                      }}>
+                        {p.name}
+                        {p.googleEmail && <span style={{ fontSize: 10, fontWeight: 400, color: "var(--text-muted)", marginLeft: 6 }}>({p.googleEmail})</span>}
+                      </p>
                       <p title={p.address || ""} style={{ 
                         fontSize: 11, color: "var(--text-muted)", marginTop: 4,
                         display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical", overflow: "hidden", lineHeight: 1.3

@@ -49,7 +49,7 @@ export async function POST(req: NextRequest) {
   }
 
   // Use the new utility to get all valid, non-expired Google accounts
-  const { getValidGoogleAccounts } = await import("@/lib/google-accounts");
+  const { getValidGoogleAccounts, getEmailFromIdToken } = await import("@/lib/google-accounts");
   const validAccounts = await getValidGoogleAccounts(userId);
   
   if (validAccounts.length === 0) {
@@ -63,6 +63,7 @@ export async function POST(req: NextRequest) {
     for (const validAccount of validAccounts) {
       const accessToken = validAccount.access_token;
       if (!accessToken) continue;
+      const accountEmail = getEmailFromIdToken(validAccount.id_token) || "Unknown Account";
 
       // Step 1: Get all GBP accounts (with retry)
       const accountsRes = await fetchWithRetry("https://mybusinessaccountmanagement.googleapis.com/v1/accounts", {
@@ -155,6 +156,7 @@ export async function POST(req: NextRequest) {
                 website: loc.websiteUri || "",
                 googleName: loc.name || "",
                 logoUrl,
+                googleEmail: accountEmail,
                 fetchedAt: new Date().toISOString(),
               });
             }

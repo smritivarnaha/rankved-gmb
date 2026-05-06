@@ -141,6 +141,7 @@ model Location {
   aiPhone                String?
   aiImageInstructions    String?   @db.Text
   logoUrl                String?   // GBP profile/logo photo URL (fetched during sync)
+  googleEmail            String?   // The email of the connected Google account
   
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt

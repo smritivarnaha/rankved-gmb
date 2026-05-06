@@ -21,6 +21,7 @@ export interface ProfileData {
   website: string;
   googleName: string;
   logoUrl?: string;
+  googleEmail?: string;
   fetchedAt: string;
 }
 
@@ -46,6 +47,7 @@ function locationToProfile(loc: any): ProfileData {
     website: "",
     googleName: loc.gbpLocationId,
     logoUrl: loc.logoUrl || undefined,
+    googleEmail: loc.googleEmail || undefined,
     fetchedAt: loc.createdAt.toISOString(),
   };
 }
@@ -92,6 +94,7 @@ export async function saveProfiles(profiles: ProfileData[], userId: string, owne
         address: p.address || null,
         phone: p.phone || null,
         logoUrl: p.logoUrl || null,
+        googleEmail: p.googleEmail || null,
         clientId: clientId,
       },
       create: {
@@ -100,6 +103,7 @@ export async function saveProfiles(profiles: ProfileData[], userId: string, owne
         address: p.address || null,
         phone: p.phone || null,
         logoUrl: p.logoUrl || null,
+        googleEmail: p.googleEmail || null,
         gbpAccountId: p.accountId,
         gbpLocationId: p.googleName || p.id,
         clientId,

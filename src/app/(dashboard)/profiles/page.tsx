@@ -17,6 +17,7 @@ interface Profile {
   phone: string;
   website: string;
   logoUrl?: string;
+  googleEmail?: string;
   fetchedAt: string;
 }
 
@@ -108,6 +109,7 @@ function ProfileCard({
                   }}
                 >
                   {profile.name}
+                  {profile.googleEmail && <span style={{ fontSize: 10, fontWeight: 400, color: "#6b7280", marginLeft: 6 }}>({profile.googleEmail})</span>}
                 </Link>
                 {profile.address && (
                   <p
