@@ -71,12 +71,18 @@ export function PostEditor({ initialData = null, timelineDate, onDateChange, loc
   const now = new Date();
   const [calMonth, setCalMonth] = useState(now.getMonth());
   const [calYear, setCalYear] = useState(now.getFullYear());
-  const [selectedDate, setSelectedDate] = useState<string>(
-    initialData?.scheduledAt ? new Date(initialData.scheduledAt).toISOString().split("T")[0] : ""
-  );
-  const [selectedTime, setSelectedTime] = useState<string>(
-    initialData?.scheduledAt ? new Date(initialData.scheduledAt).toTimeString().slice(0, 5) : ""
-  );
+  const [selectedDate, setSelectedDate] = useState<string>(() => {
+    if (!initialData?.scheduledAt) return "";
+    const d = new Date(initialData.scheduledAt);
+    // Use LOCAL date components so the edit form shows what the user originally picked
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+  });
+  const [selectedTime, setSelectedTime] = useState<string>(() => {
+    if (!initialData?.scheduledAt) return "";
+    const d = new Date(initialData.scheduledAt);
+    // Use LOCAL time components
+    return `${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`;
+  });
 
   // Sync timeline date → schedule calendar
   useEffect(() => {

@@ -21,15 +21,19 @@ export default function CalendarPage() {
         if (res.ok) {
           const d = await res.json();
           const scheduled = (d.data || []).filter((p: any) => p.scheduledAt);
-          setEvents(scheduled.map((p: any) => ({
-            id: p.id,
-            day: new Date(p.scheduledAt).getDate(),
-            month: new Date(p.scheduledAt).getMonth(),
-            year: new Date(p.scheduledAt).getFullYear(),
-            title: p.summary || "Post",
-            status: p.status?.toLowerCase() || "scheduled",
-            client: p.clientName || "",
-          })));
+          setEvents(scheduled.map((p: any) => {
+            // Convert UTC ISO to local date to ensure correct calendar cell
+            const localDate = new Date(p.scheduledAt);
+            return {
+              id: p.id,
+              day: localDate.getDate(),
+              month: localDate.getMonth(),
+              year: localDate.getFullYear(),
+              title: p.summary || "Post",
+              status: p.status?.toLowerCase() || "scheduled",
+              client: p.clientName || "",
+            };
+          }));
         }
       } catch {}
       setLoading(false);

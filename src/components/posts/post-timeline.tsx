@@ -35,8 +35,12 @@ export function PostTimeline({ onDateSelect, selectedDate, profileId }: Props) {
     fetch(url)
       .then(r => r.ok ? r.json() : { data: [] })
       .then(d => {
+        const toLocalDateStr = (iso: string) => {
+          const d = new Date(iso);
+          return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+        };
         const mapped: PostSlot[] = (d.data || []).map((p: any) => ({
-          date: p.scheduledAt ? p.scheduledAt.split("T")[0] : p.createdAt.split("T")[0],
+          date: p.scheduledAt ? toLocalDateStr(p.scheduledAt) : toLocalDateStr(p.createdAt),
           status: p.status,
         }));
         setSlots(mapped);
