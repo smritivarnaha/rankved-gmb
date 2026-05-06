@@ -750,36 +750,47 @@ export function PostEditor({ initialData = null, timelineDate, onDateChange, loc
                   Save draft
                 </button>
 
-                {/* 
-                  Logic:
-                  - If a FUTURE date+time is selected → show Schedule button (primary), hide Publish Now
-                  - If no date is selected → show Publish Now (primary)
-                  - Past / ambiguous dates: don't allow scheduling
+                {/* Single smart primary action button:
+                    - Future date selected + canSchedule  → "Schedule now"  (calls SCHEDULED)
+                    - Future date selected, no permission → disabled "Schedule now"
+                    - No future date + canPublishNow      → "Publish now"   (calls PUBLISH)
+                    - No future date, no permission       → disabled "Publish now"
                 */}
                 {isFutureScheduled ? (
-                  // Future date selected — show Schedule as the primary action only
                   canSchedule ? (
-                    <button onClick={() => handleSave("SCHEDULED")} disabled={saving || !form.locationId || !form.summary}
-                      className="px-4 py-2 bg-[var(--accent)] hover:bg-[var(--accent-hover)] text-white text-[13px] font-medium rounded-lg transition-colors disabled:opacity-50 flex items-center gap-2">
+                    <button
+                      onClick={() => handleSave("SCHEDULED")}
+                      disabled={saving || !form.locationId || !form.summary}
+                      className="px-4 py-2 text-[13px] font-medium rounded-lg transition-colors disabled:opacity-50 flex items-center gap-2"
+                      style={{ background: "#2563eb", color: "#ffffff", border: "1px solid #2563eb" }}
+                    >
                       {saving && savingType === "SCHEDULED" ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Clock className="w-3.5 h-3.5" />}
-                      Schedule
+                      Schedule now
                     </button>
                   ) : (
-                    <div className="px-4 py-2 bg-[var(--bg-elevated)] text-[var(--text-tertiary)] text-[13px] font-medium rounded-lg flex items-center gap-2 cursor-not-allowed border border-[var(--border)]" title="You do not have permission to schedule posts.">
-                      <Clock className="w-3.5 h-3.5" /> Schedule (Disabled)
+                    <div
+                      className="px-4 py-2 bg-[var(--bg-elevated)] text-[var(--text-tertiary)] text-[13px] font-medium rounded-lg flex items-center gap-2 cursor-not-allowed border border-[var(--border)]"
+                      title="You do not have permission to schedule posts."
+                    >
+                      <Clock className="w-3.5 h-3.5" /> Schedule now (Disabled)
                     </div>
                   )
                 ) : (
-                  // No date selected (or past date) — show Publish Now
                   canPublishNow ? (
-                    <button onClick={() => handleSave("PUBLISH")} disabled={saving || !form.locationId || !form.summary}
+                    <button
+                      onClick={() => handleSave("PUBLISH")}
+                      disabled={saving || !form.locationId || !form.summary}
                       className="px-4 py-2 text-[13px] font-medium rounded-lg transition-colors disabled:opacity-50 flex items-center gap-2"
-                      style={{ background: "#2563eb", color: "#ffffff", border: "1px solid #2563eb" }}>
+                      style={{ background: "#2563eb", color: "#ffffff", border: "1px solid #2563eb" }}
+                    >
                       {saving && savingType === "PUBLISH" ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Send className="w-3.5 h-3.5" />}
                       Publish now
                     </button>
                   ) : (
-                    <div className="px-4 py-2 bg-[var(--bg-elevated)] text-[var(--text-tertiary)] text-[13px] font-medium rounded-lg flex items-center gap-2 cursor-not-allowed border border-[var(--border)]" title={`You must schedule posts at least ${minScheduleDays} days in advance.`}>
+                    <div
+                      className="px-4 py-2 bg-[var(--bg-elevated)] text-[var(--text-tertiary)] text-[13px] font-medium rounded-lg flex items-center gap-2 cursor-not-allowed border border-[var(--border)]"
+                      title={`You must schedule posts at least ${minScheduleDays} days in advance.`}
+                    >
                       <Send className="w-3.5 h-3.5" /> Publish now (Disabled)
                     </div>
                   )
