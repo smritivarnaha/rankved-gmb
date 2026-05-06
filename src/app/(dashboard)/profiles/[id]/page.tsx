@@ -159,18 +159,18 @@ function PostCard({
             </>
           )}
 
-          {/* Scheduled */}
+          {/* Scheduled — LOCKED, read-only. Already submitted to queue. */}
           {isScheduled && (
-            <>
+            <div style={{ display: "flex", flexDirection: "column", gap: 4, width: "100%" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 4, padding: "4px 8px", background: "#fef3c7", border: "1px solid #fcd34d", borderRadius: 6 }}>
+                <Lock style={{ width: 9, height: 9, color: "#92400e", flexShrink: 0 }} />
+                <span style={{ fontSize: 10, fontWeight: 600, color: "#92400e" }}>Locked — queued to publish</span>
+              </div>
               <Link href={`/posts/${post.id}`}
-                style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", gap: 4, padding: "5px 0", fontSize: 11, fontWeight: 600, color: "#64748b", border: "1px solid #e2e8f0", borderRadius: 6 }}>
+                style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", gap: 4, padding: "5px 0", fontSize: 11, fontWeight: 600, color: "#64748b", border: "1px solid #e2e8f0", borderRadius: 6, background: "#f8fafc" }}>
                 View
               </Link>
-              <button onClick={() => onDelete(post)}
-                style={{ padding: "5px 7px", fontSize: 11, color: "#dc2626", border: "1px solid #fee2e2", background: "#fef2f2", borderRadius: 6, display: "flex", alignItems: "center", cursor: "pointer" }}>
-                <Trash2 style={{ width: 11, height: 11 }} />
-              </button>
-            </>
+            </div>
           )}
 
           {/* Pending approval */}

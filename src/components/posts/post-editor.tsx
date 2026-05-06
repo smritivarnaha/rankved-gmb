@@ -3,7 +3,7 @@
 import { useState, useRef, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
-import { Save, Clock, Loader2, ImagePlus, X, Send, MapPin, Link as LinkIcon, Copy, Check } from "lucide-react";
+import { Save, Clock, Loader2, ImagePlus, X, Send, MapPin, Link as LinkIcon, Copy, Check, Lock } from "lucide-react";
 import { embedGPSInImage, CAMERA_TEMPLATES } from "@/lib/geo-exif";
 
 // No fallback sample data — profiles load from /api/profiles only
@@ -318,7 +318,9 @@ export function PostEditor({ initialData = null, timelineDate, onDateChange, loc
     setSavingType("");
   };
 
-  const isPublished = false; // GBP allows editing published posts
+  // SCHEDULED posts are locked — already queued for GBP, cannot be modified
+  const isLocked = initialData?.status === "SCHEDULED" || initialData?.status === "PUBLISHED";
+  const isPublished = isLocked;
   const { daysInMonth, firstDay } = getMonthDays(calYear, calMonth);
   const todayDay = now.getDate();
 
@@ -356,6 +358,23 @@ export function PostEditor({ initialData = null, timelineDate, onDateChange, loc
       )}
       <div className="bg-white border border-[var(--border)] rounded-lg relative z-[10]">
       <div className="p-6 space-y-6">
+        {/* Lock banner — shown for SCHEDULED and PUBLISHED posts */}
+        {isLocked && (
+          <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "12px 16px", background: initialData?.status === "SCHEDULED" ? "#fef3c7" : "#f0fdf4", border: `1px solid ${initialData?.status === "SCHEDULED" ? "#fcd34d" : "#86efac"}`, borderRadius: 10 }}>
+            <Lock style={{ width: 16, height: 16, color: initialData?.status === "SCHEDULED" ? "#92400e" : "#166534", flexShrink: 0 }} />
+            <div>
+              <p style={{ fontSize: 13, fontWeight: 700, color: initialData?.status === "SCHEDULED" ? "#92400e" : "#166534", margin: 0 }}>
+                {initialData?.status === "SCHEDULED" ? "🔒 Locked — Scheduled for Publishing" : "🔒 Published — Read Only"}
+              </p>
+              <p style={{ fontSize: 11, color: initialData?.status === "SCHEDULED" ? "#a16207" : "#15803d", margin: "2px 0 0" }}>
+                {initialData?.status === "SCHEDULED"
+                  ? `This post has been queued and will go live at ${new Date(initialData.scheduledAt).toLocaleString("en-US", { month: "short", day: "numeric", hour: "numeric", minute: "2-digit", hour12: true })}. It cannot be edited.`
+                  : "This post has been published to Google Business Profile and cannot be modified here."
+                }
+              </p>
+            </div>
+          </div>
+        )}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           {/* Main content */}
           <div className="lg:col-span-2 space-y-5">
