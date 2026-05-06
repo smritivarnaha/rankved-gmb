@@ -59,10 +59,10 @@ function PostCard({
   const dot = DOT[post.status] || "#94a3b8";
 
   const dateDisplay = isPublished && post.publishedAt
-    ? `Published ${format(new Date(post.publishedAt), "MMM d, yyyy")}`
+    ? `Published ${new Date(post.publishedAt).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}`
     : isScheduled && post.scheduledAt
-    ? `Scheduled · ${format(new Date(post.scheduledAt), "MMM d · h:mm a")}`
-    : `Created ${format(new Date(post.createdAt), "MMM d, yyyy")}`;
+    ? `Scheduled · ${new Date(post.scheduledAt).toLocaleString("en-US", { month: "short", day: "numeric", hour: "numeric", minute: "2-digit", hour12: true })}`
+    : `Created ${new Date(post.createdAt).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}`;
 
   const cardBorder = isPending ? "2px solid #f59e0b" : "1px solid var(--border)";
   const cardShadow = isPending ? "0 0 0 3px #fef3c7" : "none";
@@ -415,12 +415,14 @@ export default function ProfileDetailPage() {
       const yyyy = d.getFullYear();
       const mm = String(d.getMonth() + 1).padStart(2, "0");
       const dd = String(d.getDate()).padStart(2, "0");
+      // Convert local 10:00 AM to UTC ISO string so timezone is stored correctly
+      const localDt = new Date(`${yyyy}-${mm}-${dd}T10:00:00`);
       return fetch(`/api/posts/${id}`, {
         method: "PUT",
         headers: {"Content-Type": "application/json"},
         body: JSON.stringify({
           status: "SCHEDULED",
-          scheduledAt: `${yyyy}-${mm}-${dd}T10:00:00`
+          scheduledAt: localDt.toISOString()
         })
       });
     }));

@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import prisma from "@/lib/prisma";
-import { addDays, setHours, setMinutes, parseISO } from "date-fns";
+import { addDays } from "date-fns";
 
 export async function POST(req: Request) {
   try {
@@ -11,9 +11,9 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const { postIds, startDate, timeOfDay, frequencyInterval } = await req.json();
+    const { postIds, startDateISO, frequencyInterval } = await req.json();
 
-    if (!Array.isArray(postIds) || postIds.length === 0 || !startDate || !timeOfDay || typeof frequencyInterval !== 'number') {
+    if (!Array.isArray(postIds) || postIds.length === 0 || !startDateISO || typeof frequencyInterval !== 'number') {
       return NextResponse.json({ error: "Invalid data provided" }, { status: 400 });
     }
 
@@ -34,23 +34,21 @@ export async function POST(req: Request) {
       }
     });
 
-    if (posts.length === 0 && session.user.role !== "SUPER_ADMIN") {
+    if (posts.length === 0 && (session.user as any).role !== "SUPER_ADMIN") {
       return NextResponse.json({ error: "No accessible posts found" }, { status: 404 });
     }
 
     // Determine the exact posts we have access to
-    const accessiblePostIds = session.user.role === "SUPER_ADMIN" ? postIds : posts.map(p => p.id);
-    
+    const accessiblePostIds = (session.user as any).role === "SUPER_ADMIN" ? postIds : posts.map(p => p.id);
+
     // Maintain the order provided by the client
-    const orderedPostIds = postIds.filter(id => accessiblePostIds.includes(id));
+    const orderedPostIds = postIds.filter((id: string) => accessiblePostIds.includes(id));
 
-    const [hours, minutes] = timeOfDay.split(':').map(Number);
-    let currentDate = parseISO(startDate);
-    currentDate = setHours(setMinutes(currentDate, minutes), hours);
+    // startDateISO is already a proper UTC ISO string sent from the browser
+    const baseDate = new Date(startDateISO);
 
-    // Process updates sequentially to calculate dates
-    const updatePromises = orderedPostIds.map((id, index) => {
-      const scheduledDate = addDays(currentDate, index * frequencyInterval);
+    const updatePromises = orderedPostIds.map((id: string, index: number) => {
+      const scheduledDate = addDays(baseDate, index * frequencyInterval);
       return prisma.post.update({
         where: { id },
         data: {

@@ -29,13 +29,14 @@ export function BulkScheduleModal({ postIds, isOpen, onClose, onSuccess }: BulkS
     setError(null);
 
     try {
+      // Convert local date + time to a UTC ISO string in the browser (correct timezone)
+      const localDt = new Date(`${startDate}T${timeOfDay}:00`);
       const res = await fetch("/api/posts/bulk-schedule", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           postIds,
-          startDate,
-          timeOfDay,
+          startDateISO: localDt.toISOString(), // UTC ISO, e.g. "2026-05-07T04:30:00.000Z"
           frequencyInterval: frequency,
         }),
       });
