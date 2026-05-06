@@ -43,124 +43,132 @@ export async function POST(req: NextRequest) {
   const session = await getServerSession(authOptions);
   if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-  const accessToken = (session as any)?.accessToken;
-  if (!accessToken) {
-    return NextResponse.json({ error: "Google account not connected. Please connect your Google account in Settings first." }, { status: 400 });
-  }
-
   const userId = (session as any)?.user?.id;
   if (!userId) {
     return NextResponse.json({ error: "Could not determine user ID from session." }, { status: 401 });
   }
 
+  // Use the new utility to get all valid, non-expired Google accounts
+  const { getValidGoogleAccounts } = await import("@/lib/google-accounts");
+  const validAccounts = await getValidGoogleAccounts(userId);
+  
+  if (validAccounts.length === 0) {
+    return NextResponse.json({ error: "No valid Google accounts connected. Please connect a Google account in Settings first." }, { status: 400 });
+  }
+
   try {
-    // Step 1: Get all GBP accounts (with retry)
-    const accountsRes = await fetchWithRetry("https://mybusinessaccountmanagement.googleapis.com/v1/accounts", {
-      headers: { Authorization: `Bearer ${accessToken}` },
-    });
-
-    if (!accountsRes.ok) {
-      const err = await accountsRes.json().catch(() => ({}));
-      const msg = err?.error?.message || `Google API error (${accountsRes.status})`;
-      return NextResponse.json({ error: msg }, { status: accountsRes.status });
-    }
-
-    const accountsData = await accountsRes.json();
-    const accounts = accountsData.accounts || [];
-
-    if (accounts.length === 0) {
-      return NextResponse.json({ error: "No Google Business Profile accounts found for this Google account." }, { status: 404 });
-    }
-
-    // Step 2: For each account, get locations (with delay between each to avoid rate limits)
     const fetchedProfiles: ProfileData[] = [];
 
-    for (let i = 0; i < accounts.length; i++) {
-      const account = accounts[i];
-      const accountName = account.name;
-      const accountDisplayName = account.accountName || account.name;
+    // Iterate over each connected Google account
+    for (const validAccount of validAccounts) {
+      const accessToken = validAccount.access_token;
+      if (!accessToken) continue;
 
-      if (i > 0) await delay(1500);
+      // Step 1: Get all GBP accounts (with retry)
+      const accountsRes = await fetchWithRetry("https://mybusinessaccountmanagement.googleapis.com/v1/accounts", {
+        headers: { Authorization: `Bearer ${accessToken}` },
+      });
 
-      try {
-        const locationsRes = await fetchWithRetry(
-          `https://mybusinessbusinessinformation.googleapis.com/v1/${accountName}/locations?readMask=name,title,storefrontAddress,phoneNumbers,websiteUri`,
-          { headers: { Authorization: `Bearer ${accessToken}` } }
-        );
+      if (!accountsRes.ok) {
+        const err = await accountsRes.json().catch(() => ({}));
+        console.warn(`[Google Sync] Failed to fetch accounts for provider ID ${validAccount.providerAccountId}:`, err?.error?.message || accountsRes.status);
+        continue;
+      }
 
-        if (locationsRes.ok) {
-          const locData = await locationsRes.json();
-          const locations = locData.locations || [];
+      const accountsData = await accountsRes.json();
+      const accounts = accountsData.accounts || [];
 
-          for (const loc of locations) {
-            const addressParts = loc.storefrontAddress || {};
-            const addressLines = [
-              ...(addressParts.addressLines || []),
-              addressParts.locality || "",
-              addressParts.administrativeArea || "",
-              addressParts.postalCode || "",
-            ].filter(Boolean);
+      if (accounts.length === 0) {
+        continue;
+      }
 
-            // Try to fetch profile logo from GBP Media API
-            let logoUrl: string | undefined;
-            try {
-              // The media endpoint needs the full resource name: accounts/{acc}/locations/{loc}/media
-              const mediaUrl = `https://mybusiness.googleapis.com/v4/${accountName}/${loc.name}/media?maxResults=20`;
-              console.log(`[LogoSync] Fetching media for ${loc.title}: ${mediaUrl}`);
-              
-              const mediaRes = await fetch(mediaUrl, { 
-                headers: { Authorization: `Bearer ${accessToken}` } 
-              });
-              
-              if (mediaRes.ok) {
-                const mediaData = await mediaRes.json();
-                const items: any[] = mediaData.mediaItems || [];
-                console.log(`[LogoSync] Found ${items.length} media items for ${loc.title}`);
+      // Step 2: For each account, get locations (with delay between each to avoid rate limits)
+      for (let i = 0; i < accounts.length; i++) {
+        const account = accounts[i];
+        const accountName = account.name;
+        const accountDisplayName = account.accountName || account.name;
+
+        if (i > 0 || fetchedProfiles.length > 0) await delay(1500);
+
+        try {
+          const locationsRes = await fetchWithRetry(
+            `https://mybusinessbusinessinformation.googleapis.com/v1/${accountName}/locations?readMask=name,title,storefrontAddress,phoneNumbers,websiteUri`,
+            { headers: { Authorization: `Bearer ${accessToken}` } }
+          );
+
+          if (locationsRes.ok) {
+            const locData = await locationsRes.json();
+            const locations = locData.locations || [];
+
+            for (const loc of locations) {
+              const addressParts = loc.storefrontAddress || {};
+              const addressLines = [
+                ...(addressParts.addressLines || []),
+                addressParts.locality || "",
+                addressParts.administrativeArea || "",
+                addressParts.postalCode || "",
+              ].filter(Boolean);
+
+              // Try to fetch profile logo from GBP Media API
+              let logoUrl: string | undefined;
+              try {
+                // The media endpoint needs the full resource name: accounts/{acc}/locations/{loc}/media
+                const mediaUrl = `https://mybusiness.googleapis.com/v4/${accountName}/${loc.name}/media?maxResults=20`;
+                console.log(`[LogoSync] Fetching media for ${loc.title}: ${mediaUrl}`);
                 
-                // Categories are typically uppercase: LOGO, PROFILE, COVER, etc.
-                const logo = items.find((m: any) => m.locationAssociation?.category === "LOGO") 
-                          || items.find((m: any) => m.locationAssociation?.category === "PROFILE")
-                          || items.find((m: any) => m.category === "LOGO")
-                          || items.find((m: any) => m.category === "PROFILE");
+                const mediaRes = await fetch(mediaUrl, { 
+                  headers: { Authorization: `Bearer ${accessToken}` } 
+                });
                 
-                if (logo?.googleUrl) {
-                  logoUrl = logo.googleUrl;
-                  console.log(`[LogoSync] Success! Logo found for ${loc.title}: ${logo.googleUrl.slice(0, 50)}...`);
+                if (mediaRes.ok) {
+                  const mediaData = await mediaRes.json();
+                  const items: any[] = mediaData.mediaItems || [];
+                  console.log(`[LogoSync] Found ${items.length} media items for ${loc.title}`);
+                  
+                  // Categories are typically uppercase: LOGO, PROFILE, COVER, etc.
+                  const logo = items.find((m: any) => m.locationAssociation?.category === "LOGO") 
+                            || items.find((m: any) => m.locationAssociation?.category === "PROFILE")
+                            || items.find((m: any) => m.category === "LOGO")
+                            || items.find((m: any) => m.category === "PROFILE");
+                  
+                  if (logo?.googleUrl) {
+                    logoUrl = logo.googleUrl;
+                    console.log(`[LogoSync] Success! Logo found for ${loc.title}: ${logo.googleUrl.slice(0, 50)}...`);
+                  } else {
+                    console.log(`[LogoSync] No LOGO or PROFILE category found in items for ${loc.title}`);
+                  }
                 } else {
-                  console.log(`[LogoSync] No LOGO or PROFILE category found in items for ${loc.title}`);
+                  const errText = await mediaRes.text();
+                  console.error(`[LogoSync] Media API failed for ${loc.title}: ${mediaRes.status} ${errText}`);
                 }
-              } else {
-                const errText = await mediaRes.text();
-                console.error(`[LogoSync] Media API failed for ${loc.title}: ${mediaRes.status} ${errText}`);
+              } catch (err: any) {
+                console.error(`[LogoSync] Exception fetching logo for ${loc.title}:`, err.message);
               }
-            } catch (err: any) {
-              console.error(`[LogoSync] Exception fetching logo for ${loc.title}:`, err.message);
-            }
 
-            fetchedProfiles.push({
-              id: crypto.randomUUID(),
-              name: loc.title || loc.name || "Unnamed Location",
-              accountId: accountName,
-              accountName: accountDisplayName,
-              address: addressLines.join(", "),
-              phone: loc.phoneNumbers?.primaryPhone || "",
-              website: loc.websiteUri || "",
-              googleName: loc.name || "",
-              logoUrl,
-              fetchedAt: new Date().toISOString(),
-            });
+              fetchedProfiles.push({
+                id: crypto.randomUUID(),
+                name: loc.title || loc.name || "Unnamed Location",
+                accountId: accountName,
+                accountName: accountDisplayName,
+                address: addressLines.join(", "),
+                phone: loc.phoneNumbers?.primaryPhone || "",
+                website: loc.websiteUri || "",
+                googleName: loc.name || "",
+                logoUrl,
+                fetchedAt: new Date().toISOString(),
+              });
+            }
           }
+        } catch {
+          console.warn(`Error fetching locations for ${accountName}, skipping...`);
         }
-      } catch {
-        console.warn(`Error fetching locations for ${accountName}, skipping...`);
       }
     }
 
     if (fetchedProfiles.length === 0) {
-      return NextResponse.json({ error: "No profiles found on this Google account." }, { status: 404 });
+      return NextResponse.json({ error: "No profiles found across any connected Google accounts." }, { status: 404 });
     }
 
-    const userId = (session as any)?.user?.id;
     const ownerId = (session as any)?.user?.ownerId;
     await saveProfiles(fetchedProfiles, userId, ownerId);
 

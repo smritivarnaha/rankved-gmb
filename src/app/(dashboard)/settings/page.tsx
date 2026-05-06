@@ -4,7 +4,7 @@ import { useSession, signIn } from "next-auth/react";
 import { useState, useEffect } from "react";
 import { 
   Loader2, CheckCircle2, RefreshCw, MapPin, 
-  AlertCircle, Key, Sparkles, Wand2, FlaskConical, XCircle, ChevronDown
+  AlertCircle, Key, Sparkles, Wand2, FlaskConical, XCircle, ChevronDown, User, Trash2
 } from "lucide-react";
 
 export default function SettingsPage() {
@@ -19,6 +19,27 @@ export default function SettingsPage() {
   const [fetchResult, setFetchResult] = useState<{ success?: string; error?: string } | null>(null);
   const [profiles, setProfiles] = useState<any[]>([]);
   const [loadingProfiles, setLoadingProfiles] = useState(true);
+  
+  const [googleAccounts, setGoogleAccounts] = useState<any[]>([]);
+  const [loadingAccounts, setLoadingAccounts] = useState(true);
+
+  const fetchAccounts = async () => {
+    try {
+      const res = await fetch("/api/auth/google-accounts");
+      if (res.ok) {
+        const d = await res.json();
+        setGoogleAccounts(d.data || []);
+      }
+    } catch (e) {}
+    setLoadingAccounts(false);
+  };
+
+  useEffect(() => {
+    if (canConnectGoogle) {
+      fetchAccounts();
+      fetch("/api/profiles").then(r => r.ok ? r.json() : { data: [] }).then(d => setProfiles(d.data || [])).catch(() => {}).finally(() => setLoadingProfiles(false));
+    }
+  }, [canConnectGoogle]);
 
   const handleGoogleConnect = async () => { 
     setConnecting(true); 
@@ -26,9 +47,26 @@ export default function SettingsPage() {
     if (userId) {
       document.cookie = `linkUserId=${userId}; path=/; max-age=300; SameSite=Lax`;
     }
-    await signIn("google", { callbackUrl: "/settings" }); 
+    // Force prompt to ensure user can select a different account
+    await signIn("google", { callbackUrl: "/settings" }, { prompt: "select_account consent" }); 
   };
-  const hasGoogleToken = !!(session as any)?.accessToken;
+  
+  const hasGoogleToken = googleAccounts.length > 0;
+
+  const handleDisconnectSingle = async (id: string) => {
+    if (!confirm("Disconnect this Google account? Profiles fetched from this account won't be deleted automatically until you Reset Profiles.")) return;
+    try {
+      const res = await fetch(`/api/auth/google-accounts?id=${id}`, { method: "DELETE" });
+      if (res.ok) {
+        setGoogleAccounts(prev => prev.filter(a => a.id !== id));
+      } else {
+        const err = await res.json();
+        setFetchResult({ error: err.error || "Failed to disconnect account" });
+      }
+    } catch (e) {
+      setFetchResult({ error: "Network error." });
+    }
+  };
 
   const [resetting, setResetting] = useState(false);
   const [disconnecting, setDisconnecting] = useState(false);
@@ -44,8 +82,8 @@ export default function SettingsPage() {
     setResetting(false);
   };
 
-  const handleDisconnect = async () => {
-    if (!confirm("WIPE EVERYTHING? This will disconnect your Google account and log you out. Continue?")) return;
+  const handleDisconnectAll = async () => {
+    if (!confirm("WIPE EVERYTHING? This will disconnect all Google accounts and log you out. Continue?")) return;
     setDisconnecting(true);
     try {
       const res = await fetch("/api/auth/disconnect", { method: "POST" });
@@ -57,10 +95,6 @@ export default function SettingsPage() {
       setDisconnecting(false);
     }
   };
-
-  useEffect(() => {
-    fetch("/api/profiles").then(r => r.ok ? r.json() : { data: [] }).then(d => setProfiles(d.data || [])).catch(() => {}).finally(() => setLoadingProfiles(false));
-  }, []);
 
   const handleFetchProfiles = async () => {
     setFetching(true); setFetchResult(null);
@@ -85,25 +119,46 @@ export default function SettingsPage() {
       {/* Google Integration */}
       {canConnectGoogle && (
         <div className="card shadow-sm">
-          <div className="card-header"><h2 className="card-title" style={{ fontSize: 14 }}>Google Business Profile</h2></div>
+          <div className="card-header"><h2 className="card-title" style={{ fontSize: 14 }}>Google Business Accounts</h2></div>
           <div className="card-body">
-            {hasGoogleToken ? (
+            {loadingAccounts ? (
+              <div style={{ display: "flex", justifyContent: "center", padding: "10px 0" }}>
+                <Loader2 className="anim-spin" style={{ width: 16, height: 16, color: "var(--text-muted)" }} />
+              </div>
+            ) : hasGoogleToken ? (
               <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
-                <div className="badge-success" style={{ padding: "12px 16px", borderRadius: "var(--radius-md)", display: "flex", alignItems: "center", gap: 10, fontSize: 13 }}>
-                  <CheckCircle2 style={{ width: 18, height: 18 }} />
-                  <div>
-                    <p style={{ fontWeight: 600 }}>Connected</p>
-                    <p style={{ fontSize: 11, opacity: 0.8, marginTop: 2 }}>Google account is linked and active.</p>
-                  </div>
+                <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                  {googleAccounts.map((acc, idx) => (
+                    <div key={acc.id} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "10px 14px", background: "var(--bg-elevated)", border: "1px solid var(--border)", borderRadius: "var(--radius-md)" }}>
+                      <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                        <div style={{ width: 32, height: 32, borderRadius: "50%", background: "#e0e7ff", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                          <User style={{ width: 16, height: 16, color: "#4f46e5" }} />
+                        </div>
+                        <div>
+                          <p style={{ fontSize: 13, fontWeight: 600 }}>{acc.email}</p>
+                          <p style={{ fontSize: 11, color: "var(--text-muted)", marginTop: 2 }}>Connected Account {idx + 1}</p>
+                        </div>
+                      </div>
+                      <button onClick={() => handleDisconnectSingle(acc.id)} className="btn btn-sm" style={{ color: "#dc2626", background: "transparent", padding: "6px 8px" }} title="Disconnect this account">
+                        <Trash2 style={{ width: 14, height: 14 }} />
+                      </button>
+                    </div>
+                  ))}
                 </div>
-                <div style={{ display: "flex", gap: 12 }}>
+                
+                <div style={{ display: "flex", gap: 12, flexWrap: "wrap", alignItems: "center" }}>
+                  <button onClick={handleGoogleConnect} disabled={connecting} className="btn btn-primary" style={{ fontSize: 12, padding: "8px 14px" }}>
+                    {connecting ? <Loader2 className="anim-spin" style={{ width: 14, height: 14 }} /> : null}
+                    Connect Another Account
+                  </button>
+                  <div style={{ flex: 1 }}></div>
                   <button onClick={handleReset} disabled={resetting || fetching} className="btn" style={{ fontSize: 12, padding: "8px 14px", background: "var(--bg-elevated)", border: "1px solid var(--border)" }}>
                     {resetting ? <Loader2 className="anim-spin" style={{ width: 14, height: 14 }} /> : <RefreshCw style={{ width: 14, height: 14 }} />}
                     Reset Profiles
                   </button>
-                  <button onClick={handleDisconnect} disabled={disconnecting} className="btn" style={{ fontSize: 12, padding: "8px 14px", background: "#fef2f2", color: "#dc2626", border: "1px solid #fecaca" }}>
+                  <button onClick={handleDisconnectAll} disabled={disconnecting} className="btn" style={{ fontSize: 12, padding: "8px 14px", background: "#fef2f2", color: "#dc2626", border: "1px solid #fecaca" }}>
                     {disconnecting ? <Loader2 className="anim-spin" style={{ width: 14, height: 14 }} /> : <AlertCircle style={{ width: 14, height: 14 }} />}
-                    Disconnect Google
+                    Wipe Everything
                   </button>
                 </div>
               </div>
