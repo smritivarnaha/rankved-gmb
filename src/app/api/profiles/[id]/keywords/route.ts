@@ -2,6 +2,7 @@ import { NextResponse, NextRequest } from "next/server";
 import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/lib/auth";
 import { getProfileById } from "@/lib/profile-store";
+import { getValidGoogleAccounts, getEmailFromIdToken } from "@/lib/google-accounts";
 
 export async function GET(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
@@ -10,18 +11,32 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
 
   const userId = (session as any).user.id;
   const role = (session as any).user.role;
-  const accessToken = (session as any).accessToken;
-
-  if (!accessToken) return NextResponse.json({ error: "Google account not connected" }, { status: 400 });
 
   const profile = await getProfileById(id, userId, role);
   if (!profile) return NextResponse.json({ error: "Profile not found" }, { status: 404 });
 
+  // Get correct Google account token for this profile
+  const validAccounts = await getValidGoogleAccounts(userId);
+  if (validAccounts.length === 0) {
+    return NextResponse.json({ error: "No valid Google accounts connected. Please reconnect in Settings." }, { status: 400 });
+  }
+
+  let accessToken: string | null = null;
+  if (profile.googleEmail) {
+    const matchedAccount = validAccounts.find(acc => getEmailFromIdToken(acc.id_token) === profile.googleEmail);
+    if (matchedAccount) accessToken = matchedAccount.access_token;
+  }
+  if (!accessToken) accessToken = validAccounts[0].access_token;
+  if (!accessToken) return NextResponse.json({ error: "No valid access token available." }, { status: 400 });
+
+  // Build full resource name: accounts/{accountId}/locations/{locationId}
+  const resourceName = profile.accountId && profile.googleName
+    ? `${profile.accountId}/${profile.googleName}`
+    : profile.googleName;
+
   // Support dynamic date ranges
   const { searchParams } = new URL(req.url);
   const days = parseInt(searchParams.get("days") || "30");
-
-  const resourceName = profile.googleName; 
 
   // Calculate range with 3-day buffer
   const now = new Date();
