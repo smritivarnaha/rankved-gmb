@@ -318,8 +318,8 @@ export function PostEditor({ initialData = null, timelineDate, onDateChange, loc
     setSavingType("");
   };
 
-  // SCHEDULED posts are locked — already queued for GBP, cannot be modified
-  const isLocked = initialData?.status === "SCHEDULED" || initialData?.status === "PUBLISHED";
+  // PUBLISHED posts are locked — already sent to GBP, cannot be modified
+  const isLocked = initialData?.status === "PUBLISHED";
   const isPublished = isLocked;
   const { daysInMonth, firstDay } = getMonthDays(calYear, calMonth);
   const todayDay = now.getDate();
@@ -358,19 +358,16 @@ export function PostEditor({ initialData = null, timelineDate, onDateChange, loc
       )}
       <div className="bg-white border border-[var(--border)] rounded-lg relative z-[10]">
       <div className="p-6 space-y-6">
-        {/* Lock banner — shown for SCHEDULED and PUBLISHED posts */}
+        {/* Lock banner — shown for PUBLISHED posts */}
         {isLocked && (
-          <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "12px 16px", background: initialData?.status === "SCHEDULED" ? "#fef3c7" : "#f0fdf4", border: `1px solid ${initialData?.status === "SCHEDULED" ? "#fcd34d" : "#86efac"}`, borderRadius: 10 }}>
-            <Lock style={{ width: 16, height: 16, color: initialData?.status === "SCHEDULED" ? "#92400e" : "#166534", flexShrink: 0 }} />
+          <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "12px 16px", background: "#f0fdf4", border: "1px solid #86efac", borderRadius: 10 }}>
+            <Lock style={{ width: 16, height: 16, color: "#166534", flexShrink: 0 }} />
             <div>
-              <p style={{ fontSize: 13, fontWeight: 700, color: initialData?.status === "SCHEDULED" ? "#92400e" : "#166534", margin: 0 }}>
-                {initialData?.status === "SCHEDULED" ? "🔒 Locked — Scheduled for Publishing" : "🔒 Published — Read Only"}
+              <p style={{ fontSize: 13, fontWeight: 700, color: "#166534", margin: 0 }}>
+                🔒 Published — Read Only
               </p>
-              <p style={{ fontSize: 11, color: initialData?.status === "SCHEDULED" ? "#a16207" : "#15803d", margin: "2px 0 0" }}>
-                {initialData?.status === "SCHEDULED"
-                  ? `This post has been queued and will go live at ${new Date(initialData.scheduledAt).toLocaleString("en-US", { month: "short", day: "numeric", hour: "numeric", minute: "2-digit", hour12: true })}. It cannot be edited.`
-                  : "This post has been published to Google Business Profile and cannot be modified here."
-                }
+              <p style={{ fontSize: 11, color: "#15803d", margin: "2px 0 0" }}>
+                This post has been published to Google Business Profile and cannot be modified here.
               </p>
             </div>
           </div>

@@ -59,10 +59,10 @@ function PostCard({
   const dot = DOT[post.status] || "#94a3b8";
 
   const dateDisplay = isPublished && post.publishedAt
-    ? `Published ${new Date(post.publishedAt).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}`
+    ? `Published ${new Date(post.publishedAt).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric", timeZone: "Asia/Kolkata" })}`
     : isScheduled && post.scheduledAt
-    ? `Scheduled · ${new Date(post.scheduledAt).toLocaleString("en-US", { month: "short", day: "numeric", hour: "numeric", minute: "2-digit", hour12: true })}`
-    : `Created ${new Date(post.createdAt).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}`;
+    ? `Scheduled · ${new Date(post.scheduledAt).toLocaleString("en-US", { month: "short", day: "numeric", hour: "numeric", minute: "2-digit", hour12: true, timeZone: "Asia/Kolkata" })}`
+    : `Created ${new Date(post.createdAt).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric", timeZone: "Asia/Kolkata" })}`;
 
   const cardBorder = isPending ? "2px solid #f59e0b" : "1px solid var(--border)";
   const cardShadow = isPending ? "0 0 0 3px #fef3c7" : "none";
@@ -141,8 +141,8 @@ function PostCard({
             </>
           )}
 
-          {/* Draft */}
-          {isDraft && (
+          {/* Draft & Scheduled */}
+          {(isDraft || isScheduled) && (
             <>
               <Link href={`/posts/${post.id}`}
                 style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", gap: 4, padding: "5px 0", fontSize: 11, fontWeight: 600, color: "#2563eb", border: "1px solid #dbeafe", borderRadius: 6, background: "#eff6ff" }}>
@@ -157,20 +157,6 @@ function PostCard({
                 <Trash2 style={{ width: 11, height: 11 }} />
               </button>
             </>
-          )}
-
-          {/* Scheduled — LOCKED, read-only. Already submitted to queue. */}
-          {isScheduled && (
-            <div style={{ display: "flex", flexDirection: "column", gap: 4, width: "100%" }}>
-              <div style={{ display: "flex", alignItems: "center", gap: 4, padding: "4px 8px", background: "#fef3c7", border: "1px solid #fcd34d", borderRadius: 6 }}>
-                <Lock style={{ width: 9, height: 9, color: "#92400e", flexShrink: 0 }} />
-                <span style={{ fontSize: 10, fontWeight: 600, color: "#92400e" }}>Locked — queued to publish</span>
-              </div>
-              <Link href={`/posts/${post.id}`}
-                style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", gap: 4, padding: "5px 0", fontSize: 11, fontWeight: 600, color: "#64748b", border: "1px solid #e2e8f0", borderRadius: 6, background: "#f8fafc" }}>
-                View
-              </Link>
-            </div>
           )}
 
           {/* Pending approval */}
@@ -504,6 +490,7 @@ export default function ProfileDetailPage() {
         </div>
         
         <div style={{ display: "flex", gap: 10 }}>
+          {/* AI Generator Paused to prevent accidental usage
           <button onClick={() => setIsBulkAiModalOpen(true)} className="btn btn-ghost" style={{ gap: 8, color: "#8b5cf6", background: "#f3e8ff", border: "1px solid #d8b4fe" }}>
             <Layers style={{ width: 16, height: 16 }} />
             Bulk AI
@@ -512,6 +499,7 @@ export default function ProfileDetailPage() {
             <Wand2 style={{ width: 16, height: 16 }} />
             AI
           </button>
+          */}
           <Link href={`/posts/new?profile=${profile.id}&from=profile`}
             style={{ display: "inline-flex", alignItems: "center", gap: 8, padding: "9px 20px", background: "#2563eb", color: "#fff", borderRadius: 8, fontSize: 13, fontWeight: 600 }}>
             <Plus style={{ width: 15, height: 15 }} /> Create Post
@@ -532,6 +520,7 @@ export default function ProfileDetailPage() {
         >
           Posts
         </button>
+        {/* AI Training Tab Paused
         <button 
           onClick={() => setActiveTab("AI_SETTINGS")}
           style={{ 
@@ -546,6 +535,7 @@ export default function ProfileDetailPage() {
             Train
           </div>
         </button>
+        */}
       </div>
 
       {activeTab === "AI_SETTINGS" ? (

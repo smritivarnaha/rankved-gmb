@@ -66,7 +66,7 @@ export default function EditPostPage({ params }: { params: Promise<{ id: string 
           </span>
         </div>
         <p className="text-[12px] text-[var(--text-tertiary)] mt-0.5">
-          Created by {post.createdBy} · {new Date(post.createdAt).toLocaleDateString()}
+          Created by {post.createdBy} · {new Date(post.createdAt).toLocaleDateString("en-US", { timeZone: "Asia/Kolkata" })}
         </p>
       </div>
 

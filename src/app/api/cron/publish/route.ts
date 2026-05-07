@@ -9,6 +9,9 @@ import { NextResponse, NextRequest } from "next/server";
 import prisma from "@/lib/prisma";
 import { publishToGBP } from "@/lib/gbp-publisher";
 
+// Allow the Vercel Serverless Function to run for the maximum 60 seconds (Hobby Tier)
+export const maxDuration = 60;
+
 export async function GET(req: NextRequest) {
   // Verify cron secret
   const authHeader = req.headers.get("authorization");
