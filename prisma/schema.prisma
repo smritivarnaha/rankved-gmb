@@ -217,6 +217,7 @@ model GlobalSetting {
   loginHeading     String   @default("Your Google Business, Managed in One Place.")
   loginDescription String   @default("Connect your Google account and manage all your business profiles from a single dashboard.")
   loginBgOpacity   Float    @default(0.5)
+  aiFeaturesEnabled Boolean @default(false)
   updatedAt        DateTime @updatedAt
 }
 

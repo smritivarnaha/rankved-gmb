@@ -36,7 +36,8 @@ export default function AdminDashboard() {
     loginBgUrl: "",
     loginHeading: "",
     loginDescription: "",
-    loginBgOpacity: 0.5
+    loginBgOpacity: 0.5,
+    aiFeaturesEnabled: false
   });
   const [selectedImage, setSelectedImage] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState("");
@@ -97,6 +98,7 @@ export default function AdminDashboard() {
       formData.append("heading", loginSettings.loginHeading);
       formData.append("description", loginSettings.loginDescription);
       formData.append("opacity", loginSettings.loginBgOpacity.toString());
+      formData.append("aiFeaturesEnabled", loginSettings.aiFeaturesEnabled.toString());
       if (selectedImage) {
         formData.append("image", selectedImage);
       }
@@ -306,7 +308,7 @@ export default function AdminDashboard() {
             <div className="px-6 py-4 border-b border-[var(--border-light)] bg-[var(--bg-secondary)]/50 flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <Settings className="w-5 h-5 text-[var(--accent)]" />
-                <h2 className="text-lg font-bold text-[var(--text-primary)]">Login Page Customization</h2>
+                <h2 className="text-lg font-bold text-[var(--text-primary)]">Global System Settings</h2>
               </div>
               <span className="text-xs font-bold text-[var(--accent)] uppercase tracking-wider bg-[var(--accent-light)]/20 px-3 py-1 rounded-full">
                 Super Admin Only
@@ -393,6 +395,25 @@ export default function AdminDashboard() {
                         placeholder="Enter the sub-text for the login page..." 
                       />
                     </div>
+                  </div>
+                </div>
+
+                {/* AI Features Toggle */}
+                <div className="pt-6 border-t border-slate-100">
+                  <div className="flex items-center justify-between bg-slate-50 border border-slate-200 rounded-xl p-5">
+                    <div>
+                      <h3 className="text-sm font-bold text-slate-900">Enable AI Features</h3>
+                      <p className="text-xs text-slate-500 mt-1">Globally enable or disable all AI tools (generation, training) across the platform.</p>
+                    </div>
+                    <label className="relative inline-flex items-center cursor-pointer">
+                      <input 
+                        type="checkbox" 
+                        className="sr-only peer" 
+                        checked={loginSettings.aiFeaturesEnabled}
+                        onChange={(e) => setLoginSettings({...loginSettings, aiFeaturesEnabled: e.target.checked})}
+                      />
+                      <div className="w-11 h-6 bg-slate-300 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[var(--accent)]"></div>
+                    </label>
                   </div>
                 </div>
 

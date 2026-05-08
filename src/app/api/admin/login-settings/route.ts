@@ -17,7 +17,8 @@ async function getSettings() {
         id: "settings",
         loginBgUrl: "/login-bg.jpg",
         loginHeading: "Your Google Business, Managed in One Place.",
-        loginDescription: "Connect your Google account and manage all your business profiles from a single dashboard."
+        loginDescription: "Connect your Google account and manage all your business profiles from a single dashboard.",
+        aiFeaturesEnabled: false
       }
     });
   } catch (error) {
@@ -25,7 +26,8 @@ async function getSettings() {
     return {
       loginBgUrl: "/login-bg.jpg",
       loginHeading: "Your Google Business, Managed in One Place.",
-      loginDescription: "Connect your Google account and manage all your business profiles from a single dashboard."
+      loginDescription: "Connect your Google account and manage all your business profiles from a single dashboard.",
+      aiFeaturesEnabled: false
     };
   }
 }
@@ -47,12 +49,16 @@ export async function POST(req: NextRequest) {
     const heading = formData.get("heading") as string;
     const description = formData.get("description") as string;
     const opacity = formData.get("opacity") as string;
+    const aiFeaturesEnabledStr = formData.get("aiFeaturesEnabled") as string;
     const file = formData.get("image") as File | null;
 
     const updateData: any = {};
     if (heading) updateData.loginHeading = heading;
     if (description) updateData.loginDescription = description;
     if (opacity) updateData.loginBgOpacity = parseFloat(opacity);
+    if (aiFeaturesEnabledStr !== null) {
+      updateData.aiFeaturesEnabled = aiFeaturesEnabledStr === "true";
+    }
 
     if (file && file.size > 0) {
       // Store image as Base64 for persistence on Vercel

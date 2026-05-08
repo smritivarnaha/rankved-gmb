@@ -8,6 +8,7 @@ import useSWR from "swr";
 import { AiGenerationModal } from "@/components/ai/ai-components";
 import { GbpIcon } from "@/components/gbp-icon";
 import { BulkImportModal } from "@/components/posts/BulkImportModal";
+import { useGlobalSettings } from "@/hooks/useGlobalSettings";
 
 interface Profile {
   id: string;
@@ -33,13 +34,14 @@ function getGrey(name: string) {
 }
 
 function ProfileCard({
-  profile, onDelete, deleting, onAiCreate, onBulkImport,
+  profile, onDelete, deleting, onAiCreate, onBulkImport, aiFeaturesEnabled
 }: {
   profile: Profile;
   onDelete: (id: string) => void;
   deleting: boolean;
   onAiCreate: (id: string) => void;
   onBulkImport: (id: string) => void;
+  aiFeaturesEnabled: boolean;
 }) {
   const { data: postsData } = useSWR(`/api/posts?profileId=${profile.id}`, fetcher, { revalidateOnFocus: false });
   const posts: any[] = postsData?.data || [];
@@ -167,23 +169,27 @@ function ProfileCard({
           <Eye style={{ width: 12, height: 12 }} /> View
         </Link>
 
-        <Link
-          href={`/profiles/${profile.id}?tab=ai`}
-          style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", gap: 5,
-            padding: "8px 0", fontSize: 12, fontWeight: 500, color: "#4b5563",
-            background: "#f9fafb", border: "1px solid #e5e7eb", borderRadius: 8, textDecoration: "none" }}
-        >
-          <Brain style={{ width: 12, height: 12 }} /> Train AI
-        </Link>
+        {aiFeaturesEnabled && (
+          <Link
+            href={`/profiles/${profile.id}?tab=ai`}
+            style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", gap: 5,
+              padding: "8px 0", fontSize: 12, fontWeight: 500, color: "#4b5563",
+              background: "#f9fafb", border: "1px solid #e5e7eb", borderRadius: 8, textDecoration: "none" }}
+          >
+            <Brain style={{ width: 12, height: 12 }} /> Train AI
+          </Link>
+        )}
 
-        <button
-          onClick={() => onAiCreate(profile.id)}
-          style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", gap: 5,
-            padding: "8px 0", fontSize: 12, fontWeight: 500, color: "#4b5563",
-            background: "#f9fafb", border: "1px solid #e5e7eb", borderRadius: 8, cursor: "pointer" }}
-        >
-          <Wand2 style={{ width: 12, height: 12 }} /> AI Create
-        </button>
+        {aiFeaturesEnabled && (
+          <button
+            onClick={() => onAiCreate(profile.id)}
+            style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", gap: 5,
+              padding: "8px 0", fontSize: 12, fontWeight: 500, color: "#4b5563",
+              background: "#f9fafb", border: "1px solid #e5e7eb", borderRadius: 8, cursor: "pointer" }}
+          >
+            <Wand2 style={{ width: 12, height: 12 }} /> AI Create
+          </button>
+        )}
 
         {/* Bulk Import — opens modal directly, no navigation */}
         <button
@@ -213,6 +219,8 @@ export default function ProfilesPage() {
   const { data, isLoading, mutate } = useSWR("/api/profiles", fetcher, {
     revalidateOnFocus: false, dedupingInterval: 5000,
   });
+  const { settings } = useGlobalSettings();
+  const aiFeaturesEnabled = settings?.aiFeaturesEnabled ?? false;
 
   const profiles = data?.data || [];
   const [deleting, setDeleting] = useState<string | null>(null);
@@ -287,6 +295,7 @@ export default function ProfilesPage() {
               deleting={deleting === p.id}
               onAiCreate={setAiLocationId}
               onBulkImport={setBulkLocationId}
+              aiFeaturesEnabled={aiFeaturesEnabled}
             />
           ))}
         </div>

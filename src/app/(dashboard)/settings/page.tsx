@@ -2,10 +2,10 @@
 
 import { useSession, signIn } from "next-auth/react";
 import { useState, useEffect } from "react";
-import { 
   Loader2, CheckCircle2, RefreshCw, MapPin, 
   AlertCircle, Key, Sparkles, Wand2, FlaskConical, XCircle, ChevronDown, User, Trash2
 } from "lucide-react";
+import { useGlobalSettings } from "@/hooks/useGlobalSettings";
 
 export default function SettingsPage() {
   const { data: session } = useSession();
@@ -13,6 +13,9 @@ export default function SettingsPage() {
   const isSuperAdmin = role === "SUPER_ADMIN";
   const isAgencyOwner = role === "AGENCY_OWNER";
   const canConnectGoogle = isSuperAdmin || isAgencyOwner;
+
+  const { settings } = useGlobalSettings();
+  const aiFeaturesEnabled = settings?.aiFeaturesEnabled ?? false;
 
   const [connecting, setConnecting] = useState(false);
   const [fetching, setFetching] = useState(false);
@@ -113,7 +116,7 @@ export default function SettingsPage() {
     <div style={{ ...sectionGap, maxWidth: 900 }}>
       <div>
         <h1 className="page-title">Settings</h1>
-        <p className="page-subtitle">Configure RankVed's AI engines and your Google connections.</p>
+        <p className="page-subtitle">{aiFeaturesEnabled ? "Configure RankVed's AI engines and your Google connections." : "Configure your Google connections."}</p>
       </div>
 
       {/* Google Integration */}

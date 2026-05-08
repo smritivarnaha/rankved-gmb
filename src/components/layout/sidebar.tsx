@@ -8,6 +8,7 @@ import {
   LayoutDashboard, CalendarDays, Settings, MapPin,
   FileText, Users, Shield, BarChart3, Key
 } from "lucide-react";
+import { useGlobalSettings } from "@/hooks/useGlobalSettings";
 
 const adminNav = [
   { name: "Dashboard",   href: "/dashboard",   icon: LayoutDashboard },
@@ -36,14 +37,21 @@ const teamNav = [
 export function Sidebar() {
   const pathname = usePathname();
   const { data: session } = useSession();
+  const { settings } = useGlobalSettings();
+  const aiFeaturesEnabled = settings?.aiFeaturesEnabled ?? false;
+
   const user = (session as any)?.user;
   const role = user?.role;
   const isSuperAdmin = role === "SUPER_ADMIN" || user?.email?.toLowerCase() === "rankved.business@gmail.com";
   
-  const navItems =
+  let navItems =
     isSuperAdmin ? superAdminNav :
     role === "AGENCY_OWNER" ? adminNav :
     teamNav;
+
+  if (!aiFeaturesEnabled) {
+    navItems = navItems.filter(item => item.name !== "Prompts");
+  }
 
   return (
     <aside className="sidebar">
