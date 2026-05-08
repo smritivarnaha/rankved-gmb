@@ -134,7 +134,7 @@ export async function createPost(
   userId: string
 ): Promise<PostData> {
   let mediaUrl = data.imageUrl;
-  if (mediaUrl && mediaUrl.startsWith("data:")) {
+  if (mediaUrl) {
     const upload = await resolveImageUrl(mediaUrl);
     if (upload.success) mediaUrl = upload.url || null;
   }
@@ -162,7 +162,7 @@ export async function createPost(
 export async function updatePost(id: string, data: Partial<PostData>): Promise<PostData | null> {
   try {
     let mediaUrl = data.imageUrl;
-    if (mediaUrl && mediaUrl.startsWith("data:")) {
+    if (mediaUrl) {
       const upload = await resolveImageUrl(mediaUrl);
       if (upload.success) mediaUrl = upload.url || null;
     }

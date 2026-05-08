@@ -1,18 +1,13 @@
 /**
  * storage.ts
  *
- * Handles uploading images to Supabase Storage.
+ * Handles uploading images to Supabase Storage and scrubs metadata.
  */
+import sharp from "sharp";
 
 export async function resolveImageUrl(
   imageDataUri: string
 ): Promise<{ success: boolean; url?: string; error?: string }> {
-  // If it's already a public URL, use directly
-  if (imageDataUri.startsWith("http")) {
-    return { success: true, url: imageDataUri };
-  }
-
-  // It's a base64 data URI — try to upload to Supabase storage
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_SERVICE_KEY;
 
@@ -23,13 +18,43 @@ export async function resolveImageUrl(
   if (cleanUrl.endsWith("/rest/v1")) cleanUrl = cleanUrl.replace("/rest/v1", "");
 
   try {
-    const parts = imageDataUri.split(",");
-    if (parts.length < 2) return { success: false, error: "Invalid image format" };
-    
-    const base64Data = parts[1];
-    const mimeType = imageDataUri.match(/data:([^;]+)/)?.[1] || "image/jpeg";
-    const buffer = Buffer.from(base64Data, "base64");
+    let buffer: Buffer;
 
+    // 1. Get raw buffer from either HTTP URL or Data URI
+    if (imageDataUri.startsWith("http")) {
+      // If it's already an image from our own storage, just return it.
+      if (imageDataUri.includes("supabase.co") || imageDataUri.includes("supabase.in")) {
+        return { success: true, url: imageDataUri };
+      }
+      
+      // External URL (e.g. DALL-E 3, Google). Download to scrub metadata.
+      const res = await fetch(imageDataUri);
+      if (!res.ok) {
+        return { success: false, error: "Failed to download external image for processing" };
+      }
+      const arrayBuffer = await res.arrayBuffer();
+      buffer = Buffer.from(arrayBuffer);
+    } else {
+      // Data URI
+      const parts = imageDataUri.split(",");
+      if (parts.length < 2) return { success: false, error: "Invalid image format" };
+      buffer = Buffer.from(parts[1], "base64");
+    }
+
+    // 2. Scrub Metadata & Convert to standard JPEG via Sharp
+    // Sharp automatically removes all EXIF/metadata unless told otherwise.
+    let cleanBuffer: Buffer;
+    try {
+      cleanBuffer = await sharp(buffer)
+        .jpeg({ quality: 90 }) 
+        .toBuffer();
+    } catch (err: any) {
+      console.error("[Storage] Sharp processing failed:", err);
+      // Fallback to original buffer if processing fails
+      cleanBuffer = buffer;
+    }
+
+    // 3. Upload cleaned image to Supabase
     const filename = `${Date.now()}-${Math.floor(Math.random() * 1000)}.jpg`;
     const uploadUrl = `${cleanUrl}/storage/v1/object/post-images/${filename}`;
     
@@ -37,10 +62,10 @@ export async function resolveImageUrl(
       method: "POST",
       headers: {
         Authorization: `Bearer ${supabaseKey}`,
-        "Content-Type": mimeType,
+        "Content-Type": "image/jpeg",
         "x-upsert": "true",
       },
-      body: buffer,
+      body: cleanBuffer,
     });
 
     if (!uploadRes.ok) {
