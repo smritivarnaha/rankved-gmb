@@ -66,7 +66,6 @@ export function PostEditor({ initialData = null, timelineDate, onDateChange, loc
   const [geoTemplate, setGeoTemplate] = useState("samsung_s23_ultra");
   const [geoDate, setGeoDate] = useState("2026-01-20");
   const [geoApplied, setGeoApplied] = useState(false);
-  const [imageKeyword, setImageKeyword] = useState("");
 
   const now = new Date();
   const [calMonth, setCalMonth] = useState(now.getMonth());
@@ -98,6 +97,7 @@ export function PostEditor({ initialData = null, timelineDate, onDateChange, loc
   const [form, setForm] = useState({
     locationId: initialData?.locationId || initialData?.profileId || "",
     summary: initialData?.summary || "",
+    focusKeyword: initialData?.focusKeyword || "",
     topicType: initialData?.topicType || "STANDARD",
     ctaType: initialData?.ctaType || "",
     ctaUrl: initialData?.ctaUrl || "",
@@ -278,6 +278,7 @@ export function PostEditor({ initialData = null, timelineDate, onDateChange, loc
           profileName: profile?.name || "",
           clientName: profile?.client || "",
           summary: form.summary,
+          focusKeyword: form.focusKeyword,
           topicType: form.topicType,
           ctaType: form.ctaType,
           ctaUrl: form.ctaType === "CALL" ? "" : form.ctaUrl,
@@ -430,29 +431,18 @@ export function PostEditor({ initialData = null, timelineDate, onDateChange, loc
               )}
               <input ref={fileRef} type="file" accept="image/*" onChange={handleImageSelect} className="hidden" />
 
-              {/* Image keyword / filename */}
-              {imagePreview && (
-                <div className="mt-2 flex items-center gap-2">
-                  <div className="flex-1">
-                    <label className="block text-[11px] font-medium text-[var(--text-secondary)] mb-1">Image keyword <span className="text-[var(--text-tertiary)]">(becomes filename)</span></label>
-                    <div className="flex items-center gap-0">
-                      <input type="text" value={imageKeyword}
-                        onChange={(e) => {
-                          const kw = e.target.value;
-                          setImageKeyword(kw);
-                          if (kw.trim() && imageFile) {
-                            const slug = kw.trim().toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "");
-                            const renamed = new File([imageFile], `${slug}.jpg`, { type: "image/jpeg" });
-                            setImageFile(renamed);
-                          }
-                        }}
-                        placeholder="e.g. best-dentist-portland-downtown"
-                        className="w-full border border-[var(--border)] rounded-l-md py-1.5 px-2.5 text-[12px] text-[var(--text-primary)] focus:outline-none focus:ring-2 focus:ring-[var(--accent)] focus:border-transparent" />
-                      <div className="px-2.5 py-1.5 bg-[var(--bg-secondary)] border border-l-0 border-[var(--border)] rounded-r-md text-[11px] text-[var(--text-tertiary)] whitespace-nowrap">.jpg</div>
-                    </div>
+              {/* Focus Keyword / filename */}
+              <div className="mt-4 flex items-center gap-2">
+                <div className="flex-1">
+                  <label className="block text-[11px] font-medium text-[var(--text-secondary)] mb-1">Focus Keyword <span className="text-[var(--text-tertiary)]">(used for image filename)</span></label>
+                  <div className="flex items-center gap-0">
+                    <input type="text" name="focusKeyword" value={form.focusKeyword}
+                      onChange={handleChange} disabled={isPublished}
+                      placeholder="e.g. best-dentist-portland"
+                      className="w-full border border-[var(--border)] rounded-md py-1.5 px-2.5 text-[12px] text-[var(--text-primary)] focus:outline-none focus:ring-2 focus:ring-[var(--accent)] focus:border-transparent disabled:opacity-50" />
                   </div>
                 </div>
-              )}
+              </div>
 
               {/* Geo-tagging */}
               {imagePreview && (

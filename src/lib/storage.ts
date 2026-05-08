@@ -6,7 +6,8 @@
 import sharp from "sharp";
 
 export async function resolveImageUrl(
-  imageDataUri: string
+  imageDataUri: string,
+  desiredFilename?: string
 ): Promise<{ success: boolean; url?: string; error?: string }> {
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_SERVICE_KEY;
@@ -55,7 +56,14 @@ export async function resolveImageUrl(
     }
 
     // 3. Upload cleaned image to Supabase
-    const filename = `${Date.now()}-${Math.floor(Math.random() * 1000)}.jpg`;
+    let filename = `${Date.now()}-${Math.floor(Math.random() * 1000)}.jpg`;
+    if (desiredFilename) {
+      const slug = desiredFilename
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, '-')
+        .replace(/^-|-$/g, '');
+      if (slug) filename = `${slug}.jpg`;
+    }
     const uploadUrl = `${cleanUrl}/storage/v1/object/post-images/${filename}`;
     
     const uploadRes = await fetch(uploadUrl, {
@@ -65,7 +73,7 @@ export async function resolveImageUrl(
         "Content-Type": "image/jpeg",
         "x-upsert": "true",
       },
-      body: cleanBuffer,
+      body: cleanBuffer as any,
     });
 
     if (!uploadRes.ok) {

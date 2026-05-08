@@ -40,6 +40,7 @@ export async function POST(req: Request) {
       locationId: locationId,
       userId: session.user.id,
       summary: (post.summary || "").substring(0, 1500),
+      focusKeyword: post.focusKeyword || null,
       ctaType: post.ctaType || null,
       ctaUrl: post.ctaUrl || null,
       status: "DRAFT",

@@ -14,6 +14,7 @@ export interface PostData {
   profileName: string;
   clientName: string;
   summary: string;
+  focusKeyword?: string | null;
   topicType: string;
   ctaType: string;
   ctaUrl: string;
@@ -40,6 +41,7 @@ function mapPost(p: any): PostData {
     profileName: p.location?.name || "",
     clientName: p.location?.client?.name || "",
     summary: p.summary,
+    focusKeyword: p.focusKeyword || null,
     topicType: p.topicType || "STANDARD",
     ctaType: p.ctaType || "",
     ctaUrl: p.ctaUrl || "",
@@ -135,13 +137,14 @@ export async function createPost(
 ): Promise<PostData> {
   let mediaUrl = data.imageUrl;
   if (mediaUrl) {
-    const upload = await resolveImageUrl(mediaUrl);
+    const upload = await resolveImageUrl(mediaUrl, data.focusKeyword || undefined);
     if (upload.success) mediaUrl = upload.url || null;
   }
 
   const post = await prisma.post.create({
     data: {
       summary: data.summary,
+      focusKeyword: data.focusKeyword || null,
       topicType: data.topicType || "STANDARD",
       ctaType: data.ctaType || null,
       ctaUrl: data.ctaUrl || null,
@@ -161,9 +164,15 @@ export async function createPost(
 
 export async function updatePost(id: string, data: Partial<PostData>): Promise<PostData | null> {
   try {
+    let focusKeyword = data.focusKeyword;
+    if (focusKeyword === undefined) {
+      const existing = await prisma.post.findUnique({ where: { id }});
+      focusKeyword = existing?.focusKeyword || null;
+    }
+
     let mediaUrl = data.imageUrl;
     if (mediaUrl) {
-      const upload = await resolveImageUrl(mediaUrl);
+      const upload = await resolveImageUrl(mediaUrl, focusKeyword || undefined);
       if (upload.success) mediaUrl = upload.url || null;
     }
 
@@ -171,6 +180,7 @@ export async function updatePost(id: string, data: Partial<PostData>): Promise<P
       where: { id },
       data: {
         ...(data.summary !== undefined && { summary: data.summary }),
+        ...(data.focusKeyword !== undefined && { focusKeyword: data.focusKeyword || null }),
         ...(data.topicType !== undefined && { topicType: data.topicType }),
         ...(data.ctaType !== undefined && { ctaType: data.ctaType || null }),
         ...(data.ctaUrl !== undefined && { ctaUrl: data.ctaUrl || null }),

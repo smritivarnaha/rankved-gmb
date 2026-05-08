@@ -19,6 +19,7 @@ interface BulkImportModalProps {
 interface ParsedRow {
   index: number;
   summary: string;
+  focusKeyword: string;
   wasTruncated: boolean;
   warnings: string[];
 }
@@ -87,6 +88,11 @@ export function BulkImportModal({ locationId, isOpen, onClose, onSuccess, viewDr
             Object.values(row)[0] || ""
           ).toString().trim();
 
+          let focusKeyword = (
+            row["Focus Keyword"] || row["focus keyword"] || row["FOCUS KEYWORD"] ||
+            row.Focus_Keyword || row.focus_keyword || row.Keyword || row.keyword || ""
+          ).toString().trim();
+
           let wasTruncated = false;
           if (!content) {
             warnings.push("Post content is empty — row will be skipped.");
@@ -96,7 +102,7 @@ export function BulkImportModal({ locationId, isOpen, onClose, onSuccess, viewDr
             warnings.push(`Auto-truncated to ${MAX_CHARS} characters.`);
           }
 
-          return { index: i + 1, summary: content, wasTruncated, warnings };
+          return { index: i + 1, summary: content, focusKeyword, wasTruncated, warnings };
         });
 
         setParsedRows(processed);
@@ -138,6 +144,7 @@ export function BulkImportModal({ locationId, isOpen, onClose, onSuccess, viewDr
     try {
       const payload = toImport.map(r => ({
         summary: r.summary,
+        focusKeyword: r.focusKeyword,
         ctaType: null,
         ctaUrl: null,
       }));
@@ -165,12 +172,12 @@ export function BulkImportModal({ locationId, isOpen, onClose, onSuccess, viewDr
   const handleDownloadSample = () => {
     // Single-column template — just post content, one per row
     const rows = [
-      "Post Content",
-      '"We just launched our summer menu! Come visit us and try our seasonal specials. Fresh ingredients, great taste."',
-      '"Book your appointment today and get 20% off your first visit. Limited slots available this month."',
-      '"Check out our latest handcrafted collection. Free shipping on orders over $50."',
-      '"Call us now for a free consultation. Our experts are ready to help you find the best solution."',
-      '"Sign up for our newsletter and stay updated on exclusive offers and news."',
+      "Post Content,Focus Keyword",
+      '"We just launched our summer menu! Come visit us and try our seasonal specials. Fresh ingredients, great taste.","summer menu"',
+      '"Book your appointment today and get 20% off your first visit. Limited slots available this month.","book appointment"',
+      '"Check out our latest handcrafted collection. Free shipping on orders over $50.","handcrafted collection"',
+      '"Call us now for a free consultation. Our experts are ready to help you find the best solution.","free consultation"',
+      '"Sign up for our newsletter and stay updated on exclusive offers and news.","newsletter signup"',
     ].join("\n");
     const blob = new Blob([rows], { type: "text/csv" });
     const url = URL.createObjectURL(blob);
@@ -391,15 +398,20 @@ export function BulkImportModal({ locationId, isOpen, onClose, onSuccess, viewDr
           }}>
             <div style={{ flex: 1 }}>
               <p style={{ fontSize: 12, fontWeight: 700, color: "#334155", marginBottom: 4 }}>
-                CSV format — one column only
+                CSV format — two columns
               </p>
-              <div style={{ display: "flex", gap: 8, alignItems: "baseline" }}>
+              <div style={{ display: "flex", gap: 8, alignItems: "baseline", flexWrap: "wrap" }}>
                 <code style={{
                   fontSize: 11, fontFamily: "monospace", whiteSpace: "nowrap",
                   background: "#E2E8F0", padding: "1px 7px", borderRadius: 4,
                   color: "#0F172A", fontWeight: 700,
                 }}>Post Content</code>
-                <span style={{ fontSize: 11, color: "#64748B" }}>One post per row, up to 1,500 characters (auto-truncated if longer)</span>
+                <code style={{
+                  fontSize: 11, fontFamily: "monospace", whiteSpace: "nowrap",
+                  background: "#E2E8F0", padding: "1px 7px", borderRadius: 4,
+                  color: "#0F172A", fontWeight: 700,
+                }}>Focus Keyword</code>
+                <span style={{ fontSize: 11, color: "#64748B" }}>Include the Focus Keyword to use it as the image filename.</span>
               </div>
             </div>
             <button
@@ -517,6 +529,7 @@ export function BulkImportModal({ locationId, isOpen, onClose, onSuccess, viewDr
                       <tr>
                         <th style={{ padding: "8px 12px", textAlign: "left", fontSize: 10, fontWeight: 700, color: "#94A3B8", textTransform: "uppercase", letterSpacing: "0.05em", borderBottom: "1px solid #E2E8F0", width: 28 }}>#</th>
                         <th style={{ padding: "8px 12px", textAlign: "left", fontSize: 10, fontWeight: 700, color: "#94A3B8", textTransform: "uppercase", letterSpacing: "0.05em", borderBottom: "1px solid #E2E8F0" }}>Post Content</th>
+                        <th style={{ padding: "8px 12px", textAlign: "left", fontSize: 10, fontWeight: 700, color: "#94A3B8", textTransform: "uppercase", letterSpacing: "0.05em", borderBottom: "1px solid #E2E8F0" }}>Focus Keyword</th>
                         <th style={{ padding: "8px 12px", textAlign: "center", fontSize: 10, fontWeight: 700, color: "#94A3B8", textTransform: "uppercase", letterSpacing: "0.05em", borderBottom: "1px solid #E2E8F0", width: 40 }}>OK</th>
                       </tr>
                     </thead>
@@ -555,6 +568,15 @@ export function BulkImportModal({ locationId, isOpen, onClose, onSuccess, viewDr
                                     </span>
                                   ))}
                                 </div>
+                              )}
+                            </td>
+                            <td style={{ padding: "8px 12px", fontSize: 11, color: "#334155" }}>
+                              {row.focusKeyword ? (
+                                <span style={{ background: "#F1F5F9", padding: "2px 6px", borderRadius: 4, border: "1px solid #E2E8F0" }}>
+                                  {row.focusKeyword}
+                                </span>
+                              ) : (
+                                <span style={{ color: "#94A3B8", fontStyle: "italic" }}>None</span>
                               )}
                             </td>
                             <td style={{ padding: "8px 12px", textAlign: "center" }}>

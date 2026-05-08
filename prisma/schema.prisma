@@ -155,6 +155,7 @@ model Post {
   title           String?
   summary         String
   topicType       String      @default("STANDARD")
+  focusKeyword    String?
   ctaType         String?
   ctaUrl          String?
   mediaUrl        String?
