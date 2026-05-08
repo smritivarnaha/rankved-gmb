@@ -53,6 +53,7 @@ export async function POST(req: NextRequest) {
         profileName: body.profileName || "",
         clientName: body.clientName || "",
         summary: body.summary,
+        focusKeyword: body.focusKeyword || null,
         topicType: body.topicType || "STANDARD",
         ctaType: body.ctaType || "",
         ctaUrl: body.ctaUrl || "",

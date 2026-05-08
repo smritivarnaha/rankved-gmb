@@ -42,6 +42,7 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
       profileName: body.profileName,
       clientName: body.clientName,
       summary: body.summary,
+      focusKeyword: body.focusKeyword,
       topicType: body.topicType,
       ctaType: body.ctaType,
       ctaUrl: body.ctaUrl,
