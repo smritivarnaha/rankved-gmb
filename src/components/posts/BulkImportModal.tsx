@@ -82,6 +82,7 @@ export function BulkImportModal({ locationId, isOpen, onClose, onSuccess, viewDr
 
           // Flexible column name matching — also accepts plain text rows (no header)
           let content = (
+            row["Post Content"] || row["post content"] || row["POST CONTENT"] ||
             row.Post_Content || row.post_content || row.Content || row.content ||
             Object.values(row)[0] || ""
           ).toString().trim();
@@ -164,7 +165,7 @@ export function BulkImportModal({ locationId, isOpen, onClose, onSuccess, viewDr
   const handleDownloadSample = () => {
     // Single-column template — just post content, one per row
     const rows = [
-      "Post_Content",
+      "Post Content",
       '"We just launched our summer menu! Come visit us and try our seasonal specials. Fresh ingredients, great taste."',
       '"Book your appointment today and get 20% off your first visit. Limited slots available this month."',
       '"Check out our latest handcrafted collection. Free shipping on orders over $50."',
@@ -397,7 +398,7 @@ export function BulkImportModal({ locationId, isOpen, onClose, onSuccess, viewDr
                   fontSize: 11, fontFamily: "monospace", whiteSpace: "nowrap",
                   background: "#E2E8F0", padding: "1px 7px", borderRadius: 4,
                   color: "#0F172A", fontWeight: 700,
-                }}>Post_Content</code>
+                }}>Post Content</code>
                 <span style={{ fontSize: 11, color: "#64748B" }}>One post per row, up to 1,500 characters (auto-truncated if longer)</span>
               </div>
             </div>
