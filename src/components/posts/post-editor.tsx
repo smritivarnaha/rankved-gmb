@@ -157,7 +157,7 @@ export function PostEditor({ initialData = null, timelineDate, onDateChange, loc
             resolve(new File([blob], newName, { type: "image/jpeg" }));
           },
           "image/jpeg",
-          0.92
+          1.0
         );
       };
       img.onerror = () => reject(new Error("Could not load image"));

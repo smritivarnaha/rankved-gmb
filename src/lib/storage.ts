@@ -47,7 +47,7 @@ export async function resolveImageUrl(
     let cleanBuffer: Buffer;
     try {
       cleanBuffer = await sharp(buffer)
-        .jpeg({ quality: 90 }) 
+        .jpeg({ quality: 100, chromaSubsampling: '4:4:4' }) 
         .toBuffer();
     } catch (err: any) {
       console.error("[Storage] Sharp processing failed:", err);
