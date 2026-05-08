@@ -772,11 +772,9 @@ export function PostEditor({ initialData = null, timelineDate, onDateChange, loc
 
       <div className="border-t border-[var(--border)] px-6 py-4 flex justify-end gap-3 bg-[var(--bg-secondary)]">
         {isPublished ? (
-          <button onClick={() => handleSave("PUBLISH")} disabled={saving || !form.locationId || !form.summary}
-            className="px-4 py-2 bg-[var(--accent)] hover:bg-[var(--accent-hover)] text-white text-[13px] font-medium rounded-lg transition-colors disabled:opacity-50 flex items-center gap-2">
-            {saving && savingType === "PUBLISH" ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Send className="w-3.5 h-3.5" />}
-            Update published post
-          </button>
+          <div className="text-[12px] font-medium text-[var(--text-tertiary)] flex items-center gap-1.5">
+            <Lock className="w-3.5 h-3.5" /> Post is read-only
+          </div>
         ) : (
           <>
             {!canPublishNow && !canSchedule ? (
