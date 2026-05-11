@@ -5,7 +5,7 @@ import { useState, useEffect } from "react";
 import useSWR from "swr";
 import {
   Loader2, CheckCircle2, RefreshCw, MapPin, 
-  AlertCircle, User, Trash2, Database, HardDrive,
+  AlertCircle, User, Trash2, Database,
   Save, Clock, Link as LinkIcon, Copy, Check
 } from "lucide-react";
 import { useGlobalSettings } from "@/hooks/useGlobalSettings";
@@ -29,7 +29,7 @@ function UsageStats() {
       used: data.images.usedMB, 
       total: data.images.totalMB, 
       percent: data.images.percent, 
-      icon: <HardDrive className="w-4 h-4" /> 
+      icon: <Database className="w-4 h-4" /> 
     }
   ];
 
