@@ -163,6 +163,14 @@ export default function SettingsPage() {
         <p className="page-subtitle">{aiFeaturesEnabled ? "Configure RankVed's AI engines and your Google connections." : "Configure your Google connections."}</p>
       </div>
 
+      {fetchResult && (
+        <div style={{ padding: "12px 16px", borderRadius: "var(--radius-md)", display: "flex", alignItems: "flex-start", gap: 10, fontSize: 13, background: fetchResult.success ? "var(--success-bg)" : "var(--error-bg)", border: `1px solid ${fetchResult.success ? "var(--success-border)" : "var(--error-border)"}`, color: fetchResult.success ? "var(--success)" : "var(--error)" }}>
+          {fetchResult.success ? <CheckCircle2 style={{ width: 18, height: 18, flexShrink: 0 }} /> : <AlertCircle style={{ width: 18, height: 18, flexShrink: 0 }} />}
+          <div style={{ flex: 1 }}>{fetchResult.success || fetchResult.error}</div>
+          <button onClick={() => setFetchResult(null)} style={{ background: "transparent", border: "none", color: "inherit", cursor: "pointer", opacity: 0.7 }}>✕</button>
+        </div>
+      )}
+
       {/* Google Integration */}
       {canConnectGoogle && (
         <div className="card shadow-sm">
@@ -359,12 +367,6 @@ export default function SettingsPage() {
             </button>
           </div>
           <div className="card-body">
-            {fetchResult && (
-              <div style={{ padding: "10px 14px", borderRadius: "var(--radius-md)", marginBottom: 16, display: "flex", alignItems: "flex-start", gap: 8, fontSize: 12, background: fetchResult.success ? "var(--success-bg)" : "var(--error-bg)", border: `1px solid ${fetchResult.success ? "var(--success-border)" : "var(--error-border)"}`, color: fetchResult.success ? "var(--success)" : "var(--error)" }}>
-                {fetchResult.success ? <CheckCircle2 style={{ width: 16, height: 16, flexShrink: 0 }} /> : <AlertCircle style={{ width: 16, height: 16, flexShrink: 0 }} />}
-                {fetchResult.success || fetchResult.error}
-              </div>
-            )}
             {loadingProfiles ? (
               <div style={{ padding: "24px 0", display: "flex", justifyContent: "center" }}><Loader2 className="anim-spin" style={{ width: 16, height: 16, color: "var(--text-muted)" }} /></div>
             ) : profiles.length > 0 ? (
