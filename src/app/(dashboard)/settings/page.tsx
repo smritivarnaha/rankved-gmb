@@ -23,6 +23,7 @@ export default function SettingsPage() {
   const [fetchResult, setFetchResult] = useState<{ success?: string; error?: string } | null>(null);
   const [profiles, setProfiles] = useState<any[]>([]);
   const [loadingProfiles, setLoadingProfiles] = useState(true);
+  const [testingEmail, setTestingEmail] = useState(false);
   
   const [googleAccounts, setGoogleAccounts] = useState<any[]>([]);
   const [loadingAccounts, setLoadingAccounts] = useState(true);
@@ -175,6 +176,44 @@ export default function SettingsPage() {
                 </button>
               </div>
             )}
+          </div>
+        </div>
+      )}
+
+      {/* Email Notifications */}
+      {canConnectGoogle && (
+        <div className="card shadow-sm">
+          <div className="card-header">
+            <h2 className="card-title" style={{ fontSize: 14 }}>Email Notifications</h2>
+          </div>
+          <div className="card-body">
+            <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+              <p style={{ fontSize: 13, color: "var(--text-secondary)" }}>
+                The system sends notifications to <strong>{process.env.NEXT_PUBLIC_ADMIN_EMAIL || "rankved.business@gmail.com"}</strong> for post successes and failures.
+              </p>
+              <div style={{ display: "flex", gap: 12, alignItems: "center" }}>
+                <button 
+                  onClick={async () => {
+                    setTestingEmail(true);
+                    try {
+                      const res = await fetch("/api/test-email", { method: "POST" });
+                      const data = await res.json();
+                      if (res.ok) setFetchResult({ success: data.message });
+                      else setFetchResult({ error: data.error });
+                    } catch {
+                      setFetchResult({ error: "Network error." });
+                    }
+                    setTestingEmail(false);
+                  }} 
+                  disabled={testingEmail} 
+                  className="btn" 
+                  style={{ fontSize: 12, padding: "8px 14px", background: "var(--bg-elevated)", border: "1px solid var(--border)" }}
+                >
+                  {testingEmail ? <Loader2 className="anim-spin" style={{ width: 14, height: 14 }} /> : null}
+                  Send Test Email
+                </button>
+              </div>
+            </div>
           </div>
         </div>
       )}
