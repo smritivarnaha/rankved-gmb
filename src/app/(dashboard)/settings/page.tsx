@@ -5,7 +5,8 @@ import { useState, useEffect } from "react";
 import useSWR from "swr";
 import {
   Loader2, CheckCircle2, RefreshCw, MapPin, 
-  AlertCircle, Key, Sparkles, Wand2, FlaskConical, XCircle, ChevronDown, User, Trash2, Database, HardDrive
+  AlertCircle, User, Trash2, Database, HardDrive,
+  Save, Clock, Link as LinkIcon, Copy, Check
 } from "lucide-react";
 import { useGlobalSettings } from "@/hooks/useGlobalSettings";
 
