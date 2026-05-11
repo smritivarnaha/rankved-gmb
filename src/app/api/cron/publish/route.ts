@@ -8,6 +8,8 @@
 import { NextResponse, NextRequest } from "next/server";
 import prisma from "@/lib/prisma";
 import { publishToGBP } from "@/lib/gbp-publisher";
+import { getGoogleAccessTokenForLocation } from "@/lib/google-token";
+import { notifyAdmin, templates } from "@/lib/notifications";
 
 // Allow the Vercel Serverless Function to run for the maximum 60 seconds (Hobby Tier)
 export const maxDuration = 60;
@@ -43,109 +45,20 @@ export async function GET(req: NextRequest) {
   const results: { id: string; status: string; error?: string }[] = [];
 
   for (const dbPost of duePosts) {
-    // Get the location to check which Google account the profile belongs to
-    const location = dbPost.location as any;
-    const profileGoogleEmail = location?.googleEmail as string | undefined;
+    // Use our new global helper to find the most appropriate access token
+    // This takes care of looking up the admin/owner account and refreshing if needed
+    const accessToken = await getGoogleAccessTokenForLocation(dbPost.locationId);
 
-    // Find all Google accounts for the post owner
-    const allAccounts = await prisma.account.findMany({
-      where: { userId: dbPost.userId, provider: "google" },
-    });
-
-    if (allAccounts.length === 0) {
+    if (!accessToken) {
       await prisma.post.update({
         where: { id: dbPost.id },
         data: {
           status: "FAILED",
-          failureReason: "User's Google access token not found. They need to reconnect their Google account.",
+          failureReason: "User's Google access token not found or expired. They need to reconnect their Google account.",
         },
       });
       results.push({ id: dbPost.id, status: "FAILED", error: "No access token" });
       continue;
-    }
-
-    // Try to match the profile's googleEmail to the correct Google account
-    let userAccount = allAccounts[0];
-    if (profileGoogleEmail) {
-      for (const acc of allAccounts) {
-        if (acc.id_token) {
-          try {
-            const payload = JSON.parse(Buffer.from(acc.id_token.split(".")[1], "base64").toString());
-            if (payload.email === profileGoogleEmail) {
-              userAccount = acc;
-              break;
-            }
-          } catch {}
-        }
-      }
-    }
-
-    if (!userAccount?.access_token) {
-      await prisma.post.update({
-        where: { id: dbPost.id },
-        data: {
-          status: "FAILED",
-          failureReason: "User's Google access token not found. They need to reconnect their Google account.",
-        },
-      });
-      results.push({ id: dbPost.id, status: "FAILED", error: "No access token" });
-      continue;
-    }
-
-    let accessToken = userAccount.access_token;
-
-    // ✅ Refresh the token if it's expired
-    const tokenExpiry = userAccount.expires_at ? userAccount.expires_at * 1000 : 0;
-    const isExpired = tokenExpiry > 0 && Date.now() > tokenExpiry - 60_000; // 1 min buffer
-
-    if (isExpired && userAccount.refresh_token) {
-      console.log(`[CRON] Access token expired for user ${dbPost.userId}, refreshing...`);
-      try {
-        const refreshRes = await fetch("https://oauth2.googleapis.com/token", {
-          method: "POST",
-          headers: { "Content-Type": "application/x-www-form-urlencoded" },
-          body: new URLSearchParams({
-            client_id: process.env.GOOGLE_CLIENT_ID || "",
-            client_secret: process.env.GOOGLE_CLIENT_SECRET || "",
-            grant_type: "refresh_token",
-            refresh_token: userAccount.refresh_token,
-          }),
-        });
-        const refreshData = await refreshRes.json();
-        if (refreshRes.ok && refreshData.access_token) {
-          accessToken = refreshData.access_token;
-          const newExpiresAt = Math.floor((Date.now() + refreshData.expires_in * 1000) / 1000);
-          // Persist refreshed token back to DB
-          await prisma.account.update({
-            where: { id: userAccount.id },
-            data: {
-              access_token: refreshData.access_token,
-              expires_at: newExpiresAt,
-              ...(refreshData.refresh_token ? { refresh_token: refreshData.refresh_token } : {}),
-            },
-          });
-          console.log(`[CRON] Token refreshed successfully for user ${dbPost.userId}`);
-        } else {
-          console.error("[CRON] Token refresh failed:", refreshData);
-          await prisma.post.update({
-            where: { id: dbPost.id },
-            data: {
-              status: "FAILED",
-              failureReason: "Google access token expired and refresh failed. User must reconnect their Google account.",
-            },
-          });
-          results.push({ id: dbPost.id, status: "FAILED", error: "Token refresh failed" });
-          continue;
-        }
-      } catch (refreshErr: any) {
-        console.error("[CRON] Token refresh error:", refreshErr);
-        await prisma.post.update({
-          where: { id: dbPost.id },
-          data: { status: "FAILED", failureReason: `Token refresh error: ${refreshErr.message}` },
-        });
-        results.push({ id: dbPost.id, status: "FAILED", error: "Token refresh error" });
-        continue;
-      }
     }
 
     const post = {
@@ -243,6 +156,11 @@ export async function GET(req: NextRequest) {
     } catch (e) {
       console.error("[CRON] Storage cleanup failed", e);
     }
+  }
+
+  // Send summary notification to admin
+  if (results.length > 0) {
+    await notifyAdmin(templates.cronSummary(results.length, results));
   }
 
   return NextResponse.json({ processed: results.length, results });

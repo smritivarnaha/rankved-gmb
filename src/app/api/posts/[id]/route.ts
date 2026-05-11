@@ -3,6 +3,8 @@ import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/lib/auth";
 import { getPostById, updatePost } from "@/lib/post-store";
 import { publishToGBP } from "@/lib/gbp-publisher";
+import { getGoogleAccessTokenForLocation } from "@/lib/google-token";
+import { notifyAdmin, templates } from "@/lib/notifications";
 
 // GET /api/posts/[id] — get a single post
 export async function GET(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
@@ -34,7 +36,7 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
     const requestedStatus = body.status;
     const initialStatus = requestedStatus === "PUBLISHED" ? "DRAFT" : requestedStatus;
 
-    const profileId = body.profileId || body.locationId;
+    const profileId = body.profileId || body.locationId || (existing as any)?.profileId;
     const imageUrl = body.imageUrl || body.mediaUrl;
 
     const post = await updatePost(id, {
@@ -60,7 +62,7 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
 
     // If user requested PUBLISH NOW — start background process
     if (requestedStatus === "PUBLISHED") {
-      const accessToken = (session as any)?.accessToken;
+      const accessToken = await getGoogleAccessTokenForLocation(profileId);
       if (!accessToken) {
         await updatePost(id, { status: "FAILED", failureReason: "No Google access token. Please reconnect in Settings.", publishedAt: null });
       } else {
@@ -79,11 +81,14 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
                 publishedAt: new Date().toISOString(),
                 gbpPostName: result.gbpPostName || undefined,
               });
+              await notifyAdmin(templates.postPublished(post));
             } else {
               await updatePost(id, { status: "FAILED", failureReason: result.error || "GBP publish failed", publishedAt: null });
+              await notifyAdmin(templates.postFailed(post, result.error || "GBP publish failed"));
             }
           } catch (bgErr) {
             console.error("[BG Update Publish] Failed:", bgErr);
+            await updatePost(id, { status: "FAILED", failureReason: "Unexpected server error during publish.", publishedAt: null });
           }
         })();
       }

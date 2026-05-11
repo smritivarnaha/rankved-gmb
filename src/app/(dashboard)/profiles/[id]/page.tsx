@@ -464,7 +464,20 @@ export default function ProfileDetailPage() {
   ];
 
   const filteredPosts = statusFilter === "ALL" ? posts : posts.filter(p => p.status === statusFilter);
-  const sortedPosts = [...filteredPosts].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+  const sortedPosts = [...filteredPosts].sort((a, b) => {
+    // 1. Published posts always first
+    if (a.status === "PUBLISHED" && b.status !== "PUBLISHED") return -1;
+    if (a.status !== "PUBLISHED" && b.status === "PUBLISHED") return 1;
+
+    // 2. Images first (within status groups)
+    const aHasImage = !!a.imageUrl;
+    const bHasImage = !!b.imageUrl;
+    if (aHasImage && !bHasImage) return -1;
+    if (!aHasImage && bHasImage) return 1;
+
+    // 3. Newest first (createdAt)
+    return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+  });
 
   return (
     <div style={{ maxWidth: 1100, margin: "0 auto" }}>
@@ -490,16 +503,6 @@ export default function ProfileDetailPage() {
         </div>
         
         <div style={{ display: "flex", gap: 10 }}>
-          {/* AI Generator Paused to prevent accidental usage
-          <button onClick={() => setIsBulkAiModalOpen(true)} className="btn btn-ghost" style={{ gap: 8, color: "#8b5cf6", background: "#f3e8ff", border: "1px solid #d8b4fe" }}>
-            <Layers style={{ width: 16, height: 16 }} />
-            Bulk AI
-          </button>
-          <button onClick={() => setIsAiModalOpen(true)} className="btn btn-ghost" style={{ gap: 8, color: "var(--accent)", background: "var(--accent-light)" }}>
-            <Wand2 style={{ width: 16, height: 16 }} />
-            AI
-          </button>
-          */}
           <Link href={`/posts/new?profile=${profile.id}&from=profile`}
             style={{ display: "inline-flex", alignItems: "center", gap: 8, padding: "9px 20px", background: "#2563eb", color: "#fff", borderRadius: 8, fontSize: 13, fontWeight: 600 }}>
             <Plus style={{ width: 15, height: 15 }} /> Create Post
@@ -520,22 +523,6 @@ export default function ProfileDetailPage() {
         >
           Posts
         </button>
-        {/* AI Training Tab Paused
-        <button 
-          onClick={() => setActiveTab("AI_SETTINGS")}
-          style={{ 
-            padding: "10px 4px", fontSize: 14, fontWeight: 600, border: "none", background: "none", cursor: "pointer",
-            color: activeTab === "AI_SETTINGS" ? "#2563eb" : "#94a3b8",
-            borderBottom: activeTab === "AI_SETTINGS" ? "2px solid #2563eb" : "2px solid transparent",
-            transition: "all 0.2s"
-          }}
-        >
-          <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-            <Brain style={{ width: 14, height: 14 }} />
-            Train
-          </div>
-        </button>
-        */}
       </div>
 
       {activeTab === "AI_SETTINGS" ? (

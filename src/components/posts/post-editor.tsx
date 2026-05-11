@@ -5,6 +5,30 @@ import { useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
 import { Save, Clock, Loader2, ImagePlus, X, Send, MapPin, Link as LinkIcon, Copy, Check, Lock } from "lucide-react";
 import { embedGPSInImage, CAMERA_TEMPLATES } from "@/lib/geo-exif";
+import Lottie from "lottie-react";
+
+// Lottie Animation URLs
+const ANIMATIONS = {
+  PUBLISH: "https://assets9.lottiefiles.com/packages/lf20_m6cuL6.json", // Rocket
+  SCHEDULED: "https://assets10.lottiefiles.com/packages/lf20_unp7v8.json", // Clock
+  DRAFT: "https://assets2.lottiefiles.com/packages/lf20_vnikbe.json", // Draft/Save
+  SUCCESS: "https://assets3.lottiefiles.com/packages/lf20_yupe0msc.json", // Success
+};
+
+function LottieWrapper({ url, className }: { url: string; className?: string }) {
+  const [animationData, setAnimationData] = useState<any>(null);
+
+  useEffect(() => {
+    fetch(url)
+      .then((res) => res.json())
+      .then((data) => setAnimationData(data))
+      .catch((err) => console.error("Lottie fetch error:", err));
+  }, [url]);
+
+  if (!animationData) return <Loader2 className={`animate-spin ${className}`} />;
+
+  return <Lottie animationData={animationData} loop={true} className={className} />;
+}
 
 // No fallback sample data — profiles load from /api/profiles only
 const fallbackLocations: {id:string;name:string;client:string}[] = [];
@@ -332,8 +356,8 @@ export function PostEditor({ initialData = null, timelineDate, onDateChange, loc
           <div className="bg-white rounded-2xl shadow-2xl p-8 flex flex-col items-center justify-center max-w-sm w-full mx-4 transform transition-all duration-300 scale-100">
             {successMessage ? (
               <>
-                <div className="w-16 h-16 bg-[var(--success-bg)] rounded-full flex items-center justify-center mb-4">
-                  <Check className="w-8 h-8 text-[var(--success)]" />
+                <div className="w-24 h-24 mb-4">
+                  <LottieWrapper url={ANIMATIONS.SUCCESS} className="w-full h-full" />
                 </div>
                 <h3 className="text-xl font-semibold text-[var(--text-primary)] mb-1 text-center">{successMessage}</h3>
                 <p className="text-[14px] text-[var(--text-secondary)] text-center">
@@ -342,7 +366,14 @@ export function PostEditor({ initialData = null, timelineDate, onDateChange, loc
               </>
             ) : (
               <>
-                <Loader2 className="w-12 h-12 text-[var(--accent)] animate-spin mb-4" />
+                <div className="w-24 h-24 mb-4">
+                  <LottieWrapper 
+                    url={savingType === "PUBLISH" ? ANIMATIONS.PUBLISH : 
+                         savingType === "SCHEDULED" ? ANIMATIONS.SCHEDULED : 
+                         ANIMATIONS.DRAFT} 
+                    className="w-full h-full" 
+                  />
+                </div>
                 <h3 className="text-xl font-semibold text-[var(--text-primary)] mb-1 text-center">
                   {savingType === "PUBLISH" ? "Publishing Post..." : 
                    savingType === "SCHEDULED" ? "Scheduling Post..." : 
@@ -793,12 +824,6 @@ export function PostEditor({ initialData = null, timelineDate, onDateChange, loc
                   Save draft
                 </button>
 
-                {/* Single smart primary action button:
-                    - Future date selected + canSchedule  → "Schedule now"  (calls SCHEDULED)
-                    - Future date selected, no permission → disabled "Schedule now"
-                    - No future date + canPublishNow      → "Publish now"   (calls PUBLISH)
-                    - No future date, no permission       → disabled "Publish now"
-                */}
                 {isFutureScheduled ? (
                   canSchedule ? (
                     <button

@@ -179,6 +179,7 @@ export async function updatePost(id: string, data: Partial<PostData>): Promise<P
     const post = await prisma.post.update({
       where: { id },
       data: {
+        ...(data.profileId !== undefined && { locationId: data.profileId }),
         ...(data.summary !== undefined && { summary: data.summary }),
         ...(data.focusKeyword !== undefined && { focusKeyword: data.focusKeyword || null }),
         ...(data.topicType !== undefined && { topicType: data.topicType }),

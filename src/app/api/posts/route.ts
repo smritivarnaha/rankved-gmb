@@ -4,6 +4,8 @@ import { authOptions } from "@/lib/auth";
 import { getAllPosts, getPostsByProfile, createPost, deletePost } from "@/lib/post-store";
 import { publishToGBP } from "@/lib/gbp-publisher";
 import prisma from "@/lib/prisma";
+import { getGoogleAccessTokenForLocation } from "@/lib/google-token";
+import { notifyAdmin, templates } from "@/lib/notifications";
 
 // GET /api/posts — list all posts
 export async function GET(req: NextRequest) {
@@ -34,8 +36,6 @@ export async function POST(req: NextRequest) {
 
   const userId = (session as any)?.user?.id;
   if (!userId) return NextResponse.json({ error: "Could not determine user ID." }, { status: 401 });
-
-  const accessToken = (session as any)?.accessToken;
 
   try {
     const body = await req.json();
@@ -72,6 +72,8 @@ export async function POST(req: NextRequest) {
 
     // If user requested PUBLISH NOW — start background process
     if (body.status === "PUBLISHED") {
+      const accessToken = await getGoogleAccessTokenForLocation(profileId);
+      
       if (!accessToken) {
         await prisma.post.update({
           where: { id: post.id },
@@ -96,18 +98,28 @@ export async function POST(req: NextRequest) {
                   gbpPostName: result.gbpPostName || null,
                 },
               });
+              await notifyAdmin(templates.postPublished(post));
             } else {
               await prisma.post.update({
                 where: { id: post.id },
                 data: { status: "FAILED", failureReason: result.error || "GBP publish failed" },
               });
+              await notifyAdmin(templates.postFailed(post, result.error || "GBP publish failed"));
             }
           } catch (bgErr) {
             console.error("[BG Publish] Failed:", bgErr);
+            await prisma.post.update({
+              where: { id: post.id },
+              data: { status: "FAILED", failureReason: "Unexpected server error during publish." },
+            });
           }
         })();
       }
       
+      if (post.status === "SCHEDULED") {
+        await notifyAdmin(templates.postScheduled(post));
+      }
+
       // Return 201 immediately with status 'DRAFT' (will update to PUBLISHED in seconds)
       return NextResponse.json({ data: post, message: "Publishing in progress..." }, { status: 201 });
     }
