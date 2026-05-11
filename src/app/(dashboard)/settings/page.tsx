@@ -198,6 +198,10 @@ export default function SettingsPage() {
                     {connecting ? <Loader2 className="anim-spin" style={{ width: 14, height: 14 }} /> : null}
                     Connect Another Account
                   </button>
+                  <button onClick={handleFetchProfiles} disabled={fetching} className="btn btn-primary" style={{ fontSize: 12, padding: "8px 14px", background: "#10b981", borderColor: "#10b981" }}>
+                    {fetching ? <Loader2 className="anim-spin" style={{ width: 14, height: 14 }} /> : <RefreshCw style={{ width: 14, height: 14 }} />}
+                    Fetch Profiles
+                  </button>
                   <div style={{ flex: 1 }}></div>
                   <button onClick={handleReset} disabled={resetting || fetching} className="btn" style={{ fontSize: 12, padding: "8px 14px", background: "var(--bg-elevated)", border: "1px solid var(--border)" }}>
                     {resetting ? <Loader2 className="anim-spin" style={{ width: 14, height: 14 }} /> : <RefreshCw style={{ width: 14, height: 14 }} />}

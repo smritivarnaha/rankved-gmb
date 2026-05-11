@@ -91,7 +91,7 @@ export async function embedGPSInImage(
       canvas.height = img.height;
       const ctx = canvas.getContext("2d")!;
       ctx.drawImage(img, 0, 0);
-      const jpegDataUrl = canvas.toDataURL("image/jpeg", 0.92);
+      const jpegDataUrl = canvas.toDataURL("image/jpeg", 1.0);
       
       try {
         const latRational = decimalToRational(lat);
