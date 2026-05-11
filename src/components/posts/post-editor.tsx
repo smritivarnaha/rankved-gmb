@@ -353,8 +353,8 @@ export function PostEditor({ initialData = null, timelineDate, onDateChange, loc
   return (
     <>
       {(saving || successMessage) && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 backdrop-blur-md transition-all duration-500">
-          <div className="bg-white rounded-2xl shadow-2xl p-8 flex flex-col items-center justify-center max-w-sm w-full mx-4 transform transition-all duration-500 scale-100 animate-in zoom-in-95 fade-in duration-300 ease-out">
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 backdrop-blur-md transition-opacity duration-500">
+          <div className="bg-white rounded-2xl shadow-2xl p-8 flex flex-col items-center justify-center max-w-sm w-full mx-4 transform transition-transform duration-300 scale-100">
             {successMessage ? (
               <div className="flex flex-col items-center">
                 <div className="w-24 h-24 mb-4">
