@@ -9,7 +9,7 @@ import { NextResponse, NextRequest } from "next/server";
 import prisma from "@/lib/prisma";
 import { publishToGBP } from "@/lib/gbp-publisher";
 import { getGoogleAccessTokenForLocation } from "@/lib/google-token";
-import { notifyAdmin, templates } from "@/lib/notifications";
+import { notifyAdmin, templates, getTemplate } from "@/lib/notifications";
 
 // Allow the Vercel Serverless Function to run for the maximum 60 seconds (Hobby Tier)
 export const maxDuration = 60;
@@ -101,15 +101,19 @@ export async function GET(req: NextRequest) {
         },
       });
       results.push({ id: dbPost.id, status: "PUBLISHED" });
+      const template = await getTemplate("SUCCESS", post);
+      await notifyAdmin(template);
     } else {
+      results.push({ id: dbPost.id, status: "FAILED", error: result.error });
       await prisma.post.update({
         where: { id: dbPost.id },
         data: {
           status: "FAILED",
-          failureReason: result.error || "Unknown error",
+          failureReason: result.error || "GBP publish failed",
         },
       });
-      results.push({ id: dbPost.id, status: "FAILED", error: result.error });
+      const template = await getTemplate("FAILURE", { ...post, error: result.error });
+      await notifyAdmin(template);
     }
 
     // Brief delay between posts to avoid GBP rate limits

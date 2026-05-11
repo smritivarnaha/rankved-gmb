@@ -52,6 +52,15 @@ export async function POST(req: NextRequest) {
     const aiFeaturesEnabledStr = formData.get("aiFeaturesEnabled") as string;
     const file = formData.get("image") as File | null;
 
+    // Notification fields
+    const notificationEmails = formData.get("notificationEmails") as string;
+    const successTemplateSubject = formData.get("successTemplateSubject") as string;
+    const successTemplateBody = formData.get("successTemplateBody") as string;
+    const failureTemplateSubject = formData.get("failureTemplateSubject") as string;
+    const failureTemplateBody = formData.get("failureTemplateBody") as string;
+    const scheduledTemplateSubject = formData.get("scheduledTemplateSubject") as string;
+    const scheduledTemplateBody = formData.get("scheduledTemplateBody") as string;
+
     const updateData: any = {};
     if (heading) updateData.loginHeading = heading;
     if (description) updateData.loginDescription = description;
@@ -59,6 +68,14 @@ export async function POST(req: NextRequest) {
     if (aiFeaturesEnabledStr !== null) {
       updateData.aiFeaturesEnabled = aiFeaturesEnabledStr === "true";
     }
+
+    if (notificationEmails !== null) updateData.notificationEmails = notificationEmails;
+    if (successTemplateSubject !== null) updateData.successTemplateSubject = successTemplateSubject;
+    if (successTemplateBody !== null) updateData.successTemplateBody = successTemplateBody;
+    if (failureTemplateSubject !== null) updateData.failureTemplateSubject = failureTemplateSubject;
+    if (failureTemplateBody !== null) updateData.failureTemplateBody = failureTemplateBody;
+    if (scheduledTemplateSubject !== null) updateData.scheduledTemplateSubject = scheduledTemplateSubject;
+    if (scheduledTemplateBody !== null) updateData.scheduledTemplateBody = scheduledTemplateBody;
 
     if (file && file.size > 0) {
       // Store image as Base64 for persistence on Vercel

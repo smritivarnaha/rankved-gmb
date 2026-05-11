@@ -5,7 +5,7 @@ import { getAllPosts, getPostsByProfile, createPost, deletePost } from "@/lib/po
 import { publishToGBP } from "@/lib/gbp-publisher";
 import prisma from "@/lib/prisma";
 import { getGoogleAccessTokenForLocation } from "@/lib/google-token";
-import { notifyAdmin, templates } from "@/lib/notifications";
+import { notifyAdmin, getTemplate } from "@/lib/notifications";
 
 // GET /api/posts — list all posts
 export async function GET(req: NextRequest) {
@@ -98,13 +98,15 @@ export async function POST(req: NextRequest) {
                   gbpPostName: result.gbpPostName || null,
                 },
               });
-              await notifyAdmin(templates.postPublished(post));
+              const template = await getTemplate("SUCCESS", post);
+              await notifyAdmin(template);
             } else {
               await prisma.post.update({
                 where: { id: post.id },
                 data: { status: "FAILED", failureReason: result.error || "GBP publish failed" },
               });
-              await notifyAdmin(templates.postFailed(post, result.error || "GBP publish failed"));
+              const template = await getTemplate("FAILURE", { ...post, error: result.error });
+              await notifyAdmin(template);
             }
           } catch (bgErr) {
             console.error("[BG Publish] Failed:", bgErr);
@@ -117,7 +119,8 @@ export async function POST(req: NextRequest) {
       }
       
       if (post.status === "SCHEDULED") {
-        await notifyAdmin(templates.postScheduled(post));
+        const template = await getTemplate("SCHEDULED", post);
+        await notifyAdmin(template);
       }
 
       // Return 201 immediately with status 'DRAFT' (will update to PUBLISHED in seconds)

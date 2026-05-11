@@ -15,8 +15,50 @@ export default function SettingsPage() {
   const isAgencyOwner = role === "AGENCY_OWNER";
   const canConnectGoogle = isSuperAdmin || isAgencyOwner;
 
-  const { settings } = useGlobalSettings();
+  const { settings, mutate } = useGlobalSettings();
   const aiFeaturesEnabled = settings?.aiFeaturesEnabled ?? false;
+
+  const [localSettings, setLocalSettings] = useState<any>({});
+  const [activeTemplate, setActiveTemplate] = useState<"SUCCESS" | "FAILURE" | "SCHEDULED">("SUCCESS");
+  const [savingNotifications, setSavingNotifications] = useState(false);
+
+  useEffect(() => {
+    if (settings) {
+      setLocalSettings(settings);
+    }
+  }, [settings]);
+
+  const updateSettings = (updates: any) => {
+    setLocalSettings((prev: any) => ({ ...prev, ...updates }));
+  };
+
+  const handleSaveNotifications = async () => {
+    setSavingNotifications(true);
+    try {
+      const formData = new FormData();
+      Object.keys(localSettings).forEach(key => {
+        if (localSettings[key] !== null && localSettings[key] !== undefined) {
+          formData.append(key, localSettings[key].toString());
+        }
+      });
+
+      const res = await fetch("/api/admin/login-settings", {
+        method: "POST",
+        body: formData,
+      });
+
+      if (res.ok) {
+        setFetchResult({ success: "Notification settings saved successfully." });
+        mutate();
+      } else {
+        const data = await res.json();
+        setFetchResult({ error: data.error || "Failed to save settings." });
+      }
+    } catch {
+      setFetchResult({ error: "Network error." });
+    }
+    setSavingNotifications(false);
+  };
 
   const [connecting, setConnecting] = useState(false);
   const [fetching, setFetching] = useState(false);
@@ -187,11 +229,90 @@ export default function SettingsPage() {
             <h2 className="card-title" style={{ fontSize: 14 }}>Email Notifications</h2>
           </div>
           <div className="card-body">
-            <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-              <p style={{ fontSize: 13, color: "var(--text-secondary)" }}>
-                The system sends notifications to <strong>{process.env.NEXT_PUBLIC_ADMIN_EMAIL || "rankved.business@gmail.com"}</strong> for post successes and failures.
-              </p>
-              <div style={{ display: "flex", gap: 12, alignItems: "center" }}>
+            <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
+              {/* Recipient Emails */}
+              <div>
+                <label style={{ fontSize: 12, fontWeight: 600, display: "block", marginBottom: 6 }}>Recipient Emails (Comma-separated)</label>
+                <input 
+                  type="text" 
+                  value={localSettings?.notificationEmails || ""} 
+                  onChange={(e) => updateSettings({ notificationEmails: e.target.value })}
+                  placeholder="admin@example.com, owner@example.com"
+                  className="input w-full"
+                  style={{ fontSize: 13 }}
+                />
+                <p style={{ fontSize: 11, color: "var(--text-muted)", marginTop: 4 }}>
+                  All emails in this list will receive notifications for post activities.
+                </p>
+              </div>
+
+              {/* Template Editor */}
+              <div style={{ border: "1px solid var(--border-light)", borderRadius: 10, overflow: "hidden" }}>
+                <div style={{ background: "var(--bg-elevated)", padding: "8px 12px", borderBottom: "1px solid var(--border-light)", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                  <span style={{ fontSize: 12, fontWeight: 600 }}>Custom Templates</span>
+                  <div style={{ display: "flex", gap: 8 }}>
+                    {["SUCCESS", "FAILURE", "SCHEDULED"].map(t => (
+                      <button 
+                        key={t}
+                        onClick={() => setActiveTemplate(t as any)}
+                        style={{ 
+                          fontSize: 10, padding: "4px 8px", borderRadius: 4, 
+                          background: activeTemplate === t ? "var(--accent)" : "transparent",
+                          color: activeTemplate === t ? "white" : "var(--text-secondary)",
+                          border: "none", cursor: "pointer"
+                        }}
+                      >
+                        {t}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+                <div style={{ padding: 12, display: "flex", flexDirection: "column", gap: 12 }}>
+                  <div>
+                    <label style={{ fontSize: 11, fontWeight: 600, color: "var(--text-secondary)", marginBottom: 4, display: "block" }}>Subject</label>
+                    <input 
+                      type="text" 
+                      value={activeTemplate === "SUCCESS" ? localSettings?.successTemplateSubject : activeTemplate === "FAILURE" ? localSettings?.failureTemplateSubject : localSettings?.scheduledTemplateSubject} 
+                      onChange={(e) => updateSettings({ 
+                        [activeTemplate === "SUCCESS" ? "successTemplateSubject" : activeTemplate === "FAILURE" ? "failureTemplateSubject" : "scheduledTemplateSubject"]: e.target.value 
+                      })}
+                      className="input w-full"
+                      style={{ fontSize: 13 }}
+                    />
+                  </div>
+                  <div>
+                    <label style={{ fontSize: 11, fontWeight: 600, color: "var(--text-secondary)", marginBottom: 4, display: "block" }}>Body</label>
+                    <textarea 
+                      rows={4}
+                      value={activeTemplate === "SUCCESS" ? localSettings?.successTemplateBody : activeTemplate === "FAILURE" ? localSettings?.failureTemplateBody : localSettings?.scheduledTemplateBody} 
+                      onChange={(e) => updateSettings({ 
+                        [activeTemplate === "SUCCESS" ? "successTemplateBody" : activeTemplate === "FAILURE" ? "failureTemplateBody" : "scheduledTemplateBody"]: e.target.value 
+                      })}
+                      className="input w-full"
+                      style={{ fontSize: 13, resize: "vertical" }}
+                    />
+                  </div>
+                  <div style={{ padding: "8px 10px", background: "#f8fafc", borderRadius: 6, border: "1px dashed #cbd5e1" }}>
+                    <p style={{ fontSize: 10, fontWeight: 600, color: "#64748b", marginBottom: 4 }}>Available Variables:</p>
+                    <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
+                      {["{profileName}", "{postSummary}", "{postPreview}", "{error}", "{scheduledAt}"].map(v => (
+                        <code key={v} style={{ fontSize: 10, background: "#e2e8f0", padding: "2px 4px", borderRadius: 3 }}>{v}</code>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div style={{ display: "flex", gap: 12, alignItems: "center", borderTop: "1px solid var(--border-light)", paddingTop: 16 }}>
+                <button 
+                  onClick={handleSaveNotifications}
+                  disabled={savingNotifications}
+                  className="btn btn-primary"
+                  style={{ fontSize: 12, padding: "8px 14px" }}
+                >
+                  {savingNotifications ? <Loader2 className="anim-spin" style={{ width: 14, height: 14 }} /> : null}
+                  Save Notification Settings
+                </button>
                 <button 
                   onClick={async () => {
                     setTestingEmail(true);

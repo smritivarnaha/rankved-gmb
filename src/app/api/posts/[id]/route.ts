@@ -4,7 +4,7 @@ import { authOptions } from "@/lib/auth";
 import { getPostById, updatePost } from "@/lib/post-store";
 import { publishToGBP } from "@/lib/gbp-publisher";
 import { getGoogleAccessTokenForLocation } from "@/lib/google-token";
-import { notifyAdmin, templates } from "@/lib/notifications";
+import { notifyAdmin, getTemplate } from "@/lib/notifications";
 
 // GET /api/posts/[id] — get a single post
 export async function GET(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
@@ -81,10 +81,12 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
                 publishedAt: new Date().toISOString(),
                 gbpPostName: result.gbpPostName || undefined,
               });
-              await notifyAdmin(templates.postPublished(post));
+              const template = await getTemplate("SUCCESS", post);
+              await notifyAdmin(template);
             } else {
               await updatePost(id, { status: "FAILED", failureReason: result.error || "GBP publish failed", publishedAt: null });
-              await notifyAdmin(templates.postFailed(post, result.error || "GBP publish failed"));
+              const template = await getTemplate("FAILURE", { ...post, error: result.error });
+              await notifyAdmin(template);
             }
           } catch (bgErr) {
             console.error("[BG Update Publish] Failed:", bgErr);

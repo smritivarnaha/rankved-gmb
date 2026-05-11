@@ -219,6 +219,16 @@ model GlobalSetting {
   loginDescription String   @default("Connect your Google account and manage all your business profiles from a single dashboard.")
   loginBgOpacity   Float    @default(0.5)
   aiFeaturesEnabled Boolean @default(false)
+  
+  // Notification Settings
+  notificationEmails        String  @default("rankved.business@gmail.com")
+  successTemplateSubject    String  @default("✅ Post Published: {profileName} - {postPreview}")
+  successTemplateBody       String  @default("Your post has been published successfully.\n\nProfile: {profileName}\nPost: {postSummary}")
+  failureTemplateSubject    String  @default("⚠️ Post Failed: {profileName}")
+  failureTemplateBody       String  @default("Your post failed to publish.\n\nProfile: {profileName}\nError: {error}\nPost: {postSummary}")
+  scheduledTemplateSubject  String  @default("🕒 Post Scheduled: {profileName}")
+  scheduledTemplateBody     String  @default("A new post has been scheduled.\n\nProfile: {profileName}\nDate: {scheduledAt}")
+  
   updatedAt        DateTime @updatedAt
 }
 
