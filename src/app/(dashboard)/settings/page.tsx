@@ -2,11 +2,59 @@
 
 import { useSession, signIn } from "next-auth/react";
 import { useState, useEffect } from "react";
+import useSWR from "swr";
 import {
   Loader2, CheckCircle2, RefreshCw, MapPin, 
-  AlertCircle, Key, Sparkles, Wand2, FlaskConical, XCircle, ChevronDown, User, Trash2
+  AlertCircle, Key, Sparkles, Wand2, FlaskConical, XCircle, ChevronDown, User, Trash2, Database, HardDrive
 } from "lucide-react";
 import { useGlobalSettings } from "@/hooks/useGlobalSettings";
+
+function UsageStats() {
+  const { data, error, isLoading } = useSWR("/api/usage", (url) => fetch(url).then(r => r.json()));
+
+  if (isLoading) return <div style={{ display: "flex", gap: 10, alignItems: "center", padding: "10px 0" }}><Loader2 className="anim-spin w-4 h-4" /><span style={{ fontSize: 13, color: "var(--text-muted)" }}>Calculating usage...</span></div>;
+  if (error || !data) return <div style={{ fontSize: 13, color: "var(--error)" }}>Failed to load usage data.</div>;
+
+  const stats = [
+    { 
+      label: "Database Storage", 
+      used: data.database.usedMB, 
+      total: data.database.totalMB, 
+      percent: data.database.percent, 
+      icon: <Database className="w-4 h-4" /> 
+    },
+    { 
+      label: "Image Storage (Estimated)", 
+      used: data.images.usedMB, 
+      total: data.images.totalMB, 
+      percent: data.images.percent, 
+      icon: <HardDrive className="w-4 h-4" /> 
+    }
+  ];
+
+  return (
+    <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: 24 }}>
+      {stats.map((s, idx) => (
+        <div key={idx} style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+              <span style={{ color: "var(--text-secondary)" }}>{s.icon}</span>
+              <span style={{ fontSize: 12, fontWeight: 600, color: "var(--text-secondary)" }}>{s.label}</span>
+            </div>
+            <span style={{ fontSize: 11, fontWeight: 700, color: "var(--text-primary)" }}>{s.percent}%</span>
+          </div>
+          <div style={{ height: 6, width: "100%", background: "#e2e8f0", borderRadius: 3, overflow: "hidden" }}>
+            <div style={{ height: "100%", width: `${s.percent}%`, background: "var(--accent)", borderRadius: 3, transition: "width 1s ease-out" }} />
+          </div>
+          <div style={{ display: "flex", justifyContent: "space-between", fontSize: 11, color: "var(--text-muted)" }}>
+            <span>{s.used} MB used</span>
+            <span>{s.total - s.used} MB left</span>
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
 
 export default function SettingsPage() {
   const { data: session } = useSession();
@@ -162,6 +210,22 @@ export default function SettingsPage() {
         <h1 className="page-title">Settings</h1>
         <p className="page-subtitle">{aiFeaturesEnabled ? "Configure RankVed's AI engines and your Google connections." : "Configure your Google connections."}</p>
       </div>
+
+      {/* Storage Usage */}
+      {canConnectGoogle && (
+        <div className="card shadow-sm" style={{ background: "linear-gradient(135deg, #ffffff 0%, #f8fafc 100%)" }}>
+          <div className="card-header" style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+              <Database className="w-4 h-4 text-[var(--accent)]" />
+              <h2 className="card-title" style={{ fontSize: 14 }}>System Storage & Usage</h2>
+            </div>
+            <div style={{ fontSize: 10, fontWeight: 600, color: "var(--accent)", background: "#eef2ff", padding: "2px 8px", borderRadius: 10 }}>SUPABASE FREE TIER</div>
+          </div>
+          <div className="card-body">
+            <UsageStats />
+          </div>
+        </div>
+      )}
 
       {fetchResult && (
         <div style={{ padding: "12px 16px", borderRadius: "var(--radius-md)", display: "flex", alignItems: "flex-start", gap: 10, fontSize: 13, background: fetchResult.success ? "var(--success-bg)" : "var(--error-bg)", border: `1px solid ${fetchResult.success ? "var(--success-border)" : "var(--error-border)"}`, color: fetchResult.success ? "var(--success)" : "var(--error)" }}>
