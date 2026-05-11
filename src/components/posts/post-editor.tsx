@@ -322,12 +322,13 @@ export function PostEditor({ initialData = null, timelineDate, onDateChange, loc
         if (type === "PUBLISH") msg = "Post published successfully!";
         else if (type === "SCHEDULED") msg = "Post scheduled successfully!";
         else if (type === "DRAFT") msg = "Draft saved successfully!";
+        await new Promise(r => setTimeout(r, 800));
         setSuccessMessage(msg);
         setSaving(false);
         setSavingType("");
         setTimeout(() => {
           router.push(returnUrl || (form.locationId ? `/profiles/${form.locationId}` : "/profiles"));
-        }, 2200);
+        }, 3000);
         return;
       } else if (res.status === 207) {
         // Partial success — saved to DB but GBP publish failed
@@ -352,10 +353,10 @@ export function PostEditor({ initialData = null, timelineDate, onDateChange, loc
   return (
     <>
       {(saving || successMessage) && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/40 backdrop-blur-sm transition-all duration-300">
-          <div className="bg-white rounded-2xl shadow-2xl p-8 flex flex-col items-center justify-center max-w-sm w-full mx-4 transform transition-all duration-300 scale-100">
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 backdrop-blur-md transition-all duration-500">
+          <div className="bg-white rounded-2xl shadow-2xl p-8 flex flex-col items-center justify-center max-w-sm w-full mx-4 transform transition-all duration-500 scale-100 animate-in zoom-in-95 fade-in duration-300 ease-out">
             {successMessage ? (
-              <>
+              <div className="flex flex-col items-center">
                 <div className="w-24 h-24 mb-4">
                   <LottieWrapper url={ANIMATIONS.SUCCESS} className="w-full h-full" />
                 </div>
