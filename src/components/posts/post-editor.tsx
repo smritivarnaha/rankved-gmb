@@ -364,9 +364,9 @@ export function PostEditor({ initialData = null, timelineDate, onDateChange, loc
                 <p className="text-[14px] text-[var(--text-secondary)] text-center">
                   Redirecting back to profile...
                 </p>
-              </>
+              </div>
             ) : (
-              <>
+              <div className="flex flex-col items-center">
                 <div className="w-24 h-24 mb-4">
                   <LottieWrapper 
                     url={savingType === "PUBLISH" ? ANIMATIONS.PUBLISH : 
@@ -384,7 +384,7 @@ export function PostEditor({ initialData = null, timelineDate, onDateChange, loc
                 <p className="text-[14px] text-[var(--text-secondary)] text-center">
                   Please wait while we process your request.
                 </p>
-              </>
+              </div>
             )}
           </div>
         </div>
