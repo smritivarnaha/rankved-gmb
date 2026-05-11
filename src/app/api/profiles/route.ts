@@ -92,77 +92,72 @@ export async function POST(req: NextRequest) {
         if (i > 0 || fetchedProfiles.length > 0) await delay(1500);
 
         try {
-          const locationsRes = await fetchWithRetry(
-            `https://mybusinessbusinessinformation.googleapis.com/v1/${accountName}/locations?readMask=name,title,storefrontAddress,phoneNumbers,websiteUri`,
-            { headers: { Authorization: `Bearer ${accessToken}` } }
-          );
+          let pageToken: string | undefined = undefined;
+          
+          do {
+            const url = new URL(`https://mybusinessbusinessinformation.googleapis.com/v1/${accountName}/locations`);
+            url.searchParams.set("readMask", "name,title,storefrontAddress,phoneNumbers,websiteUri");
+            url.searchParams.set("pageSize", "100");
+            if (pageToken) url.searchParams.set("pageToken", pageToken);
 
-          if (locationsRes.ok) {
-            const locData = await locationsRes.json();
-            const locations = locData.locations || [];
+            const locationsRes = await fetchWithRetry(url.toString(), { 
+              headers: { Authorization: `Bearer ${accessToken}` } 
+            });
 
-            for (const loc of locations) {
-              const addressParts = loc.storefrontAddress || {};
-              const addressLines = [
-                ...(addressParts.addressLines || []),
-                addressParts.locality || "",
-                addressParts.administrativeArea || "",
-                addressParts.postalCode || "",
-              ].filter(Boolean);
+            if (locationsRes.ok) {
+              const locData = await locationsRes.json();
+              const locations = locData.locations || [];
+              pageToken = locData.nextPageToken;
 
-              // Try to fetch profile logo from GBP Media API
-              let logoUrl: string | undefined;
-              try {
-                // The media endpoint needs the full resource name: accounts/{acc}/locations/{loc}/media
-                const mediaUrl = `https://mybusiness.googleapis.com/v4/${accountName}/${loc.name}/media?maxResults=20`;
-                console.log(`[LogoSync] Fetching media for ${loc.title}: ${mediaUrl}`);
-                
-                const mediaRes = await fetch(mediaUrl, { 
-                  headers: { Authorization: `Bearer ${accessToken}` } 
-                });
-                
-                if (mediaRes.ok) {
-                  const mediaData = await mediaRes.json();
-                  const items: any[] = mediaData.mediaItems || [];
-                  console.log(`[LogoSync] Found ${items.length} media items for ${loc.title}`);
+              for (const loc of locations) {
+                const addressParts = loc.storefrontAddress || {};
+                const addressLines = [
+                  ...(addressParts.addressLines || []),
+                  addressParts.locality || "",
+                  addressParts.administrativeArea || "",
+                  addressParts.postalCode || "",
+                ].filter(Boolean);
+
+                // Try to fetch profile logo from GBP Media API
+                let logoUrl: string | undefined;
+                try {
+                  const mediaUrl = `https://mybusiness.googleapis.com/v4/${accountName}/${loc.name}/media?maxResults=20`;
+                  const mediaRes = await fetch(mediaUrl, { 
+                    headers: { Authorization: `Bearer ${accessToken}` } 
+                  });
                   
-                  // Categories are typically uppercase: LOGO, PROFILE, COVER, etc.
-                  const logo = items.find((m: any) => m.locationAssociation?.category === "LOGO") 
-                            || items.find((m: any) => m.locationAssociation?.category === "PROFILE")
-                            || items.find((m: any) => m.category === "LOGO")
-                            || items.find((m: any) => m.category === "PROFILE");
-                  
-                  if (logo?.googleUrl) {
-                    logoUrl = logo.googleUrl;
-                    console.log(`[LogoSync] Success! Logo found for ${loc.title}: ${logo.googleUrl.slice(0, 50)}...`);
-                  } else {
-                    console.log(`[LogoSync] No LOGO or PROFILE category found in items for ${loc.title}`);
+                  if (mediaRes.ok) {
+                    const mediaData = await mediaRes.json();
+                    const items: any[] = mediaData.mediaItems || [];
+                    const logo = items.find((m: any) => m.locationAssociation?.category === "LOGO") 
+                              || items.find((m: any) => m.locationAssociation?.category === "PROFILE")
+                              || items.find((m: any) => m.category === "LOGO")
+                              || items.find((m: any) => m.category === "PROFILE");
+                    
+                    if (logo?.googleUrl) logoUrl = logo.googleUrl;
                   }
-                } else {
-                  const errText = await mediaRes.text();
-                  console.error(`[LogoSync] Media API failed for ${loc.title}: ${mediaRes.status} ${errText}`);
-                }
-              } catch (err: any) {
-                console.error(`[LogoSync] Exception fetching logo for ${loc.title}:`, err.message);
-              }
+                } catch (err) {}
 
-              fetchedProfiles.push({
-                id: crypto.randomUUID(),
-                name: loc.title || loc.name || "Unnamed Location",
-                accountId: accountName,
-                accountName: accountDisplayName,
-                address: addressLines.join(", "),
-                phone: loc.phoneNumbers?.primaryPhone || "",
-                website: loc.websiteUri || "",
-                googleName: loc.name || "",
-                logoUrl,
-                googleEmail: accountEmail,
-                fetchedAt: new Date().toISOString(),
-              });
+                fetchedProfiles.push({
+                  id: crypto.randomUUID(),
+                  name: loc.title || loc.name || "Unnamed Location",
+                  accountId: accountName,
+                  accountName: accountDisplayName,
+                  address: addressLines.join(", "),
+                  phone: loc.phoneNumbers?.primaryPhone || "",
+                  website: loc.websiteUri || "",
+                  googleName: loc.name || "",
+                  logoUrl,
+                  googleEmail: accountEmail,
+                  fetchedAt: new Date().toISOString(),
+                });
+              }
+            } else {
+              break; // Stop on error
             }
-          }
-        } catch {
-          console.warn(`Error fetching locations for ${accountName}, skipping...`);
+          } while (pageToken);
+        } catch (err: any) {
+          console.warn(`Error fetching locations for ${accountName}:`, err.message);
         }
       }
     }
