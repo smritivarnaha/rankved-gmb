@@ -9,10 +9,10 @@ import Lottie from "lottie-react";
 
 // Lottie Animation URLs
 const ANIMATIONS = {
-  PUBLISH: "https://lottie.host/433e1b07-7440-42f5-b28e-68869b2d076f/6W3V7pL5Vz.json", // Premium Rocket
-  SCHEDULED: "https://lottie.host/79040854-5d5b-4355-89f4-187515f79566/O5MvR7U1eL.json", // Premium Clock
-  DRAFT: "https://lottie.host/191b7d56-7848-43d9-95e5-3d842279169a/X8F6tYvL7l.json", // Premium Pencil/Draft
-  SUCCESS: "https://lottie.host/9f50e7a5-c7e6-4993-9c59-5f2847240a5e/8v3N4782B8.json", // Premium Success Check
+  PUBLISH: "https://assets2.lottiefiles.com/packages/lf20_m6cuL6.json", 
+  SCHEDULED: "https://assets10.lottiefiles.com/packages/lf20_unp7v8.json", 
+  DRAFT: "https://assets5.lottiefiles.com/packages/lf20_vnikbe.json", 
+  SUCCESS: "https://assets3.lottiefiles.com/packages/lf20_yupe0msc.json", 
 };
 
 function LottieWrapper({ url, className }: { url: string; className?: string }) {
