@@ -48,8 +48,47 @@ export default function AdminDashboard() {
 
   const [loginSettings, setLoginSettings] = useState({
     loginBgUrl: "", loginHeading: "", loginDescription: "",
-    loginBgOpacity: 0.2, aiFeaturesEnabled: true
+    loginBgOpacity: 0.2, aiFeaturesEnabled: true,
+    sidebarText: "RankVed", sidebarLogoUrl: "https://rankved.com/wp-content/uploads/2025/04/Rankved-Logo-Official-Black.avif"
   });
+  const [selectedBg, setSelectedBg] = useState<File | null>(null);
+  const [selectedLogo, setSelectedLogo] = useState<File | null>(null);
+  const [savingSettings, setSavingSettings] = useState(false);
+
+  useEffect(() => {
+    fetch("/api/admin/login-settings")
+      .then(r => r.json())
+      .then(d => {
+        if (d && !d.error) setLoginSettings(d);
+      });
+  }, []);
+
+  const handleSaveSettings = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setSavingSettings(true);
+    try {
+      const formData = new FormData();
+      formData.append("heading", loginSettings.loginHeading);
+      formData.append("description", loginSettings.loginDescription);
+      formData.append("opacity", loginSettings.loginBgOpacity.toString());
+      formData.append("aiFeaturesEnabled", loginSettings.aiFeaturesEnabled.toString());
+      formData.append("sidebarText", loginSettings.sidebarText);
+      if (selectedBg) formData.append("image", selectedBg);
+      if (selectedLogo) formData.append("sidebarLogo", selectedLogo);
+
+      const res = await fetch("/api/admin/login-settings", { method: "POST", body: formData });
+      if (!res.ok) throw new Error("Failed to save");
+      const d = await res.json();
+      setLoginSettings(d.settings);
+      setSelectedBg(null);
+      setSelectedLogo(null);
+      alert("Settings saved successfully!");
+    } catch (err: any) {
+      alert(err.message);
+    } finally {
+      setSavingSettings(false);
+    }
+  };
 
   const handleCreateUser = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -189,27 +228,65 @@ export default function AdminDashboard() {
             <span style={{ fontSize: 10, fontWeight: 700, color: "#64748B", background: "#F1F5F9", padding: "4px 8px", borderRadius: 100, letterSpacing: "0.05em" }}>SUPER ADMIN ONLY</span>
           </div>
           
-          <div style={{ padding: 24 }}>
-            {/* Login branding */}
+          <form onSubmit={handleSaveSettings} style={{ padding: 24 }}>
+            {/* Sidebar Branding */}
             <div style={{ marginBottom: 32 }}>
-              <p style={{ fontSize: 13, fontWeight: 600, color: "#111827", marginBottom: 12 }}>Background Image</p>
+              <p style={{ fontSize: 13, fontWeight: 600, color: "#111827", marginBottom: 12 }}>Sidebar Branding</p>
               <div style={{ display: "flex", gap: 24, alignItems: "flex-start" }}>
-                <div style={{ width: 280, height: 140, background: "#f8f9fa", borderRadius: 8, border: "1px solid #eaeaea", display: "flex", alignItems: "center", justifyContent: "center" }}>
-                  <ImageIcon size={32} color="#CBD5E1" />
+                <div style={{ width: 140, height: 140, background: "#f8f9fa", borderRadius: 8, border: "1px solid #eaeaea", display: "flex", alignItems: "center", justifyContent: "center", overflow: "hidden" }}>
+                  {selectedLogo ? (
+                    <img src={URL.createObjectURL(selectedLogo)} alt="Preview" style={{ width: "100%", height: "100%", objectFit: "contain" }} />
+                  ) : loginSettings.sidebarLogoUrl ? (
+                    <img src={loginSettings.sidebarLogoUrl} alt="Logo" style={{ width: "100%", height: "100%", objectFit: "contain" }} />
+                  ) : (
+                    <ImageIcon size={32} color="#CBD5E1" />
+                  )}
                 </div>
                 <div style={{ flex: 1, display: "flex", flexDirection: "column", gap: 16 }}>
                   <div style={{ display: "flex", gap: 12 }}>
-                    <button style={{ ...btnPrimary, background: "#fff", color: "#2563EB", border: "1px solid #BFDBFE" }}><Upload size={14} /> Upload New Image</button>
-                    <button style={{ ...btnPrimary, background: "#FEF2F2", color: "#DC2626", border: "1px solid #FECACA" }}><Trash2 size={14} /> Remove Image</button>
+                    <label style={{ ...btnPrimary, background: "#fff", color: "#2563EB", border: "1px solid #BFDBFE" }}>
+                      <Upload size={14} /> Upload New Logo
+                      <input type="file" accept="image/*" style={{ display: "none" }} onChange={e => setSelectedLogo(e.target.files?.[0] || null)} />
+                    </label>
+                  </div>
+                  <div>
+                    <label style={{ fontSize: 13, fontWeight: 600, color: "#111827", display: "block", marginBottom: 8 }}>Sidebar Text</label>
+                    <input type="text" style={inputStyle} value={loginSettings.sidebarText} onChange={e => setLoginSettings({...loginSettings, sidebarText: e.target.value})} placeholder="e.g. RankVed" />
+                    <p style={{ fontSize: 11, color: "#64748B", marginTop: 8 }}>The text that appears next to the logo in the sidebar.</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Login branding */}
+            <div style={{ marginBottom: 32, paddingTop: 24, borderTop: "1px solid #eaeaea" }}>
+              <p style={{ fontSize: 13, fontWeight: 600, color: "#111827", marginBottom: 12 }}>Login Page Background</p>
+              <div style={{ display: "flex", gap: 24, alignItems: "flex-start" }}>
+                <div style={{ width: 280, height: 140, background: "#f8f9fa", borderRadius: 8, border: "1px solid #eaeaea", display: "flex", alignItems: "center", justifyContent: "center", overflow: "hidden" }}>
+                  {selectedBg ? (
+                    <img src={URL.createObjectURL(selectedBg)} alt="Preview" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                  ) : loginSettings.loginBgUrl ? (
+                    <img src={loginSettings.loginBgUrl} alt="Bg" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                  ) : (
+                    <ImageIcon size={32} color="#CBD5E1" />
+                  )}
+                </div>
+                <div style={{ flex: 1, display: "flex", flexDirection: "column", gap: 16 }}>
+                  <div style={{ display: "flex", gap: 12 }}>
+                    <label style={{ ...btnPrimary, background: "#fff", color: "#2563EB", border: "1px solid #BFDBFE" }}>
+                      <Upload size={14} /> Upload New Image
+                      <input type="file" accept="image/*" style={{ display: "none" }} onChange={e => setSelectedBg(e.target.files?.[0] || null)} />
+                    </label>
+                    <button type="button" onClick={() => { setSelectedBg(null); setLoginSettings({...loginSettings, loginBgUrl: "/login-bg.jpg"}); }} style={{ ...btnPrimary, background: "#FEF2F2", color: "#DC2626", border: "1px solid #FECACA" }}><Trash2 size={14} /> Remove Image</button>
                   </div>
                   <div>
                     <p style={{ fontSize: 12, fontWeight: 600, color: "#111827", textTransform: "uppercase", letterSpacing: "0.05em", margin: "0 0 12px" }}>RESET TO DEFAULT</p>
                     <p style={{ fontSize: 11, fontWeight: 600, color: "#64748B", textTransform: "uppercase", letterSpacing: "0.05em", margin: "0 0 16px" }}>RECOMMENDED: 1920X1080px · HIGH QUALITY JPG/PNG</p>
                     <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 8 }}>
                       <span style={{ fontSize: 13, fontWeight: 600, color: "#111827" }}>Overlay Darkness</span>
-                      <span style={{ fontSize: 13, fontWeight: 600, color: "#111827" }}>20%</span>
+                      <span style={{ fontSize: 13, fontWeight: 600, color: "#111827" }}>{Math.round(loginSettings.loginBgOpacity * 100)}%</span>
                     </div>
-                    <input type="range" style={{ width: "100%", accentColor: "#A855F7" }} />
+                    <input type="range" min="0" max="1" step="0.05" value={loginSettings.loginBgOpacity} onChange={e => setLoginSettings({...loginSettings, loginBgOpacity: parseFloat(e.target.value)})} style={{ width: "100%", accentColor: "#A855F7" }} />
                     <p style={{ fontSize: 13, color: "#64748B", marginTop: 8 }}>Adjust to ensure text is readable against your background image.</p>
                   </div>
                 </div>
@@ -219,12 +296,12 @@ export default function AdminDashboard() {
             {/* Text Inputs */}
             <div style={{ display: "flex", flexDirection: "column", gap: 20, marginBottom: 32 }}>
               <div>
-                <label style={{ fontSize: 13, fontWeight: 600, color: "#111827", display: "block", marginBottom: 8 }}>Heading</label>
-                <input type="text" style={inputStyle} value="Your Google Business, Managed in One Place." readOnly />
+                <label style={{ fontSize: 13, fontWeight: 600, color: "#111827", display: "block", marginBottom: 8 }}>Login Heading</label>
+                <input type="text" style={inputStyle} value={loginSettings.loginHeading} onChange={e => setLoginSettings({...loginSettings, loginHeading: e.target.value})} placeholder="Your Google Business, Managed in One Place." />
               </div>
               <div>
-                <label style={{ fontSize: 13, fontWeight: 600, color: "#111827", display: "block", marginBottom: 8 }}>Description</label>
-                <textarea style={{ ...inputStyle, height: 80, paddingTop: 10, resize: "none" }} value="Connect your Google account and manage all your business profiles from a single dashboard." readOnly />
+                <label style={{ fontSize: 13, fontWeight: 600, color: "#111827", display: "block", marginBottom: 8 }}>Login Description</label>
+                <textarea style={{ ...inputStyle, height: 80, paddingTop: 10, resize: "none" }} value={loginSettings.loginDescription} onChange={e => setLoginSettings({...loginSettings, loginDescription: e.target.value})} placeholder="Connect your Google account and manage all your business profiles from a single dashboard." />
               </div>
             </div>
 
@@ -234,15 +311,18 @@ export default function AdminDashboard() {
                 <p style={{ fontSize: 13, fontWeight: 600, color: "#111827", margin: "0 0 4px" }}>Enable AI Features</p>
                 <p style={{ fontSize: 13, color: "#64748B", margin: 0 }}>Globally enable or disable all AI tools (generation, training) across the platform.</p>
               </div>
-              <div style={{ width: 36, height: 20, background: "#2563EB", borderRadius: 100, position: "relative" }}>
-                <div style={{ width: 16, height: 16, background: "#fff", borderRadius: "50%", position: "absolute", right: 2, top: 2 }} />
-              </div>
+              <label style={{ width: 36, height: 20, background: loginSettings.aiFeaturesEnabled ? "#2563EB" : "#CBD5E1", borderRadius: 100, position: "relative", cursor: "pointer", transition: "background 0.2s" }}>
+                <input type="checkbox" style={{ display: "none" }} checked={loginSettings.aiFeaturesEnabled} onChange={e => setLoginSettings({...loginSettings, aiFeaturesEnabled: e.target.checked})} />
+                <div style={{ width: 16, height: 16, background: "#fff", borderRadius: "50%", position: "absolute", left: loginSettings.aiFeaturesEnabled ? 18 : 2, top: 2, transition: "left 0.2s" }} />
+              </label>
             </div>
 
             <div style={{ display: "flex", justifyContent: "flex-end" }}>
-              <button style={btnPrimary}><Save size={16} /> Save Changes</button>
+              <button type="submit" disabled={savingSettings} style={{ ...btnPrimary, opacity: savingSettings ? 0.7 : 1 }}>
+                <Save size={16} /> {savingSettings ? "Saving..." : "Save Changes"}
+              </button>
             </div>
-          </div>
+          </form>
         </div>
       )}
     </div>

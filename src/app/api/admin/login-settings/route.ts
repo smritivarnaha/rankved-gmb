@@ -18,7 +18,9 @@ async function getSettings() {
         loginBgUrl: "/login-bg.jpg",
         loginHeading: "Your Google Business, Managed in One Place.",
         loginDescription: "Connect your Google account and manage all your business profiles from a single dashboard.",
-        aiFeaturesEnabled: false
+        aiFeaturesEnabled: false,
+        sidebarText: "RankVed",
+        sidebarLogoUrl: "https://rankved.com/wp-content/uploads/2025/04/Rankved-Logo-Official-Black.avif"
       }
     });
   } catch (error) {
@@ -27,7 +29,9 @@ async function getSettings() {
       loginBgUrl: "/login-bg.jpg",
       loginHeading: "Your Google Business, Managed in One Place.",
       loginDescription: "Connect your Google account and manage all your business profiles from a single dashboard.",
-      aiFeaturesEnabled: false
+      aiFeaturesEnabled: false,
+      sidebarText: "RankVed",
+      sidebarLogoUrl: "https://rankved.com/wp-content/uploads/2025/04/Rankved-Logo-Official-Black.avif"
     };
   }
 }
@@ -52,6 +56,8 @@ export async function POST(req: NextRequest) {
     const opacity = formData.get("opacity") as string;
     const aiFeaturesEnabledStr = formData.get("aiFeaturesEnabled") as string;
     const file = formData.get("image") as File | null;
+    const sidebarText = formData.get("sidebarText") as string;
+    const sidebarLogo = formData.get("sidebarLogo") as File | null;
 
     // Notification fields
     const notificationEmails = formData.get("notificationEmails") as string;
@@ -69,6 +75,7 @@ export async function POST(req: NextRequest) {
     if (aiFeaturesEnabledStr !== null) {
       updateData.aiFeaturesEnabled = aiFeaturesEnabledStr === "true";
     }
+    if (sidebarText !== null) updateData.sidebarText = sidebarText;
 
     if (notificationEmails !== null) updateData.notificationEmails = notificationEmails;
     if (successTemplateSubject !== null) updateData.successTemplateSubject = successTemplateSubject;
@@ -84,6 +91,13 @@ export async function POST(req: NextRequest) {
       const buffer = Buffer.from(bytes);
       const base64Image = `data:${file.type};base64,${buffer.toString("base64")}`;
       updateData.loginBgUrl = base64Image;
+    }
+    
+    if (sidebarLogo && sidebarLogo.size > 0) {
+      const bytes = await sidebarLogo.arrayBuffer();
+      const buffer = Buffer.from(bytes);
+      const base64Image = `data:${sidebarLogo.type};base64,${buffer.toString("base64")}`;
+      updateData.sidebarLogoUrl = base64Image;
     }
 
     const settings = await prisma.globalSetting.upsert({

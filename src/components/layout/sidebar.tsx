@@ -41,6 +41,8 @@ export function Sidebar() {
   const { data: session } = useSession();
   const { settings } = useGlobalSettings();
   const aiFeaturesEnabled = settings?.aiFeaturesEnabled ?? false;
+  const sidebarText = settings?.sidebarText || "RankVed";
+  const sidebarLogoUrl = settings?.sidebarLogoUrl || "https://rankved.com/wp-content/uploads/2025/04/Rankved-Logo-Official-Black.avif";
 
   const user = (session as any)?.user;
   const role = user?.role;
@@ -60,14 +62,11 @@ export function Sidebar() {
       {/* ─── Organization Selector ─── */}
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "8px 12px", cursor: "pointer", borderRadius: 6, marginBottom: 16 }}>
         <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-          <div style={{ width: 24, height: 24, background: "#111", borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center" }}>
-            <Image
-              src="https://rankved.com/wp-content/uploads/2025/04/Rankved-Logo-Official-Black.avif"
-              alt="RankVed" width={14} height={14} className="invert" priority
-            />
+          <div style={{ width: 24, height: 24, background: "#111", borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", overflow: "hidden" }}>
+            <img src={sidebarLogoUrl} alt={sidebarText} style={{ width: "100%", height: "100%", objectFit: "contain" }} />
           </div>
           <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-            <span style={{ fontSize: 14, fontWeight: 600, color: "#111" }}>RankVed</span>
+            <span style={{ fontSize: 14, fontWeight: 600, color: "#111" }}>{sidebarText}</span>
             <span style={{ fontSize: 11, fontWeight: 500, color: "#2563EB", background: "#EFF6FF", padding: "2px 6px", borderRadius: 100 }}>GMB</span>
           </div>
         </div>

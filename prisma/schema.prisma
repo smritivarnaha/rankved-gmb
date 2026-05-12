@@ -220,6 +220,10 @@ model GlobalSetting {
   loginBgOpacity   Float    @default(0.5)
   aiFeaturesEnabled Boolean @default(false)
   
+  // Dashboard Branding
+  sidebarLogoUrl   String   @default("https://rankved.com/wp-content/uploads/2025/04/Rankved-Logo-Official-Black.avif")
+  sidebarText      String   @default("RankVed")
+  
   // Notification Settings
   notificationEmails        String  @default("rankved.business@gmail.com")
   successTemplateSubject    String  @default("✅ Post Published: {profileName} - {postPreview}")
