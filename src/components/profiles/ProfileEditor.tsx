@@ -1,175 +1,334 @@
 "use client";
 
 import { useState } from "react";
-import { Loader2, Save, MapPin, Phone, Globe, Clock, Info, CheckCircle2 } from "lucide-react";
+import {
+  Loader2, Save, MapPin, Phone, Globe, Clock,
+  Info, CheckCircle2, Building2, AlertCircle, Edit3
+} from "lucide-react";
 
-interface ProfileData {
-  name: string;
-  phone: string;
-  website: string;
-  description: string;
-  address: string;
-  // Complex fields like hours would be added here
+const DAYS = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
+
+const defaultHours: Record<string, { open: string; close: string; closed: boolean }> = {
+  Monday:    { open: "09:00", close: "18:00", closed: false },
+  Tuesday:   { open: "09:00", close: "18:00", closed: false },
+  Wednesday: { open: "09:00", close: "18:00", closed: false },
+  Thursday:  { open: "09:00", close: "18:00", closed: false },
+  Friday:    { open: "09:00", close: "18:00", closed: false },
+  Saturday:  { open: "10:00", close: "16:00", closed: false },
+  Sunday:    { open: "10:00", close: "16:00", closed: true  },
+};
+
+type Tab = "info" | "contact" | "hours";
+
+/* ─── Field component ────────────────────────────── */
+function Field({
+  label, icon: Icon, children
+}: { label: string; icon?: any; children: React.ReactNode }) {
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+      <label style={{
+        fontSize: 12, fontWeight: 600, color: "#64748B",
+        display: "flex", alignItems: "center", gap: 6
+      }}>
+        {Icon && <Icon size={13} />} {label}
+      </label>
+      {children}
+    </div>
+  );
 }
 
-export function ProfileEditor({ profile, onUpdate }: { profile: any, onUpdate?: () => void }) {
+/* ─── Input style ────────────────────────────────── */
+const inputStyle = {
+  width: "100%", height: 44, padding: "0 14px",
+  background: "#F8FAFC", border: "1.5px solid #E2E8F0",
+  borderRadius: 10, fontSize: 14, fontFamily: "Inter, sans-serif",
+  color: "#111827", outline: "none", boxSizing: "border-box" as const,
+  transition: "border-color 0.15s"
+};
+
+const textareaStyle = {
+  ...inputStyle, height: "auto", padding: "12px 14px",
+  resize: "vertical" as const, lineHeight: "1.6"
+};
+
+/* ─── Main component ─────────────────────────────── */
+export function ProfileEditor({ profile, onUpdate }: { profile: any; onUpdate?: () => void }) {
+  const [activeTab, setTab]   = useState<Tab>("info");
   const [loading, setLoading] = useState(false);
-  const [success, setSuccess] = useState(false);
-  const [formData, setFormData] = useState<ProfileData>({
-    name: profile.googleName || profile.name || "",
-    phone: profile.phone || "",
-    website: profile.website || "",
+  const [saved, setSaved]     = useState(false);
+  const [error, setError]     = useState<string | null>(null);
+
+  const [info, setInfo] = useState({
+    name:        profile.name        || "",
     description: profile.description || "",
-    address: profile.address || "",
+    address:     profile.address     || "",
   });
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setLoading(true);
-    setSuccess(false);
+  const [contact, setContact] = useState({
+    phone:   profile.phone   || "",
+    website: profile.website || "",
+  });
 
+  const [hours, setHours] = useState<typeof defaultHours>(
+    profile.hours || defaultHours
+  );
+
+  const handleSave = async () => {
+    setLoading(true); setSaved(false); setError(null);
     try {
+      const payload = { ...info, ...contact, hours };
       const res = await fetch(`/api/profiles/${profile.id}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(formData),
+        body: JSON.stringify(payload),
       });
-
       if (res.ok) {
-        setSuccess(true);
+        setSaved(true);
         if (onUpdate) onUpdate();
+        setTimeout(() => setSaved(false), 4000);
       } else {
-        alert("Failed to update profile. Please try again.");
+        const d = await res.json();
+        setError(d?.error || "Failed to save. Please try again.");
       }
-    } catch (err) {
-      console.error(err);
-      alert("An error occurred while saving.");
-    } finally {
-      setLoading(false);
-    }
+    } catch { setError("Network error. Please try again."); }
+    finally { setLoading(false); }
   };
 
+  const TABS: { key: Tab; label: string; icon: any }[] = [
+    { key: "info",    label: "Business Info",  icon: Building2 },
+    { key: "contact", label: "Contact",        icon: Phone     },
+    { key: "hours",   label: "Hours",          icon: Clock     },
+  ];
+
   return (
-    <div className="anim-fade-up max-w-4xl mx-auto pb-20">
-      <div className="bg-white rounded-[32px] border-2 border-slate-100 p-10 shadow-xl shadow-slate-100/50">
-        <div className="flex items-center justify-between mb-10">
-          <div>
-            <h2 className="text-3xl font-black text-slate-900 tracking-tight">Edit Profile</h2>
-            <p className="text-slate-500 font-medium">Changes will be pushed directly to Google Maps.</p>
-          </div>
-          {success && (
-            <div className="flex items-center gap-2 text-emerald-600 font-bold bg-emerald-50 px-4 py-2 rounded-full animate-pulse">
-              <CheckCircle2 className="w-5 h-5" />
-              Saved to Google
-            </div>
-          )}
-        </div>
+    <div style={{ fontFamily: "Inter, -apple-system, sans-serif", maxWidth: 700 }}>
 
-        <form onSubmit={handleSubmit} className="space-y-8">
-          {/* Basic Info */}
-          <section className="space-y-4">
-            <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mb-4 flex items-center gap-2">
-              <Info className="w-3 h-3" />
-              Business Identity
-            </h4>
-            <div className="grid grid-cols-1 gap-6">
-              <div className="space-y-2">
-                <label className="text-sm font-bold text-slate-700 ml-1">Business Name</label>
-                <input
-                  type="text"
-                  className="w-full px-5 py-4 bg-slate-50 border-2 border-transparent rounded-xl font-bold focus:outline-none focus:bg-white focus:border-indigo-600 transition-all"
-                  value={formData.name}
-                  onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                />
-              </div>
-              <div className="space-y-2">
-                <label className="text-sm font-bold text-slate-700 ml-1">Description</label>
-                <textarea
-                  rows={4}
-                  className="w-full px-5 py-4 bg-slate-50 border-2 border-transparent rounded-xl font-bold focus:outline-none focus:bg-white focus:border-indigo-600 transition-all"
-                  value={formData.description}
-                  onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                  placeholder="Describe your business to your customers..."
-                />
-              </div>
-            </div>
-          </section>
-
-          {/* Contact Info */}
-          <section className="space-y-4">
-            <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mb-4 flex items-center gap-2">
-              <Phone className="w-3 h-3" />
-              Contact & Presence
-            </h4>
-            <div className="grid grid-cols-2 gap-6">
-              <div className="space-y-2">
-                <label className="text-sm font-bold text-slate-700 ml-1">Phone Number</label>
-                <input
-                  type="text"
-                  className="w-full px-5 py-4 bg-slate-50 border-2 border-transparent rounded-xl font-bold focus:outline-none focus:bg-white focus:border-indigo-600 transition-all"
-                  value={formData.phone}
-                  onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                />
-              </div>
-              <div className="space-y-2">
-                <label className="text-sm font-bold text-slate-700 ml-1">Website URL</label>
-                <input
-                  type="text"
-                  className="w-full px-5 py-4 bg-slate-50 border-2 border-transparent rounded-xl font-bold focus:outline-none focus:bg-white focus:border-indigo-600 transition-all"
-                  value={formData.website}
-                  onChange={(e) => setFormData({ ...formData, website: e.target.value })}
-                />
-              </div>
-            </div>
-          </section>
-
-          {/* Location */}
-          <section className="space-y-4">
-            <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mb-4 flex items-center gap-2">
-              <MapPin className="w-3 h-3" />
-              Location Details
-            </h4>
-            <div className="space-y-2">
-              <label className="text-sm font-bold text-slate-700 ml-1">Business Address</label>
-              <input
-                type="text"
-                className="w-full px-5 py-4 bg-slate-50 border-2 border-transparent rounded-xl font-bold focus:outline-none focus:bg-white focus:border-indigo-600 transition-all"
-                value={formData.address}
-                onChange={(e) => setFormData({ ...formData, address: e.target.value })}
-              />
-            </div>
-          </section>
-
-          <div className="pt-8 border-t border-slate-50">
-            <button
-              type="submit"
-              disabled={loading}
-              className="w-full py-5 bg-slate-900 text-white rounded-2xl font-black uppercase tracking-[0.2em] text-xs hover:bg-indigo-600 transition-all shadow-xl shadow-slate-100 flex items-center justify-center gap-3 disabled:opacity-50"
-            >
-              {loading ? (
-                <Loader2 className="w-5 h-5 animate-spin" />
-              ) : (
-                <>
-                  <Save className="w-4 h-4" />
-                  Save Changes to Google
-                </>
-              )}
-            </button>
-          </div>
-        </form>
-      </div>
-
-      <div className="mt-8 bg-amber-50 border border-amber-100 p-6 rounded-[24px] flex items-start gap-4">
-        <div className="w-10 h-10 bg-amber-100 rounded-lg flex items-center justify-center text-amber-600 shrink-0">
-          <Clock className="w-5 h-5" />
-        </div>
+      {/* Header */}
+      <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", marginBottom: 24, flexWrap: "wrap", gap: 12 }}>
         <div>
-          <h4 className="font-black text-amber-900 uppercase tracking-widest text-xs mb-1">Update Notice</h4>
-          <p className="text-amber-800 text-sm font-medium leading-relaxed">
-            Google may take up to 48 hours to verify and publish these changes. Some edits might require manual review by Google's team.
-          </p>
+          <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 4 }}>
+            <Edit3 size={16} color="#94A3B8" />
+            <p style={{ fontSize: 12, color: "#94A3B8", margin: 0, fontWeight: 500 }}>Edit Profile</p>
+          </div>
+          <h1 style={{ fontSize: 20, fontWeight: 700, color: "#111827", margin: 0, letterSpacing: "-0.01em" }}>
+            {profile.name}
+          </h1>
         </div>
+
+        {/* Save button */}
+        <button
+          onClick={handleSave}
+          disabled={loading}
+          style={{
+            height: 40, padding: "0 20px",
+            background: saved ? "#10B981" : "#2563EB",
+            color: "#fff", borderRadius: 10, border: "none",
+            fontSize: 13, fontWeight: 600, cursor: loading ? "default" : "pointer",
+            display: "flex", alignItems: "center", gap: 8,
+            boxShadow: "0 2px 8px rgba(37,99,235,0.25)",
+            transition: "all 0.2s", opacity: loading ? 0.7 : 1
+          }}
+        >
+          {loading ? <Loader2 size={15} className="anim-spin" /> :
+           saved   ? <CheckCircle2 size={15} /> :
+                     <Save size={15} />}
+          {loading ? "Saving…" : saved ? "Saved!" : "Save to Google"}
+        </button>
       </div>
+
+      {/* Error banner */}
+      {error && (
+        <div style={{
+          display: "flex", alignItems: "center", gap: 10,
+          padding: "12px 16px", marginBottom: 20,
+          background: "#FEF2F2", border: "1px solid #FECACA",
+          borderRadius: 10, fontSize: 13, color: "#991B1B"
+        }}>
+          <AlertCircle size={16} />
+          {error}
+        </div>
+      )}
+
+      {/* Tab strip — Google style */}
+      <div style={{
+        display: "flex", borderBottom: "1px solid #E2E8F0",
+        marginBottom: 28, overflowX: "auto"
+      }}>
+        {TABS.map(({ key, label, icon: Icon }) => (
+          <button
+            key={key}
+            onClick={() => setTab(key)}
+            style={{
+              display: "flex", alignItems: "center", gap: 7,
+              padding: "10px 20px", border: "none", cursor: "pointer",
+              background: "transparent", fontSize: 14, fontWeight: 500,
+              color: activeTab === key ? "#2563EB" : "#64748B",
+              borderBottom: activeTab === key ? "2px solid #2563EB" : "2px solid transparent",
+              marginBottom: -1, transition: "all 0.15s", whiteSpace: "nowrap"
+            }}
+          >
+            <Icon size={15} />
+            {label}
+          </button>
+        ))}
+      </div>
+
+      {/* ── TAB: Business Info ── */}
+      {activeTab === "info" && (
+        <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
+          <Field label="Business Name" icon={Building2}>
+            <input
+              style={inputStyle}
+              value={info.name}
+              onChange={(e) => setInfo({ ...info, name: e.target.value })}
+              placeholder="Your business name"
+              onFocus={(e) => e.target.style.borderColor = "#2563EB"}
+              onBlur={(e) => e.target.style.borderColor = "#E2E8F0"}
+            />
+          </Field>
+
+          <Field label="Business Description" icon={Info}>
+            <textarea
+              style={{ ...textareaStyle, minHeight: 120 }}
+              value={info.description}
+              onChange={(e) => setInfo({ ...info, description: e.target.value })}
+              placeholder="Describe your business — this appears on your Google profile…"
+              rows={5}
+              onFocus={(e) => e.target.style.borderColor = "#2563EB"}
+              onBlur={(e) => e.target.style.borderColor = "#E2E8F0"}
+            />
+            <p style={{ fontSize: 11, color: "#94A3B8", margin: 0 }}>
+              {info.description.length}/750 characters
+            </p>
+          </Field>
+
+          <Field label="Business Address" icon={MapPin}>
+            <input
+              style={inputStyle}
+              value={info.address}
+              onChange={(e) => setInfo({ ...info, address: e.target.value })}
+              placeholder="Full address"
+              onFocus={(e) => e.target.style.borderColor = "#2563EB"}
+              onBlur={(e) => e.target.style.borderColor = "#E2E8F0"}
+            />
+          </Field>
+
+          <Notice text="Changes to your business name and address may require Google verification before going live." />
+        </div>
+      )}
+
+      {/* ── TAB: Contact ── */}
+      {activeTab === "contact" && (
+        <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
+          <Field label="Phone Number" icon={Phone}>
+            <input
+              style={inputStyle}
+              value={contact.phone}
+              onChange={(e) => setContact({ ...contact, phone: e.target.value })}
+              placeholder="+91 98765 43210"
+              type="tel"
+              onFocus={(e) => e.target.style.borderColor = "#2563EB"}
+              onBlur={(e) => e.target.style.borderColor = "#E2E8F0"}
+            />
+          </Field>
+
+          <Field label="Website URL" icon={Globe}>
+            <input
+              style={inputStyle}
+              value={contact.website}
+              onChange={(e) => setContact({ ...contact, website: e.target.value })}
+              placeholder="https://yourwebsite.com"
+              type="url"
+              onFocus={(e) => e.target.style.borderColor = "#2563EB"}
+              onBlur={(e) => e.target.style.borderColor = "#E2E8F0"}
+            />
+          </Field>
+
+          <Notice text="Updates to phone and website are usually reflected on Google Maps within a few hours." />
+        </div>
+      )}
+
+      {/* ── TAB: Hours ── */}
+      {activeTab === "hours" && (
+        <div style={{ display: "flex", flexDirection: "column", gap: 0 }}>
+          <div className="ds-card" style={{ padding: 0, overflow: "hidden" }}>
+            {DAYS.map((day, i) => {
+              const h = hours[day];
+              return (
+                <div
+                  key={day}
+                  style={{
+                    display: "flex", alignItems: "center", gap: 16,
+                    padding: "14px 20px",
+                    borderBottom: i < DAYS.length - 1 ? "1px solid #F1F5F9" : "none",
+                    background: h.closed ? "#FAFAFA" : "#fff"
+                  }}
+                >
+                  {/* Day name */}
+                  <span style={{ width: 100, fontSize: 13, fontWeight: 600, color: h.closed ? "#94A3B8" : "#374151", flexShrink: 0 }}>
+                    {day}
+                  </span>
+
+                  {/* Closed toggle */}
+                  <button
+                    onClick={() => setHours({ ...hours, [day]: { ...h, closed: !h.closed } })}
+                    style={{
+                      width: 36, height: 20, borderRadius: 99, border: "none",
+                      background: h.closed ? "#E2E8F0" : "#2563EB",
+                      cursor: "pointer", position: "relative", flexShrink: 0,
+                      transition: "background 0.2s"
+                    }}
+                  >
+                    <div style={{
+                      width: 14, height: 14, borderRadius: "50%", background: "#fff",
+                      position: "absolute", top: 3,
+                      left: h.closed ? 3 : 19,
+                      transition: "left 0.2s",
+                      boxShadow: "0 1px 3px rgba(0,0,0,0.15)"
+                    }} />
+                  </button>
+
+                  {h.closed ? (
+                    <span style={{ fontSize: 13, color: "#94A3B8", fontStyle: "italic" }}>Closed</span>
+                  ) : (
+                    <div style={{ display: "flex", alignItems: "center", gap: 8, flex: 1 }}>
+                      <input
+                        type="time"
+                        value={h.open}
+                        onChange={(e) => setHours({ ...hours, [day]: { ...h, open: e.target.value } })}
+                        style={{ ...inputStyle, width: 120, height: 36, fontSize: 13 }}
+                      />
+                      <span style={{ fontSize: 12, color: "#94A3B8" }}>to</span>
+                      <input
+                        type="time"
+                        value={h.close}
+                        onChange={(e) => setHours({ ...hours, [day]: { ...h, close: e.target.value } })}
+                        style={{ ...inputStyle, width: 120, height: 36, fontSize: 13 }}
+                      />
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+
+          <Notice text="Business hours are shown on Google Search and Maps. Update these when your schedule changes." />
+        </div>
+      )}
+    </div>
+  );
+}
+
+/* ─── Notice banner ──────────────────────────────── */
+function Notice({ text }: { text: string }) {
+  return (
+    <div style={{
+      display: "flex", alignItems: "flex-start", gap: 10, padding: "14px 16px",
+      background: "#FFFBEB", border: "1px solid #FDE68A",
+      borderRadius: 10, marginTop: 8
+    }}>
+      <Clock size={14} style={{ color: "#D97706", flexShrink: 0, marginTop: 1 }} />
+      <p style={{ fontSize: 12, color: "#92400E", margin: 0, lineHeight: 1.6 }}>{text}</p>
     </div>
   );
 }
