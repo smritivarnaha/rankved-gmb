@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { Loader2, X, AlertCircle, CheckCircle2, RefreshCw, Plus, Eye, Trash2, Wand2, Brain, FileDown, Upload, BarChart3, Edit2, Save, Users } from "lucide-react";
+import { Loader2, X, AlertCircle, CheckCircle2, RefreshCw, Plus, Eye, Trash2, Wand2, Brain, FileDown, Upload, BarChart3, Edit2, Save, Users, FileText, CalendarDays, ArrowRight } from "lucide-react";
 import useSWR from "swr";
 import { AiGenerationModal } from "@/components/ai/ai-components";
 import { GbpIcon } from "@/components/gbp-icon";
@@ -155,40 +155,57 @@ function ProfileCard({
       {/* Stats strip */}
       <div style={{ margin: "0 14px", padding: "16px 0", background: theme.bgLight, borderRadius: 8, display: "grid", gridTemplateColumns: "1fr 1fr 1fr" }}>
         <div style={{ textAlign: "center", borderRight: `1px solid ${theme.border}20` }}>
-          <Eye style={{ width: 14, height: 14, color: theme.icon, margin: "0 auto 6px" }} />
-          <p style={{ fontSize: 16, fontWeight: 700, color: "#111827", lineHeight: 1, marginBottom: 2 }}>{searchViews}</p>
-          <p style={{ fontSize: 9, fontWeight: 600, color: "#6b7280" }}>Search Views</p>
+          <FileText style={{ width: 14, height: 14, color: theme.icon, margin: "0 auto 6px" }} />
+          <p style={{ fontSize: 16, fontWeight: 700, color: "#111827", lineHeight: 1, marginBottom: 2 }}>{drafts}</p>
+          <p style={{ fontSize: 9, fontWeight: 600, color: "#6b7280" }}>Drafts</p>
         </div>
         <div style={{ textAlign: "center", borderRight: `1px solid ${theme.border}20` }}>
-          <Users style={{ width: 14, height: 14, color: theme.icon, margin: "0 auto 6px" }} />
-          <p style={{ fontSize: 16, fontWeight: 700, color: "#111827", lineHeight: 1, marginBottom: 2 }}>{interactions}</p>
-          <p style={{ fontSize: 9, fontWeight: 600, color: "#6b7280" }}>Interactions</p>
+          <CalendarDays style={{ width: 14, height: 14, color: theme.icon, margin: "0 auto 6px" }} />
+          <p style={{ fontSize: 16, fontWeight: 700, color: "#111827", lineHeight: 1, marginBottom: 2 }}>{scheduled}</p>
+          <p style={{ fontSize: 9, fontWeight: 600, color: "#6b7280" }}>Scheduled</p>
         </div>
         <div style={{ textAlign: "center" }}>
-          <AlertCircle style={{ width: 14, height: 14, color: theme.icon, margin: "0 auto 6px" }} />
-          <p style={{ fontSize: 16, fontWeight: 700, color: "#111827", lineHeight: 1, marginBottom: 2 }}>{engagements}</p>
-          <p style={{ fontSize: 9, fontWeight: 600, color: "#6b7280" }}>Engagements</p>
+          <CheckCircle2 style={{ width: 14, height: 14, color: theme.icon, margin: "0 auto 6px" }} />
+          <p style={{ fontSize: 16, fontWeight: 700, color: "#111827", lineHeight: 1, marginBottom: 2 }}>{published}</p>
+          <p style={{ fontSize: 9, fontWeight: 600, color: "#6b7280" }}>Published</p>
         </div>
       </div>
 
       {/* Actions */}
-      <div style={{ padding: "14px", display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>        {/* Bulk Import — opens modal directly, no navigation */}
+      <div style={{ padding: "12px 14px" }}>
+        <Link
+          href={`/profiles/${profile.id}`}
+          style={{ 
+            display: "flex", alignItems: "center", justifyContent: "space-between", 
+            padding: "10px 14px", background: "#fff", border: `1px solid ${theme.border}30`, 
+            borderRadius: 10, textDecoration: "none", transition: "all 0.2s"
+          }}
+          onMouseEnter={(e) => { e.currentTarget.style.background = theme.bgLight; e.currentTarget.style.borderColor = theme.border; }}
+          onMouseLeave={(e) => { e.currentTarget.style.background = "#fff"; e.currentTarget.style.borderColor = `${theme.border}30`; }}
+        >
+          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+            <BarChart3 size={14} color={theme.icon} />
+            <span style={{ fontSize: 12, fontWeight: 700, color: theme.text }}>View Performance Report</span>
+          </div>
+          <ArrowRight size={14} color={theme.icon} />
+        </Link>
+      </div>
+
+      {/* Quick Actions (Floating or bottom) */}
+      <div style={{ display: "flex", gap: 8, padding: "0 14px 14px" }}>
         <button
           onClick={() => onBulkImport(profile.id)}
-          style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", gap: 5,
-            padding: "8px 0", fontSize: 12, fontWeight: 500, color: "#4b5563",
-            background: "#f9fafb", border: "1px solid #e5e7eb", borderRadius: 8, cursor: "pointer" }}
+          title="Bulk Import"
+          style={{ flex: 1, height: 32, display: "flex", alignItems: "center", justifyContent: "center", gap: 6, background: "#f8fafc", border: "1px solid #e2e8f0", borderRadius: 8, color: "#64748b", fontSize: 11, fontWeight: 600, cursor: "pointer" }}
         >
-          <Upload style={{ width: 12, height: 12 }} /> Bulk Import
+          <Upload size={12} /> Bulk
         </button>
-
         <Link
           href={`/posts/new?profile=${profile.id}&from=profile`}
-          style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", gap: 5,
-            padding: "8px 0", fontSize: 12, fontWeight: 600, color: "#fff",
-            background: "#2563eb", borderRadius: 8, border: "none", textDecoration: "none" }}
+          title="Create Post"
+          style={{ flex: 1, height: 32, display: "flex", alignItems: "center", justifyContent: "center", gap: 6, background: "#2563eb", border: "none", borderRadius: 8, color: "#fff", fontSize: 11, fontWeight: 600, textDecoration: "none" }}
         >
-          <Plus style={{ width: 12, height: 12 }} /> Create Post
+          <Plus size={12} /> Post
         </Link>
       </div>
     </div>
