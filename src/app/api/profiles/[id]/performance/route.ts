@@ -28,9 +28,9 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
   if (!accessToken) accessToken = validAccounts[0].access_token;
   if (!accessToken) return NextResponse.json({ error: "No valid access token available." }, { status: 400 });
 
-  const resourceName = profile.accountId && profile.googleName
-    ? `${profile.accountId}/${profile.googleName}`
-    : profile.googleName;
+  // The Business Profile Performance API strictly requires "locations/{location_id}"
+  // It does NOT support the "accounts/{account_id}/locations/{location_id}" format.
+  const resourceName = profile.googleName;
     
   const { searchParams } = new URL(req.url);
   const months = parseInt(searchParams.get("months") || "1"); // Default 1 month
