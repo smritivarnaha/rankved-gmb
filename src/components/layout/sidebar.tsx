@@ -3,12 +3,12 @@
 import Link from "next/link";
 import Image from "next/image";
 import { usePathname } from "next/navigation";
-import { useSession } from "next-auth/react";
+import { useSession, signOut } from "next-auth/react";
 import {
   LayoutDashboard, CalendarDays, Settings, MapPin,
   FileText, Users, Shield, BarChart3, Key, Zap,
   Search, ChevronsUpDown, Command, User, Share2, 
-  Lock, Star, ArrowRight, ArrowLeft
+  Lock, Star, ArrowRight, LogOut
 } from "lucide-react";
 import { useGlobalSettings } from "@/hooks/useGlobalSettings";
 
@@ -17,10 +17,10 @@ import { useGlobalSettings } from "@/hooks/useGlobalSettings";
       label: "OVERVIEW",
       items: [
         { name: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
-        { name: "Command Center", href: "/command-center", icon: Share2 },
-        { name: "Profiles", href: "/profiles", icon: User },
+        { name: "Command Center", href: "/command-center", icon: Zap },
         { name: "Performance", href: "/performance", icon: BarChart3 },
-        { name: "Audience", href: "/audience", icon: Users },
+        { name: "Profiles", href: "/profiles", icon: MapPin },
+        { name: "Prompts", href: "/prompts", icon: FileText, aiOnly: true },
       ]
     },
     {
@@ -35,7 +35,7 @@ import { useGlobalSettings } from "@/hooks/useGlobalSettings";
       label: "SYSTEM",
       items: [
         { name: "Settings", href: "/settings", icon: Settings },
-        { name: "Admin Setup", href: "/admin", icon: Lock, superAdminOnly: true },
+        { name: "Admin Setup", href: "/admin", icon: Shield, superAdminOnly: true },
       ]
     }
   ];
@@ -44,8 +44,12 @@ export function Sidebar() {
   const pathname = usePathname();
   const { data: session } = useSession();
   const { settings } = useGlobalSettings();
+  const aiFeaturesEnabled = settings?.aiFeaturesEnabled ?? false;
   const sidebarText = settings?.sidebarText || "RankVed";
   const sidebarLogoUrl = settings?.sidebarLogoUrl || "https://rankved.com/wp-content/uploads/2025/04/Rankved-Logo-Official-Black.avif";
+  const sidebarLogoShape = settings?.sidebarLogoShape || "circle";
+  const sidebarLogoSize = settings?.sidebarLogoSize || 24;
+  const sidebarTextSize = settings?.sidebarTextSize || 14;
 
   const user = (session as any)?.user;
   const role = user?.role;
@@ -56,11 +60,17 @@ export function Sidebar() {
       {/* ─── Organization Selector ─── */}
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "8px 12px", cursor: "pointer", borderRadius: 6, marginBottom: 16 }}>
         <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-          <div style={{ width: 24, height: 24, background: "#111", borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", overflow: "hidden" }}>
+          <div style={{ 
+            width: sidebarLogoSize, 
+            height: sidebarLogoSize, 
+            background: "transparent", 
+            borderRadius: sidebarLogoShape === "circle" ? "50%" : sidebarLogoShape === "rounded" ? "8px" : "0", 
+            display: "flex", alignItems: "center", justifyContent: "center", overflow: "hidden" 
+          }}>
             <img src={sidebarLogoUrl} alt={sidebarText} style={{ width: "100%", height: "100%", objectFit: "contain" }} />
           </div>
           <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-            <span style={{ fontSize: 14, fontWeight: 600, color: "#111" }}>{sidebarText}</span>
+            <span style={{ fontSize: sidebarTextSize, fontWeight: 600, color: "#111" }}>{sidebarText}</span>
             <span style={{ fontSize: 11, fontWeight: 500, color: "#2563EB", background: "#EFF6FF", padding: "2px 6px", borderRadius: 100 }}>GMB</span>
           </div>
         </div>
@@ -86,6 +96,7 @@ export function Sidebar() {
           const visibleItems = cat.items.filter((item: any) => {
             if (item.superAdminOnly && !isSuperAdmin) return false;
             if (item.hideForTeam && role !== "AGENCY_OWNER" && !isSuperAdmin) return false;
+            if (item.aiOnly && !aiFeaturesEnabled) return false;
             return true;
           });
 
@@ -105,16 +116,14 @@ export function Sidebar() {
                       style={{
                         display: "flex", alignItems: "center", justifyContent: "space-between",
                         padding: "8px 12px", borderRadius: 6, textDecoration: "none",
-                        background: isActive ? "#eff6ff" : "transparent", transition: "background 0.2s",
-                        borderLeft: isActive ? "3px solid #2563eb" : "3px solid transparent",
-                        marginLeft: isActive ? -3 : 0
+                        background: isActive ? "#eaeaea" : "transparent", transition: "background 0.2s"
                       }}
                       onMouseEnter={(e) => { if(!isActive) e.currentTarget.style.background = "#f5f5f5"; }}
                       onMouseLeave={(e) => { if(!isActive) e.currentTarget.style.background = "transparent"; }}
                     >
                       <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-                        <Icon size={16} strokeWidth={1.5} color={isActive ? "#2563eb" : "#666"} />
-                        <span style={{ fontSize: 13, fontWeight: 500, color: isActive ? "#2563eb" : "#666" }}>{item.name}</span>
+                        <Icon size={16} strokeWidth={1.5} color={isActive ? "#111" : "#666"} />
+                        <span style={{ fontSize: 13, fontWeight: 500, color: isActive ? "#111" : "#666" }}>{item.name}</span>
                       </div>
                     </Link>
                   );
@@ -142,8 +151,8 @@ export function Sidebar() {
             Upgrade Plan <ArrowRight size={12} />
           </button>
         </div>
-        <button style={{ width: "100%", display: "flex", alignItems: "center", gap: 8, padding: "8px 12px", background: "transparent", border: "none", color: "#666", cursor: "pointer" }}>
-          <ArrowLeft size={16} /> <span style={{ fontSize: 13, fontWeight: 500 }}>Collapse</span>
+        <button onClick={() => signOut({ callbackUrl: "/login" })} style={{ width: "100%", display: "flex", alignItems: "center", gap: 8, padding: "8px 12px", background: "transparent", border: "none", color: "#666", cursor: "pointer", transition: "color 0.2s" }} onMouseEnter={e => e.currentTarget.style.color = "#dc2626"} onMouseLeave={e => e.currentTarget.style.color = "#666"}>
+          <LogOut size={16} /> <span style={{ fontSize: 13, fontWeight: 500 }}>Sign out</span>
         </button>
       </div>
     </aside>

@@ -462,6 +462,39 @@ export default function SettingsPage() {
                   <input type="text" className="input" value={localSettings?.sidebarText || ""} onChange={e => updateSettings({ sidebarText: e.target.value })} placeholder="e.g. RankVed" style={{ width: "100%", height: 38, padding: "0 12px", background: "#fff", border: "1px solid #eaeaea", borderRadius: 6, fontSize: 14 }} />
                   <p style={{ fontSize: 11, color: "#64748B", marginTop: 8 }}>The text that appears next to the logo in the sidebar.</p>
                 </div>
+
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 16 }}>
+                  <div>
+                    <label style={{ fontSize: 13, fontWeight: 600, color: "#111827", display: "block", marginBottom: 8 }}>Logo Shape</label>
+                    <select 
+                      value={localSettings?.sidebarLogoShape || "circle"} 
+                      onChange={e => updateSettings({ sidebarLogoShape: e.target.value })}
+                      style={{ width: "100%", height: 38, padding: "0 12px", background: "#fff", border: "1px solid #eaeaea", borderRadius: 6, fontSize: 14 }}
+                    >
+                      <option value="circle">Circle</option>
+                      <option value="rounded">Rounded</option>
+                      <option value="square">Square</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label style={{ fontSize: 13, fontWeight: 600, color: "#111827", display: "block", marginBottom: 8 }}>Logo Size (px)</label>
+                    <input 
+                      type="number" 
+                      value={localSettings?.sidebarLogoSize || 24} 
+                      onChange={e => updateSettings({ sidebarLogoSize: e.target.value })}
+                      style={{ width: "100%", height: 38, padding: "0 12px", background: "#fff", border: "1px solid #eaeaea", borderRadius: 6, fontSize: 14 }}
+                    />
+                  </div>
+                  <div>
+                    <label style={{ fontSize: 13, fontWeight: 600, color: "#111827", display: "block", marginBottom: 8 }}>Text Size (px)</label>
+                    <input 
+                      type="number" 
+                      value={localSettings?.sidebarTextSize || 14} 
+                      onChange={e => updateSettings({ sidebarTextSize: e.target.value })}
+                      style={{ width: "100%", height: 38, padding: "0 12px", background: "#fff", border: "1px solid #eaeaea", borderRadius: 6, fontSize: 14 }}
+                    />
+                  </div>
+                </div>
               </div>
             </div>
 

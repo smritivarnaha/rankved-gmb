@@ -223,6 +223,9 @@ model GlobalSetting {
   // Dashboard Branding
   sidebarLogoUrl   String   @default("https://rankved.com/wp-content/uploads/2025/04/Rankved-Logo-Official-Black.avif")
   sidebarText      String   @default("RankVed")
+  sidebarLogoShape String   @default("circle") // circle, square, rounded
+  sidebarLogoSize  Int      @default(24)
+  sidebarTextSize  Int      @default(14)
   
   // Notification Settings
   notificationEmails        String  @default("rankved.business@gmail.com")

@@ -57,6 +57,9 @@ export async function POST(req: NextRequest) {
     const aiFeaturesEnabledStr = formData.get("aiFeaturesEnabled") as string;
     const file = formData.get("image") as File | null;
     const sidebarText = formData.get("sidebarText") as string;
+    const sidebarLogoShape = formData.get("sidebarLogoShape") as string;
+    const sidebarLogoSize = formData.get("sidebarLogoSize") as string;
+    const sidebarTextSize = formData.get("sidebarTextSize") as string;
     const sidebarLogo = formData.get("sidebarLogo") as File | null;
 
     // Notification fields
@@ -76,6 +79,9 @@ export async function POST(req: NextRequest) {
       updateData.aiFeaturesEnabled = aiFeaturesEnabledStr === "true";
     }
     if (sidebarText !== null) updateData.sidebarText = sidebarText;
+    if (sidebarLogoShape !== null) updateData.sidebarLogoShape = sidebarLogoShape;
+    if (sidebarLogoSize !== null) updateData.sidebarLogoSize = parseInt(sidebarLogoSize, 10);
+    if (sidebarTextSize !== null) updateData.sidebarTextSize = parseInt(sidebarTextSize, 10);
 
     if (notificationEmails !== null) updateData.notificationEmails = notificationEmails;
     if (successTemplateSubject !== null) updateData.successTemplateSubject = successTemplateSubject;
