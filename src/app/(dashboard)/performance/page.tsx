@@ -4,6 +4,7 @@ import { useState } from "react";
 import useSWR from "swr";
 import { Loader2, MapPin, BarChart3, TrendingUp } from "lucide-react";
 import { PerformanceView } from "@/components/performance/PerformanceView";
+import { GbpIcon } from "@/components/gbp-icon";
 import { useSearchParams } from "next/navigation";
 import { useEffect } from "react";
 
