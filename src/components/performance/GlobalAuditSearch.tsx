@@ -1,215 +1,234 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { Search, Zap, MapPin, Globe, Star, ArrowRight, Loader2, Sparkles, Copy, Check } from "lucide-react";
+import { useState, useEffect, useRef } from "react";
+import { Search, MapPin, Globe, Star, ArrowLeft, Loader2, Copy, Check } from "lucide-react";
 import { AuditDashboard } from "./AuditDashboard";
+
+const GAPI_KEY = "AIzaSyBtbsS35qhHRLn_63YHVV66e6OK3IGUa8M";
 
 export function GlobalAuditSearch() {
   const [query, setQuery] = useState("");
   const [suggestions, setSuggestions] = useState<any[]>([]);
   const [isSearching, setIsSearching] = useState(false);
-  const [results, setResults] = useState<any[]>([]);
   const [selectedBusiness, setSelectedBusiness] = useState<any>(null);
   const [showDropdown, setShowDropdown] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [apiError, setApiError] = useState<string | null>(null);
+  const dropdownRef = useRef<HTMLDivElement>(null);
 
-  // Handle Autocomplete
+  // Close dropdown on outside click
   useEffect(() => {
-    const fetchSuggestions = async () => {
-      if (query.length < 3) {
-        setSuggestions([]);
+    const handler = (e: MouseEvent) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) {
         setShowDropdown(false);
-        return;
       }
+    };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, []);
+
+  // Autocomplete — debounced, via our API route
+  useEffect(() => {
+    if (query.length < 3) { setSuggestions([]); setShowDropdown(false); return; }
+
+    const timer = setTimeout(async () => {
       setIsSearching(true);
+      setApiError(null);
       try {
         const res = await fetch(`/api/gbp/autocomplete?input=${encodeURIComponent(query)}`);
         const data = await res.json();
-        setSuggestions(data.suggestions || []);
-        setShowDropdown(true);
-      } catch (err) { console.error(err); } 
+        if (data.googleError) {
+          setApiError(data.googleError);
+          setSuggestions([]);
+        } else {
+          setSuggestions(data.suggestions || []);
+          setShowDropdown((data.suggestions || []).length > 0);
+        }
+      } catch { setSuggestions([]); }
       finally { setIsSearching(false); }
-    };
-    const timer = setTimeout(fetchSuggestions, 300);
+    }, 350);
+
     return () => clearTimeout(timer);
   }, [query]);
 
-  const handleSelect = async (suggestion: any) => {
-    setQuery(suggestion.text);
+  // When a suggestion is selected — fetch full place details via search route
+  const handleSelect = async (s: any) => {
     setShowDropdown(false);
+    setQuery(s.text || s.mainText);
     setIsSearching(true);
-    setSelectedBusiness(null); // Reset
     try {
-      const res = await fetch(`/api/gbp/search?q=${encodeURIComponent(suggestion.text)}`);
+      const res = await fetch(`/api/gbp/search?q=${encodeURIComponent(s.text || s.mainText)}`);
       const data = await res.json();
+      if (data.googleError) { setApiError(data.googleError); return; }
       const place = data.places?.[0];
       if (place) {
-        const mockAudit = {
-          completionScore: 68, searchRank: 4.2, replyRate: 15, reviewsPerWeek: 0.5,
-          totalReviews: place.userRatingCount || 0, averageRating: place.rating || 0,
-          missingFields: ["Website", "Description", "Service Areas"]
-        };
-        setSelectedBusiness({ ...place, mockAudit });
+        setSelectedBusiness({
+          ...place,
+          mockAudit: {
+            completionScore: 68, searchRank: 4.2, replyRate: 15, reviewsPerWeek: 0.5,
+            totalReviews: place.userRatingCount || 0, averageRating: place.rating || 0,
+            missingFields: ["Website", "Description", "Service Areas"]
+          }
+        });
       }
-    } catch (err) { console.error(err); } 
-    finally { setIsSearching(false); }
-  };
-
-  const handleSearch = async () => {
-    setShowDropdown(false);
-    setIsSearching(true);
-    setResults([]);
-    setSelectedBusiness(null);
-    try {
-      const res = await fetch(`/api/gbp/search?q=${encodeURIComponent(query)}`);
-      const data = await res.json();
-      setResults(data.places || []);
-    } catch (err) { console.error(err); } 
-    finally { setIsSearching(false); }
+    } catch { } finally { setIsSearching(false); }
   };
 
   const copyLink = () => {
-    const link = `${window.location.origin}/connect`;
-    navigator.clipboard.writeText(link);
+    navigator.clipboard.writeText(`${window.location.origin}/connect`);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
   };
 
   return (
-    <div style={{ maxWidth: '1200px', margin: '0 auto', padding: '48px 24px', fontFamily: 'Inter, sans-serif' }}>
-      {/* Hero Header */}
-      <div style={{ textAlign: 'center', marginBottom: '64px' }}>
-        <div style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', padding: '8px 16px', background: '#F5F3FF', color: '#4F46E5', borderRadius: '99px', fontSize: '11px', fontWeight: 'bold', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: '24px', border: '1px solid #DDD6FE' }}>
-          <Sparkles size={14} />
-          Intelligence Engine
+    <div>
+      {/* Page title */}
+      <div className="page-header" style={{ marginBottom: 24 }}>
+        <div>
+          <h1 className="page-title">Command Center</h1>
+          <p className="page-subtitle">Search and audit any Google Business Profile instantly.</p>
         </div>
-        <h1 style={{ fontSize: '48px', fontWeight: '900', color: '#111827', letterSpacing: '-0.04em', marginBottom: '16px' }}>Command Center</h1>
-        <p style={{ color: '#64748B', fontSize: '18px', maxWidth: '600px', margin: '0 auto', fontWeight: '500' }}>
-          Search and audit any business profile on Google instantly.
-        </p>
+        {/* Copy link button */}
+        <button
+          onClick={copyLink}
+          className="btn btn-ghost"
+          style={{ border: "1px solid var(--neutral-200)", gap: 8 }}
+        >
+          {copied ? <Check size={14} /> : <Copy size={14} />}
+          {copied ? "Copied!" : "Copy Client Onboarding Link"}
+        </button>
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(12, 1fr)', gap: '32px', marginBottom: '80px' }}>
-        {/* Search Bar Container */}
-        <div style={{ gridColumn: 'span 8', position: 'relative' }}>
-           <div style={{ display: 'flex', alignItems: 'center', background: '#fff', border: '1px solid #E2E8F0', borderRadius: '24px', padding: '8px', boxShadow: '0 20px 40px rgba(0,0,0,0.03)' }}>
-             <div style={{ flex: 1, display: 'flex', alignItems: 'center', padding: '0 24px' }}>
-               {isSearching ? <Loader2 size={20} className="anim-spin" style={{ color: '#4F46E5', marginRight: '16px' }} /> : <Search size={20} style={{ color: '#94A3B8', marginRight: '16px' }} />}
-               <input 
-                 type="text" 
-                 placeholder="Search business name..."
-                 style={{ width: '100%', height: '56px', border: 'none', outline: 'none', fontSize: '18px', fontWeight: '600', color: '#111827' }}
-                 value={query}
-                 onChange={(e) => setQuery(e.target.value)}
-                 onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
-               />
-             </div>
-             <button 
-               onClick={handleSearch}
-               style={{ padding: '0 40px', height: '56px', background: '#111827', color: '#fff', borderRadius: '18px', fontSize: '12px', fontWeight: 'bold', textTransform: 'uppercase', letterSpacing: '0.1em', border: 'none', cursor: 'pointer', transition: 'all 0.2s' }}
-             >
-               Audit Now
-             </button>
-           </div>
-
-           {/* Suggestions Dropdown */}
-           {showDropdown && suggestions.length > 0 && (
-             <div style={{ position: 'absolute', top: 'calc(100% + 12px)', left: 0, right: 0, background: '#fff', borderRadius: '24px', border: '1px solid #E2E8F0', boxShadow: '0 30px 60px rgba(0,0,0,0.12)', zIndex: 100, overflow: 'hidden' }}>
-                {suggestions.map((s) => (
-                  <div 
-                    key={s.id}
-                    onClick={() => handleSelect(s)}
-                    style={{ padding: '16px 24px', cursor: 'pointer', borderBottom: '1px solid #F1F5F9', transition: 'all 0.2s', display: 'flex', alignItems: 'center', gap: '16px' }}
-                    onMouseEnter={(e) => e.currentTarget.style.background = '#F8FAFC'}
-                    onMouseLeave={(e) => e.currentTarget.style.background = '#fff'}
-                  >
-                    <div style={{ width: '40px', height: '40px', background: '#F1F5F9', borderRadius: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#94A3B8' }}>
-                       <MapPin size={18} />
-                    </div>
-                    <div>
-                       <p style={{ fontSize: '14px', fontWeight: '700', color: '#111827' }}>{s.mainText}</p>
-                       <p style={{ fontSize: '11px', color: '#94A3B8' }}>{s.secondaryText}</p>
-                    </div>
-                  </div>
-                ))}
-             </div>
-           )}
+      {/* Search bar */}
+      <div ref={dropdownRef} style={{ position: "relative", maxWidth: 640, marginBottom: 32 }}>
+        <div className="ds-card" style={{
+          display: "flex", alignItems: "center", padding: "8px 12px", gap: 8,
+          border: showDropdown ? "1px solid var(--brand)" : "1px solid var(--neutral-200)"
+        }}>
+          {isSearching
+            ? <Loader2 size={16} style={{ color: "var(--brand)", flexShrink: 0 }} className="anim-spin" />
+            : <Search size={16} style={{ color: "var(--neutral-400)", flexShrink: 0 }} />
+          }
+          <input
+            type="text"
+            placeholder="Search a business name or address..."
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            style={{
+              flex: 1, border: "none", outline: "none", fontSize: 14,
+              fontFamily: "inherit", background: "transparent", color: "var(--neutral-900)"
+            }}
+          />
+          {query && (
+            <button
+              onClick={() => { setQuery(""); setSuggestions([]); setShowDropdown(false); setSelectedBusiness(null); }}
+              style={{ border: "none", background: "none", cursor: "pointer", color: "var(--neutral-400)", padding: 4 }}
+            >✕</button>
+          )}
         </div>
 
-        {/* Public Link Card */}
-        <div style={{ gridColumn: 'span 4' }}>
-           <div style={{ background: '#4F46E5', borderRadius: '24px', padding: '24px', color: '#fff', position: 'relative', overflow: 'hidden' }}>
-              <p style={{ fontSize: '10px', fontWeight: 'bold', textTransform: 'uppercase', letterSpacing: '0.1em', opacity: 0.6, marginBottom: '8px' }}>Onboarding</p>
-              <h3 style={{ fontSize: '18px', fontWeight: 'bold', marginBottom: '24px' }}>Public Link</h3>
-              <button 
-                onClick={copyLink}
-                style={{ width: '100%', height: '48px', background: 'rgba(255,255,255,0.1)', border: '1px solid rgba(255,255,255,0.2)', borderRadius: '12px', color: '#fff', fontSize: '12px', fontWeight: 'bold', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px' }}
-              >
-                {copied ? <Check size={16} /> : <Copy size={16} />}
-                {copied ? 'Copied URL' : 'Copy Onboarding Link'}
-              </button>
-              <Globe size={80} style={{ position: 'absolute', top: '-10px', right: '-10px', opacity: 0.05 }} />
-           </div>
-        </div>
-      </div>
-
-      {/* Results / Audit Section */}
-      {selectedBusiness ? (
-        <div className="anim-fade-up">
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '48px' }}>
-            <button 
-              onClick={() => setSelectedBusiness(null)}
-              style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#94A3B8', fontWeight: 'bold', fontSize: '12px', textTransform: 'uppercase', letterSpacing: '0.1em', cursor: 'pointer', border: 'none', background: 'none' }}
-            >
-              <ArrowRight size={16} style={{ transform: 'rotate(180deg)' }} /> New Search
-            </button>
-            <div style={{ padding: '8px 24px', background: '#F1F5F9', borderRadius: '99px', fontSize: '11px', fontWeight: 'bold', color: '#475569', border: '1px solid #E2E8F0' }}>
-               Current Audit: {selectedBusiness.displayName?.text}
-            </div>
+        {/* Error banner */}
+        {apiError && (
+          <div style={{
+            marginTop: 8, padding: "10px 14px", borderRadius: 8, fontSize: 12,
+            background: "var(--danger-subtle)", color: "var(--danger-text)",
+            border: "1px solid var(--danger-muted)"
+          }}>
+            ⚠ Google API error: {apiError}
           </div>
-          <AuditDashboard auditData={selectedBusiness.mockAudit} isPublic />
-        </div>
-      ) : results.length > 0 && (
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '32px' }}>
-          {results.map((biz) => (
-            <div 
-              key={biz.id}
-              onClick={() => {
-                const mockAudit = {
-                  completionScore: 68, searchRank: 4.2, replyRate: 15, reviewsPerWeek: 0.5,
-                  totalReviews: biz.userRatingCount || 0, averageRating: biz.rating || 0,
-                  missingFields: ["Website", "Description", "Service Areas"]
-                };
-                setSelectedBusiness({ ...biz, mockAudit });
-              }}
-              style={{ background: '#fff', border: '1px solid #E2E8F0', borderRadius: '32px', padding: '32px', cursor: 'pointer', transition: 'all 0.3s' }}
-              onMouseEnter={(e) => { e.currentTarget.style.borderColor = '#4F46E5'; e.currentTarget.style.boxShadow = '0 20px 40px rgba(0,0,0,0.05)'; }}
-              onMouseLeave={(e) => { e.currentTarget.style.borderColor = '#E2E8F0'; e.currentTarget.style.boxShadow = 'none'; }}
-            >
-              <div style={{ display: 'flex', alignItems: 'center', gap: '16px', marginBottom: '24px' }}>
-                <div style={{ width: '48px', height: '48px', background: '#F8FAFC', borderRadius: '16px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#94A3B8' }}>
-                  <MapPin size={24} />
+        )}
+
+        {/* Suggestions dropdown */}
+        {showDropdown && suggestions.length > 0 && (
+          <div style={{
+            position: "absolute", top: "calc(100% + 6px)", left: 0, right: 0,
+            background: "#fff", borderRadius: 10, border: "1px solid var(--neutral-200)",
+            boxShadow: "0 8px 24px rgba(0,0,0,0.10)", zIndex: 200, overflow: "hidden"
+          }}>
+            {suggestions.map((s) => (
+              <button
+                key={s.id}
+                onClick={() => handleSelect(s)}
+                style={{
+                  width: "100%", padding: "12px 16px", border: "none",
+                  background: "none", cursor: "pointer", display: "flex",
+                  alignItems: "center", gap: 12, textAlign: "left",
+                  borderBottom: "1px solid var(--neutral-100)"
+                }}
+                onMouseEnter={(e) => e.currentTarget.style.background = "var(--neutral-50)"}
+                onMouseLeave={(e) => e.currentTarget.style.background = "none"}
+              >
+                <div style={{
+                  width: 32, height: 32, borderRadius: 8, background: "var(--neutral-100)",
+                  display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0
+                }}>
+                  <MapPin size={15} style={{ color: "var(--neutral-400)" }} />
                 </div>
                 <div>
-                   <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
-                      <Star size={14} style={{ color: '#F59E0B', fill: '#F59E0B' }} />
-                      <span style={{ fontSize: '13px', fontWeight: 'bold', color: '#111827' }}>{biz.rating || "N/A"}</span>
-                      <span style={{ fontSize: '13px', color: '#94A3B8' }}>({biz.userRatingCount || 0})</span>
-                   </div>
-                   <p style={{ fontSize: '10px', fontWeight: 'bold', color: '#4F46E5', textTransform: 'uppercase', letterSpacing: '0.1em' }}>{biz.primaryType?.replace(/_/g, ' ') || "Business"}</p>
+                  <p style={{ fontSize: 13, fontWeight: 600, color: "var(--neutral-900)", margin: 0 }}>{s.mainText}</p>
+                  <p style={{ fontSize: 11, color: "var(--neutral-400)", margin: 0 }}>{s.secondaryText}</p>
                 </div>
+              </button>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* Audit result */}
+      {selectedBusiness && (
+        <div>
+          <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 24 }}>
+            <button
+              onClick={() => { setSelectedBusiness(null); setQuery(""); }}
+              style={{
+                display: "flex", alignItems: "center", gap: 6,
+                border: "none", background: "none", cursor: "pointer",
+                fontSize: 13, color: "var(--neutral-500)", fontWeight: 500
+              }}
+            >
+              <ArrowLeft size={14} /> Back to search
+            </button>
+            <span style={{ fontSize: 13, color: "var(--neutral-300)" }}>·</span>
+            <span style={{ fontSize: 13, fontWeight: 600, color: "var(--neutral-700)" }}>
+              {selectedBusiness.displayName?.text}
+            </span>
+          </div>
+
+          {/* Results card */}
+          <div className="ds-card" style={{ padding: 24, marginBottom: 24 }}>
+            <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 16, flexWrap: "wrap" }}>
+              <div>
+                <h2 style={{ fontSize: 18, fontWeight: 700, color: "var(--neutral-900)", margin: 0, marginBottom: 4 }}>
+                  {selectedBusiness.displayName?.text}
+                </h2>
+                <p style={{ fontSize: 13, color: "var(--neutral-400)", margin: 0 }}>{selectedBusiness.formattedAddress}</p>
               </div>
-              <h3 style={{ fontSize: '20px', fontWeight: 'bold', color: '#111827', marginBottom: '8px', lineHeight: '1.2' }}>{biz.displayName?.text}</h3>
-              <p style={{ color: '#94A3B8', fontSize: '14px', marginBottom: '32px', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>{biz.formattedAddress}</p>
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', paddingTop: '24px', borderTop: '1px solid #F1F5F9' }}>
-                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#94A3B8' }}>
-                    <Globe size={16} />
-                    <span style={{ fontSize: '10px', fontWeight: 'bold', textTransform: 'uppercase' }}>{biz.websiteUri ? "Live" : "No Site"}</span>
-                 </div>
-                 <span style={{ fontSize: '10px', fontWeight: '900', textTransform: 'uppercase', color: '#4F46E5' }}>Audit Profile</span>
+              <div style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
+                {selectedBusiness.rating && (
+                  <div style={{ display: "flex", alignItems: "center", gap: 4, fontSize: 13, color: "var(--neutral-700)" }}>
+                    <Star size={13} style={{ color: "#F59E0B", fill: "#F59E0B" }} />
+                    <strong>{selectedBusiness.rating}</strong>
+                    <span style={{ color: "var(--neutral-400)" }}>({selectedBusiness.userRatingCount})</span>
+                  </div>
+                )}
+                {selectedBusiness.websiteUri && (
+                  <div style={{ display: "flex", alignItems: "center", gap: 4, fontSize: 13, color: "var(--neutral-500)" }}>
+                    <Globe size={13} /> {selectedBusiness.websiteUri.replace(/^https?:\/\//, "").split("/")[0]}
+                  </div>
+                )}
               </div>
             </div>
-          ))}
+          </div>
+
+          <AuditDashboard auditData={selectedBusiness.mockAudit} isPublic />
+        </div>
+      )}
+
+      {/* Empty state */}
+      {!selectedBusiness && query.length < 3 && (
+        <div style={{ textAlign: "center", padding: "64px 0", color: "var(--neutral-400)" }}>
+          <Search size={32} style={{ marginBottom: 12, opacity: 0.4 }} />
+          <p style={{ fontSize: 14, margin: 0 }}>Type at least 3 characters to search</p>
         </div>
       )}
     </div>
