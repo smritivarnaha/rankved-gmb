@@ -1,117 +1,111 @@
 "use client";
 
-import { useState, useMemo } from "react";
 import { 
-  CheckCircle2, XCircle, AlertTriangle, Star, 
-  TrendingUp, MessageSquare, MapPin, Search, 
-  ArrowUpRight, Zap, Info, ShieldCheck, 
-  ChevronRight, Sparkles, LayoutDashboard
+  CheckCircle2, AlertTriangle, Search, 
+  TrendingUp, MessageSquare, ShieldCheck, 
+  ChevronRight, Sparkles, LayoutDashboard, ArrowUpRight
 } from "lucide-react";
 
 export function AuditDashboard({ auditData, isPublic = false }: { auditData: any, isPublic?: boolean }) {
   if (!auditData) return null;
 
   return (
-    <div className="anim-fade-up space-y-12 pb-32">
-      {/* Header Stat Bar */}
+    <div className="anim-fade-up space-y-8">
+      {/* Stat Grid */}
       <div className="grid grid-cols-4 gap-6">
         <ScoreCard 
-          label="Overall Score" 
+          label="Profile Quality" 
           value={auditData.completionScore} 
-          subtext="Profile Quality"
-          icon={Zap}
-          color="indigo"
+          subtext="Completion"
+          icon={ShieldCheck}
         />
         <ScoreCard 
-          label="Search Rank" 
+          label="Google Search" 
           value={auditData.searchRank} 
-          subtext="Visibility"
+          subtext="Avg Position"
           icon={Search}
-          color="cyan"
           isRank
         />
         <ScoreCard 
           label="Reply Rate" 
           value={auditData.replyRate} 
-          subtext="Engagement"
+          subtext="Response %"
           icon={MessageSquare}
-          color="emerald"
         />
         <ScoreCard 
-          label="Review Velocity" 
+          label="Weekly Velocity" 
           value={auditData.reviewsPerWeek} 
-          subtext="Growth / week"
+          subtext="Reviews / Week"
           icon={TrendingUp}
-          color="amber"
           isVelocity
         />
       </div>
 
       <div className="grid grid-cols-12 gap-8">
-        {/* Profile Completion Detail */}
-        <div className="col-span-7 space-y-8">
-          <div className="bg-white rounded-[48px] p-10 border-2 border-slate-50 shadow-2xl shadow-slate-100/50">
-            <div className="flex items-center justify-between mb-10">
+        {/* Checklist Section */}
+        <div className="col-span-7 space-y-6">
+          <div className="ds-card">
+            <div className="flex items-center justify-between mb-8">
                <div>
-                  <h3 className="text-2xl font-black text-slate-900 tracking-tight">Audit Checklist</h3>
-                  <p className="text-slate-500 font-medium text-sm">Critical items needed for 100% visibility.</p>
+                  <h3 className="heading-card">Audit Checklist</h3>
+                  <p className="text-meta">Required optimizations for 100% visibility.</p>
                </div>
-               <div className="w-14 h-14 bg-indigo-50 rounded-2xl flex items-center justify-center text-indigo-600">
-                  <ShieldCheck className="w-7 h-7" />
+               <div className="w-10 h-10 bg-brand-subtle rounded-lg flex items-center justify-center text-brand">
+                  <ShieldCheck className="w-5 h-5" />
                </div>
             </div>
 
-            <div className="space-y-4">
+            <div className="space-y-2">
               <CheckItem label="Verified Business Status" isComplete={true} />
-              <CheckItem label="High-Resolution Cover Photo" isComplete={auditData.completionScore > 50} />
+              <CheckItem label="High-Resolution Photos" isComplete={auditData.completionScore > 50} />
               <CheckItem label="Detailed Business Description" isComplete={auditData.completionScore > 30} />
-              <CheckItem label="Primary Category Optimization" isComplete={true} />
+              <CheckItem label="Primary Category Selection" isComplete={true} />
               <CheckItem label="Active Service Areas" isComplete={auditData.completionScore > 70} />
-              <CheckItem label="Special Hours Configuration" isComplete={auditData.completionScore > 90} />
+              <CheckItem label="Business Hours Configuration" isComplete={auditData.completionScore > 90} />
             </div>
           </div>
 
-          <div className="bg-slate-900 rounded-[48px] p-10 text-white shadow-2xl relative overflow-hidden group">
-            <div className="absolute top-0 right-0 p-8 opacity-10 group-hover:scale-110 transition-transform duration-700">
-              <Sparkles className="w-32 h-32" />
+          <div className="ds-card bg-neutral-900 border-none relative overflow-hidden">
+            <div className="absolute top-0 right-0 p-8 opacity-10">
+              <Sparkles className="w-24 h-24 text-white" />
             </div>
             <div className="relative z-10">
-              <h4 className="text-indigo-400 font-black uppercase tracking-[0.3em] text-[10px] mb-4">Strategic Advice</h4>
-              <h3 className="text-3xl font-black mb-6 leading-tight">Your visibility could increase <br/> by <span className="text-indigo-400">42%</span> next month.</h3>
-              <p className="text-slate-400 font-medium mb-8 max-w-md">
-                By resolving the missing attributes and increasing your review reply rate, Google's algorithm will prioritize your profile in local searches.
+              <p className="text-[10px] font-bold text-brand uppercase tracking-widest mb-4">Strategic Insight</p>
+              <h3 className="text-xl font-bold text-white mb-4 leading-tight">Increase visibility by <span className="text-brand">42%</span>.</h3>
+              <p className="text-neutral-400 text-sm mb-6 max-w-md">
+                By optimizing missing attributes and maintaining a 90% reply rate, your profile will prioritize in local search results.
               </p>
-              <button className="flex items-center gap-3 px-8 py-4 bg-white text-slate-900 rounded-2xl font-black uppercase tracking-widest text-xs hover:bg-indigo-400 transition-all">
-                Execute Growth Plan <ChevronRight className="w-4 h-4" />
+              <button className="ds-btn ds-btn-primary h-10 px-6">
+                Generate Growth Plan
               </button>
             </div>
           </div>
         </div>
 
-        {/* Competitive Radar / Sidebar */}
-        <div className="col-span-5 space-y-8">
-           <div className="bg-white rounded-[48px] p-10 border-2 border-slate-50 shadow-2xl shadow-slate-100/50">
-              <h3 className="text-xl font-black text-slate-900 mb-8">Reputation Health</h3>
+        {/* Health Sidebar */}
+        <div className="col-span-5 space-y-6">
+           <div className="ds-card">
+              <h3 className="heading-card mb-8">Reputation Health</h3>
               
               <div className="space-y-10">
-                <GaugeBlock label="Average Rating" value={auditData.averageRating} max={5} color="#f59e0b" />
-                <GaugeBlock label="Review Volume" value={auditData.totalReviews} max={1000} color="#10b981" />
-                <GaugeBlock label="Response Speed" value={auditData.replyRate} max={100} color="#6366f1" />
+                <GaugeBlock label="Average Rating" value={auditData.averageRating} max={5} />
+                <GaugeBlock label="Review Volume" value={auditData.totalReviews} max={1000} />
+                <GaugeBlock label="Reply Rate" value={auditData.replyRate} max={100} />
               </div>
            </div>
 
-           <div className="bg-indigo-600 rounded-[40px] p-8 text-white flex items-center justify-between shadow-xl shadow-indigo-100">
+           <div className="ds-card bg-brand border-none flex items-center justify-between shadow-lg shadow-brand/20">
               <div className="flex items-center gap-4">
-                 <div className="w-12 h-12 bg-white/10 rounded-2xl flex items-center justify-center">
-                    <LayoutDashboard className="w-6 h-6" />
+                 <div className="w-10 h-10 bg-white/10 rounded-lg flex items-center justify-center text-white">
+                    <LayoutDashboard className="w-5 h-5" />
                  </div>
                  <div>
-                    <p className="font-black text-sm tracking-tight">Generate Report</p>
-                    <p className="text-indigo-200 text-[10px] font-bold uppercase tracking-widest">Share with client</p>
+                    <p className="font-bold text-white text-sm">Download Report</p>
+                    <p className="text-white/60 text-[10px] font-bold uppercase tracking-wider">Share with client</p>
                  </div>
               </div>
-              <button className="w-10 h-10 bg-white text-indigo-600 rounded-xl flex items-center justify-center hover:scale-110 transition-transform">
-                 <ArrowUpRight className="w-5 h-5" />
+              <button className="w-8 h-8 bg-white/10 text-white rounded-lg flex items-center justify-center hover:bg-white/20 transition-all">
+                 <ArrowUpRight className="w-4 h-4" />
               </button>
            </div>
         </div>
@@ -120,61 +114,54 @@ export function AuditDashboard({ auditData, isPublic = false }: { auditData: any
   );
 }
 
-function ScoreCard({ label, value, subtext, icon: Icon, color, isRank = false, isVelocity = false }: any) {
-  const colors: any = {
-    indigo: "bg-indigo-50 text-indigo-600 border-indigo-100 shadow-indigo-100/20",
-    cyan: "bg-cyan-50 text-cyan-600 border-cyan-100 shadow-cyan-100/20",
-    emerald: "bg-emerald-50 text-emerald-600 border-emerald-100 shadow-emerald-100/20",
-    amber: "bg-amber-50 text-amber-600 border-amber-100 shadow-amber-100/20",
-  };
-
+function ScoreCard({ label, value, subtext, icon: Icon, isRank = false, isVelocity = false }: any) {
   return (
-    <div className={`p-8 rounded-[40px] border-2 bg-white shadow-xl ${colors[color]} relative overflow-hidden group hover:-translate-y-2 transition-all duration-500`}>
-      <div className={`w-12 h-12 rounded-2xl flex items-center justify-center mb-6 transition-transform group-hover:scale-110 duration-500 ${colors[color]} border-none shadow-md`}>
-         <Icon className="w-6 h-6" />
+    <div className="ds-card ds-card-hover">
+      <div className="w-10 h-10 rounded-lg bg-neutral-100 flex items-center justify-center text-neutral-500 mb-6 transition-all">
+         <Icon className="w-5 h-5" />
       </div>
-      <p className="text-[10px] font-black uppercase tracking-[0.2em] opacity-60 mb-2">{label}</p>
-      <h4 className="text-4xl font-black tracking-tighter text-slate-900 mb-1">
+      <p className="label-stat mb-1">{label}</p>
+      <h4 className="value-stat mb-1">
         {value}{(!isRank && !isVelocity) && "%"}
       </h4>
-      <p className="text-slate-400 text-[10px] font-bold uppercase tracking-widest">{subtext}</p>
+      <p className="text-meta uppercase text-[10px] tracking-wider">{subtext}</p>
     </div>
   );
 }
 
 function CheckItem({ label, isComplete }: { label: string, isComplete: boolean }) {
   return (
-    <div className="flex items-center justify-between p-5 bg-slate-50 rounded-2xl border-2 border-transparent hover:border-indigo-100 hover:bg-white transition-all group">
-      <div className="flex items-center gap-4">
+    <div className="flex items-center justify-between p-3 hover:bg-neutral-50 rounded-lg transition-all border border-transparent hover:border-neutral-200">
+      <div className="flex items-center gap-3">
         {isComplete ? (
-          <CheckCircle2 className="w-6 h-6 text-emerald-500" />
+          <CheckCircle2 className="w-5 h-5 text-success" />
         ) : (
-          <div className="w-6 h-6 rounded-full border-2 border-slate-200" />
+          <div className="w-5 h-5 rounded-full border-2 border-neutral-200" />
         )}
-        <span className={`font-bold text-sm ${isComplete ? "text-slate-900" : "text-slate-400"}`}>{label}</span>
+        <span className={`text-sm font-medium ${isComplete ? "text-neutral-900" : "text-neutral-400"}`}>{label}</span>
       </div>
       {isComplete ? (
-        <span className="text-[10px] font-black uppercase tracking-widest text-emerald-600 bg-emerald-50 px-3 py-1 rounded-full">Optimized</span>
+        <span className="ds-badge ds-badge-success">Optimized</span>
       ) : (
-        <button className="text-[10px] font-black uppercase tracking-widest text-indigo-600 hover:underline">Fix Now</button>
+        <button className="text-xs font-bold text-brand hover:underline">Improve</button>
       )}
     </div>
   );
 }
 
-function GaugeBlock({ label, value, max, color }: any) {
+function GaugeBlock({ label, value, max }: any) {
   const percentage = Math.min((value / max) * 100, 100);
   
   return (
     <div className="space-y-3">
-      <div className="flex items-center justify-between text-[11px] font-black uppercase tracking-widest">
-         <span className="text-slate-400">{label}</span>
-         <span className="text-slate-900">{value} / {max}</span>
+      <div className="flex items-center justify-between text-[11px] font-bold uppercase tracking-wider">
+         <span className="text-neutral-400">{label}</span>
+         <span className="text-neutral-900 font-bold">{value} / {max}</span>
       </div>
-      <div className="h-3 w-full bg-slate-100 rounded-full overflow-hidden">
+      <div className="h-1.5 w-full bg-neutral-100 rounded-full overflow-hidden">
          <div 
-           className="h-full rounded-full transition-all duration-1000" 
-           style={{ width: `${percentage}%`, backgroundColor: color }}
+           className="h-full bg-brand rounded-full transition-all duration-1000" 
+           style={{ width: `${percentage}%` }}
          />
       </div>
     </div>

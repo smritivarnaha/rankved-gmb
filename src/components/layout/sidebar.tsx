@@ -55,28 +55,28 @@ export function Sidebar() {
   }
 
   return (
-    <aside className="sidebar bg-white border-r-2 border-slate-50 flex flex-col h-screen sticky top-0 w-72">
+    <aside className="sidebar">
       {/* Logo */}
-      <div className="p-8 pb-10">
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 bg-slate-900 rounded-2xl flex items-center justify-center shadow-xl shadow-slate-200">
+      <div className="sidebar-logo">
+        <Link href="/dashboard" className="flex items-center gap-3">
+          <div className="w-9 h-9 bg-neutral-900 rounded-lg flex items-center justify-center">
              <Image
               src="https://rankved.com/wp-content/uploads/2025/04/Rankved-Logo-Official-Black.avif"
               alt="RankVed"
-              width={20}
-              height={20}
+              width={18}
+              height={18}
               className="invert"
               priority
             />
           </div>
-          <span className="text-xl font-black text-slate-900 tracking-tighter uppercase">
+          <span className="text-md font-bold tracking-tight">
             GMB Manager
           </span>
-        </div>
+        </Link>
       </div>
 
       {/* Navigation */}
-      <nav className="flex-1 px-4 space-y-2 overflow-y-auto scrollbar-hide">
+      <nav className="sidebar-nav">
         {navItems.map((item) => {
           const isActive = pathname === item.href || pathname.startsWith(item.href + "/");
           const Icon = item.icon;
@@ -84,27 +84,22 @@ export function Sidebar() {
             <Link
               key={item.name}
               href={item.href}
-              prefetch={true}
-              className={`group flex items-center gap-4 px-6 py-4 rounded-2xl text-xs font-black uppercase tracking-widest transition-all ${isActive ? "bg-slate-900 text-white shadow-2xl shadow-slate-300" : "text-slate-400 hover:text-slate-600 hover:bg-slate-50"}`}
+              className={`sidebar-link ${isActive ? "active" : ""}`}
             >
-              <Icon
-                className={`w-5 h-5 transition-transform duration-500 ${isActive ? "scale-110" : "group-hover:scale-110"}`}
-                strokeWidth={isActive ? 2.5 : 2}
-              />
-              {item.name}
+              <Icon className="w-5 h-5" />
+              <span>{item.name}</span>
             </Link>
           );
         })}
       </nav>
 
       {/* Footer */}
-      <div className="p-8 border-t border-slate-50">
-        <div className="px-4 py-3 bg-slate-50 rounded-xl text-[10px] font-black text-slate-400 uppercase tracking-widest text-center border border-slate-100">
-          {isSuperAdmin
-            ? "Super Admin"
-            : role === "AGENCY_OWNER"
-            ? "Agency Owner"
-            : "Team Member"}
+      <div className="sidebar-footer">
+        <div className="sidebar-role">
+          <Shield className="w-4 h-4" />
+          <span>
+            {isSuperAdmin ? "Super Admin" : role === "AGENCY_OWNER" ? "Agency Owner" : "Team Member"}
+          </span>
         </div>
       </div>
     </aside>
