@@ -168,18 +168,37 @@ export default function ConnectPage() {
                 </p>
              </div>
 
-             <div style={{ display: 'flex', gap: '16px', justifyContent: 'center' }}>
+             <div style={{ display: 'flex', gap: '16px', justifyContent: 'center', flexWrap: 'wrap' }}>
                 <button 
                   onClick={() => { setSelected(null); setQuery(""); }}
-                  style={{ height: '64px', padding: '0 32px', background: '#fff', border: '1px solid #E5E7EB', borderRadius: '20px', fontWeight: '700', cursor: 'pointer' }}
+                  style={{ 
+                    height: '52px', padding: '0 28px', 
+                    background: '#fff', 
+                    border: '1.5px solid #D1D5DB', 
+                    borderRadius: '12px', 
+                    fontWeight: '600', 
+                    fontSize: '14px',
+                    color: '#374151',
+                    cursor: 'pointer',
+                    fontFamily: 'Inter, sans-serif'
+                  }}
                 >
-                  Change Business
+                  ← Change Business
                 </button>
                 <button 
                   onClick={handleConnect}
-                  style={{ height: '64px', padding: '0 40px', background: '#2563EB', color: '#fff', borderRadius: '20px', fontWeight: '700', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '12px', boxShadow: '0 10px 20px rgba(37, 99, 235, 0.2)' }}
+                  style={{ 
+                    height: '52px', padding: '0 32px', 
+                    background: '#2563EB', color: '#fff', 
+                    borderRadius: '12px', fontWeight: '600', 
+                    fontSize: '14px',
+                    border: 'none', cursor: 'pointer', 
+                    display: 'flex', alignItems: 'center', gap: '10px', 
+                    boxShadow: '0 4px 14px rgba(37, 99, 235, 0.3)',
+                    fontFamily: 'Inter, sans-serif'
+                  }}
                 >
-                  <Zap size={20} fill="currentColor" />
+                  <Zap size={16} fill="currentColor" />
                   Connect with Google
                 </button>
              </div>
