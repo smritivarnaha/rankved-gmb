@@ -129,7 +129,28 @@ select {
 }
 
 .modal-body::-webkit-scrollbar { width: 6px; }
-.modal-body::-webkit-scrollbar-thumb { background: #e2e8f0; border-radius: 10px; }
+.modal-body::-webkit-scrollbar-thumb { background: #f1f5f9; border-radius: 100px; }
+
+/* NProgress Customization */
+#nprogress .bar {
+  background: #2563eb !important;
+  height: 3px !important;
+}
+#nprogress .peg {
+  box-shadow: 0 0 10px #2563eb, 0 0 5px #2563eb !important;
+}
+
+/* Skeleton Shimmer */
+@keyframes shimmer {
+  0% { background-position: -1000px 0; }
+  100% { background-position: 1000px 0; }
+}
+
+.skeleton-shimmer {
+  animation: shimmer 2s infinite linear;
+  background: linear-gradient(to right, #f1f5f9 4%, #e2e8f0 25%, #f1f5f9 36%);
+  background-size: 1000px 100%;
+}
 
 .modal-footer {
   padding: 20px 24px;

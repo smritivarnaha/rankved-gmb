@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { Loader2, X, AlertCircle, CheckCircle2, RefreshCw, Plus, Eye, Trash2, Wand2, Brain, FileDown, Upload, BarChart3, Edit2, Save } from "lucide-react";
+import { Loader2, X, AlertCircle, CheckCircle2, RefreshCw, Plus, Eye, Trash2, Wand2, Brain, FileDown, Upload, BarChart3, Edit2, Save, Users } from "lucide-react";
 import useSWR from "swr";
 import { AiGenerationModal } from "@/components/ai/ai-components";
 import { GbpIcon } from "@/components/gbp-icon";
@@ -24,13 +24,48 @@ interface Profile {
 
 const fetcher = (url: string) => fetch(url).then((r) => r.json());
 
-const BRAND_BLUE = "#2563eb";
-const GREY_VARIANTS = ["#f3f4f6", "#e5e7eb", "#d1d5db", "#9ca3af", "#cbd5e1"];
+import { Skeleton } from "@/components/ui/Skeleton";
 
-function getGrey(name: string) {
+const THEMES = [
+  { border: "#3b82f6", bgLight: "#eff6ff", text: "#1e3a8a", icon: "#3b82f6" }, // Blue
+  { border: "#f59e0b", bgLight: "#fffbeb", text: "#92400e", icon: "#f59e0b" }, // Yellow
+  { border: "#10b981", bgLight: "#ecfdf5", text: "#065f46", icon: "#10b981" }, // Green
+  { border: "#a855f7", bgLight: "#faf5ff", text: "#6b21a8", icon: "#a855f7" }, // Purple
+  { border: "#f97316", bgLight: "#fff7ed", text: "#9a3412", icon: "#f97316" }, // Peach/Orange
+  { border: "#14b8a6", bgLight: "#f0fdfa", text: "#115e59", icon: "#14b8a6" }, // Teal
+];
+
+function getTheme(name: string) {
   let h = 0;
   for (let i = 0; i < name.length; i++) h = name.charCodeAt(i) + ((h << 5) - h) | 0;
-  return GREY_VARIANTS[Math.abs(h) % GREY_VARIANTS.length];
+  return THEMES[Math.abs(h) % THEMES.length];
+}
+
+function SkeletonProfileCard() {
+  return (
+    <div style={{ background: "#ffffff", borderRadius: 14, boxShadow: "0 1px 4px rgba(0,0,0,0.07)", border: "1px solid #eaeaea", overflow: "hidden", display: "flex", flexDirection: "column" }}>
+      <div style={{ display: "flex", gap: 0 }}>
+        <div style={{ width: 4, background: "#f1f5f9", flexShrink: 0 }} />
+        <div style={{ flex: 1, padding: "16px 14px" }}>
+          <div style={{ display: "flex", gap: 12 }}>
+            <Skeleton style={{ width: 52, height: 52, borderRadius: 10 }} />
+            <div style={{ flex: 1, display: "flex", flexDirection: "column", gap: 8, marginTop: 4 }}>
+              <Skeleton style={{ width: "70%", height: 14 }} />
+              <Skeleton style={{ width: "40%", height: 12 }} />
+            </div>
+          </div>
+        </div>
+      </div>
+      <div style={{ margin: "0 14px", padding: "16px 0", background: "#fafafa", borderRadius: 8, display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 8 }}>
+        <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 6 }}><Skeleton style={{ width: 16, height: 16, borderRadius: "50%" }} /><Skeleton style={{ width: 30, height: 14 }} /></div>
+        <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 6 }}><Skeleton style={{ width: 16, height: 16, borderRadius: "50%" }} /><Skeleton style={{ width: 30, height: 14 }} /></div>
+        <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 6 }}><Skeleton style={{ width: 16, height: 16, borderRadius: "50%" }} /><Skeleton style={{ width: 30, height: 14 }} /></div>
+      </div>
+      <div style={{ padding: "14px" }}>
+        <Skeleton style={{ width: "100%", height: 36, borderRadius: 8 }} />
+      </div>
+    </div>
+  );
 }
 
 function ProfileCard({
@@ -56,7 +91,12 @@ function ProfileCard({
   const scheduled = posts.filter((p: any) => p.status === "SCHEDULED").length;
   const drafts    = posts.filter((p: any) => p.status === "DRAFT").length;
 
-  const sidebarGrey = getGrey(profile.name);
+  const theme = getTheme(profile.name);
+
+  // Use cached stats from DB if available, else 0
+  const searchViews = (profile as any).cachedSearchViews || 0;
+  const interactions = (profile as any).cachedInteractions || 0;
+  const engagements = (profile as any).cachedEngagements || 0;
 
   return (
     <div
@@ -74,151 +114,72 @@ function ProfileCard({
     >
       {/* Left accent + header */}
       <div style={{ display: "flex", gap: 0 }}>
-        <div style={{ width: 4, background: sidebarGrey, flexShrink: 0 }} />
+        <div style={{ width: 4, background: theme.border, flexShrink: 0 }} />
 
-        <div style={{ flex: 1, padding: "16px 14px 14px" }}>
-          <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 10 }}>
-            {/* Avatar + name */}
-            <div style={{ display: "flex", alignItems: "center", gap: 12, minWidth: 0 }}>
-              {profile.logoUrl ? (
-                <img
-                  src={profile.logoUrl}
-                  alt={profile.name}
-                  style={{ width: 52, height: 52, borderRadius: 10, objectFit: "cover", flexShrink: 0, border: "1px solid rgba(0,0,0,0.08)" }}
-                  onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }}
-                />
-              ) : (
-                <div style={{
-                  width: 52, height: 52, borderRadius: 10, flexShrink: 0,
-                  background: "#f8fafc",
-                  display: "flex", alignItems: "center", justifyContent: "center",
-                  border: "1px solid #e2e8f0",
-                }}>
-                  <GbpIcon size={32} />
-                </div>
-              )}
-              <div style={{ minWidth: 0, flex: 1 }}>
-                <Link
-                  href={`/profiles/${profile.id}`}
-                  title={profile.name}
-                  style={{
-                    fontSize: 13, fontWeight: 700, color: "#111827",
-                    display: "-webkit-box",
-                    WebkitLineClamp: 2,
-                    WebkitBoxOrient: "vertical",
-                    overflow: "hidden",
-                    lineHeight: 1.3,
-                    textDecoration: "none"
-                  }}
-                >
-                  {profile.name}
-                  {profile.googleEmail && <span style={{ fontSize: 10, fontWeight: 400, color: "#6b7280", marginLeft: 6 }}>({profile.googleEmail})</span>}
-                </Link>
-                {profile.address && (
-                  <p
-                    title={profile.address}
-                    style={{
-                      fontSize: 11, color: "#9ca3af", marginTop: 4,
-                      display: "-webkit-box",
-                      WebkitLineClamp: 3,
-                      WebkitBoxOrient: "vertical",
-                      overflow: "hidden",
-                      lineHeight: 1.4,
-                    }}
-                  >
-                    {profile.address}
-                  </p>
-                )}
+        <div style={{ flex: 1, padding: "16px 14px 14px", position: "relative" }}>
+          {/* 3-dot menu */}
+          <div style={{ position: "absolute", top: 12, right: 10 }}>
+            <button onClick={() => onEdit(profile)} title="Options" style={{ background: "none", border: "none", cursor: "pointer", color: "#9ca3af", padding: 4 }}>
+              <Eye style={{ width: 14, height: 14, opacity: 0 }} /> {/* Placeholder, can implement dropdown later */}
+              <div style={{ position: "absolute", top: 4, right: 4, display: "flex", flexDirection: "column", gap: 2 }}>
+                <div style={{ width: 3, height: 3, background: "#9ca3af", borderRadius: "50%" }} />
+                <div style={{ width: 3, height: 3, background: "#9ca3af", borderRadius: "50%" }} />
+                <div style={{ width: 3, height: 3, background: "#9ca3af", borderRadius: "50%" }} />
               </div>
+            </button>
+          </div>
+
+          <div style={{ display: "flex", alignItems: "flex-start", gap: 12 }}>
+            {/* Avatar */}
+            <div style={{ width: 52, height: 52, borderRadius: 10, flexShrink: 0, background: theme.bgLight, display: "flex", alignItems: "center", justifyContent: "center", border: `1px solid ${theme.border}20`, overflow: "hidden" }}>
+              {profile.logoUrl ? (
+                <img src={profile.logoUrl} alt={profile.name} style={{ width: "100%", height: "100%", objectFit: "cover" }} onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }} />
+              ) : (
+                <GbpIcon size={32} />
+              )}
             </div>
 
-            {/* Actions */}
-            <div style={{ display: "flex", gap: 4, flexShrink: 0 }}>
-              <button
-                onClick={() => onEdit(profile)}
-                title="Edit Profile"
-                style={{ padding: 4, borderRadius: 6, color: "#9ca3af", background: "none", border: "none", cursor: "pointer", lineHeight: 0 }}
-              >
-                <Edit2 style={{ width: 13, height: 13 }} />
-              </button>
-              <button
-                onClick={() => onDelete(profile.id)}
-                disabled={deleting}
-                title="Remove"
-                style={{ padding: 4, borderRadius: 6, color: "#d1d5db", background: "none", border: "none", cursor: "pointer", lineHeight: 0, opacity: deleting ? 0.4 : 1 }}
-              >
-                {deleting ? <Loader2 style={{ width: 13, height: 13 }} className="anim-spin" /> : <Trash2 style={{ width: 13, height: 13 }} />}
-              </button>
+            <div style={{ minWidth: 0, flex: 1, paddingRight: 20 }}>
+              <Link href={`/profiles/${profile.id}`} title={profile.name} style={{ fontSize: 14, fontWeight: 700, color: "#111827", display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical", overflow: "hidden", lineHeight: 1.3, textDecoration: "none" }}>
+                {profile.name}
+              </Link>
+              <div style={{ display: "flex", alignItems: "center", gap: 4, marginTop: 6, background: "#f0fdf4", color: "#16a34a", padding: "2px 6px", borderRadius: 4, width: "fit-content" }}>
+                <CheckCircle2 style={{ width: 10, height: 10 }} />
+                <span style={{ fontSize: 10, fontWeight: 600 }}>Verified</span>
+              </div>
             </div>
           </div>
         </div>
       </div>
 
       {/* Stats strip */}
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", background: "#fafafa", borderTop: "1px solid #f3f4f6", borderBottom: "1px solid #f3f4f6" }}>
-        {[
-          { value: published, label: "Published" },
-          { value: scheduled, label: "Scheduled" },
-          { value: drafts,    label: "Drafts" },
-        ].map((s, i) => (
-          <div key={i} style={{ padding: "10px 8px", textAlign: "center", borderRight: i < 2 ? "1px solid #f3f4f6" : "none" }}>
-            <p style={{ fontSize: 20, fontWeight: 700, color: "#111827", lineHeight: 1, marginBottom: 2 }}>{s.value}</p>
-            <p style={{ fontSize: 9, fontWeight: 600, color: "#9ca3af", textTransform: "uppercase", letterSpacing: "0.07em" }}>{s.label}</p>
-          </div>
-        ))}
+      <div style={{ margin: "0 14px", padding: "16px 0", background: theme.bgLight, borderRadius: 8, display: "grid", gridTemplateColumns: "1fr 1fr 1fr" }}>
+        <div style={{ textAlign: "center", borderRight: `1px solid ${theme.border}20` }}>
+          <Eye style={{ width: 14, height: 14, color: theme.icon, margin: "0 auto 6px" }} />
+          <p style={{ fontSize: 16, fontWeight: 700, color: "#111827", lineHeight: 1, marginBottom: 2 }}>{searchViews}</p>
+          <p style={{ fontSize: 9, fontWeight: 600, color: "#6b7280" }}>Search Views</p>
+        </div>
+        <div style={{ textAlign: "center", borderRight: `1px solid ${theme.border}20` }}>
+          <Users style={{ width: 14, height: 14, color: theme.icon, margin: "0 auto 6px" }} />
+          <p style={{ fontSize: 16, fontWeight: 700, color: "#111827", lineHeight: 1, marginBottom: 2 }}>{interactions}</p>
+          <p style={{ fontSize: 9, fontWeight: 600, color: "#6b7280" }}>Interactions</p>
+        </div>
+        <div style={{ textAlign: "center" }}>
+          <AlertCircle style={{ width: 14, height: 14, color: theme.icon, margin: "0 auto 6px" }} />
+          <p style={{ fontSize: 16, fontWeight: 700, color: "#111827", lineHeight: 1, marginBottom: 2 }}>{engagements}</p>
+          <p style={{ fontSize: 9, fontWeight: 600, color: "#6b7280" }}>Engagements</p>
+        </div>
       </div>
 
       {/* Actions */}
-      <div style={{ padding: "10px 12px", display: "grid", gridTemplateColumns: "1fr 1fr", gap: 6 }}>
+      <div style={{ padding: "14px" }}>
         <Link
-          href={`/profiles/${profile.id}`}
-          style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", gap: 5,
-            padding: "8px 0", fontSize: 12, fontWeight: 500, color: "#4b5563",
-            background: "#f9fafb", border: "1px solid #e5e7eb", borderRadius: 8, textDecoration: "none" }}
+          href={`/performance?profile=${profile.id}`}
+          style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 8,
+            padding: "10px 0", fontSize: 12, fontWeight: 600, color: theme.text,
+            background: "transparent", border: `1px solid ${theme.border}30`, borderRadius: 8, textDecoration: "none" }}
         >
-          <Eye style={{ width: 12, height: 12 }} /> View
-        </Link>
-
-        {aiFeaturesEnabled && (
-          <Link
-            href={`/profiles/${profile.id}?tab=ai`}
-            style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", gap: 5,
-              padding: "8px 0", fontSize: 12, fontWeight: 500, color: "#4b5563",
-              background: "#f9fafb", border: "1px solid #e5e7eb", borderRadius: 8, textDecoration: "none" }}
-          >
-            <Brain style={{ width: 12, height: 12 }} /> Train AI
-          </Link>
-        )}
-
-        {aiFeaturesEnabled && (
-          <button
-            onClick={() => onAiCreate(profile.id)}
-            style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", gap: 5,
-              padding: "8px 0", fontSize: 12, fontWeight: 500, color: "#4b5563",
-              background: "#f9fafb", border: "1px solid #e5e7eb", borderRadius: 8, cursor: "pointer" }}
-          >
-            <Wand2 style={{ width: 12, height: 12 }} /> AI Create
-          </button>
-        )}
-
-        {/* Bulk Import — opens modal directly, no navigation */}
-        <button
-          onClick={() => onBulkImport(profile.id)}
-          style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", gap: 5,
-            padding: "8px 0", fontSize: 12, fontWeight: 500, color: "#4b5563",
-            background: "#f9fafb", border: "1px solid #e5e7eb", borderRadius: 8, cursor: "pointer" }}
-        >
-          <Upload style={{ width: 12, height: 12 }} /> Bulk Import
-        </button>
-
-        <Link
-          href={`/posts/new?profile=${profile.id}&from=profile`}
-          style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", gap: 5,
-            padding: "8px 0", fontSize: 12, fontWeight: 600, color: "#fff",
-            background: BRAND_BLUE, borderRadius: 8, border: "none", textDecoration: "none",
-            gridColumn: "span 2" }}
-        >
-          <Plus style={{ width: 12, height: 12 }} /> Create Post
+          <BarChart3 style={{ width: 14, height: 14 }} /> View Performance Report <span style={{ marginLeft: "auto", marginRight: 16 }}>→</span>
         </Link>
       </div>
     </div>
@@ -285,8 +246,8 @@ export default function ProfilesPage() {
 
       {/* Grid */}
       {isLoading ? (
-        <div style={{ padding: "80px 0", display: "flex", justifyContent: "center" }}>
-          <Loader2 className="anim-spin" style={{ width: 20, height: 20, color: "#9ca3af" }} />
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(290px, 1fr))", gap: 16 }}>
+          {[...Array(6)].map((_, i) => <SkeletonProfileCard key={i} />)}
         </div>
       ) : profiles.length === 0 ? (
         <div className="card">

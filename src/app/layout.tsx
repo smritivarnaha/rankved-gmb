@@ -1,5 +1,7 @@
 import type { Metadata } from "next";
 import { Providers } from "@/components/providers";
+import { TopProgressBar } from "@/components/ui/TopProgressBar";
+import { Suspense } from "react";
 import "./globals.css";
 
 export const metadata: Metadata = {
@@ -16,6 +18,9 @@ export default function RootLayout({
   return (
     <html lang="en" suppressHydrationWarning>
       <body>
+        <Suspense fallback={null}>
+          <TopProgressBar />
+        </Suspense>
         <Providers>{children}</Providers>
       </body>
     </html>

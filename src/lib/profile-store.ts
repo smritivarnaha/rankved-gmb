@@ -23,6 +23,10 @@ export interface ProfileData {
   logoUrl?: string;
   googleEmail?: string;
   fetchedAt: string;
+  cachedSearchViews?: number;
+  cachedInteractions?: number;
+  cachedEngagements?: number;
+  statsUpdatedAt?: string;
 }
 
 // Ensure a default Client row exists (for single-tenant use)
@@ -49,6 +53,10 @@ function locationToProfile(loc: any): ProfileData {
     logoUrl: loc.logoUrl || undefined,
     googleEmail: loc.googleEmail || undefined,
     fetchedAt: loc.createdAt.toISOString(),
+    cachedSearchViews: loc.cachedSearchViews || 0,
+    cachedInteractions: loc.cachedInteractions || 0,
+    cachedEngagements: loc.cachedEngagements || 0,
+    statsUpdatedAt: loc.statsUpdatedAt ? loc.statsUpdatedAt.toISOString() : undefined,
   };
 }
 
