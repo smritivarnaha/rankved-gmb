@@ -11,6 +11,8 @@ import { useParams } from "next/navigation";
 import useSWR from "swr";
 import { useSession } from "next-auth/react";
 import { AiSettingsTab, AiGenerationModal, AiBulkGenerationModal } from "@/components/ai/ai-components";
+import { ProfileEditor } from "@/components/profiles/ProfileEditor";
+import { ReviewManager } from "@/components/profiles/ReviewManager";
 import { useSearchParams } from "next/navigation";
 
 const fetcher = (url: string) => fetch(url).then(r => r.json());
@@ -312,7 +314,7 @@ export default function ProfileDetailPage() {
   const [statusFilter, setStatusFilter] = useState("ALL");
   const searchParamsHook = useSearchParams();
   const initialTab = searchParamsHook.get("tab") === "ai" ? "AI_SETTINGS" : "POSTS";
-  const [activeTab, setActiveTab] = useState<"POSTS" | "AI_SETTINGS">(initialTab as any);
+  const [activeTab, setActiveTab] = useState<"POSTS" | "AI_SETTINGS" | "EDIT_PROFILE" | "REVIEWS">(initialTab as any);
   const [isAiModalOpen, setIsAiModalOpen] = useState(false);
   const [isBulkAiModalOpen, setIsBulkAiModalOpen] = useState(false);
   const [selectedPosts, setSelectedPosts] = useState<Set<string>>(new Set());
@@ -523,12 +525,38 @@ export default function ProfileDetailPage() {
         >
           Posts
         </button>
+        <button 
+          onClick={() => setActiveTab("EDIT_PROFILE")}
+          style={{ 
+            padding: "10px 4px", fontSize: 14, fontWeight: 600, border: "none", background: "none", cursor: "pointer",
+            color: activeTab === "EDIT_PROFILE" ? "#2563eb" : "#94a3b8",
+            borderBottom: activeTab === "EDIT_PROFILE" ? "2px solid #2563eb" : "2px solid transparent",
+            transition: "all 0.2s"
+          }}
+        >
+          Edit Profile
+        </button>
+        <button 
+          onClick={() => setActiveTab("REVIEWS")}
+          style={{ 
+            padding: "10px 4px", fontSize: 14, fontWeight: 600, border: "none", background: "none", cursor: "pointer",
+            color: activeTab === "REVIEWS" ? "#2563eb" : "#94a3b8",
+            borderBottom: activeTab === "REVIEWS" ? "2px solid #2563eb" : "2px solid transparent",
+            transition: "all 0.2s"
+          }}
+        >
+          Reviews
+        </button>
       </div>
 
       {activeTab === "AI_SETTINGS" ? (
         <div style={{ background: "#fff", border: "1px solid #e2e8f0", borderRadius: 12, overflow: "hidden" }}>
           <AiSettingsTab locationId={profile.id} profileName={profile.name} />
         </div>
+      ) : activeTab === "EDIT_PROFILE" ? (
+        <ProfileEditor profile={profile} onUpdate={() => mutatePosts()} />
+      ) : activeTab === "REVIEWS" ? (
+        <ReviewManager profileId={profile.id} />
       ) : (
         /* Original Two-Column Layout */
         <div style={{ display: "grid", gridTemplateColumns: "270px 1fr", gap: 18, alignItems: "start" }}>
