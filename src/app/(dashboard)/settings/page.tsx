@@ -21,6 +21,8 @@ export default function SettingsPage() {
   const [localSettings, setLocalSettings] = useState<any>({});
   const [activeTemplate, setActiveTemplate] = useState<"SUCCESS" | "FAILURE" | "SCHEDULED">("SUCCESS");
   const [savingNotifications, setSavingNotifications] = useState(false);
+  
+  const [activeTab, setActiveTab] = useState<"accounts" | "notifications" | "profiles">("accounts");
 
   useEffect(() => {
     if (settings) {
@@ -163,7 +165,33 @@ export default function SettingsPage() {
         <p className="page-subtitle">{aiFeaturesEnabled ? "Configure RankVed's AI engines and your Google connections." : "Configure your Google connections."}</p>
       </div>
 
-      {/* Storage Usage Section Removed for Debugging */}
+      {/* ─── Settings Tabs ─── */}
+      <div style={{ display: "flex", alignItems: "center", gap: 8, borderBottom: "1px solid #eaeaea", paddingBottom: 0 }}>
+        {[
+          { id: "accounts", label: "Google Accounts" },
+          { id: "notifications", label: "Email Notifications" },
+          { id: "profiles", label: "Saved Profiles" }
+        ].map(tab => (
+          <button
+            key={tab.id}
+            onClick={() => setActiveTab(tab.id as any)}
+            style={{
+              padding: "10px 16px",
+              background: "transparent",
+              color: activeTab === tab.id ? "#111" : "#666",
+              border: "none",
+              borderBottom: activeTab === tab.id ? "2px solid #111" : "2px solid transparent",
+              fontSize: 14,
+              fontWeight: 500,
+              cursor: "pointer",
+              marginBottom: -1,
+              transition: "all 0.2s"
+            }}
+          >
+            {tab.label}
+          </button>
+        ))}
+      </div>
 
       {fetchResult && (
         <div style={{ padding: "12px 16px", borderRadius: "var(--radius-md)", display: "flex", alignItems: "flex-start", gap: 10, fontSize: 13, background: fetchResult.success ? "var(--success-bg)" : "var(--error-bg)", border: `1px solid ${fetchResult.success ? "var(--success-border)" : "var(--error-border)"}`, color: fetchResult.success ? "var(--success)" : "var(--error)" }}>
@@ -174,7 +202,7 @@ export default function SettingsPage() {
       )}
 
       {/* Google Integration */}
-      {canConnectGoogle && (
+      {canConnectGoogle && activeTab === "accounts" && (
         <div className="card shadow-sm">
           <div className="card-header"><h2 className="card-title" style={{ fontSize: 14 }}>Google Business Accounts</h2></div>
           <div className="card-body">
@@ -237,7 +265,7 @@ export default function SettingsPage() {
       )}
 
       {/* Email Notifications */}
-      {canConnectGoogle && (
+      {canConnectGoogle && activeTab === "notifications" && (
         <div className="card shadow-sm">
           <div className="card-header">
             <h2 className="card-title" style={{ fontSize: 14 }}>Email Notifications</h2>
@@ -354,7 +382,7 @@ export default function SettingsPage() {
       )}
 
       {/* Profiles List */}
-      {canConnectGoogle && (
+      {canConnectGoogle && activeTab === "profiles" && (
         <div className="card shadow-sm">
           <div className="card-header">
             <div>
