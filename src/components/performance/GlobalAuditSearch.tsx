@@ -13,6 +13,7 @@ export function GlobalAuditSearch() {
   const handleSearch = async () => {
     if (!query) return;
     setIsSearching(true);
+    setResults([]);
     try {
       const res = await fetch(`/api/gbp/search?q=${encodeURIComponent(query)}`);
       const data = await res.json();
@@ -25,29 +26,61 @@ export function GlobalAuditSearch() {
   };
 
   return (
-    <div className="anim-fade-up max-w-6xl mx-auto py-12">
+    <div style={{ maxWidth: '1200px', margin: '0 auto', padding: '64px 24px' }} className="anim-fade-up">
       {/* Header Section */}
-      <div className="text-center mb-16">
-        <div className="inline-flex items-center gap-2 px-4 py-2 bg-brand-subtle text-brand rounded-full text-[10px] font-bold uppercase tracking-[0.2em] mb-6">
-          <Sparkles className="w-3 h-3" />
+      <div style={{ textAlign: 'center', marginBottom: '64px' }}>
+        <div style={{ 
+          display: 'inline-flex', 
+          alignItems: 'center', 
+          gap: '8px', 
+          padding: '8px 16px', 
+          backgroundColor: 'var(--brand-subtle)', 
+          color: 'var(--brand)', 
+          borderRadius: '99px', 
+          fontSize: '11px', 
+          fontWeight: 'bold', 
+          textTransform: 'uppercase', 
+          letterSpacing: '0.1em',
+          marginBottom: '24px'
+        }}>
+          <Sparkles size={14} />
           RankVed Intelligence
         </div>
-        <h1 className="text-5xl font-black text-neutral-900 tracking-tighter mb-4">Command Center</h1>
-        <p className="text-neutral-500 text-lg max-w-2xl mx-auto">
+        <h1 style={{ fontSize: '48px', fontWeight: '900', color: 'var(--neutral-900)', letterSpacing: '-0.04em', marginBottom: '16px' }}>
+          Command Center
+        </h1>
+        <p style={{ color: 'var(--neutral-500)', fontSize: '18px', maxWidth: '600px', margin: '0 auto', lineHeight: '1.6' }}>
           Audit any business on Google instantly. Enter a business name or location to generate a professional performance report.
         </p>
       </div>
 
-      {/* Search Input — 2026 SaaS Style */}
-      <div className="relative max-w-3xl mx-auto mb-20 group">
-        <div className="absolute -inset-1 bg-gradient-to-r from-brand to-cyan-400 rounded-[28px] opacity-20 blur-xl group-hover:opacity-40 transition-opacity"></div>
-        <div className="relative flex items-center bg-white border-2 border-neutral-100 rounded-[24px] p-2 shadow-2xl shadow-neutral-200/50">
-          <div className="flex-1 flex items-center px-6">
-            <Search className="w-6 h-6 text-neutral-400 mr-4" />
+      {/* Search Input — 2026 SaaS Style (Inline Fixed) */}
+      <div style={{ maxWidth: '800px', margin: '0 auto 80px', position: 'relative' }}>
+        <div style={{
+          display: 'flex',
+          alignItems: 'center',
+          backgroundColor: '#ffffff',
+          border: '1px solid var(--border-default)',
+          borderRadius: '24px',
+          padding: '8px',
+          boxShadow: '0 20px 40px rgba(0,0,0,0.05)',
+          transition: 'all 0.3s ease'
+        }}>
+          <div style={{ flex: 1, display: 'flex', alignItems: 'center', padding: '0 24px' }}>
+            <Search size={22} color="var(--neutral-400)" style={{ marginRight: '16px' }} />
             <input 
               type="text" 
-              placeholder="Business name, address, or phone..."
-              className="w-full h-14 bg-transparent text-lg font-medium text-neutral-900 outline-none placeholder:text-neutral-300"
+              placeholder="Search business name or address..."
+              style={{ 
+                width: '100%', 
+                height: '56px', 
+                backgroundColor: 'transparent', 
+                border: 'none', 
+                fontSize: '18px', 
+                fontWeight: '500', 
+                color: 'var(--neutral-900)', 
+                outline: 'none'
+              }}
               value={query}
               onChange={(e) => setQuery(e.target.value)}
               onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
@@ -56,39 +89,52 @@ export function GlobalAuditSearch() {
           <button 
             onClick={handleSearch}
             disabled={isSearching}
-            className="flex items-center gap-3 px-10 h-14 bg-neutral-900 text-white rounded-[20px] font-bold uppercase tracking-widest text-xs hover:bg-brand transition-all active:scale-95 disabled:opacity-50"
+            style={{ 
+              display: 'flex',
+              alignItems: 'center',
+              gap: '12px',
+              padding: '0 32px',
+              height: '56px',
+              backgroundColor: 'var(--neutral-900)',
+              color: '#ffffff',
+              borderRadius: '18px',
+              fontWeight: 'bold',
+              textTransform: 'uppercase',
+              letterSpacing: '0.1em',
+              fontSize: '12px',
+              cursor: 'pointer',
+              border: 'none',
+              opacity: isSearching ? 0.7 : 1,
+              transition: 'all 0.2s ease'
+            }}
           >
-            {isSearching ? <Loader2 className="w-5 h-5 animate-spin" /> : <><Zap className="w-4 h-4 fill-current" /> Search</>}
+            {isSearching ? <Loader2 size={18} className="anim-spin" /> : <><Zap size={16} fill="currentColor" /> Search</>}
           </button>
         </div>
       </div>
 
-      {/* Results or Audit Dashboard */}
+      {/* Results Section */}
       {selectedBusiness ? (
         <div className="ds-anim-fade">
-          <div className="flex items-center justify-between mb-12">
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '48px' }}>
             <button 
               onClick={() => setSelectedBusiness(null)}
-              className="flex items-center gap-2 text-neutral-400 hover:text-neutral-900 font-bold text-xs uppercase tracking-widest"
+              style={{ display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--neutral-400)', fontWeight: 'bold', fontSize: '12px', textTransform: 'uppercase', letterSpacing: '0.1em', cursor: 'pointer' }}
             >
-              <ArrowRight className="w-4 h-4 rotate-180" /> Back to Search
+              <ArrowRight size={16} style={{ transform: 'rotate(180deg)' }} /> Back to Search
             </button>
-            <div className="flex items-center gap-4">
-               <div className="px-4 py-2 bg-neutral-100 rounded-full text-[10px] font-bold uppercase tracking-widest text-neutral-500">
-                  Business: {selectedBusiness.displayName?.text}
-               </div>
+            <div style={{ padding: '8px 16px', backgroundColor: 'var(--neutral-100)', borderRadius: '99px', fontSize: '12px', fontWeight: 'bold', color: 'var(--neutral-600)' }}>
+              Target: {selectedBusiness.displayName?.text}
             </div>
           </div>
           <AuditDashboard auditData={selectedBusiness.mockAudit} isPublic />
         </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: '32px' }}>
           {results.map((biz, i) => (
-            <BusinessResultCard 
-              key={i} 
-              biz={biz} 
+            <div 
+              key={biz.id || i}
               onClick={() => {
-                // Mocking audit data for demo
                 const mockAudit = {
                   completionScore: 68,
                   searchRank: 4.2,
@@ -100,55 +146,71 @@ export function GlobalAuditSearch() {
                 };
                 setSelectedBusiness({ ...biz, mockAudit });
               }}
-            />
+              style={{ 
+                backgroundColor: '#ffffff', 
+                border: '1px solid var(--border-default)', 
+                borderRadius: '32px', 
+                padding: '32px', 
+                cursor: 'pointer', 
+                transition: 'all 0.3s ease',
+                position: 'relative',
+                overflow: 'hidden'
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.borderColor = 'var(--brand)';
+                e.currentTarget.style.boxShadow = '0 20px 40px rgba(0,0,0,0.05)';
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.borderColor = 'var(--border-default)';
+                e.currentTarget.style.boxShadow = 'none';
+              }}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', gap: '16px', marginBottom: '24px' }}>
+                <div style={{ width: '48px', height: '48px', backgroundColor: 'var(--neutral-50)', borderRadius: '16px', display: 'flex', alignItems: 'center', justifyCenter: 'center', color: 'var(--neutral-400)' }}>
+                  <MapPin size={24} style={{ margin: 'auto' }} />
+                </div>
+                <div>
+                   <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
+                      <Star size={14} color="var(--warning)" fill="var(--warning)" />
+                      <span style={{ fontSize: '13px', fontWeight: 'bold', color: 'var(--neutral-900)' }}>{biz.rating || "N/A"}</span>
+                      <span style={{ fontSize: '13px', color: 'var(--neutral-400)', fontWeight: '500' }}>({biz.userRatingCount || 0})</span>
+                   </div>
+                   <p style={{ fontSize: '11px', fontWeight: 'bold', color: 'var(--brand)', textTransform: 'uppercase', letterSpacing: '0.1em' }}>
+                     {biz.primaryType?.replace(/_/g, ' ') || "Business"}
+                   </p>
+                </div>
+              </div>
+              
+              <h3 style={{ fontSize: '20px', fontWeight: 'bold', color: 'var(--neutral-900)', marginBottom: '8px', lineHeight: '1.2' }}>
+                {biz.displayName?.text}
+              </h3>
+              <p style={{ color: 'var(--neutral-400)', fontSize: '14px', marginBottom: '32px', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
+                {biz.formattedAddress}
+              </p>
+              
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', paddingTop: '24px', borderTop: '1px solid var(--neutral-50)' }}>
+                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--neutral-400)' }}>
+                    <Globe size={16} />
+                    <span style={{ fontSize: '11px', fontWeight: 'bold', textTransform: 'uppercase', letterSpacing: '0.1em' }}>
+                      {biz.websiteUri ? "Live Website" : "No Site"}
+                    </span>
+                 </div>
+                 <span style={{ fontSize: '11px', fontWeight: '900', textTransform: 'uppercase', letterSpacing: '0.1em', color: 'var(--brand)' }}>
+                   Audit Profile
+                 </span>
+              </div>
+            </div>
           ))}
           {!isSearching && results.length === 0 && query && (
-             <div className="col-span-full py-20 text-center">
-                <div className="w-20 h-20 bg-neutral-50 rounded-full flex items-center justify-center mx-auto mb-6">
-                   <Search className="w-8 h-8 text-neutral-300" />
+             <div style={{ gridColumn: '1 / -1', textAlign: 'center', padding: '80px 0' }}>
+                <div style={{ width: '80px', height: '80px', backgroundColor: 'var(--neutral-50)', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 24px' }}>
+                   <Search size={32} color="var(--neutral-200)" />
                 </div>
-                <p className="text-neutral-400 font-medium">No businesses found. Try a different search query.</p>
+                <p style={{ color: 'var(--neutral-400)', fontWeight: '500' }}>No businesses found. Try a different search query.</p>
              </div>
           )}
         </div>
       )}
-    </div>
-  );
-}
-
-function BusinessResultCard({ biz, onClick }: { biz: any, onClick: () => void }) {
-  return (
-    <div 
-      onClick={onClick}
-      className="bg-white border-2 border-neutral-100 rounded-[32px] p-8 hover:border-brand hover:shadow-2xl hover:shadow-neutral-200 transition-all cursor-pointer group relative overflow-hidden"
-    >
-      <div className="absolute top-0 right-0 p-6 opacity-0 group-hover:opacity-100 transition-opacity">
-         <ArrowRight className="w-6 h-6 text-brand" />
-      </div>
-      <div className="flex items-center gap-4 mb-6">
-        <div className="w-12 h-12 bg-neutral-50 rounded-2xl flex items-center justify-center text-neutral-400 group-hover:bg-brand-subtle group-hover:text-brand transition-all">
-          <MapPin className="w-6 h-6" />
-        </div>
-        <div>
-           <div className="flex items-center gap-2 mb-1">
-              <Star className="w-3.5 h-3.5 text-warning fill-current" />
-              <span className="text-xs font-bold text-neutral-900">{biz.rating || "N/A"}</span>
-              <span className="text-xs text-neutral-400 font-medium">({biz.userRatingCount || 0})</span>
-           </div>
-           <p className="text-[10px] font-bold text-brand uppercase tracking-widest">{biz.primaryType?.replace(/_/g, ' ') || "Business"}</p>
-        </div>
-      </div>
-      
-      <h3 className="text-xl font-bold text-neutral-900 mb-2 leading-tight">{biz.displayName?.text}</h3>
-      <p className="text-neutral-400 text-sm mb-8 line-clamp-2">{biz.formattedAddress}</p>
-      
-      <div className="flex items-center justify-between pt-6 border-t border-neutral-50">
-         <div className="flex items-center gap-2 text-neutral-400">
-            <Globe className="w-4 h-4" />
-            <span className="text-[10px] font-bold uppercase tracking-widest">{biz.websiteUri ? "Website Found" : "No Website"}</span>
-         </div>
-         <span className="text-[10px] font-black uppercase tracking-widest text-brand group-hover:underline">Audit Profile</span>
-      </div>
     </div>
   );
 }
