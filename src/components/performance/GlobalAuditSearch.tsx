@@ -166,7 +166,7 @@ export function GlobalAuditSearch() {
               }}
             >
               <div style={{ display: 'flex', alignItems: 'center', gap: '16px', marginBottom: '24px' }}>
-                <div style={{ width: '48px', height: '48px', backgroundColor: 'var(--neutral-50)', borderRadius: '16px', display: 'flex', alignItems: 'center', justifyCenter: 'center', color: 'var(--neutral-400)' }}>
+                <div style={{ width: '48px', height: '48px', backgroundColor: 'var(--neutral-50)', borderRadius: '16px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--neutral-400)' }}>
                   <MapPin size={24} style={{ margin: 'auto' }} />
                 </div>
                 <div>
