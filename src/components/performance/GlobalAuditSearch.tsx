@@ -1,18 +1,62 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Search, Zap, MapPin, Globe, Star, ArrowRight, Loader2, Sparkles, Copy, Check } from "lucide-react";
 import { AuditDashboard } from "./AuditDashboard";
 
 export function GlobalAuditSearch() {
   const [query, setQuery] = useState("");
+  const [suggestions, setSuggestions] = useState<any[]>([]);
   const [isSearching, setIsSearching] = useState(false);
   const [results, setResults] = useState<any[]>([]);
   const [selectedBusiness, setSelectedBusiness] = useState<any>(null);
+  const [showDropdown, setShowDropdown] = useState(false);
   const [copied, setCopied] = useState(false);
 
+  // Handle Autocomplete
+  useEffect(() => {
+    const fetchSuggestions = async () => {
+      if (query.length < 3) {
+        setSuggestions([]);
+        setShowDropdown(false);
+        return;
+      }
+
+      setIsSearching(true);
+      try {
+        const res = await fetch(`/api/gbp/autocomplete?input=${encodeURIComponent(query)}`);
+        const data = await res.json();
+        setSuggestions(data.suggestions || []);
+        setShowDropdown(true);
+      } catch (err) {
+        console.error(err);
+      } finally {
+        setIsSearching(false);
+      }
+    };
+
+    const timer = setTimeout(fetchSuggestions, 300);
+    return () => clearTimeout(timer);
+  }, [query]);
+
+  const handleSelect = async (suggestion: any) => {
+    setQuery(suggestion.text);
+    setShowDropdown(false);
+    setIsSearching(true);
+
+    try {
+      const res = await fetch(`/api/gbp/search?q=${encodeURIComponent(suggestion.text)}`);
+      const data = await res.json();
+      setResults(data.places || []);
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setIsSearching(false);
+    }
+  };
+
   const handleSearch = async () => {
-    if (!query) return;
+    setShowDropdown(false);
     setIsSearching(true);
     setResults([]);
     try {
@@ -49,12 +93,12 @@ export function GlobalAuditSearch() {
 
       <div className="grid grid-cols-12 gap-8 mb-20">
         {/* Main Search Bar */}
-        <div className="col-span-8">
+        <div className="col-span-8 relative">
            <div className="relative group">
               <div className="absolute -inset-1 bg-gradient-to-r from-indigo-500 to-blue-600 rounded-[24px] opacity-10 blur-lg group-hover:opacity-20 transition-opacity"></div>
               <div className="relative flex items-center bg-white border border-slate-200 rounded-[20px] p-2 shadow-xl shadow-slate-100/50">
                 <div className="flex-1 flex items-center px-6">
-                  <Search className="w-5 h-5 text-slate-400 mr-4" />
+                  {isSearching ? <Loader2 className="w-5 h-5 animate-spin text-indigo-600 mr-4" /> : <Search className="w-5 h-5 text-slate-400 mr-4" />}
                   <input 
                     type="text" 
                     placeholder="Search business name or address..."
@@ -69,10 +113,31 @@ export function GlobalAuditSearch() {
                   disabled={isSearching}
                   className="flex items-center gap-3 px-10 h-14 bg-slate-900 text-white rounded-[16px] font-bold uppercase tracking-widest text-xs hover:bg-indigo-600 transition-all active:scale-95 disabled:opacity-50"
                 >
-                  {isSearching ? <Loader2 className="w-5 h-5 animate-spin" /> : <><Zap className="w-4 h-4 fill-current" /> Search</>}
+                  Find Results
                 </button>
               </div>
            </div>
+
+           {/* Suggestions Dropdown */}
+           {showDropdown && suggestions.length > 0 && (
+             <div className="absolute top-[calc(100%+12px)] left-0 right-0 bg-white rounded-[24px] border border-slate-200 shadow-2xl shadow-slate-200/50 z-[100] overflow-hidden">
+                {suggestions.map((s) => (
+                  <div 
+                    key={s.id}
+                    onClick={() => handleSelect(s)}
+                    className="p-4 px-6 hover:bg-slate-50 cursor-pointer border-bottom border-slate-100 transition-all flex items-center gap-4"
+                  >
+                    <div className="w-10 h-10 bg-slate-100 rounded-xl flex items-center justify-center text-slate-400">
+                       <MapPin size={18} />
+                    </div>
+                    <div>
+                       <p className="text-sm font-bold text-slate-900">{s.mainText}</p>
+                       <p className="text-[11px] text-slate-400">{s.secondaryText}</p>
+                    </div>
+                  </div>
+                ))}
+             </div>
+           )}
         </div>
 
         {/* Public Onboarding Link Card */}
@@ -159,7 +224,7 @@ export function GlobalAuditSearch() {
               </div>
             </div>
           ))}
-          {!isSearching && results.length === 0 && query && (
+          {!isSearching && results.length === 0 && query.length > 5 && (
              <div className="col-span-full py-20 text-center">
                 <div className="w-20 h-20 bg-slate-50 rounded-full flex items-center justify-center mx-auto mb-6">
                    <Search className="w-8 h-8 text-slate-300" />
