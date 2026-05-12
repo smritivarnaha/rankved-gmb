@@ -4,7 +4,7 @@ import { useState, useMemo } from "react";
 import useSWR from "swr";
 import { Loader2, AlertCircle, ArrowLeft, Eye, MousePointerClick, PhoneCall, Navigation, ArrowUpRight } from "lucide-react";
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
-import { format } from "date-fns";
+import { format, startOfWeek } from "date-fns";
 
 interface Profile {
   id: string;
@@ -47,25 +47,41 @@ export function PerformanceView({ profile, onBack }: { profile: Profile, onBack?
         
         datedValues.forEach((point: any) => {
           if (!point.date || point.value === undefined) return;
-          const dateStr = `${point.date.year}-${String(point.date.month).padStart(2, '0')}-${String(point.date.day).padStart(2, '0')}`;
+          
+          // Data Aggregation Logic
+          const pointDate = new Date(point.date.year, point.date.month - 1, point.date.day);
+          let bucketKey = "";
+          let sortDate = pointDate;
+          
+          if (months === 1) {
+            // Group by Week (starts on Monday)
+            const weekStart = startOfWeek(pointDate, { weekStartsOn: 1 });
+            bucketKey = format(weekStart, "yyyy-MM-dd");
+            sortDate = weekStart;
+          } else {
+            // Group by Month
+            const monthStart = new Date(point.date.year, point.date.month - 1, 1);
+            bucketKey = format(monthStart, "yyyy-MM");
+            sortDate = monthStart;
+          }
+
           const val = parseInt(point.value) || 0;
           
-          if (!dateMap.has(dateStr)) {
-            dateMap.set(dateStr, { 
-              date: dateStr, dateObj: new Date(dateStr), 
+          if (!dateMap.has(bucketKey)) {
+            dateMap.set(bucketKey, { 
+              bucketKey, sortDate, 
               VIEWS: 0, INTERACTIONS: 0, OVERVIEW: 0,
               CALLS: 0, MESSAGES: 0, BOOKINGS: 0, DIRECTIONS: 0, WEBSITE_CLICKS: 0
             });
           }
-          const row = dateMap.get(dateStr);
-          row[metricName] = val;
-
+          const row = dateMap.get(bucketKey);
+          
           if (metricName.includes("IMPRESSIONS")) {
             row.VIEWS += val;
             calcTotals.VIEWS += val;
           } else {
             row.INTERACTIONS += val;
-            row.OVERVIEW += val; // Overview maps to Interactions trend
+            row.OVERVIEW += val; 
             calcTotals.INTERACTIONS += val;
           }
 
@@ -74,18 +90,27 @@ export function PerformanceView({ profile, onBack }: { profile: Profile, onBack?
           if (metricName === "BUSINESS_BOOKINGS") { row.BOOKINGS += val; calcTotals.BUSINESS_BOOKINGS += val; }
           if (metricName === "BUSINESS_DIRECTION_REQUESTS") { row.DIRECTIONS += val; calcTotals.BUSINESS_DIRECTION_REQUESTS += val; }
           if (metricName === "WEBSITE_CLICKS") { row.WEBSITE_CLICKS += val; calcTotals.WEBSITE_CLICKS += val; }
+          
+          if (metricName === "BUSINESS_IMPRESSIONS_DESKTOP_MAPS") calcTotals.BUSINESS_IMPRESSIONS_DESKTOP_MAPS += val;
+          if (metricName === "BUSINESS_IMPRESSIONS_MOBILE_MAPS") calcTotals.BUSINESS_IMPRESSIONS_MOBILE_MAPS += val;
+          if (metricName === "BUSINESS_IMPRESSIONS_DESKTOP_SEARCH") calcTotals.BUSINESS_IMPRESSIONS_DESKTOP_SEARCH += val;
+          if (metricName === "BUSINESS_IMPRESSIONS_MOBILE_SEARCH") calcTotals.BUSINESS_IMPRESSIONS_MOBILE_SEARCH += val;
         });
       });
     });
 
-    const sortedData = Array.from(dateMap.values()).sort((a, b) => a.dateObj.getTime() - b.dateObj.getTime());
+    const sortedData = Array.from(dateMap.values()).sort((a, b) => a.sortDate.getTime() - b.sortDate.getTime());
     
     sortedData.forEach(d => {
-      d.displayDate = format(d.dateObj, "MMM d");
+      if (months === 1) {
+        d.displayDate = `Week of ${format(d.sortDate, "MMM d")}`;
+      } else {
+        d.displayDate = format(d.sortDate, "MMM yyyy");
+      }
     });
 
     return { chartData: sortedData, totals: calcTotals };
-  }, [perfData]);
+  }, [perfData, months]);
 
   const TABS = [
     { id: "OVERVIEW", label: "Overview", value: totals.INTERACTIONS },
@@ -148,8 +173,8 @@ export function PerformanceView({ profile, onBack }: { profile: Profile, onBack?
           </div>
         ) : (
           <div className="anim-fade-up">
-            {/* Scrollable Tabs */}
-            <div style={{ display: 'flex', gap: 16, overflowX: 'auto', paddingBottom: 16, marginBottom: 16, scrollbarWidth: 'none' }}>
+            {/* Premium Track UI for Tabs */}
+            <div style={{ display: 'flex', gap: 8, overflowX: 'auto', padding: '8px', background: '#f1f5f9', borderRadius: 24, marginBottom: 32, boxShadow: 'inset 0 2px 4px rgba(0,0,0,0.02)', scrollbarWidth: 'none' }}>
               {TABS.map(tab => {
                 const isActive = activeMetric === tab.id;
                 return (
@@ -158,29 +183,32 @@ export function PerformanceView({ profile, onBack }: { profile: Profile, onBack?
                     onClick={() => setActiveMetric(tab.id)}
                     style={{
                       flexShrink: 0,
-                      minWidth: 140,
+                      minWidth: 150,
                       padding: '16px 20px',
                       borderRadius: 16,
-                      background: isActive ? '#eff6ff' : '#fff',
-                      border: isActive ? '2px solid #2563eb' : '1px solid #e2e8f0',
+                      background: isActive ? '#fff' : 'transparent',
+                      border: 'none',
                       textAlign: 'left',
                       cursor: 'pointer',
-                      transition: 'all 0.2s',
-                      boxShadow: isActive ? 'none' : '0 1px 2px rgba(0,0,0,0.02)'
+                      transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+                      boxShadow: isActive ? '0 10px 25px -5px rgba(0,0,0,0.08), 0 4px 6px -4px rgba(0,0,0,0.04)' : 'none',
+                      position: 'relative',
+                      overflow: 'hidden'
                     }}
                   >
-                    <p style={{ fontSize: 13, fontWeight: 600, color: isActive ? '#1e40af' : '#64748b', marginBottom: 8 }}>{tab.label}</p>
-                    <p style={{ fontSize: 24, fontWeight: 800, color: '#0f172a' }}>{tab.value?.toLocaleString() || "0"}</p>
+                    {isActive && <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: 4, background: 'linear-gradient(90deg, #2563eb, #3b82f6)' }} />}
+                    <p style={{ fontSize: 12, fontWeight: isActive ? 800 : 700, color: isActive ? '#2563eb' : '#64748b', marginBottom: 4, textTransform: 'uppercase', letterSpacing: '0.1em' }}>{tab.label}</p>
+                    <p style={{ fontSize: 24, fontWeight: 900, color: isActive ? '#0f172a' : '#475569', letterSpacing: '-0.02em' }}>{tab.value?.toLocaleString() || "0"}</p>
                   </button>
                 )
               })}
             </div>
 
             {/* Main Chart */}
-            <div style={{ height: 380, width: "100%", marginBottom: 30, background: "#fff", padding: 24, borderRadius: 16, border: "1px solid #e2e8f0" }}>
+            <div style={{ height: 380, width: "100%", marginBottom: 30, background: "#fff", padding: 24, borderRadius: 24, border: "1px solid #e2e8f0", boxShadow: "0 4px 6px -1px rgba(0,0,0,0.05)" }}>
               <div style={{ marginBottom: 16, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                 <h3 style={{ fontSize: 16, fontWeight: 700, color: '#0f172a' }}>
-                  {TABS.find(t => t.id === activeMetric)?.label} Trend
+                  {TABS.find(t => t.id === activeMetric)?.label} Trend {months === 1 ? "(Weekly)" : "(Monthly)"}
                 </h3>
               </div>
               <ResponsiveContainer width="100%" height={300}>
@@ -196,28 +224,28 @@ export function PerformanceView({ profile, onBack }: { profile: Profile, onBack?
                     dataKey="displayDate" 
                     axisLine={false} 
                     tickLine={false} 
-                    tick={{ fontSize: 12, fill: "#94a3b8", fontWeight: 500 }} 
+                    tick={{ fontSize: 12, fill: "#94a3b8", fontWeight: 600 }} 
                     dy={10}
                     minTickGap={30}
                   />
                   <YAxis 
                     axisLine={false} 
                     tickLine={false} 
-                    tick={{ fontSize: 12, fill: "#94a3b8", fontWeight: 500 }} 
+                    tick={{ fontSize: 12, fill: "#94a3b8", fontWeight: 600 }} 
                     dx={-10}
                   />
                   <Tooltip 
-                    contentStyle={{ borderRadius: 12, border: "none", boxShadow: "0 10px 15px -3px rgba(0,0,0,0.1), 0 4px 6px -4px rgba(0,0,0,0.1)", fontWeight: 600, padding: '12px 16px' }}
+                    contentStyle={{ borderRadius: 12, border: "none", boxShadow: "0 10px 15px -3px rgba(0,0,0,0.1), 0 4px 6px -4px rgba(0,0,0,0.1)", fontWeight: 700, padding: '12px 16px' }}
                     labelStyle={{ color: "#64748b", marginBottom: 6, fontSize: 12, textTransform: 'uppercase', letterSpacing: 0.5 }}
                   />
                   <Area 
                     type="monotone" 
                     dataKey={activeMetric} 
                     stroke="#2563eb" 
-                    strokeWidth={3}
+                    strokeWidth={4}
                     fillOpacity={1} 
                     fill="url(#colorMetric)" 
-                    activeDot={{ r: 6, strokeWidth: 0, fill: "#2563eb", stroke: "#fff" }}
+                    activeDot={{ r: 8, strokeWidth: 0, fill: "#2563eb", stroke: "#fff" }}
                   />
                 </AreaChart>
               </ResponsiveContainer>
@@ -257,7 +285,61 @@ export function PerformanceView({ profile, onBack }: { profile: Profile, onBack?
             )}
           </div>
         )}
+        
+        {/* Keywords Section */}
+        <div className="anim-fade-up" style={{ marginTop: 40, animationDelay: '0.2s' }}>
+          <h3 style={{ fontSize: 18, fontWeight: 800, color: '#0f172a', marginBottom: 16 }}>Top Search Queries</h3>
+          <p style={{ fontSize: 13, color: '#64748b', marginBottom: 20 }}>Keywords people used to find your business on Google over the last {months === 1 ? 'month' : months + ' months'}.</p>
+          
+          <KeywordsTable profileId={profile.id} months={months} />
+        </div>
+
       </div>
+    </div>
+  );
+}
+
+function KeywordsTable({ profileId, months }: { profileId: string, months: number }) {
+  const { data: keywordsData, isLoading } = useSWR(`/api/profiles/${profileId}/keywords?months=${months}`, fetcher);
+  
+  if (isLoading) {
+    return (
+      <div style={{ padding: 40, textAlign: 'center', background: '#fff', borderRadius: 24, border: '1px solid #e2e8f0' }}>
+        <Loader2 className="anim-spin mx-auto text-indigo-600 mb-2" style={{ width: 24, height: 24 }} />
+        <p style={{ fontSize: 13, color: '#64748b' }}>Analyzing search queries...</p>
+      </div>
+    );
+  }
+
+  const keywords = keywordsData?.data || [];
+
+  if (keywords.length === 0) {
+    return (
+      <div style={{ padding: 40, textAlign: 'center', background: '#fff', borderRadius: 24, border: '1px solid #e2e8f0' }}>
+        <p style={{ fontSize: 14, fontWeight: 600, color: '#475569' }}>No search query data available</p>
+        <p style={{ fontSize: 13, color: '#94a3b8', marginTop: 4 }}>Google hasn't reported any search queries for this period.</p>
+      </div>
+    );
+  }
+
+  return (
+    <div style={{ background: '#fff', borderRadius: 24, border: '1px solid #e2e8f0', overflow: 'hidden', boxShadow: "0 4px 6px -1px rgba(0,0,0,0.05)" }}>
+      <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+        <thead>
+          <tr style={{ background: '#f8fafc', borderBottom: '1px solid #e2e8f0' }}>
+            <th style={{ padding: '16px 24px', textAlign: 'left', fontSize: 11, fontWeight: 800, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Search Query</th>
+            <th style={{ padding: '16px 24px', textAlign: 'right', fontSize: 11, fontWeight: 800, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Impressions</th>
+          </tr>
+        </thead>
+        <tbody>
+          {keywords.slice(0, 15).map((kw: any, idx: number) => (
+            <tr key={idx} style={{ borderBottom: idx === keywords.slice(0, 15).length - 1 ? 'none' : '1px solid #f1f5f9' }}>
+              <td style={{ padding: '16px 24px', fontSize: 14, fontWeight: 600, color: '#334155' }}>{kw.keyword}</td>
+              <td style={{ padding: '16px 24px', textAlign: 'right', fontSize: 14, fontWeight: 800, color: '#0f172a' }}>{kw.count.toLocaleString()}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
     </div>
   );
 }

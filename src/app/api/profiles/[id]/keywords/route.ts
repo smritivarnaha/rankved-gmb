@@ -29,31 +29,19 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
   if (!accessToken) accessToken = validAccounts[0].access_token;
   if (!accessToken) return NextResponse.json({ error: "No valid access token available." }, { status: 400 });
 
-  // Build full resource name: accounts/{accountId}/locations/{locationId}
-  const resourceName = profile.accountId && profile.googleName
-    ? `${profile.accountId}/${profile.googleName}`
-    : profile.googleName;
+  // The Business Profile Performance API strictly requires "locations/{location_id}"
+  const resourceName = profile.googleName;
 
   // Support dynamic date ranges
   const { searchParams } = new URL(req.url);
-  const days = parseInt(searchParams.get("days") || "30");
+  const months = parseInt(searchParams.get("months") || "1");
 
-  // Calculate range with 3-day buffer
+  // Calculate monthly range (API only accepts month ranges, not days)
   const now = new Date();
-  const endDate = new Date(now.getTime() - 3 * 24 * 60 * 60 * 1000);
-  const startDate = new Date(now.getTime() - (days + 3) * 24 * 60 * 60 * 1000);
+  const startMonth = new Date(now);
+  startMonth.setMonth(now.getMonth() - months); // Get last X months of keywords
 
-  const startYear = startDate.getFullYear();
-  const startMonth = startDate.getMonth() + 1;
-  const startDay = startDate.getDate();
-
-  const endYear = endDate.getFullYear();
-  const endMonth = endDate.getMonth() + 1;
-  const endDay = endDate.getDate();
-
-  const url = `https://businessprofileperformance.googleapis.com/v1/${resourceName}/searchKeywords:list?` + 
-    `dailyRange.startDate.year=${startYear}&dailyRange.startDate.month=${startMonth}&dailyRange.startDate.day=${startDay}` +
-    `&dailyRange.endDate.year=${endYear}&dailyRange.endDate.month=${endMonth}&dailyRange.endDate.day=${endDay}`;
+  const url = `https://businessprofileperformance.googleapis.com/v1/${resourceName}/searchkeywords/impressions/monthly?monthlyRange.startMonth.year=${startMonth.getFullYear()}&monthlyRange.startMonth.month=${startMonth.getMonth() + 1}&monthlyRange.endMonth.year=${now.getFullYear()}&monthlyRange.endMonth.month=${now.getMonth() + 1}&pageSize=50`;
 
   try {
     const response = await fetch(url, {
@@ -61,21 +49,30 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
     });
 
     if (!response.ok) {
-      const errorData = await response.json();
+      // It's possible for this to return a 404 HTML string if resource name is invalid, just like the other endpoint
+      const responseText = await response.text();
+      let errorData;
+      try {
+        errorData = JSON.parse(responseText);
+      } catch (e) {
+        throw new Error(responseText.slice(0, 100) + "..."); // Catch HTML errors
+      }
+      
+      console.error("Google Keywords API Error:", errorData);
       return NextResponse.json({ error: errorData.error?.message || "Google API Error" }, { status: response.status });
     }
 
     const data = await response.json();
     
-    // The API returns a list of SearchKeywordCount objects
-    // Each has a 'searchKeyword' and 'insightValue' (which has a 'value')
-    const keywords = (data.searchKeywords || []).map((k: any) => ({
+    // The API returns searchKeywordsCounts which has { searchKeyword: string, insightsValue: { threshold: string, value: string } }
+    const keywords = (data.searchKeywordsCounts || []).map((k: any) => ({
       keyword: k.searchKeyword,
-      count: parseInt(k.insightValue?.value || "0")
+      count: parseInt(k.insightsValue?.value || "0")
     })).sort((a: any, b: any) => b.count - a.count);
 
     return NextResponse.json({ data: keywords });
   } catch (err: any) {
+    console.error("Keywords API Catch:", err);
     return NextResponse.json({ error: err.message }, { status: 500 });
   }
 }
