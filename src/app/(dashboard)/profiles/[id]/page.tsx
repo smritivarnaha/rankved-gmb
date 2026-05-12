@@ -12,7 +12,6 @@ import useSWR from "swr";
 import { useSession } from "next-auth/react";
 import { AiSettingsTab, AiGenerationModal, AiBulkGenerationModal } from "@/components/ai/ai-components";
 import { useSearchParams } from "next/navigation";
-import PerformanceDashboard from "@/components/PerformanceDashboard";
 
 const fetcher = (url: string) => fetch(url).then(r => r.json());
 
@@ -313,7 +312,7 @@ export default function ProfileDetailPage() {
   const [statusFilter, setStatusFilter] = useState("ALL");
   const searchParamsHook = useSearchParams();
   const initialTab = searchParamsHook.get("tab") === "ai" ? "AI_SETTINGS" : "POSTS";
-  const [activeTab, setActiveTab] = useState<"POSTS" | "AI_SETTINGS" | "PERFORMANCE">(initialTab as any);
+  const [activeTab, setActiveTab] = useState<"POSTS" | "AI_SETTINGS">(initialTab as any);
   const [isAiModalOpen, setIsAiModalOpen] = useState(false);
   const [isBulkAiModalOpen, setIsBulkAiModalOpen] = useState(false);
   const [selectedPosts, setSelectedPosts] = useState<Set<string>>(new Set());
@@ -524,22 +523,9 @@ export default function ProfileDetailPage() {
         >
           Posts
         </button>
-        <button 
-          onClick={() => setActiveTab("PERFORMANCE")}
-          style={{ 
-            padding: "10px 4px", fontSize: 14, fontWeight: 600, border: "none", background: "none", cursor: "pointer",
-            color: activeTab === "PERFORMANCE" ? "#2563eb" : "#94a3b8",
-            borderBottom: activeTab === "PERFORMANCE" ? "2px solid #2563eb" : "2px solid transparent",
-            transition: "all 0.2s"
-          }}
-        >
-          Performance
-        </button>
       </div>
 
-      {activeTab === "PERFORMANCE" ? (
-        <PerformanceDashboard profileId={profile.id} />
-      ) : activeTab === "AI_SETTINGS" ? (
+      {activeTab === "AI_SETTINGS" ? (
         <div style={{ background: "#fff", border: "1px solid #e2e8f0", borderRadius: 12, overflow: "hidden" }}>
           <AiSettingsTab locationId={profile.id} profileName={profile.name} />
         </div>
