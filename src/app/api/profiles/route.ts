@@ -194,3 +194,43 @@ export async function DELETE(req: NextRequest) {
   if (!success) return NextResponse.json({ error: "Profile not found" }, { status: 404 });
   return NextResponse.json({ success: true });
 }
+
+// PATCH /api/profiles — update a profile (e.g. custom logo)
+export async function PATCH(req: NextRequest) {
+  const session = await getServerSession(authOptions);
+  if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+
+  const role = (session as any)?.user?.role;
+  const allowedRoles = ["SUPER_ADMIN", "AGENCY_OWNER", "TEAM_MEMBER"];
+  if (!allowedRoles.includes(role)) {
+    return NextResponse.json({ error: "Permission denied" }, { status: 403 });
+  }
+
+  try {
+    const formData = await req.formData();
+    const id = formData.get("id") as string;
+    const logoFile = formData.get("logo") as File | null;
+
+    if (!id) return NextResponse.json({ error: "Profile ID required" }, { status: 400 });
+
+    let base64Logo = undefined;
+    if (logoFile && logoFile.size > 0) {
+      const bytes = await logoFile.arrayBuffer();
+      const buffer = Buffer.from(bytes);
+      base64Logo = `data:${logoFile.type};base64,${buffer.toString("base64")}`;
+    }
+
+    if (base64Logo) {
+      const prisma = (await import("@/lib/prisma")).default;
+      await prisma.location.update({
+        where: { id },
+        data: { logoUrl: base64Logo }
+      });
+    }
+
+    return NextResponse.json({ success: true, message: "Profile updated successfully" });
+  } catch (err: any) {
+    console.error("Error updating profile:", err);
+    return NextResponse.json({ error: "Failed to update profile" }, { status: 500 });
+  }
+}
