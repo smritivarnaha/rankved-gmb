@@ -12,7 +12,7 @@ import {
 } from "lucide-react";
 import { AuditReport } from "./AuditReport";
 
-export default function PerformanceView({ data, profile }: any) {
+export function PerformanceView({ data, profile }: any) {
   const [activeTab, setActiveTab] = useState("OVERVIEW");
 
   if (!data) return null;
