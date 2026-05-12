@@ -116,7 +116,7 @@ export function PerformanceView({ profile, onBack }: any) {
             
             <div style={{ display: 'flex', flexDirection: 'column', gap: '32px', marginBottom: '48px' }}>
               <div>
-                <h3 style={{ fontSize: '32px', fontWeight: '900', color: '#111827', tracking: '-0.04em', marginBottom: '8px' }}>Growth Analytics</h3>
+                <h3 style={{ fontSize: '32px', fontWeight: '900', color: '#111827', letterSpacing: '-0.04em', marginBottom: '8px' }}>Growth Analytics</h3>
                 <p style={{ color: '#94A3B8', fontWeight: '500', fontSize: '16px' }}>Daily interaction trends for {profile.name}.</p>
               </div>
               <div style={{ display: 'flex', alignItems: 'center', gap: '16px', background: '#F8FAFC', padding: '8px', borderRadius: '20px', width: 'max-content' }}>
@@ -166,7 +166,7 @@ function HyperCard({ label, value, change, isPositive, icon: Icon, color }: any)
       
       <div style={{ position: 'relative', zIndex: 10 }}>
         <p style={{ fontSize: '10px', fontWeight: 'bold', color: '#94A3B8', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: '4px' }}>{label}</p>
-        <h4 style={{ fontSize: '40px', fontWeight: '900', color: '#111827', tracking: '-0.04em', marginBottom: '4px', lineHeight: '1' }}>{value.toLocaleString()}</h4>
+        <h4 style={{ fontSize: '40px', fontWeight: '900', color: '#111827', letterSpacing: '-0.04em', marginBottom: '4px', lineHeight: '1' }}>{value.toLocaleString()}</h4>
         <p style={{ color: '#94A3B8', fontSize: '10px', fontWeight: 'bold', textTransform: 'uppercase', letterSpacing: '0.05em' }}>30 Day Total</p>
       </div>
 
