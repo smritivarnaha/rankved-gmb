@@ -1,133 +1,154 @@
 "use client";
 
 import { useState } from "react";
-import { Search, MapPin, Star, Zap, Loader2, Info } from "lucide-react";
-import { AuditReport } from "./AuditReport";
+import { Search, Zap, MapPin, Globe, Star, ArrowRight, Loader2, Sparkles } from "lucide-react";
+import { AuditDashboard } from "./AuditDashboard";
 
 export function GlobalAuditSearch() {
   const [query, setQuery] = useState("");
+  const [isSearching, setIsSearching] = useState(false);
   const [results, setResults] = useState<any[]>([]);
-  const [loading, setLoading] = useState(false);
   const [selectedBusiness, setSelectedBusiness] = useState<any>(null);
 
-  const handleSearch = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (query.length < 3) return;
-
-    setLoading(true);
+  const handleSearch = async () => {
+    if (!query) return;
+    setIsSearching(true);
     try {
       const res = await fetch(`/api/gbp/search?q=${encodeURIComponent(query)}`);
       const data = await res.json();
-      setResults(data.data || []);
+      setResults(data.places || []);
     } catch (err) {
       console.error(err);
     } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleSelect = async (placeId: string) => {
-    setLoading(true);
-    try {
-      const res = await fetch(`/api/gbp/search?placeId=${placeId}`);
-      const data = await res.json();
-      setSelectedBusiness(data.data);
-    } catch (err) {
-      console.error(err);
-    } finally {
-      setLoading(false);
+      setIsSearching(false);
     }
   };
 
   return (
-    <div className="space-y-8">
-      {/* Search Header */}
-      <div className="bg-white rounded-[32px] p-10 border-2 border-slate-100 shadow-xl shadow-slate-100/50">
-        <h2 className="text-3xl font-black text-slate-900 mb-2">Command Center</h2>
-        <p className="text-slate-500 font-medium mb-8">Search and audit any business profile on Google.</p>
-        
-        <form onSubmit={handleSearch} className="relative group">
-          <input
-            type="text"
-            className="w-full pl-14 pr-32 py-6 bg-slate-50 border-2 border-transparent rounded-2xl text-lg font-bold placeholder:text-slate-400 focus:outline-none focus:bg-white focus:border-indigo-600 focus:ring-4 focus:ring-indigo-50 transition-all"
-            placeholder="Type business name or address..."
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-          />
-          <div className="absolute inset-y-0 left-5 flex items-center pointer-events-none">
-            <Search className="w-6 h-6 text-slate-400 group-focus-within:text-indigo-600 transition-colors" />
-          </div>
-          <button
-            type="submit"
-            className="absolute inset-y-3 right-3 px-8 bg-slate-900 text-white rounded-xl font-black uppercase tracking-widest text-xs hover:bg-indigo-600 transition-all flex items-center gap-2"
-          >
-            {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : "Search"}
-          </button>
-        </form>
-
-        {/* Results List */}
-        {!selectedBusiness && results.length > 0 && (
-          <div className="mt-6 space-y-3 anim-fade-up">
-            {results.map((r) => (
-              <button
-                key={r.placeId}
-                onClick={() => handleSelect(r.placeId)}
-                className="w-full p-4 text-left bg-white border border-slate-100 rounded-xl hover:border-indigo-600 hover:shadow-lg transition-all flex items-center justify-between group"
-              >
-                <div className="flex items-center gap-4">
-                  <div className="w-10 h-10 bg-indigo-50 rounded-lg flex items-center justify-center text-indigo-600">
-                    <MapPin className="w-5 h-5" />
-                  </div>
-                  <div>
-                    <p className="font-bold text-slate-900">{r.mainText}</p>
-                    <p className="text-xs text-slate-400 font-medium">{r.secondaryText}</p>
-                  </div>
-                </div>
-                <Zap className="w-4 h-4 text-slate-200 group-hover:text-indigo-600 transition-colors" />
-              </button>
-            ))}
-          </div>
-        )}
+    <div className="anim-fade-up max-w-6xl mx-auto py-12">
+      {/* Header Section */}
+      <div className="text-center mb-16">
+        <div className="inline-flex items-center gap-2 px-4 py-2 bg-brand-subtle text-brand rounded-full text-[10px] font-bold uppercase tracking-[0.2em] mb-6">
+          <Sparkles className="w-3 h-3" />
+          RankVed Intelligence
+        </div>
+        <h1 className="text-5xl font-black text-neutral-900 tracking-tighter mb-4">Command Center</h1>
+        <p className="text-neutral-500 text-lg max-w-2xl mx-auto">
+          Audit any business on Google instantly. Enter a business name or location to generate a professional performance report.
+        </p>
       </div>
 
-      {/* Audit View */}
-      {selectedBusiness && (
-        <div className="anim-fade-up space-y-6">
-          <div className="flex items-center justify-between bg-indigo-900 text-white p-6 rounded-[24px] shadow-xl">
-             <div className="flex items-center gap-4">
-                <div className="w-12 h-12 bg-white/10 rounded-xl flex items-center justify-center">
-                   <Info className="w-6 h-6" />
-                </div>
-                <div>
-                   <h3 className="text-xl font-black">{selectedBusiness.name}</h3>
-                   <p className="text-indigo-200 text-sm font-medium">{selectedBusiness.formatted_address}</p>
-                </div>
-             </div>
-             <button 
+      {/* Search Input — 2026 SaaS Style */}
+      <div className="relative max-w-3xl mx-auto mb-20 group">
+        <div className="absolute -inset-1 bg-gradient-to-r from-brand to-cyan-400 rounded-[28px] opacity-20 blur-xl group-hover:opacity-40 transition-opacity"></div>
+        <div className="relative flex items-center bg-white border-2 border-neutral-100 rounded-[24px] p-2 shadow-2xl shadow-neutral-200/50">
+          <div className="flex-1 flex items-center px-6">
+            <Search className="w-6 h-6 text-neutral-400 mr-4" />
+            <input 
+              type="text" 
+              placeholder="Business name, address, or phone..."
+              className="w-full h-14 bg-transparent text-lg font-medium text-neutral-900 outline-none placeholder:text-neutral-300"
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
+            />
+          </div>
+          <button 
+            onClick={handleSearch}
+            disabled={isSearching}
+            className="flex items-center gap-3 px-10 h-14 bg-neutral-900 text-white rounded-[20px] font-bold uppercase tracking-widest text-xs hover:bg-brand transition-all active:scale-95 disabled:opacity-50"
+          >
+            {isSearching ? <Loader2 className="w-5 h-5 animate-spin" /> : <><Zap className="w-4 h-4 fill-current" /> Search</>}
+          </button>
+        </div>
+      </div>
+
+      {/* Results or Audit Dashboard */}
+      {selectedBusiness ? (
+        <div className="ds-anim-fade">
+          <div className="flex items-center justify-between mb-12">
+            <button 
               onClick={() => setSelectedBusiness(null)}
-              className="px-6 py-3 bg-white/10 hover:bg-white/20 rounded-xl text-xs font-black uppercase tracking-widest transition-all"
-             >
-              Back to Search
-             </button>
+              className="flex items-center gap-2 text-neutral-400 hover:text-neutral-900 font-bold text-xs uppercase tracking-widest"
+            >
+              <ArrowRight className="w-4 h-4 rotate-180" /> Back to Search
+            </button>
+            <div className="flex items-center gap-4">
+               <div className="px-4 py-2 bg-neutral-100 rounded-full text-[10px] font-bold uppercase tracking-widest text-neutral-500">
+                  Business: {selectedBusiness.displayName?.text}
+               </div>
+            </div>
           </div>
-
-          <div className="bg-amber-50 border border-amber-100 p-6 rounded-[24px] flex items-start gap-4">
-             <div className="w-10 h-10 bg-amber-100 rounded-lg flex items-center justify-center text-amber-600 shrink-0">
-                <Zap className="w-5 h-5 fill-current" />
+          <AuditDashboard auditData={selectedBusiness.mockAudit} isPublic />
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+          {results.map((biz, i) => (
+            <BusinessResultCard 
+              key={i} 
+              biz={biz} 
+              onClick={() => {
+                // Mocking audit data for demo
+                const mockAudit = {
+                  completionScore: 68,
+                  searchRank: 4.2,
+                  replyRate: 15,
+                  reviewsPerWeek: 0.5,
+                  totalReviews: biz.userRatingCount || 0,
+                  averageRating: biz.rating || 0,
+                  missingFields: ["Website", "Description", "Service Areas"]
+                };
+                setSelectedBusiness({ ...biz, mockAudit });
+              }}
+            />
+          ))}
+          {!isSearching && results.length === 0 && query && (
+             <div className="col-span-full py-20 text-center">
+                <div className="w-20 h-20 bg-neutral-50 rounded-full flex items-center justify-center mx-auto mb-6">
+                   <Search className="w-8 h-8 text-neutral-300" />
+                </div>
+                <p className="text-neutral-400 font-medium">No businesses found. Try a different search query.</p>
              </div>
-             <div>
-                <h4 className="font-black text-amber-900 uppercase tracking-widest text-xs mb-1">Public Audit Mode</h4>
-                <p className="text-amber-800 text-sm font-medium leading-relaxed">
-                  You are auditing a business that is not yet connected. Keyword and Impression data are hidden. 
-                  Use this report to demonstrate value to the business owner.
-                </p>
-             </div>
-          </div>
-
-          {/* We will pass a "mock" ID for public audits or adapt the AuditReport to handle public objects */}
-          <AuditReport profileId="PUBLIC_MODE" publicData={selectedBusiness} />
+          )}
         </div>
       )}
+    </div>
+  );
+}
+
+function BusinessResultCard({ biz, onClick }: { biz: any, onClick: () => void }) {
+  return (
+    <div 
+      onClick={onClick}
+      className="bg-white border-2 border-neutral-100 rounded-[32px] p-8 hover:border-brand hover:shadow-2xl hover:shadow-neutral-200 transition-all cursor-pointer group relative overflow-hidden"
+    >
+      <div className="absolute top-0 right-0 p-6 opacity-0 group-hover:opacity-100 transition-opacity">
+         <ArrowRight className="w-6 h-6 text-brand" />
+      </div>
+      <div className="flex items-center gap-4 mb-6">
+        <div className="w-12 h-12 bg-neutral-50 rounded-2xl flex items-center justify-center text-neutral-400 group-hover:bg-brand-subtle group-hover:text-brand transition-all">
+          <MapPin className="w-6 h-6" />
+        </div>
+        <div>
+           <div className="flex items-center gap-2 mb-1">
+              <Star className="w-3.5 h-3.5 text-warning fill-current" />
+              <span className="text-xs font-bold text-neutral-900">{biz.rating || "N/A"}</span>
+              <span className="text-xs text-neutral-400 font-medium">({biz.userRatingCount || 0})</span>
+           </div>
+           <p className="text-[10px] font-bold text-brand uppercase tracking-widest">{biz.primaryType?.replace(/_/g, ' ') || "Business"}</p>
+        </div>
+      </div>
+      
+      <h3 className="text-xl font-bold text-neutral-900 mb-2 leading-tight">{biz.displayName?.text}</h3>
+      <p className="text-neutral-400 text-sm mb-8 line-clamp-2">{biz.formattedAddress}</p>
+      
+      <div className="flex items-center justify-between pt-6 border-t border-neutral-50">
+         <div className="flex items-center gap-2 text-neutral-400">
+            <Globe className="w-4 h-4" />
+            <span className="text-[10px] font-bold uppercase tracking-widest">{biz.websiteUri ? "Website Found" : "No Website"}</span>
+         </div>
+         <span className="text-[10px] font-black uppercase tracking-widest text-brand group-hover:underline">Audit Profile</span>
+      </div>
     </div>
   );
 }
