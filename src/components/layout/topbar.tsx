@@ -37,36 +37,26 @@ export function Topbar() {
   return (
     <header style={{ display: "flex", flexDirection: "column", borderBottom: "1px solid #eaeaea", background: "#fff", fontFamily: "Inter, sans-serif" }}>
       {/* ─── Top Row ─── */}
-      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "0 24px", height: 48 }}>
-        {/* Left: Project Breadcrumb */}
-        <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 8, cursor: "pointer", padding: "4px 8px", borderRadius: 6, marginLeft: -8 }} onMouseEnter={(e) => e.currentTarget.style.background = "#fafafa"} onMouseLeave={(e) => e.currentTarget.style.background = "transparent"}>
-            <div style={{ width: 20, height: 20, background: "#000", borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center" }}>
-              <span style={{ color: "#fff", fontSize: 11, fontWeight: 700 }}>N</span>
-            </div>
-            <span style={{ fontSize: 13, fontWeight: 500, color: "#000" }}>site</span>
-            <ChevronsUpDown size={12} color="#888" />
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "0 24px", height: 56 }}>
+        {/* Left: Project Selector */}
+        <div style={{ display: "flex", alignItems: "center", gap: 12, cursor: "pointer", padding: "6px 8px", borderRadius: 6, marginLeft: -8 }} onMouseEnter={(e) => e.currentTarget.style.background = "#fafafa"} onMouseLeave={(e) => e.currentTarget.style.background = "transparent"}>
+          <div style={{ width: 24, height: 24, background: "#111", borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center" }}>
+            <span style={{ color: "#fff", fontSize: 13, fontWeight: 600 }}>N</span>
           </div>
+          <span style={{ fontSize: 14, fontWeight: 500, color: "#111" }}>{pageTitle}</span>
+          <ChevronsUpDown size={14} color="#888" />
         </div>
 
-        {/* Right: Breadcrumbs & Avatar */}
-        <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 13, color: "#666" }}>
-            <span>Deployments</span>
-            <span style={{ color: "#eaeaea" }}>/</span>
-            <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-              <div style={{ width: 8, height: 8, background: "#10b981", borderRadius: "50%" }} />
-              <span style={{ color: "#000", fontWeight: 500, fontFamily: "monospace" }}>0wA...</span>
-            </div>
-          </div>
+        {/* Right: Avatar */}
+        <div style={{ display: "flex", alignItems: "center", gap: 24 }}>
           <div style={{ position: "relative" }} ref={menuRef}>
             <button 
               onClick={() => setShowMenu(!showMenu)} 
               title={name} 
-              style={{ width: 28, height: 28, borderRadius: "50%", background: "#000", border: "none", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", color: "#fff", fontSize: 11, fontWeight: 600, overflow: "hidden" }}
+              style={{ width: 32, height: 32, borderRadius: "50%", background: "#000", border: "none", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", color: "#fff", fontSize: 12, fontWeight: 600 }}
             >
               {session?.user?.image ? (
-                <img src={session.user.image} alt={name} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                <img src={session.user.image} alt={name} style={{ width: "100%", height: "100%", borderRadius: "50%", objectFit: "cover" }} />
               ) : (
                 initials
               )}
@@ -93,35 +83,6 @@ export function Topbar() {
             )}
           </div>
         </div>
-      </div>
-
-      {/* ─── Bottom Row: Tabs ─── */}
-      <div style={{ display: "flex", alignItems: "center", gap: 24, padding: "0 24px", height: 48, overflowX: "auto" }}>
-        {[
-          { id: "deployment", label: "Deployment" },
-          { id: "resources", label: "Resources" },
-          { id: "source", label: "Source" },
-          { id: "open-graph", label: "Open Graph" },
-          { id: "bundle-sizes", label: "Bundle Sizes" }
-        ].map((tab, idx) => (
-          <div 
-            key={tab.id}
-            style={{ 
-              height: "100%", 
-              display: "flex", 
-              alignItems: "center", 
-              fontSize: 14, 
-              color: idx === 0 ? "#000" : "#666", 
-              fontWeight: idx === 0 ? 500 : 400,
-              cursor: "pointer",
-              position: "relative",
-              borderBottom: idx === 0 ? "2px solid #000" : "2px solid transparent",
-              marginTop: "2px"
-            }}
-          >
-            {tab.label}
-          </div>
-        ))}
       </div>
     </header>
   );

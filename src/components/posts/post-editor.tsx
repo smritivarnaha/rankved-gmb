@@ -354,120 +354,436 @@ export function PostEditor({ initialData = null, timelineDate, onDateChange, loc
     <>
       {(saving || successMessage) && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center bg-[#0f172a]/40 backdrop-blur-sm transition-opacity duration-500">
-          <div className="bg-white rounded-2xl shadow-[0_20px_50px_rgba(0,0,0,0.15)] p-10 flex flex-col items-center justify-center max-w-sm w-full mx-4 border border-[#f1f5f9]">
+          <div className="bg-white rounded-2xl shadow-[0_20px_50px_rgba(0,0,0,0.15)] p-10 flex flex-col items-center justify-center max-w-sm w-full mx-4 transform transition-transform duration-300 scale-100 border border-[#f1f5f9]">
             {successMessage ? (
               <div className="flex flex-col items-center">
                 <div className="w-28 h-28 mb-6">
                   <LottieWrapper url={ANIMATIONS.SUCCESS} className="w-full h-full" />
                 </div>
                 <h3 className="text-2xl font-bold text-[#0f172a] mb-2 text-center tracking-tight">{successMessage}</h3>
-                <p className="text-[15px] text-[#64748b] text-center font-medium">Redirecting back...</p>
+                <p className="text-[15px] text-[#64748b] text-center font-medium">
+                  Redirecting back to dashboard...
+                </p>
               </div>
             ) : (
               <div className="flex flex-col items-center">
                 <div className="w-28 h-28 mb-6">
-                  <LottieWrapper url={savingType === "PUBLISH" ? ANIMATIONS.PUBLISH : savingType === "SCHEDULED" ? ANIMATIONS.SCHEDULED : ANIMATIONS.DRAFT} className="w-full h-full" />
+                  <LottieWrapper 
+                    url={savingType === "PUBLISH" ? ANIMATIONS.PUBLISH : 
+                         savingType === "SCHEDULED" ? ANIMATIONS.SCHEDULED : 
+                         ANIMATIONS.DRAFT} 
+                    className="w-full h-full" 
+                  />
                 </div>
-                <h3 className="text-2xl font-bold text-[#0f172a] mb-2 text-center tracking-tight">{savingType === "PUBLISH" ? "Publishing Now" : "Scheduling Post"}</h3>
+                <h3 className="text-2xl font-bold text-[#0f172a] mb-2 text-center tracking-tight">
+                  {savingType === "PUBLISH" ? "Publishing Now" : 
+                   savingType === "SCHEDULED" ? "Scheduling Post" : 
+                   savingType === "PENDING_APPROVAL" ? "Submitting Post" :
+                   "Saving Draft"}
+                </h3>
+                <p className="text-[15px] text-[#64748b] text-center font-medium">
+                  Sit tight, we're syncing with Google...
+                </p>
               </div>
             )}
           </div>
         </div>
       )}
-
-      <div className="space-y-12">
-        {/* ─── Top Selection Row ─── */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-12 items-start">
-          {/* Column 1: Business Profile */}
-          <div className="space-y-4">
-            <h3 className="text-[14px] font-bold text-[#000] uppercase tracking-wider">Business Profile</h3>
-            <div className="flex items-start gap-4">
-              <div className="w-10 h-10 rounded-full bg-[#f8fafc] border border-[#eaeaea] flex items-center justify-center shrink-0">
-                <MapPin className="w-5 h-5 text-[#64748b]" />
-              </div>
-              <div className="space-y-2 flex-1">
-                <p className="text-[15px] font-semibold text-[#000]">
-                  {locations.find(l => l.id === form.locationId)?.name || "Select Profile"}
-                </p>
-                <div className="inline-flex items-center gap-1.5 bg-[#f0f9ff] border border-[#bae6fd] px-2.5 py-0.5 rounded-full">
-                  <div className="w-1.5 h-1.5 rounded-full bg-[#0369a1]" />
-                  <span className="text-[11px] font-bold text-[#0369a1] uppercase">Selected</span>
-                </div>
-              </div>
+      <div className="bg-white border border-[#e2e8f0] rounded-xl relative z-[10] shadow-sm overflow-hidden">
+      <div className="p-6 space-y-6">
+        {/* Lock banner — shown for PUBLISHED posts */}
+        {isLocked && (
+          <div style={{ display: "flex", alignItems: "center", gap: 12, padding: "16px", background: "#f0fdf4", border: "1px solid #bbf7d0", borderRadius: 12 }}>
+            <div style={{ width: 36, height: 36, borderRadius: "50%", background: "#dcfce7", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+              <Lock style={{ width: 18, height: 18, color: "#166534" }} />
+            </div>
+            <div>
+              <p style={{ fontSize: 14, fontWeight: 700, color: "#166534", margin: 0 }}>
+                Published & Locked
+              </p>
+              <p style={{ fontSize: 13, color: "#15803d", margin: "2px 0 0", opacity: 0.8 }}>
+                This post is live on Google Business Profile and cannot be edited.
+              </p>
             </div>
           </div>
-
-          {/* Column 2: Visual Content */}
-          <div className="space-y-4">
-            <h3 className="text-[14px] font-bold text-[#000] uppercase tracking-wider">Visual Content</h3>
-            {imagePreview ? (
-              <div className="relative rounded-xl overflow-hidden border border-[#eaeaea] bg-[#f8fafc] group">
-                <img src={imagePreview} alt="Preview" className="w-full aspect-square object-cover" />
-                {!isPublished && (
-                  <button onClick={removeImage} className="absolute top-2 right-2 p-1.5 rounded-lg bg-white/90 shadow-sm hover:bg-white text-red-500">
-                    <X size={14} />
-                  </button>
-                )}
-              </div>
-            ) : (
-              <button 
-                onClick={() => fileRef.current?.click()} 
-                disabled={isPublished}
-                className="w-full aspect-square border-2 border-dashed border-[#eaeaea] rounded-xl flex flex-col items-center justify-center gap-2 hover:border-[#2563eb] hover:bg-[#f0f9ff] transition-all group"
-              >
-                <ImagePlus className="w-8 h-8 text-[#94a3b8] group-hover:text-[#2563eb]" />
-                <span className="text-[13px] font-bold text-[#1e293b]">Upload Media</span>
-                <p className="text-[11px] text-[#64748b]">High-quality JPG, PNG or WebP</p>
-              </button>
-            )}
-            <input ref={fileRef} type="file" accept="image/*" onChange={handleImageSelect} className="hidden" />
-          </div>
-
-          {/* Column 3: Publish Schedule */}
-          <div className="space-y-4">
-            <div className="flex items-center gap-2">
-               <Clock size={16} />
-               <h3 className="text-[14px] font-bold text-[#000] uppercase tracking-wider">Publish Schedule</h3>
-            </div>
-            
-            <div className="space-y-4">
-              <div className="flex gap-4">
-                <button onClick={() => setQuickDate("tomorrow")} className="flex-1 py-1.5 text-[13px] font-semibold text-[#000] hover:text-[#2563eb] transition-colors">Tomorrow</button>
-                <button onClick={() => setQuickDate("dayafter")} className="flex-1 py-1.5 text-[13px] font-semibold text-[#000] hover:text-[#2563eb] transition-colors">Day After</button>
-              </div>
-
-              {/* Mini Calendar */}
-              <div className="bg-white">
-                <div className="flex items-center justify-between mb-4">
-                  <span className="text-[13px] font-bold text-[#000]">{monthNames[calMonth]} {calYear}</span>
-                  <div className="flex gap-2">
-                    <button onClick={() => { if (calMonth === 0) { setCalMonth(11); setCalYear(y=>y-1); } else setCalMonth(m=>m-1); }} className="p-1 hover:bg-gray-100 rounded">‹</button>
-                    <button onClick={() => { if (calMonth === 11) { setCalMonth(0); setCalYear(y=>y+1); } else setCalMonth(m=>m+1); }} className="p-1 hover:bg-gray-100 rounded">›</button>
+        )}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          {/* Main content */}
+          <div className="lg:col-span-2 space-y-5">
+            {/* Profile */}
+            {/* Profile Selection */}
+            <div className="space-y-1.5">
+              <label className="text-[13px] font-bold text-[#475569] uppercase tracking-wider">Business Profile</label>
+              {lockedProfileId ? (
+                <div className="w-full border border-[#e2e8f0] rounded-xl py-3 px-4 text-[14px] text-[#0f172a] bg-[#f8fafc] flex items-center gap-3">
+                  <MapPin className="w-4 h-4 text-[#64748b] shrink-0" />
+                  <span className="font-semibold">{locations.find(l => l.id === lockedProfileId)?.name || "Loading Profile..."}</span>
+                  <div className="ml-auto flex items-center gap-1.5 bg-white border border-[#e2e8f0] px-2.5 py-1 rounded-full shadow-sm">
+                    <div className="w-1.5 h-1.5 rounded-full bg-[#2563eb]" />
+                    <span className="text-[11px] font-bold text-[#2563eb] uppercase">Selected</span>
                   </div>
                 </div>
-                <div className="grid grid-cols-7 text-center text-[11px] font-bold text-[#94a3b8] mb-2">
-                  {["S","M","T","W","T","F","S"].map(d => <div key={d}>{d}</div>)}
+              ) : (
+                <div className="relative">
+                  <select name="locationId" value={form.locationId} onChange={handleChange} disabled={isPublished}
+                    className="w-full border border-[#e2e8f0] rounded-xl py-3 pl-11 pr-4 text-[15px] font-medium text-[#0f172a] bg-white focus:outline-none focus:ring-2 focus:ring-[#2563eb] focus:border-transparent disabled:opacity-50 appearance-none transition-all">
+                    <option value="">Select a business profile...</option>
+                    {locations.map((loc: any) => (
+                      <option key={loc.id} value={loc.id}>{loc.name}</option>
+                    ))}
+                  </select>
+                  <MapPin className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-[#64748b]" />
+                </div>
+              )}
+            </div>
+
+            {/* Image — ABOVE post content */}
+            {/* Image Selection */}
+            <div className="space-y-1.5">
+              <label className="text-[13px] font-bold text-[#475569] uppercase tracking-wider">Visual Content</label>
+              {imagePreview ? (
+                <div className="relative rounded-2xl overflow-hidden border border-[#e2e8f0] bg-[#f8fafc] shadow-sm">
+                  <img src={imagePreview} alt="Post preview" className="w-full max-h-[320px] object-cover" />
+                  {!isPublished && (
+                    <button onClick={removeImage}
+                      className="absolute top-3 right-3 p-2 rounded-xl border border-[#e2e8f0] bg-white transition-all shadow-lg hover:bg-red-50 hover:border-red-100 group">
+                      <X className="w-4 h-4 text-[#64748b] group-hover:text-red-500" />
+                    </button>
+                  )}
+                  {imageFile && (
+                    <div className="px-4 py-3 bg-white border-t border-[#f1f5f9] flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <div className="w-8 h-8 rounded-lg bg-blue-50 flex items-center justify-center">
+                           <ImagePlus className="w-4 h-4 text-blue-500" />
+                        </div>
+                        <span className="text-[13px] font-semibold text-[#1e293b] truncate max-w-[200px]">{imageFile.name}</span>
+                      </div>
+                      <span className="text-[12px] font-bold text-[#64748b] bg-[#f1f5f9] px-2 py-0.5 rounded-md">{(imageFile.size / 1024).toFixed(0)} KB</span>
+                    </div>
+                  )}
+                </div>
+              ) : converting ? (
+                <div className="w-full border-2 border-dashed border-blue-200 rounded-2xl py-12 flex flex-col items-center justify-center bg-blue-50/30">
+                  <div className="w-12 h-12 rounded-full bg-blue-100 flex items-center justify-center mb-4">
+                    <Loader2 className="w-6 h-6 text-blue-500 animate-spin" />
+                  </div>
+                  <span className="text-[15px] font-bold text-blue-600">Processing Image...</span>
+                  <p className="text-[12px] text-blue-400 mt-1">Optimizing for Google Business Profile</p>
+                </div>
+              ) : (
+                <button onClick={() => fileRef.current?.click()} disabled={isPublished}
+                  className="w-full border-2 border-dashed border-[#cbd5e1] rounded-2xl py-12 flex flex-col items-center justify-center hover:border-blue-400 hover:bg-blue-50/50 transition-all disabled:opacity-50 group">
+                  <div className="w-14 h-14 rounded-full bg-gray-50 flex items-center justify-center group-hover:bg-blue-100 transition-all mb-4">
+                    <ImagePlus className="w-7 h-7 text-[#94a3b8] group-hover:text-blue-500 transition-all" />
+                  </div>
+                  <span className="text-[15px] font-bold text-[#1e293b] group-hover:text-blue-600">Upload Media</span>
+                  <p className="text-[12px] text-[#64748b] mt-1">High-quality JPG, PNG or WebP (Max 10MB)</p>
+                </button>
+              )}
+              <input ref={fileRef} type="file" accept="image/*" onChange={handleImageSelect} className="hidden" />
+
+              {/* SEO: Focus Keyword */}
+              <div className="mt-4 pt-4 border-t border-[#f1f5f9]">
+                <div className="flex items-center justify-between mb-2">
+                  <label className="text-[12px] font-bold text-[#475569] uppercase tracking-wider">SEO Filename Keyword</label>
+                  <span className="text-[10px] font-bold text-[#94a3b8] bg-[#f8fafc] px-2 py-0.5 rounded border border-[#e2e8f0]">GOOGLE SEO</span>
+                </div>
+                <div className="relative">
+                  <input type="text" name="focusKeyword" value={form.focusKeyword}
+                    onChange={handleChange} disabled={isPublished}
+                    placeholder="e.g. dental-implants-nyc"
+                    className="w-full border border-[#e2e8f0] rounded-xl py-2.5 px-4 text-[14px] font-medium text-[#0f172a] focus:outline-none focus:ring-2 focus:ring-[#2563eb] focus:border-transparent disabled:opacity-50 placeholder:text-gray-400 transition-all" />
+                </div>
+                <p className="text-[11px] text-[#64748b] mt-2 italic flex items-center gap-1.5">
+                   <div className="w-1 h-1 rounded-full bg-blue-400" />
+                   We use this keyword to automatically rename your image for better local SEO ranking.
+                </p>
+              </div>
+            </div>
+
+              {/* Geo-tagging */}
+              {imagePreview && (
+                <div className="mt-3 border border-[var(--border)] rounded-lg overflow-hidden">
+                  <button onClick={() => setGeoEnabled(!geoEnabled)} type="button"
+                    className="w-full px-3 py-2.5 flex items-center justify-between bg-[var(--bg-secondary)] hover:bg-[var(--bg-tertiary)] transition-colors">
+                    <span className="flex items-center gap-2 text-[13px] font-medium text-[var(--text-primary)]">
+                      <MapPin className="w-4 h-4 text-[var(--text-tertiary)]" />
+                      Geo-tag this image
+                    </span>
+                    <span className={`text-[11px] font-medium px-2 py-0.5 rounded-full ${
+                      geoApplied ? 'text-[var(--success)] bg-[var(--success-bg)]' :
+                      geoEnabled ? 'text-[var(--accent)] bg-[var(--accent-light)]' :
+                      'text-[var(--text-tertiary)] bg-[var(--bg-tertiary)]'
+                    }`}>
+                      {geoApplied ? 'Applied' : geoEnabled ? 'Open' : 'Off'}
+                    </span>
+                  </button>
+                  {geoEnabled && (
+                    <div className="p-3 border-t border-[var(--border-light)] space-y-3">
+                      <p className="text-[11px] text-[var(--text-tertiary)]">
+                        Embed GPS coordinates into the image EXIF metadata for local SEO.
+                      </p>
+                      <div className="grid grid-cols-2 gap-3">
+                        <div>
+                          <label className="block text-[11px] font-medium text-[var(--text-secondary)] mb-1">Camera Template</label>
+                          <select value={geoTemplate} onChange={(e) => { setGeoTemplate(e.target.value); setGeoApplied(false); }} className="w-full border border-[var(--border)] rounded-md py-2 px-2.5 text-[13px] text-[var(--text-primary)] focus:outline-none focus:ring-2 focus:ring-[var(--accent)] bg-white">
+                            {CAMERA_TEMPLATES.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
+                          </select>
+                        </div>
+                        <div>
+                          <label className="block text-[11px] font-medium text-[var(--text-secondary)] mb-1">Date of Capture</label>
+                          <input type="date" value={geoDate} onChange={(e) => { setGeoDate(e.target.value); setGeoApplied(false); }} className="w-full border border-[var(--border)] rounded-md py-2 px-2.5 text-[13px] text-[var(--text-primary)] focus:outline-none focus:ring-2 focus:ring-[var(--accent)] bg-white" />
+                        </div>
+                      </div>
+                      
+                      <div className="grid grid-cols-2 gap-3">
+                        <div>
+                          <label className="block text-[11px] font-medium text-[var(--text-secondary)] mb-1">Latitude</label>
+                          <div className="flex border border-[var(--border)] rounded-md overflow-hidden focus-within:ring-2 focus-within:ring-[var(--accent)] focus-within:border-transparent">
+                            <input type="text" value={geoLat} onChange={(e) => { 
+                                let val = e.target.value.replace(/[^\d.-]/g, '');
+                                val = val.replace(/(?!^)-/g, '').replace(/(\..*)\./g, '$1');
+                                if (val.startsWith('-')) {
+                                  setGeoLatRef('S');
+                                  val = val.substring(1);
+                                }
+                                setGeoLat(val); 
+                                setGeoApplied(false); 
+                              }}
+                              placeholder="e.g. 45.5152"
+                              className="w-full py-2 pl-2.5 text-[13px] text-[var(--text-primary)] focus:outline-none bg-transparent" />
+                            <div className="flex items-center bg-[var(--bg-secondary)] border-l border-[var(--border)] px-1 shrink-0">
+                              <span className="text-[12px] font-medium text-[var(--text-tertiary)] pl-1 select-none">°</span>
+                              <select value={geoLatRef} onChange={(e) => { setGeoLatRef(e.target.value); setGeoApplied(false); }} className="bg-transparent text-[12px] font-medium text-[var(--text-secondary)] focus:outline-none py-1 pr-1 cursor-pointer">
+                                <option value="N">N</option>
+                                <option value="S">S</option>
+                              </select>
+                            </div>
+                          </div>
+                        </div>
+                        <div>
+                          <label className="block text-[11px] font-medium text-[var(--text-secondary)] mb-1">Longitude</label>
+                          <div className="flex border border-[var(--border)] rounded-md overflow-hidden focus-within:ring-2 focus-within:ring-[var(--accent)] focus-within:border-transparent">
+                            <input type="text" value={geoLng} onChange={(e) => { 
+                                let val = e.target.value.replace(/[^\d.-]/g, '');
+                                val = val.replace(/(?!^)-/g, '').replace(/(\..*)\./g, '$1');
+                                if (val.startsWith('-')) {
+                                  setGeoLngRef('W');
+                                  val = val.substring(1);
+                                }
+                                setGeoLng(val); 
+                                setGeoApplied(false); 
+                              }}
+                              placeholder="e.g. 122.6784"
+                              className="w-full py-2 pl-2.5 text-[13px] text-[var(--text-primary)] focus:outline-none bg-transparent" />
+                            <div className="flex items-center bg-[var(--bg-secondary)] border-l border-[var(--border)] px-1 shrink-0">
+                              <span className="text-[12px] font-medium text-[var(--text-tertiary)] pl-1 select-none">°</span>
+                              <select value={geoLngRef} onChange={(e) => { setGeoLngRef(e.target.value); setGeoApplied(false); }} className="bg-transparent text-[12px] font-medium text-[var(--text-secondary)] focus:outline-none py-1 pr-1 cursor-pointer">
+                                <option value="E">E</option>
+                                <option value="W">W</option>
+                              </select>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                      <button type="button" disabled={!geoLat || !geoLng || !imageFile || geoApplied}
+                        onClick={async () => {
+                          if (!imageFile || !geoLat || !geoLng) return;
+                          try {
+                            const latNum = parseFloat(geoLat);
+                            const lngNum = parseFloat(geoLng);
+                            const lat = geoLatRef === 'S' ? -latNum : latNum;
+                            const lng = geoLngRef === 'W' ? -lngNum : lngNum;
+                            
+                            if (isNaN(lat) || isNaN(lng) || lat < -90 || lat > 90 || lng < -180 || lng > 180) {
+                              alert('Invalid coordinates. Lat: -90 to 90, Lng: -180 to 180');
+                              return;
+                            }
+                            const { embedGPSInImage } = await import("@/lib/geo-exif");
+                            const geoDataUrl = await embedGPSInImage(imagePreview!, lat, lng, geoLatRef, geoLngRef, geoTemplate, geoDate || "2026-01-20");
+                            
+                            // Update preview and convert to File for persistence
+                            setImagePreview(geoDataUrl);
+                            const byteString = atob(geoDataUrl.split(',')[1]);
+                            const ab = new ArrayBuffer(byteString.length);
+                            const ia = new Uint8Array(ab);
+                            for (let i = 0; i < byteString.length; i++) ia[i] = byteString.charCodeAt(i);
+                            const geoFile = new File([ab], imageFile.name.replace(/\.[^.]+$/, '.jpg'), { type: 'image/jpeg' });
+                            setImageFile(geoFile);
+                            setGeoApplied(true);
+                          } catch (err) {
+                            alert('Failed to embed GPS data.');
+                          }
+                        }}
+                        className="w-full py-2 text-[12px] font-medium bg-[var(--accent)] hover:bg-[var(--accent-hover)] disabled:opacity-50 text-white rounded-md transition-colors flex items-center justify-center gap-1.5">
+                        <MapPin className="w-3.5 h-3.5" />
+                        {geoApplied ? 'GPS data embedded' : 'Apply geo-tag'}
+                      </button>
+                      {geoApplied && imageFile && (
+                        <button type="button"
+                          onClick={() => {
+                            const url = URL.createObjectURL(imageFile);
+                            const a = document.createElement('a');
+                            a.href = url;
+                            a.download = imageFile.name;
+                            a.click();
+                            URL.revokeObjectURL(url);
+                          }}
+                          className="w-full py-2 text-[12px] font-medium border border-[var(--border)] text-[var(--text-secondary)] rounded-md hover:bg-white transition-colors flex items-center justify-center gap-1.5">
+                          Download to verify
+                        </button>
+                      )}
+                    </div>
+                  )}
+            </div>
+            )}
+            {/* Post content */}
+            <div className="space-y-1.5">
+              <div className="flex justify-between items-center">
+                <label className="text-[13px] font-bold text-[#475569] uppercase tracking-wider">Post Content</label>
+                <span className={`text-[11px] font-bold px-2 py-0.5 rounded-full ${form.summary.length > 1500 ? 'text-red-600 bg-red-50' : 'text-gray-400 bg-gray-50'}`}>
+                  {form.summary.length} / 1500
+                </span>
+              </div>
+              <textarea name="summary" value={form.summary} onChange={handleChange} disabled={isPublished}
+                rows={10}
+                className="w-full border border-[#e2e8f0] rounded-xl py-3.5 px-4 text-[15px] leading-relaxed text-[#0f172a] focus:outline-none focus:ring-2 focus:ring-[#2563eb] focus:border-transparent resize-none disabled:opacity-50 disabled:bg-[#f8fafc] placeholder:text-gray-400 shadow-sm transition-all"
+                placeholder="What would you like to share with your customers?"
+              />
+            </div>
+
+            {/* Type & CTA */}
+            <div className="grid grid-cols-2 gap-5">
+              <div className="space-y-1.5">
+                <label className="text-[13px] font-bold text-[#475569] uppercase tracking-wider">Post Type</label>
+                <div className="relative">
+                  <select name="topicType" value={form.topicType} onChange={handleChange} disabled={isPublished}
+                    className="w-full border border-[#e2e8f0] rounded-xl py-3 px-4 text-[14px] font-semibold text-[#0f172a] bg-white focus:outline-none focus:ring-2 focus:ring-[#2563eb] focus:border-transparent disabled:opacity-50 transition-all appearance-none">
+                    <option value="STANDARD">✨ Standard Update</option>
+                    <option value="EVENT">📅 Special Event</option>
+                    <option value="OFFER">🎁 Exclusive Offer</option>
+                  </select>
+                </div>
+              </div>
+              <div className="space-y-1.5">
+                <label className="text-[13px] font-bold text-[#475569] uppercase tracking-wider">Call to Action</label>
+                <div className="relative">
+                  <select name="ctaType" value={form.ctaType} onChange={handleChange} disabled={isPublished}
+                    className="w-full border border-[#e2e8f0] rounded-xl py-3 px-4 text-[14px] font-semibold text-[#0f172a] bg-white focus:outline-none focus:ring-2 focus:ring-[#2563eb] focus:border-transparent disabled:opacity-50 transition-all appearance-none">
+                    <option value="">🚫 No Button</option>
+                    <option value="BOOK">📖 Book Now</option>
+                    <option value="ORDER">🛒 Order Online</option>
+                    <option value="LEARN_MORE">🔍 Learn More</option>
+                    <option value="SIGN_UP">✍️ Sign Up</option>
+                    <option value="CALL">📞 Call Now</option>
+                  </select>
+                </div>
+              </div>
+            </div>
+
+            {/* Event fields */}
+            {form.topicType === "EVENT" && (
+              <div className="border border-blue-100 rounded-2xl p-5 bg-blue-50/20 space-y-5 animate-in fade-in slide-in-from-top-4 duration-300">
+                <div className="flex items-center gap-2 pb-2 border-b border-blue-100/50">
+                  <Clock className="w-4 h-4 text-blue-500" />
+                  <h4 className="text-[14px] font-bold text-[#0f172a] uppercase tracking-tight">Event Logistics</h4>
+                </div>
+                <div className="space-y-1.5">
+                  <label className="text-[12px] font-bold text-[#64748b] uppercase">Event Title</label>
+                  <input type="text" name="eventTitle" value={form.eventTitle} onChange={handleChange} disabled={isPublished}
+                    className="w-full border border-[#e2e8f0] rounded-xl py-3 px-4 text-[14px] font-medium text-[#0f172a] bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50 shadow-sm"
+                    placeholder="e.g. Grand Opening Celebration" />
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-1.5">
+                    <label className="text-[12px] font-bold text-[#64748b] uppercase">Start Date</label>
+                    <input type="date" name="eventStart" value={form.eventStart} onChange={handleChange} disabled={isPublished}
+                      className="w-full border border-[#e2e8f0] rounded-xl py-3 px-4 text-[14px] font-medium text-[#0f172a] bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50 shadow-sm" />
+                  </div>
+                  <div className="space-y-1.5">
+                    <label className="text-[12px] font-bold text-[#64748b] uppercase">End Date</label>
+                    <input type="date" name="eventEnd" value={form.eventEnd} onChange={handleChange} disabled={isPublished}
+                      className="w-full border border-[#e2e8f0] rounded-xl py-3 px-4 text-[14px] font-medium text-[#0f172a] bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50 shadow-sm" />
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {form.ctaType === "CALL" && (
+              <div className="flex items-start gap-3 px-4 py-4 bg-blue-50 border border-blue-100 rounded-2xl text-[13px] text-blue-800 font-medium">
+                <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center shrink-0">
+                  <Phone className="w-4 h-4 text-blue-600" />
+                </div>
+                <div className="pt-1">
+                  <span className="font-bold block mb-0.5">Direct Call Integration</span>
+                  <p className="text-blue-600/80 leading-relaxed">Google will automatically use the primary phone number from your Business Profile. No URL is required for this action type.</p>
+                </div>
+              </div>
+            )}
+
+            {form.ctaType && form.ctaType !== "CALL" && (
+              <div className="space-y-1.5 animate-in fade-in slide-in-from-top-2 duration-200">
+                <label className="text-[13px] font-bold text-[#475569] uppercase tracking-wider">Button Destination Link</label>
+                <div className="relative">
+                  <input type="url" name="ctaUrl" value={form.ctaUrl} onChange={handleChange} disabled={isPublished}
+                    className="w-full border border-[#e2e8f0] rounded-xl py-3 pl-11 pr-4 text-[14px] font-medium text-[#0f172a] focus:outline-none focus:ring-2 focus:ring-[#2563eb] focus:border-transparent disabled:opacity-50 placeholder:text-gray-400 shadow-sm transition-all"
+                    placeholder="https://yourwebsite.com/promotion" />
+                  <LinkIcon className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-[#64748b]" />
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Sidebar — Schedule */}
+          <div className="space-y-6">
+            <div className="border border-[#e2e8f0] rounded-2xl bg-[#f8fafc] overflow-hidden shadow-sm">
+              <div className="px-5 py-4 border-b border-[#f1f5f9] bg-white">
+                <h3 className="text-[14px] font-bold text-[#0f172a] flex items-center gap-2.5 uppercase tracking-tight">
+                  <Clock className="w-4 h-4 text-[#2563eb]" />
+                  Publish Schedule
+                </h3>
+              </div>
+
+              {/* Quick picks */}
+              <div className="px-4 py-4 border-b border-[#f1f5f9] flex gap-3">
+                <button onClick={() => setQuickDate("tomorrow")} disabled={minScheduleDays > 1} className={`flex-1 py-2 text-[12px] font-bold border border-[#e2e8f0] rounded-xl transition-all shadow-sm ${minScheduleDays > 1 ? "opacity-50 cursor-not-allowed bg-gray-50 text-gray-400" : "bg-white hover:border-blue-300 hover:text-blue-600 text-[#475569]"}`}>Tomorrow</button>
+                <button onClick={() => setQuickDate("dayafter")} disabled={minScheduleDays > 2} className={`flex-1 py-2 text-[12px] font-bold border border-[#e2e8f0] rounded-xl transition-all shadow-sm ${minScheduleDays > 2 ? "opacity-50 cursor-not-allowed bg-gray-50 text-gray-400" : "bg-white hover:border-blue-300 hover:text-blue-600 text-[#475569]"}`}>Day After</button>
+              </div>
+
+              {/* Mini calendar */}
+              <div className="px-4 py-5 bg-white">
+                <div className="flex items-center justify-between mb-4">
+                  <button onClick={() => { if (calMonth === 0) { setCalMonth(11); setCalYear(y=>y-1); } else setCalMonth(m=>m-1); }}
+                    className="p-1.5 hover:bg-gray-100 rounded-lg text-gray-400 transition-colors">‹</button>
+                  <span className="text-[13px] font-bold text-[#0f172a] tracking-tight">{monthNames[calMonth]} {calYear}</span>
+                  <button onClick={() => { if (calMonth === 11) { setCalMonth(0); setCalYear(y=>y+1); } else setCalMonth(m=>m+1); }}
+                    className="p-1.5 hover:bg-gray-100 rounded-lg text-gray-400 transition-colors">›</button>
+                </div>
+                <div className="grid grid-cols-7 text-center text-[10px] text-[#94a3b8] font-bold mb-2 uppercase tracking-widest">
+                  {["S","M","T","W","T","F","S"].map((d,i) => <div key={i} className="py-1">{d}</div>)}
                 </div>
                 <div className="grid grid-cols-7 text-center gap-y-1">
-                  {Array.from({ length: firstDay }).map((_, i) => <div key={i} />)}
+                  {Array.from({ length: firstDay }).map((_, i) => <div key={`e${i}`} />)}
                   {Array.from({ length: daysInMonth }).map((_, i) => {
                     const day = i + 1;
                     const dateStr = `${calYear}-${String(calMonth + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
                     const isSelected = selectedDate === dateStr;
                     const isToday = day === todayDay && calMonth === now.getMonth() && calYear === now.getFullYear();
-                    const isPast = new Date(dateStr) < new Date(todayStr);
-
+                    
+                    const dateObj = new Date(dateStr);
+                    const todayObj = new Date(todayStr);
+                    const diffTime = dateObj.getTime() - todayObj.getTime();
+                    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+                    const isPast = diffDays < 0 || diffDays < minScheduleDays;
+                    
                     return (
-                      <button 
-                        key={day} 
-                        onClick={() => !isPast && selectCalDay(day)}
-                        disabled={isPast}
-                        className={`w-7 h-7 mx-auto rounded-lg text-[12px] font-bold flex items-center justify-center transition-all ${
-                          isSelected ? "bg-[#000] text-[#fff]" :
-                          isToday ? "text-[#2563eb] font-extrabold" :
-                          isPast ? "text-gray-200" : "text-[#475569] hover:bg-gray-100"
-                        }`}
-                      >
+                      <button key={day} onClick={() => !isPast && selectCalDay(day)} disabled={isPast}
+                        className={`w-8 h-8 mx-auto rounded-xl text-[12px] font-bold transition-all ${
+                          isSelected ? "bg-[#2563eb] text-white shadow-[0_4px_12px_rgba(37,99,235,0.3)] scale-110" :
+                          isToday && !isPast ? "border-2 border-[#2563eb] text-[#2563eb]" :
+                          isPast ? "text-gray-200 cursor-not-allowed" :
+                          "text-[#475569] hover:bg-gray-100"
+                        }`}>
                         {day}
                       </button>
                     );
@@ -475,98 +791,13 @@ export function PostEditor({ initialData = null, timelineDate, onDateChange, loc
                 </div>
               </div>
 
+              {/* Time picker */}
               {selectedDate && (
-                <div className="pt-2">
-                  <input type="time" value={selectedTime} onChange={(e) => setSelectedTime(e.target.value)} 
-                    className="w-full border-none p-0 text-[24px] font-bold text-[#000] focus:ring-0 cursor-pointer" />
-                </div>
-              )}
-            </div>
-          </div>
-        </div>
-
-        {/* ─── Main Content Area ─── */}
-        <div className="border-t border-[#f5f5f7] pt-12 space-y-8">
-           <div className="max-w-3xl space-y-6">
-              <div className="space-y-2">
-                <div className="flex justify-between items-center">
-                  <h3 className="text-[14px] font-bold text-[#000] uppercase tracking-wider">Post Content</h3>
-                  <span className="text-[11px] font-bold text-[#94a3b8]">{form.summary.length} / 1500</span>
-                </div>
-                <textarea 
-                  name="summary" 
-                  value={form.summary} 
-                  onChange={handleChange} 
-                  disabled={isPublished}
-                  rows={8}
-                  placeholder="What would you like to share?"
-                  className="w-full border-none p-0 text-[18px] text-[#000] focus:ring-0 resize-none placeholder:text-[#94a3b8]"
-                />
-              </div>
-
-              <div className="grid grid-cols-2 gap-8">
-                <div className="space-y-2">
-                  <h3 className="text-[14px] font-bold text-[#000] uppercase tracking-wider">Post Type</h3>
-                  <select name="topicType" value={form.topicType} onChange={handleChange} disabled={isPublished}
-                    className="w-full border border-[#eaeaea] rounded-lg py-2.5 px-3 text-[14px] font-medium bg-white outline-none">
-                    <option value="STANDARD">Standard Update</option>
-                    <option value="EVENT">Special Event</option>
-                    <option value="OFFER">Exclusive Offer</option>
-                  </select>
-                </div>
-                <div className="space-y-2">
-                  <h3 className="text-[14px] font-bold text-[#000] uppercase tracking-wider">Call to Action</h3>
-                  <select name="ctaType" value={form.ctaType} onChange={handleChange} disabled={isPublished}
-                    className="w-full border border-[#eaeaea] rounded-lg py-2.5 px-3 text-[14px] font-medium bg-white outline-none">
-                    <option value="">No Button</option>
-                    <option value="BOOK">Book Now</option>
-                    <option value="ORDER">Order Online</option>
-                    <option value="LEARN_MORE">Learn More</option>
-                    <option value="SIGN_UP">Sign Up</option>
-                    <option value="CALL">Call Now</option>
-                  </select>
-                </div>
-              </div>
-
-              {form.ctaType && form.ctaType !== "CALL" && (
-                <div className="space-y-2">
-                  <h3 className="text-[14px] font-bold text-[#000] uppercase tracking-wider">Button Link</h3>
-                  <input type="url" name="ctaUrl" value={form.ctaUrl} onChange={handleChange} disabled={isPublished}
-                    placeholder="https://example.com"
-                    className="w-full border border-[#eaeaea] rounded-lg py-2.5 px-4 text-[14px] font-medium outline-none" />
-                </div>
-              )}
-           </div>
-
-           {/* Actions Row */}
-           <div className="flex items-center gap-4 pt-8 border-t border-[#f5f5f7]">
-              <button 
-                onClick={() => handleSave("PUBLISH")} 
-                disabled={saving || isPublished || !form.locationId || !form.summary}
-                className="px-8 py-3 bg-[#000] text-[#fff] rounded-lg text-[14px] font-bold hover:bg-[#222] disabled:opacity-30 transition-all shadow-sm"
-              >
-                Publish Now
-              </button>
-              <button 
-                onClick={() => handleSave("SCHEDULED")} 
-                disabled={saving || isPublished || !selectedDate || !form.locationId || !form.summary}
-                className="px-8 py-3 bg-[#fff] text-[#000] border border-[#eaeaea] rounded-lg text-[14px] font-bold hover:bg-[#fafafa] disabled:opacity-30 transition-all"
-              >
-                Schedule Post
-              </button>
-              <button 
-                onClick={() => handleSave("DRAFT")} 
-                disabled={saving || isPublished || !form.locationId || !form.summary}
-                className="px-6 py-3 bg-transparent text-[#64748b] text-[14px] font-bold hover:text-[#000] transition-all"
-              >
-                Save as Draft
-              </button>
-           </div>
-        </div>
-      </div>
-    </>
-  );
-}
+                <div className="px-5 py-5 border-t border-[#f1f5f9] bg-[#f8fafc]">
+                  <label className="block text-[11px] font-bold text-[#64748b] uppercase tracking-widest mb-3">Target Time</label>
+                  <input 
+                    type="time" 
+                    value={selectedTime}
                     min={selectedDate === todayStr ? nowTimeStr : undefined}
                     onChange={(e) => {
                       const val = e.target.value;
