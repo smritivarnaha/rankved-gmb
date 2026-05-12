@@ -19,92 +19,78 @@ function ProfileStatCard({ profile, onClick }: { profile: any, onClick: () => vo
     perfData.data.forEach((multiSeriesItem: any) => {
       const seriesArray = multiSeriesItem.dailyMetricTimeSeries || [];
       seriesArray.forEach((series: any) => {
-        const metricName = series.dailyMetric;
-        if (!metricName) return;
-        
         const sum = (series.timeSeries?.datedValues || []).reduce((acc: number, point: any) => acc + (parseInt(point.value) || 0), 0);
-        
-        if (metricName.includes("IMPRESSIONS")) {
-          views += sum;
-        } else {
-          interactions += sum;
-        }
+        if ((series.dailyMetric || "").includes("IMPRESSIONS")) views += sum;
+        else interactions += sum;
       });
     });
   }
 
-  // Clean up the Google location ID string (remove "accounts/xxx/locations/")
-  const locationId = profile.googleName?.split('/').pop() || "Pending";
-
   return (
-    <button 
-      onClick={onClick}
-      className="relative p-6 rounded-[32px] text-left group overflow-hidden bg-white"
+    <div
       style={{
-        boxShadow: "0 10px 40px -10px rgba(0,0,0,0.08)",
-        border: "1px solid rgba(226, 232, 240, 0.8)",
-        transition: "all 0.4s cubic-bezier(0.4, 0, 0.2, 1)"
+        background: "#ffffff",
+        borderRadius: 14,
+        boxShadow: "0 1px 4px rgba(0,0,0,0.07), 0 4px 16px rgba(0,0,0,0.04)",
+        overflow: "hidden",
+        display: "flex",
+        flexDirection: "column",
+        border: "1px solid rgba(0,0,0,0.07)",
+        cursor: "pointer",
+        transition: "transform 0.2s, box-shadow 0.2s"
       }}
-      onMouseEnter={(e) => {
-        e.currentTarget.style.transform = "translateY(-4px)";
-        e.currentTarget.style.boxShadow = "0 20px 40px -10px rgba(37, 99, 235, 0.15)";
-        e.currentTarget.style.borderColor = "rgba(37, 99, 235, 0.3)";
-      }}
-      onMouseLeave={(e) => {
-        e.currentTarget.style.transform = "translateY(0)";
-        e.currentTarget.style.boxShadow = "0 10px 40px -10px rgba(0,0,0,0.08)";
-        e.currentTarget.style.borderColor = "rgba(226, 232, 240, 0.8)";
-      }}
+      className="profile-card-hover"
+      onClick={onClick}
     >
-      {/* Subtle background glow */}
-      <div className="absolute top-0 right-0 w-64 h-64 bg-indigo-50 rounded-full blur-3xl opacity-60 -translate-y-1/2 translate-x-1/3 transition-all group-hover:bg-indigo-100" />
-      
-      <div className="relative z-10 flex items-center justify-between mb-6">
-        <div className="w-12 h-12 bg-white/80 backdrop-blur rounded-2xl flex items-center justify-center border border-slate-100 shadow-sm text-slate-400 group-hover:text-indigo-600 transition-colors">
-          <MapPin className="w-6 h-6" />
-        </div>
-        <div className="flex items-center gap-1.5 text-emerald-600 bg-emerald-50 px-3 py-1.5 rounded-full text-[11px] font-black uppercase tracking-wider border border-emerald-100 shadow-sm">
-          <div className="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-pulse" />
-          Active
-        </div>
-      </div>
-      
-      <div className="relative z-10 mb-8">
-        <h3 className="text-xl font-black text-slate-900 tracking-tight mb-2 line-clamp-1">{profile.name}</h3>
-        <div className="flex items-center gap-2 text-slate-400">
-          <span className="text-[10px] font-bold uppercase tracking-widest bg-slate-100 px-2 py-0.5 rounded-md">ID: {locationId}</span>
-        </div>
-      </div>
-      
-      <div className="relative z-10 grid grid-cols-2 gap-4 mb-6">
-        <div className="bg-slate-50 p-4 rounded-2xl border border-slate-100/50">
-          <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1.5">Views (30d)</p>
-          {isLoading ? (
-            <div className="h-6 w-20 bg-slate-200/50 rounded animate-pulse" />
-          ) : (
-            <p className="text-2xl font-black text-slate-900 tracking-tight">{views.toLocaleString()}</p>
-          )}
-        </div>
-        <div className="bg-slate-50 p-4 rounded-2xl border border-slate-100/50">
-          <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1.5">Interactions</p>
-          {isLoading ? (
-            <div className="h-6 w-20 bg-slate-200/50 rounded animate-pulse" />
-          ) : (
-            <p className="text-2xl font-black text-slate-900 tracking-tight">{interactions.toLocaleString()}</p>
-          )}
+      <div style={{ display: "flex", gap: 0 }}>
+        <div style={{ width: 4, background: "#2563eb", flexShrink: 0 }} />
+
+        <div style={{ flex: 1, padding: "20px 16px" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
+            <div style={{
+              width: 52, height: 52, borderRadius: 10, flexShrink: 0,
+              background: "#f8fafc",
+              display: "flex", alignItems: "center", justifyContent: "center",
+              border: "1px solid #e2e8f0",
+            }}>
+              <GbpIcon size={32} />
+            </div>
+            <div style={{ minWidth: 0 }}>
+              <h3 style={{ fontSize: 14, fontWeight: 700, color: "#111827", marginBottom: 2 }}>{profile.name}</h3>
+              <p style={{ fontSize: 11, color: "#9ca3af", textTransform: "uppercase", letterSpacing: "0.05em", fontWeight: 600 }}>
+                Verified Profile
+              </p>
+            </div>
+          </div>
         </div>
       </div>
 
-      <div className="relative z-10 flex items-center justify-between pt-5 border-t border-slate-100">
-        <div className="flex items-center gap-2">
-          <div className="w-2 h-2 rounded-full bg-blue-500" />
-          <p className="text-[11px] font-bold text-slate-500 uppercase tracking-widest">Verified Profile</p>
+      {/* Stats Strip */}
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", background: "#fafafa", borderTop: "1px solid #f3f4f6", borderBottom: "1px solid #f3f4f6" }}>
+        <div style={{ padding: "12px 8px", textAlign: "center", borderRight: "1px solid #f3f4f6" }}>
+          <p style={{ fontSize: 20, fontWeight: 700, color: "#111827", lineHeight: 1, marginBottom: 2 }}>{isLoading ? "..." : views.toLocaleString()}</p>
+          <p style={{ fontSize: 9, fontWeight: 600, color: "#9ca3af", textTransform: "uppercase", letterSpacing: "0.07em" }}>Search Views</p>
         </div>
-        <div className="bg-indigo-600 text-white text-[11px] font-bold uppercase tracking-widest px-4 py-2 rounded-xl group-hover:bg-indigo-700 transition-colors shadow-md shadow-indigo-200 flex items-center gap-1.5">
-          Deep Dive <span>→</span>
+        <div style={{ padding: "12px 8px", textAlign: "center" }}>
+          <p style={{ fontSize: 20, fontWeight: 700, color: "#111827", lineHeight: 1, marginBottom: 2 }}>{isLoading ? "..." : interactions.toLocaleString()}</p>
+          <p style={{ fontSize: 9, fontWeight: 600, color: "#9ca3af", textTransform: "uppercase", letterSpacing: "0.07em" }}>Interactions</p>
         </div>
       </div>
-    </button>
+
+      <div style={{ padding: "12px" }}>
+        <button
+          style={{ 
+            width: "100%", height: 38, background: "#2563eb", color: "#fff", 
+            borderRadius: 8, border: "none", fontWeight: 600, fontSize: 12,
+            display: "flex", alignItems: "center", justifyContent: "center", gap: 8,
+            cursor: "pointer"
+          }}
+        >
+          <BarChart3 style={{ width: 14, height: 14 }} />
+          View Performance Report
+        </button>
+      </div>
+    </div>
   );
 }
 
