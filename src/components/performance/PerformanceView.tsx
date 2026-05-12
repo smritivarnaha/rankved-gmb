@@ -1,234 +1,295 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import {
-  BarChart, Bar, XAxis, YAxis, CartesianGrid,
-  Tooltip, ResponsiveContainer
+  LineChart, Line, XAxis, YAxis, CartesianGrid,
+  Tooltip, ResponsiveContainer, ReferenceLine
 } from "recharts";
-import { ArrowLeft, TrendingUp, Eye, Phone, MessageSquare, MousePointer2 } from "lucide-react";
+import { ArrowLeft, Info } from "lucide-react";
 import { AuditReport } from "./AuditReport";
 import useSWR from "swr";
 
 const fetcher = (url: string) => fetch(url).then((r) => r.json());
 
-/* ─────────────────────────────────────────
-   Aggregate raw GBP API data into display
-───────────────────────────────────────── */
-function processData(dataRaw: any[]) {
-  let interactions = 0, views = 0, calls = 0, messages = 0;
-  const weeklyMap: Record<string, number> = {};
+/* ── Time periods ─────────────────────────────── */
+const PERIODS = [
+  { label: "This Month", months: 1 },
+  { label: "3 Months",   months: 3 },
+  { label: "6 Months",   months: 6 },
+] as const;
 
-  if (!Array.isArray(dataRaw)) return { interactions, views, calls, messages, weekly: [] };
+/* ── Metric tabs (mirroring Google's tabs) ────── */
+const METRIC_TABS = [
+  { key: "overview",   label: "Overview" },
+  { key: "calls",      label: "Calls" },
+  { key: "website",    label: "Website clicks" },
+  { key: "directions", label: "Directions" },
+  { key: "messages",   label: "Messages" },
+] as const;
+
+type MetricKey = typeof METRIC_TABS[number]["key"];
+
+/* ── Process raw API data ─────────────────────── */
+function processRaw(dataRaw: any[], activeMetric: MetricKey) {
+  const dailyMap: Record<string, number> = {};
+  let total = 0;
+
+  if (!Array.isArray(dataRaw)) return { total: 0, chartData: [] };
 
   dataRaw.forEach((item: any) => {
     (item.dailyMetricTimeSeries || []).forEach((series: any) => {
       const metric: string = series.dailyMetric || "";
       const points: any[] = series.timeSeries?.datedValues || [];
-      const sum = points.reduce((a: number, p: any) => a + (parseInt(p.value) || 0), 0);
 
-      if (metric.includes("IMPRESSIONS")) views += sum;
-      else if (metric.includes("CALLS"))   calls += sum;
-      else if (metric.includes("MESSAGES")) messages += sum;
-      else interactions += sum;
+      const isImpression = metric.includes("IMPRESSIONS");
+      const isCall       = metric.includes("CALL_CLICKS");
+      const isWebsite    = metric.includes("WEBSITE_CLICKS");
+      const isDirection  = metric.includes("DIRECTION");
+      const isMessage    = metric.includes("CONVERSATIONS");
 
-      // Build weekly buckets from impressions series
-      if (metric.includes("IMPRESSIONS") && points.length > 0) {
-        points.forEach((p: any) => {
-          const d = new Date(p.date.year, p.date.month - 1, p.date.day);
-          // ISO week key: "Wk 1", "Wk 2" etc. — just use the day-of-month / 7
-          const weekNum = Math.ceil(p.date.day / 7);
-          const key = `W${weekNum} ${d.toLocaleString("default", { month: "short" })}`;
-          weeklyMap[key] = (weeklyMap[key] || 0) + (parseInt(p.value) || 0);
-        });
-      }
+      const include =
+        activeMetric === "overview"   ? isImpression :
+        activeMetric === "calls"      ? isCall :
+        activeMetric === "website"    ? isWebsite :
+        activeMetric === "directions" ? isDirection :
+        activeMetric === "messages"   ? isMessage : false;
+
+      if (!include) return;
+
+      points.forEach((p: any) => {
+        if (!p.date) return;
+        const key = `${p.date.year}-${String(p.date.month).padStart(2,"0")}-${String(p.date.day).padStart(2,"0")}`;
+        dailyMap[key] = (dailyMap[key] || 0) + (parseInt(p.value) || 0);
+      });
     });
   });
 
-  const weekly = Object.entries(weeklyMap).map(([week, value]) => ({ week, value }));
-  return { interactions, views, calls, messages, weekly };
+  // Sort dates and build chart data
+  const sorted = Object.entries(dailyMap).sort(([a], [b]) => a.localeCompare(b));
+
+  // Group into weekly buckets for cleaner chart
+  const weeklyMap: Record<string, number> = {};
+  sorted.forEach(([dateStr, val]) => {
+    const d = new Date(dateStr);
+    const jan = new Date(d.getFullYear(), 0, 1);
+    const weekNum = Math.ceil(((d.getTime() - jan.getTime()) / 86400000 + jan.getDay() + 1) / 7);
+    const label = d.toLocaleString("default", { month: "short" }) + " " + d.getDate();
+    // Use first day of the week as label key
+    const weekKey = d.toLocaleString("default", { month: "short", year: "2-digit" }) + " W" + (Math.ceil(d.getDate() / 7));
+    weeklyMap[weekKey] = (weeklyMap[weekKey] || 0) + val;
+    total += val;
+  });
+
+  const chartData = Object.entries(weeklyMap).map(([label, value]) => ({ label, value }));
+
+  return { total, chartData };
 }
 
-/* ─────────────────────────────────────────
-   Google-style metric card
-───────────────────────────────────────── */
-function MetricCard({
-  label, value, icon: Icon, iconBg, delta
-}: {
-  label: string; value: number; icon: any; iconBg: string; delta?: string;
-}) {
+/* ── Custom tooltip ───────────────────────────── */
+function CustomTooltip({ active, payload, label }: any) {
+  if (!active || !payload?.length) return null;
   return (
-    <div className="ds-card" style={{ padding: "20px 24px", display: "flex", flexDirection: "column", gap: 12 }}>
-      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-        <span style={{ fontSize: 13, fontWeight: 500, color: "var(--neutral-500)" }}>{label}</span>
-        <div style={{
-          width: 36, height: 36, borderRadius: 10,
-          background: iconBg, display: "flex", alignItems: "center", justifyContent: "center"
-        }}>
-          <Icon size={18} color="#fff" />
-        </div>
-      </div>
-      <div style={{ fontSize: 32, fontWeight: 700, color: "var(--neutral-900)", letterSpacing: "-0.02em", lineHeight: 1 }}>
-        {value.toLocaleString()}
-      </div>
-      {delta && (
-        <div style={{
-          fontSize: 12, fontWeight: 500,
-          color: delta.startsWith("+") ? "var(--success)" : "var(--danger)"
-        }}>
-          {delta} vs last month
-        </div>
-      )}
+    <div style={{
+      background: "#fff", border: "1px solid var(--neutral-200)",
+      borderRadius: 8, padding: "10px 14px", fontSize: 12,
+      boxShadow: "0 4px 12px rgba(0,0,0,0.08)"
+    }}>
+      <p style={{ fontWeight: 600, color: "var(--neutral-700)", marginBottom: 4 }}>{label}</p>
+      <p style={{ color: "var(--brand)", fontWeight: 700 }}>{payload[0].value?.toLocaleString()}</p>
     </div>
   );
 }
 
-/* ─────────────────────────────────────────
-   Main component
-───────────────────────────────────────── */
+/* ── Main component ───────────────────────────── */
 export function PerformanceView({ profile, onBack }: { profile: any; onBack?: () => void }) {
-  const [activeTab, setActiveTab] = useState<"overview" | "audit">("overview");
+  const [months, setMonths]         = useState<1 | 3 | 6>(6); // default 6 months
+  const [activeMetric, setMetric]   = useState<MetricKey>("overview");
+  const [activeView, setActiveView] = useState<"performance" | "audit">("performance");
 
   const { data: perfData, isLoading } = useSWR(
-    profile ? `/api/profiles/${profile.id}/performance?months=1` : null,
+    profile ? `/api/profiles/${profile.id}/performance?months=${months}` : null,
     fetcher
+  );
+
+  const { total, chartData } = useMemo(
+    () => processRaw(perfData?.data || [], activeMetric),
+    [perfData, activeMetric]
   );
 
   if (!profile) return null;
 
-  const { interactions, views, calls, messages, weekly } = processData(perfData?.data || []);
+  const metricLabel =
+    activeMetric === "overview"   ? "Business Profile interactions" :
+    activeMetric === "calls"      ? "Calls" :
+    activeMetric === "website"    ? "Website clicks" :
+    activeMetric === "directions" ? "Direction requests" :
+    "Messages";
 
   return (
-    <div style={{ fontFamily: "Inter, sans-serif" }}>
+    <div style={{ fontFamily: "Inter, -apple-system, sans-serif", maxWidth: 900 }}>
 
-      {/* ── Top bar ── */}
+      {/* ── Header: back + profile name + view tabs ── */}
       <div style={{ display: "flex", alignItems: "center", gap: 16, marginBottom: 24, flexWrap: "wrap" }}>
         {onBack && (
-          <button
-            onClick={onBack}
-            style={{
-              width: 36, height: 36, borderRadius: "50%",
-              border: "1px solid var(--neutral-200)", background: "#fff",
-              display: "flex", alignItems: "center", justifyContent: "center",
-              cursor: "pointer", color: "var(--neutral-500)"
-            }}
-          >
-            <ArrowLeft size={16} />
+          <button onClick={onBack} style={{
+            width: 32, height: 32, borderRadius: "50%", border: "1px solid var(--neutral-200)",
+            background: "#fff", cursor: "pointer", display: "flex", alignItems: "center",
+            justifyContent: "center", color: "var(--neutral-500)", flexShrink: 0
+          }}>
+            <ArrowLeft size={14} />
           </button>
         )}
 
-        {/* Tab strip */}
-        <div style={{
-          display: "flex", gap: 4,
-          background: "var(--neutral-100)", borderRadius: 10, padding: 4
-        }}>
-          {(["overview", "audit"] as const).map((t) => (
-            <button
-              key={t}
-              onClick={() => setActiveTab(t)}
-              style={{
-                padding: "6px 18px", borderRadius: 7, border: "none",
-                fontSize: 13, fontWeight: 600, cursor: "pointer",
-                background: activeTab === t ? "#fff" : "transparent",
-                color: activeTab === t ? "var(--neutral-900)" : "var(--neutral-400)",
-                boxShadow: activeTab === t ? "0 1px 3px rgba(0,0,0,0.08)" : "none",
-                transition: "all 0.15s"
-              }}
-            >
-              {t === "overview" ? "Performance" : "Business Audit"}
+        <div style={{ flex: 1 }}>
+          <p style={{ fontSize: 12, color: "var(--neutral-400)", margin: 0, fontWeight: 500 }}>Performance</p>
+          <h1 style={{
+            fontSize: 20, fontWeight: 700, color: "var(--neutral-900)",
+            margin: 0, letterSpacing: "-0.01em"
+          }}>
+            {profile.name}
+          </h1>
+        </div>
+
+        {/* Performance / Audit view toggle */}
+        <div style={{ display: "flex", gap: 4, background: "var(--neutral-100)", borderRadius: 8, padding: 3 }}>
+          {(["performance", "audit"] as const).map((v) => (
+            <button key={v} onClick={() => setActiveView(v)} style={{
+              padding: "5px 16px", borderRadius: 6, border: "none", cursor: "pointer",
+              fontSize: 13, fontWeight: 600,
+              background: activeView === v ? "#fff" : "transparent",
+              color: activeView === v ? "var(--neutral-900)" : "var(--neutral-400)",
+              boxShadow: activeView === v ? "0 1px 3px rgba(0,0,0,0.08)" : "none",
+              transition: "all 0.15s"
+            }}>
+              {v === "performance" ? "Performance" : "Audit"}
             </button>
           ))}
         </div>
-
-        <span style={{ fontSize: 13, color: "var(--neutral-400)", marginLeft: "auto" }}>
-          Last 30 days
-        </span>
       </div>
 
-      {activeTab === "overview" ? (
+      {activeView === "audit" ? (
+        <AuditReport profileId={profile.id} />
+      ) : (
         <>
-          {/* ── Metric cards — Google GBP style ── */}
-          {isLoading ? (
-            <div style={{
-              display: "grid",
-              gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))",
-              gap: 16, marginBottom: 24
-            }}>
-              {[...Array(4)].map((_, i) => (
-                <div key={i} className="ds-card" style={{ padding: 24, height: 120 }}>
-                  <div style={{ height: 12, width: "60%", background: "var(--neutral-100)", borderRadius: 6, marginBottom: 12 }} />
-                  <div style={{ height: 32, width: "40%", background: "var(--neutral-100)", borderRadius: 6 }} />
-                </div>
-              ))}
-            </div>
-          ) : (
-            <div style={{
-              display: "grid",
-              gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))",
-              gap: 16, marginBottom: 24
-            }}>
-              <MetricCard label="Searches" value={views} icon={Eye} iconBg="#4285F4" />
-              <MetricCard label="Interactions" value={interactions} icon={MousePointer2} iconBg="#34A853" />
-              <MetricCard label="Calls" value={calls} icon={Phone} iconBg="#FBBC05" />
-              <MetricCard label="Messages" value={messages} icon={MessageSquare} iconBg="#EA4335" />
-            </div>
-          )}
+          {/* ── Time period selector — Google style ── */}
+          <div style={{
+            display: "flex", alignItems: "center", gap: 8,
+            marginBottom: 20, padding: "12px 16px",
+            background: "#fff", border: "1px solid var(--neutral-200)",
+            borderRadius: 10, width: "max-content"
+          }}>
+            <span style={{ fontSize: 12, color: "var(--neutral-400)", marginRight: 4, fontWeight: 500 }}>Time period</span>
+            {PERIODS.map((p) => (
+              <button
+                key={p.months}
+                onClick={() => setMonths(p.months as 1 | 3 | 6)}
+                style={{
+                  padding: "6px 14px", borderRadius: 6, border: "none", cursor: "pointer",
+                  fontSize: 13, fontWeight: 600, transition: "all 0.15s",
+                  background: months === p.months ? "var(--brand)" : "transparent",
+                  color: months === p.months ? "#fff" : "var(--neutral-500)",
+                }}
+              >
+                {p.label}
+              </button>
+            ))}
+          </div>
 
-          {/* ── Weekly bar chart — Google GBP style ── */}
-          <div className="ds-card" style={{ padding: 24 }}>
-            <div style={{ marginBottom: 16 }}>
-              <p style={{ fontSize: 13, fontWeight: 600, color: "var(--neutral-900)" }}>
-                Search views — Weekly breakdown
-              </p>
-              <p style={{ fontSize: 12, color: "var(--neutral-400)", marginTop: 2 }}>
-                {profile.name}
-              </p>
-            </div>
+          {/* ── Metric tabs (Google‐style underline) ── */}
+          <div style={{
+            display: "flex", gap: 0, borderBottom: "1px solid var(--neutral-200)",
+            marginBottom: 28, overflowX: "auto"
+          }}>
+            {METRIC_TABS.map((tab) => (
+              <button
+                key={tab.key}
+                onClick={() => setMetric(tab.key)}
+                style={{
+                  padding: "10px 20px", border: "none", cursor: "pointer",
+                  background: "transparent", fontSize: 14, fontWeight: 500,
+                  color: activeMetric === tab.key ? "var(--brand)" : "var(--neutral-500)",
+                  borderBottom: activeMetric === tab.key ? "2px solid var(--brand)" : "2px solid transparent",
+                  marginBottom: -1, transition: "all 0.15s", whiteSpace: "nowrap"
+                }}
+              >
+                {tab.label}
+              </button>
+            ))}
+          </div>
 
+          {/* ── Big total number ── */}
+          <div style={{ marginBottom: 24 }}>
             {isLoading ? (
-              <div style={{ height: 220, background: "var(--neutral-100)", borderRadius: 8 }} />
-            ) : weekly.length === 0 ? (
+              <div style={{ height: 52, width: 160, background: "var(--neutral-100)", borderRadius: 8 }} />
+            ) : (
+              <>
+                <div style={{
+                  fontSize: 48, fontWeight: 700, color: "var(--neutral-900)",
+                  letterSpacing: "-0.03em", lineHeight: 1.1
+                }}>
+                  {total.toLocaleString()}
+                </div>
+                <div style={{
+                  display: "flex", alignItems: "center", gap: 6, marginTop: 6,
+                  fontSize: 14, fontWeight: 600, color: "var(--neutral-500)"
+                }}>
+                  {metricLabel}
+                  <Info size={14} style={{ color: "var(--neutral-300)" }} />
+                </div>
+              </>
+            )}
+          </div>
+
+          {/* ── Line chart — Google GBP style ── */}
+          <div style={{ marginBottom: 12 }}>
+            {isLoading ? (
+              <div style={{ height: 260, background: "var(--neutral-100)", borderRadius: 8 }} />
+            ) : chartData.length === 0 ? (
               <div style={{
-                height: 220, display: "flex", alignItems: "center", justifyContent: "center",
+                height: 260, border: "1px solid var(--neutral-200)", borderRadius: 8,
+                display: "flex", alignItems: "center", justifyContent: "center",
                 color: "var(--neutral-400)", fontSize: 13
               }}>
-                <TrendingUp size={20} style={{ marginRight: 8 }} />
                 No data available for this period
               </div>
             ) : (
-              <div style={{ height: 220 }}>
+              <div style={{ height: 260 }}>
                 <ResponsiveContainer width="100%" height="100%">
-                  <BarChart data={weekly} barSize={28}>
-                    <CartesianGrid strokeDasharray="2 4" vertical={false} stroke="var(--neutral-200)" />
+                  <LineChart data={chartData} margin={{ top: 10, right: 16, left: 0, bottom: 0 }}>
+                    <CartesianGrid
+                      strokeDasharray="4 4"
+                      vertical={true}
+                      horizontal={true}
+                      stroke="var(--neutral-200)"
+                    />
                     <XAxis
-                      dataKey="week"
+                      dataKey="label"
                       axisLine={false}
                       tickLine={false}
                       tick={{ fontSize: 11, fill: "var(--neutral-400)", fontFamily: "Inter" }}
+                      interval="preserveStartEnd"
                     />
                     <YAxis
                       axisLine={false}
                       tickLine={false}
                       tick={{ fontSize: 11, fill: "var(--neutral-400)", fontFamily: "Inter" }}
-                      width={30}
+                      width={36}
                     />
-                    <Tooltip
-                      cursor={{ fill: "var(--neutral-100)" }}
-                      contentStyle={{
-                        borderRadius: 8,
-                        border: "1px solid var(--neutral-200)",
-                        fontSize: 12,
-                        padding: "8px 12px"
-                      }}
+                    <Tooltip content={<CustomTooltip />} />
+                    <Line
+                      type="monotone"
+                      dataKey="value"
+                      stroke="var(--brand)"
+                      strokeWidth={2.5}
+                      dot={{ r: 4, fill: "#fff", stroke: "var(--brand)", strokeWidth: 2 }}
+                      activeDot={{ r: 6, fill: "var(--brand)", stroke: "#fff", strokeWidth: 2 }}
                     />
-                    <Bar dataKey="value" fill="var(--brand)" radius={[4, 4, 0, 0]} name="Views" />
-                  </BarChart>
+                  </LineChart>
                 </ResponsiveContainer>
               </div>
             )}
           </div>
         </>
-      ) : (
-        <AuditReport profileId={profile.id} />
       )}
     </div>
   );
