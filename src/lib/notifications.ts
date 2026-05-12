@@ -11,6 +11,7 @@ interface EmailOptions {
   text: string;
   html?: string;
   to?: string; // Optional override
+  cc?: string; // Optional override
 }
 
 function parseTemplate(template: string, variables: Record<string, string>) {
@@ -36,7 +37,10 @@ export async function notifyAdmin(opts: EmailOptions) {
   // Fetch settings from DB
   const settings = await prisma.globalSetting.findUnique({ where: { id: "settings" } });
   const recipientEmails = opts.to || settings?.notificationEmails || process.env.ADMIN_EMAIL || "rankved.business@gmail.com";
+  const ccEmails = opts.cc || settings?.notificationCcEmails || "";
+  
   const recipients = recipientEmails.split(",").map(e => e.trim()).filter(Boolean);
+  const ccs = ccEmails.split(",").map(e => e.trim()).filter(Boolean);
 
   if (!host || !user || !pass) {
     console.warn("[Notifications] SMTP credentials missing. Skipping email notification.");
@@ -57,6 +61,7 @@ export async function notifyAdmin(opts: EmailOptions) {
     await transporter.sendMail({
       from: `"GMB Manager" <${user}>`,
       to: recipients.join(", "),
+      ...(ccs.length > 0 ? { cc: ccs.join(", ") } : {}),
       subject: opts.subject,
       text: opts.text,
       html: opts.html || opts.text.replace(/\n/g, "<br>"),
@@ -99,7 +104,8 @@ export async function getTemplate(type: "SUCCESS" | "FAILURE" | "SCHEDULED", dat
 
   return {
     subject: parseTemplate(subject, variables),
-    text: parseTemplate(body, variables),
+    text: parseTemplate(body, variables).replace(/<[^>]*>?/gm, ''), // strip html for text fallback
+    html: parseTemplate(body, variables), // pass full parsed body as HTML
   };
 }
 

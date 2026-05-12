@@ -64,6 +64,7 @@ export async function POST(req: NextRequest) {
 
     // Notification fields
     const notificationEmails = formData.get("notificationEmails") as string;
+    const notificationCcEmails = formData.get("notificationCcEmails") as string;
     const successTemplateSubject = formData.get("successTemplateSubject") as string;
     const successTemplateBody = formData.get("successTemplateBody") as string;
     const failureTemplateSubject = formData.get("failureTemplateSubject") as string;
@@ -84,6 +85,7 @@ export async function POST(req: NextRequest) {
     if (sidebarTextSize !== null) updateData.sidebarTextSize = parseInt(sidebarTextSize, 10);
 
     if (notificationEmails !== null) updateData.notificationEmails = notificationEmails;
+    if (notificationCcEmails !== null) updateData.notificationCcEmails = notificationCcEmails;
     if (successTemplateSubject !== null) updateData.successTemplateSubject = successTemplateSubject;
     if (successTemplateBody !== null) updateData.successTemplateBody = successTemplateBody;
     if (failureTemplateSubject !== null) updateData.failureTemplateSubject = failureTemplateSubject;

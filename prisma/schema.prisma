@@ -229,6 +229,7 @@ model GlobalSetting {
   
   // Notification Settings
   notificationEmails        String  @default("rankved.business@gmail.com")
+  notificationCcEmails      String  @default("")
   successTemplateSubject    String  @default("✅ Post Published: {profileName} - {postPreview}")
   successTemplateBody       String  @default("Your post has been published successfully.\n\nProfile: {profileName}\nPost: {postSummary}")
   failureTemplateSubject    String  @default("⚠️ Post Failed: {profileName}")

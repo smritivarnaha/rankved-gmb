@@ -279,25 +279,41 @@ export default function SettingsPage() {
           <div className="card-body">
             <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
               {/* Recipient Emails */}
-              <div>
-                <label style={{ fontSize: 12, fontWeight: 600, display: "block", marginBottom: 6 }}>Recipient Emails (Comma-separated)</label>
-                <input 
-                  type="text" 
-                  value={localSettings?.notificationEmails || ""} 
-                  onChange={(e) => updateSettings({ notificationEmails: e.target.value })}
-                  placeholder="admin@example.com, owner@example.com"
-                  className="input w-full"
-                  style={{ fontSize: 13 }}
-                />
-                <p style={{ fontSize: 11, color: "var(--text-muted)", marginTop: 4 }}>
-                  All emails in this list will receive notifications for post activities.
-                </p>
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
+                <div>
+                  <label style={{ fontSize: 12, fontWeight: 600, display: "block", marginBottom: 6 }}>Recipient Emails (To)</label>
+                  <input 
+                    type="text" 
+                    value={localSettings?.notificationEmails || ""} 
+                    onChange={(e) => updateSettings({ notificationEmails: e.target.value })}
+                    placeholder="admin@example.com"
+                    className="input w-full"
+                    style={{ fontSize: 13 }}
+                  />
+                  <p style={{ fontSize: 11, color: "var(--text-muted)", marginTop: 4 }}>
+                    Main recipient(s), comma-separated.
+                  </p>
+                </div>
+                <div>
+                  <label style={{ fontSize: 12, fontWeight: 600, display: "block", marginBottom: 6 }}>CC Emails</label>
+                  <input 
+                    type="text" 
+                    value={localSettings?.notificationCcEmails || ""} 
+                    onChange={(e) => updateSettings({ notificationCcEmails: e.target.value })}
+                    placeholder="owner@example.com, team@example.com"
+                    className="input w-full"
+                    style={{ fontSize: 13 }}
+                  />
+                  <p style={{ fontSize: 11, color: "var(--text-muted)", marginTop: 4 }}>
+                    Additional CC recipient(s), comma-separated.
+                  </p>
+                </div>
               </div>
 
               {/* Template Editor */}
               <div style={{ border: "1px solid var(--border-light)", borderRadius: 10, overflow: "hidden" }}>
                 <div style={{ background: "var(--bg-elevated)", padding: "8px 12px", borderBottom: "1px solid var(--border-light)", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                  <span style={{ fontSize: 12, fontWeight: 600 }}>Custom Templates</span>
+                  <span style={{ fontSize: 12, fontWeight: 600 }}>Custom Templates (HTML Supported)</span>
                   <div style={{ display: "flex", gap: 8 }}>
                     {["SUCCESS", "FAILURE", "SCHEDULED"].map(t => (
                       <button 
