@@ -172,14 +172,23 @@ function ProfileCard({
       </div>
 
       {/* Actions */}
-      <div style={{ padding: "14px" }}>
-        <Link
-          href={`/performance?profile=${profile.id}`}
-          style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 8,
-            padding: "10px 0", fontSize: 12, fontWeight: 600, color: theme.text,
-            background: "transparent", border: `1px solid ${theme.border}30`, borderRadius: 8, textDecoration: "none" }}
+      <div style={{ padding: "14px", display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>        {/* Bulk Import — opens modal directly, no navigation */}
+        <button
+          onClick={() => onBulkImport(profile.id)}
+          style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", gap: 5,
+            padding: "8px 0", fontSize: 12, fontWeight: 500, color: "#4b5563",
+            background: "#f9fafb", border: "1px solid #e5e7eb", borderRadius: 8, cursor: "pointer" }}
         >
-          <BarChart3 style={{ width: 14, height: 14 }} /> View Performance Report <span style={{ marginLeft: "auto", marginRight: 16 }}>→</span>
+          <Upload style={{ width: 12, height: 12 }} /> Bulk Import
+        </button>
+
+        <Link
+          href={`/posts/new?profile=${profile.id}&from=profile`}
+          style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", gap: 5,
+            padding: "8px 0", fontSize: 12, fontWeight: 600, color: "#fff",
+            background: BRAND_BLUE, borderRadius: 8, border: "none", textDecoration: "none" }}
+        >
+          <Plus style={{ width: 12, height: 12 }} /> Create Post
         </Link>
       </div>
     </div>
@@ -187,6 +196,7 @@ function ProfileCard({
 }
 
 export default function ProfilesPage() {
+  const router = useRouter();
   const { data, isLoading, mutate } = useSWR("/api/profiles", fetcher, {
     revalidateOnFocus: false, dedupingInterval: 5000,
   });
@@ -195,7 +205,6 @@ export default function ProfilesPage() {
 
   const profiles = data?.data || [];
   const [deleting, setDeleting] = useState<string | null>(null);
-  const [editingProfile, setEditingProfile] = useState<Profile | null>(null);
   const [message, setMessage] = useState<{ type: "success" | "error"; text: string } | null>(null);
   const [aiLocationId, setAiLocationId]   = useState<string | null>(null);
   const [bulkLocationId, setBulkLocationId] = useState<string | null>(null);
@@ -264,7 +273,7 @@ export default function ProfilesPage() {
               key={p.id}
               profile={p}
               onDelete={handleDelete}
-              onEdit={setEditingProfile}
+              onEdit={(prof) => router.push(`/profiles/${prof.id}/edit`)}
               deleting={deleting === p.id}
               onAiCreate={setAiLocationId}
               onBulkImport={setBulkLocationId}
@@ -291,96 +300,6 @@ export default function ProfilesPage() {
         }}
         viewDraftsHref={bulkLocationId ? `/profiles/${bulkLocationId}` : undefined}
       />
-
-      {/* Edit Profile Modal */}
-      {editingProfile && (
-        <EditProfileModal
-          profile={editingProfile}
-          onClose={() => setEditingProfile(null)}
-          onSuccess={() => {
-            setEditingProfile(null);
-            setMessage({ type: "success", text: "Profile updated successfully." });
-            mutate();
-          }}
-        />
-      )}
-    </div>
-  );
-}
-
-function EditProfileModal({ profile, onClose, onSuccess }: { profile: Profile; onClose: () => void; onSuccess: () => void }) {
-  const [saving, setSaving] = useState(false);
-  const [logoFile, setLogoFile] = useState<File | null>(null);
-  const [error, setError] = useState<string | null>(null);
-
-  const handleSave = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!logoFile) {
-      onClose();
-      return;
-    }
-    
-    setSaving(true);
-    setError(null);
-    try {
-      const formData = new FormData();
-      formData.append("id", profile.id);
-      formData.append("logo", logoFile);
-
-      const res = await fetch("/api/profiles", { method: "PATCH", body: formData });
-      if (res.ok) {
-        onSuccess();
-      } else {
-        const d = await res.json();
-        setError(d.error || "Failed to update profile");
-      }
-    } catch (err: any) {
-      setError(err.message || "Network error");
-    } finally {
-      setSaving(false);
-    }
-  };
-
-  return (
-    <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.5)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 100 }}>
-      <div style={{ background: "#fff", width: 400, borderRadius: 12, overflow: "hidden", boxShadow: "0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)" }}>
-        <div style={{ padding: "16px 20px", borderBottom: "1px solid #eaeaea", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-          <h2 style={{ fontSize: 16, fontWeight: 600, color: "#111827", margin: 0 }}>Edit Profile</h2>
-          <button onClick={onClose} style={{ background: "none", border: "none", cursor: "pointer", color: "#6b7280" }}><X size={16} /></button>
-        </div>
-        <form onSubmit={handleSave} style={{ padding: 20 }}>
-          {error && <div style={{ padding: "10px 14px", background: "#fef2f2", color: "#dc2626", borderRadius: 8, fontSize: 13, marginBottom: 16 }}>{error}</div>}
-          
-          <div style={{ marginBottom: 20 }}>
-            <label style={{ fontSize: 13, fontWeight: 600, color: "#374151", display: "block", marginBottom: 8 }}>Profile Logo</label>
-            <div style={{ display: "flex", gap: 16, alignItems: "center" }}>
-              <div style={{ width: 64, height: 64, borderRadius: 12, background: "#f3f4f6", display: "flex", alignItems: "center", justifyContent: "center", overflow: "hidden", border: "1px solid #e5e7eb" }}>
-                {logoFile ? (
-                  <img src={URL.createObjectURL(logoFile)} alt="Preview" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
-                ) : profile.logoUrl ? (
-                  <img src={profile.logoUrl} alt="Current" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
-                ) : (
-                  <span style={{ fontSize: 12, color: "#9ca3af" }}>No Logo</span>
-                )}
-              </div>
-              <div>
-                <label className="btn btn-primary" style={{ background: "#fff", color: "#2563eb", border: "1px solid #bfdbfe", padding: "6px 12px", fontSize: 12, cursor: "pointer" }}>
-                  <Upload size={14} style={{ marginRight: 6, display: "inline" }} /> Upload Image
-                  <input type="file" accept="image/*" style={{ display: "none" }} onChange={(e) => setLogoFile(e.target.files?.[0] || null)} />
-                </label>
-                <p style={{ fontSize: 11, color: "#6b7280", marginTop: 8, margin: "8px 0 0" }}>Recommended: Square PNG/JPG.</p>
-              </div>
-            </div>
-          </div>
-
-          <div style={{ display: "flex", justifyContent: "flex-end", gap: 10, marginTop: 32 }}>
-            <button type="button" onClick={onClose} className="btn" style={{ background: "#fff", border: "1px solid #d1d5db", color: "#374151" }}>Cancel</button>
-            <button type="submit" disabled={saving} className="btn btn-primary" style={{ minWidth: 80, justifyContent: "center" }}>
-              {saving ? <Loader2 size={16} className="anim-spin" /> : "Save"}
-            </button>
-          </div>
-        </form>
-      </div>
     </div>
   );
 }

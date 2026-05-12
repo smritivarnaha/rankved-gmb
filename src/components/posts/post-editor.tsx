@@ -353,21 +353,21 @@ export function PostEditor({ initialData = null, timelineDate, onDateChange, loc
   return (
     <>
       {(saving || successMessage) && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 backdrop-blur-md transition-opacity duration-500">
-          <div className="bg-white rounded-2xl shadow-2xl p-8 flex flex-col items-center justify-center max-w-sm w-full mx-4 transform transition-transform duration-300 scale-100">
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-[#0f172a]/40 backdrop-blur-sm transition-opacity duration-500">
+          <div className="bg-white rounded-2xl shadow-[0_20px_50px_rgba(0,0,0,0.15)] p-10 flex flex-col items-center justify-center max-w-sm w-full mx-4 transform transition-transform duration-300 scale-100 border border-[#f1f5f9]">
             {successMessage ? (
               <div className="flex flex-col items-center">
-                <div className="w-24 h-24 mb-4">
+                <div className="w-28 h-28 mb-6">
                   <LottieWrapper url={ANIMATIONS.SUCCESS} className="w-full h-full" />
                 </div>
-                <h3 className="text-xl font-semibold text-[var(--text-primary)] mb-1 text-center">{successMessage}</h3>
-                <p className="text-[14px] text-[var(--text-secondary)] text-center">
-                  Redirecting back to profile...
+                <h3 className="text-2xl font-bold text-[#0f172a] mb-2 text-center tracking-tight">{successMessage}</h3>
+                <p className="text-[15px] text-[#64748b] text-center font-medium">
+                  Redirecting back to dashboard...
                 </p>
               </div>
             ) : (
               <div className="flex flex-col items-center">
-                <div className="w-24 h-24 mb-4">
+                <div className="w-28 h-28 mb-6">
                   <LottieWrapper 
                     url={savingType === "PUBLISH" ? ANIMATIONS.PUBLISH : 
                          savingType === "SCHEDULED" ? ANIMATIONS.SCHEDULED : 
@@ -375,32 +375,34 @@ export function PostEditor({ initialData = null, timelineDate, onDateChange, loc
                     className="w-full h-full" 
                   />
                 </div>
-                <h3 className="text-xl font-semibold text-[var(--text-primary)] mb-1 text-center">
-                  {savingType === "PUBLISH" ? "Publishing Post..." : 
-                   savingType === "SCHEDULED" ? "Scheduling Post..." : 
-                   savingType === "PENDING_APPROVAL" ? "Submitting Post..." :
-                   "Saving Draft..."}
+                <h3 className="text-2xl font-bold text-[#0f172a] mb-2 text-center tracking-tight">
+                  {savingType === "PUBLISH" ? "Publishing Now" : 
+                   savingType === "SCHEDULED" ? "Scheduling Post" : 
+                   savingType === "PENDING_APPROVAL" ? "Submitting Post" :
+                   "Saving Draft"}
                 </h3>
-                <p className="text-[14px] text-[var(--text-secondary)] text-center">
-                  Please wait while we process your request.
+                <p className="text-[15px] text-[#64748b] text-center font-medium">
+                  Sit tight, we're syncing with Google...
                 </p>
               </div>
             )}
           </div>
         </div>
       )}
-      <div className="bg-white border border-[var(--border)] rounded-lg relative z-[10]">
+      <div className="bg-white border border-[#e2e8f0] rounded-xl relative z-[10] shadow-sm overflow-hidden">
       <div className="p-6 space-y-6">
         {/* Lock banner — shown for PUBLISHED posts */}
         {isLocked && (
-          <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "12px 16px", background: "#f0fdf4", border: "1px solid #86efac", borderRadius: 10 }}>
-            <Lock style={{ width: 16, height: 16, color: "#166534", flexShrink: 0 }} />
+          <div style={{ display: "flex", alignItems: "center", gap: 12, padding: "16px", background: "#f0fdf4", border: "1px solid #bbf7d0", borderRadius: 12 }}>
+            <div style={{ width: 36, height: 36, borderRadius: "50%", background: "#dcfce7", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+              <Lock style={{ width: 18, height: 18, color: "#166534" }} />
+            </div>
             <div>
-              <p style={{ fontSize: 13, fontWeight: 700, color: "#166534", margin: 0 }}>
-                🔒 Published — Read Only
+              <p style={{ fontSize: 14, fontWeight: 700, color: "#166534", margin: 0 }}>
+                Published & Locked
               </p>
-              <p style={{ fontSize: 11, color: "#15803d", margin: "2px 0 0" }}>
-                This post has been published to Google Business Profile and cannot be modified here.
+              <p style={{ fontSize: 13, color: "#15803d", margin: "2px 0 0", opacity: 0.8 }}>
+                This post is live on Google Business Profile and cannot be edited.
               </p>
             </div>
           </div>
@@ -409,72 +411,95 @@ export function PostEditor({ initialData = null, timelineDate, onDateChange, loc
           {/* Main content */}
           <div className="lg:col-span-2 space-y-5">
             {/* Profile */}
-            <div>
-              <label className="block text-[13px] font-medium text-[var(--text-primary)] mb-1.5">Profile</label>
+            {/* Profile Selection */}
+            <div className="space-y-1.5">
+              <label className="text-[13px] font-bold text-[#475569] uppercase tracking-wider">Business Profile</label>
               {lockedProfileId ? (
-                <div className="w-full border border-[var(--border)] rounded-lg py-2.5 px-3 text-[14px] text-[var(--text-primary)] bg-[var(--bg-secondary)] flex items-center gap-2">
-                  <MapPin className="w-4 h-4 text-[var(--text-tertiary)] shrink-0" />
-                  <span className="font-medium">{locations.find(l => l.id === lockedProfileId)?.name || "Loading..."}</span>
-                  <span className="ml-auto text-[11px] text-[var(--text-tertiary)] bg-[var(--bg-elevated)] px-2 py-0.5 rounded-full">Locked</span>
+                <div className="w-full border border-[#e2e8f0] rounded-xl py-3 px-4 text-[14px] text-[#0f172a] bg-[#f8fafc] flex items-center gap-3">
+                  <MapPin className="w-4 h-4 text-[#64748b] shrink-0" />
+                  <span className="font-semibold">{locations.find(l => l.id === lockedProfileId)?.name || "Loading Profile..."}</span>
+                  <div className="ml-auto flex items-center gap-1.5 bg-white border border-[#e2e8f0] px-2.5 py-1 rounded-full shadow-sm">
+                    <div className="w-1.5 h-1.5 rounded-full bg-[#2563eb]" />
+                    <span className="text-[11px] font-bold text-[#2563eb] uppercase">Selected</span>
+                  </div>
                 </div>
               ) : (
-                <select name="locationId" value={form.locationId} onChange={handleChange} disabled={isPublished}
-                  className="w-full border border-[var(--border)] rounded-lg py-2.5 px-3 text-[14px] text-[var(--text-primary)] bg-white focus:outline-none focus:ring-2 focus:ring-[var(--accent)] focus:border-transparent disabled:opacity-50 disabled:bg-[var(--bg-secondary)]">
-                  <option value="">Select a profile</option>
-                  {locations.map((loc: any) => (
-                    <option key={loc.id} value={loc.id}>{loc.name}</option>
-                  ))}
-                </select>
+                <div className="relative">
+                  <select name="locationId" value={form.locationId} onChange={handleChange} disabled={isPublished}
+                    className="w-full border border-[#e2e8f0] rounded-xl py-3 pl-11 pr-4 text-[15px] font-medium text-[#0f172a] bg-white focus:outline-none focus:ring-2 focus:ring-[#2563eb] focus:border-transparent disabled:opacity-50 appearance-none transition-all">
+                    <option value="">Select a business profile...</option>
+                    {locations.map((loc: any) => (
+                      <option key={loc.id} value={loc.id}>{loc.name}</option>
+                    ))}
+                  </select>
+                  <MapPin className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-[#64748b]" />
+                </div>
               )}
             </div>
 
             {/* Image — ABOVE post content */}
-            <div>
-              <label className="block text-[13px] font-medium text-[var(--text-primary)] mb-1.5">Photo</label>
+            {/* Image Selection */}
+            <div className="space-y-1.5">
+              <label className="text-[13px] font-bold text-[#475569] uppercase tracking-wider">Visual Content</label>
               {imagePreview ? (
-                <div className="relative rounded-lg overflow-hidden border border-[var(--border)] bg-[var(--bg-secondary)]">
-                  <img src={imagePreview} alt="Post preview" className="w-full max-h-[240px] object-cover" />
+                <div className="relative rounded-2xl overflow-hidden border border-[#e2e8f0] bg-[#f8fafc] shadow-sm">
+                  <img src={imagePreview} alt="Post preview" className="w-full max-h-[320px] object-cover" />
                   {!isPublished && (
                     <button onClick={removeImage}
-                      className="absolute top-2 right-2 p-1.5 rounded-full border border-[var(--border)] transition-colors shadow-sm"
-                      style={{ backgroundColor: "#ffffff" }}>
-                      <X className="w-4 h-4" style={{ color: "var(--text-secondary)" }} />
+                      className="absolute top-3 right-3 p-2 rounded-xl border border-[#e2e8f0] bg-white transition-all shadow-lg hover:bg-red-50 hover:border-red-100 group">
+                      <X className="w-4 h-4 text-[#64748b] group-hover:text-red-500" />
                     </button>
                   )}
                   {imageFile && (
-                    <div className="px-3 py-2 bg-[var(--bg-secondary)] border-t border-[var(--border)] flex items-center justify-between">
-                      <span className="text-[12px] text-[var(--text-secondary)] truncate">{imageFile.name}</span>
-                      <span className="text-[11px] text-[var(--text-tertiary)] shrink-0 ml-2">{(imageFile.size / 1024).toFixed(0)} KB</span>
+                    <div className="px-4 py-3 bg-white border-t border-[#f1f5f9] flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <div className="w-8 h-8 rounded-lg bg-blue-50 flex items-center justify-center">
+                           <ImagePlus className="w-4 h-4 text-blue-500" />
+                        </div>
+                        <span className="text-[13px] font-semibold text-[#1e293b] truncate max-w-[200px]">{imageFile.name}</span>
+                      </div>
+                      <span className="text-[12px] font-bold text-[#64748b] bg-[#f1f5f9] px-2 py-0.5 rounded-md">{(imageFile.size / 1024).toFixed(0)} KB</span>
                     </div>
                   )}
                 </div>
               ) : converting ? (
-                <div className="w-full border-2 border-dashed border-[var(--accent)] rounded-lg py-8 flex flex-col items-center justify-center bg-[var(--accent-light)]/10">
-                  <Loader2 className="w-6 h-6 text-[var(--accent)] animate-spin mb-1.5" />
-                  <span className="text-[13px] font-medium text-[var(--accent)]">Converting to JPEG...</span>
+                <div className="w-full border-2 border-dashed border-blue-200 rounded-2xl py-12 flex flex-col items-center justify-center bg-blue-50/30">
+                  <div className="w-12 h-12 rounded-full bg-blue-100 flex items-center justify-center mb-4">
+                    <Loader2 className="w-6 h-6 text-blue-500 animate-spin" />
+                  </div>
+                  <span className="text-[15px] font-bold text-blue-600">Processing Image...</span>
+                  <p className="text-[12px] text-blue-400 mt-1">Optimizing for Google Business Profile</p>
                 </div>
               ) : (
                 <button onClick={() => fileRef.current?.click()} disabled={isPublished}
-                  className="w-full border-2 border-dashed border-[var(--border)] rounded-lg py-8 flex flex-col items-center justify-center hover:border-[var(--accent)] hover:bg-[var(--accent-light)]/20 transition-colors disabled:opacity-50 group">
-                  <ImagePlus className="w-7 h-7 text-[var(--text-tertiary)] group-hover:text-[var(--accent)] transition-colors mb-1.5" />
-                  <span className="text-[13px] font-medium text-[var(--text-secondary)] group-hover:text-[var(--accent)]">Upload image</span>
-                  <span className="text-[11px] text-[var(--text-tertiary)] mt-0.5">Any format — auto-converts to JPEG</span>
+                  className="w-full border-2 border-dashed border-[#cbd5e1] rounded-2xl py-12 flex flex-col items-center justify-center hover:border-blue-400 hover:bg-blue-50/50 transition-all disabled:opacity-50 group">
+                  <div className="w-14 h-14 rounded-full bg-gray-50 flex items-center justify-center group-hover:bg-blue-100 transition-all mb-4">
+                    <ImagePlus className="w-7 h-7 text-[#94a3b8] group-hover:text-blue-500 transition-all" />
+                  </div>
+                  <span className="text-[15px] font-bold text-[#1e293b] group-hover:text-blue-600">Upload Media</span>
+                  <p className="text-[12px] text-[#64748b] mt-1">High-quality JPG, PNG or WebP (Max 10MB)</p>
                 </button>
               )}
               <input ref={fileRef} type="file" accept="image/*" onChange={handleImageSelect} className="hidden" />
 
-              {/* Focus Keyword / filename */}
-              <div className="mt-4 flex items-center gap-2">
-                <div className="flex-1">
-                  <label className="block text-[11px] font-medium text-[var(--text-secondary)] mb-1">Focus Keyword <span className="text-[var(--text-tertiary)]">(used for image filename)</span></label>
-                  <div className="flex items-center gap-0">
-                    <input type="text" name="focusKeyword" value={form.focusKeyword}
-                      onChange={handleChange} disabled={isPublished}
-                      placeholder="e.g. best-dentist-portland"
-                      className="w-full border border-[var(--border)] rounded-md py-1.5 px-2.5 text-[12px] text-[var(--text-primary)] focus:outline-none focus:ring-2 focus:ring-[var(--accent)] focus:border-transparent disabled:opacity-50" />
-                  </div>
+              {/* SEO: Focus Keyword */}
+              <div className="mt-4 pt-4 border-t border-[#f1f5f9]">
+                <div className="flex items-center justify-between mb-2">
+                  <label className="text-[12px] font-bold text-[#475569] uppercase tracking-wider">SEO Filename Keyword</label>
+                  <span className="text-[10px] font-bold text-[#94a3b8] bg-[#f8fafc] px-2 py-0.5 rounded border border-[#e2e8f0]">GOOGLE SEO</span>
                 </div>
+                <div className="relative">
+                  <input type="text" name="focusKeyword" value={form.focusKeyword}
+                    onChange={handleChange} disabled={isPublished}
+                    placeholder="e.g. dental-implants-nyc"
+                    className="w-full border border-[#e2e8f0] rounded-xl py-2.5 px-4 text-[14px] font-medium text-[#0f172a] focus:outline-none focus:ring-2 focus:ring-[#2563eb] focus:border-transparent disabled:opacity-50 placeholder:text-gray-400 transition-all" />
+                </div>
+                <p className="text-[11px] text-[#64748b] mt-2 italic flex items-center gap-1.5">
+                   <div className="w-1 h-1 rounded-full bg-blue-400" />
+                   We use this keyword to automatically rename your image for better local SEO ranking.
+                </p>
               </div>
+            </div>
 
               {/* Geo-tagging */}
               {imagePreview && (
@@ -614,119 +639,132 @@ export function PostEditor({ initialData = null, timelineDate, onDateChange, loc
               )}
             </div>
 
-            {/* Post content — taller */}
-            <div>
-              <div className="flex justify-between items-center mb-1.5">
-                <label className="text-[13px] font-medium text-[var(--text-primary)]">Post content</label>
-                <span className={`text-[11px] ${form.summary.length > 1500 ? 'text-[var(--error)]' : 'text-[var(--text-tertiary)]'}`}>
+            {/* Post content */}
+            <div className="space-y-1.5">
+              <div className="flex justify-between items-center">
+                <label className="text-[13px] font-bold text-[#475569] uppercase tracking-wider">Post Content</label>
+                <span className={`text-[11px] font-bold px-2 py-0.5 rounded-full ${form.summary.length > 1500 ? 'text-red-600 bg-red-50' : 'text-gray-400 bg-gray-50'}`}>
                   {form.summary.length} / 1500
                 </span>
               </div>
               <textarea name="summary" value={form.summary} onChange={handleChange} disabled={isPublished}
-                rows={8}
-                className="w-full border border-[var(--border)] rounded-lg py-3 px-3 text-[14px] text-[var(--text-primary)] focus:outline-none focus:ring-2 focus:ring-[var(--accent)] focus:border-transparent resize-none disabled:opacity-50 disabled:bg-[var(--bg-secondary)]"
-                placeholder="What's new with this business?"
+                rows={10}
+                className="w-full border border-[#e2e8f0] rounded-xl py-3.5 px-4 text-[15px] leading-relaxed text-[#0f172a] focus:outline-none focus:ring-2 focus:ring-[#2563eb] focus:border-transparent resize-none disabled:opacity-50 disabled:bg-[#f8fafc] placeholder:text-gray-400 shadow-sm transition-all"
+                placeholder="What would you like to share with your customers?"
               />
             </div>
 
             {/* Type & CTA */}
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <label className="block text-[13px] font-medium text-[var(--text-primary)] mb-1.5">Post type</label>
-                <select name="topicType" value={form.topicType} onChange={handleChange} disabled={isPublished}
-                  className="w-full border border-[var(--border)] rounded-lg py-2.5 px-3 text-[14px] text-[var(--text-primary)] bg-white focus:outline-none focus:ring-2 focus:ring-[var(--accent)] focus:border-transparent disabled:opacity-50">
-                  <option value="STANDARD">Update</option>
-                  <option value="EVENT">Event</option>
-                  <option value="OFFER">Offer</option>
-                </select>
+            <div className="grid grid-cols-2 gap-5">
+              <div className="space-y-1.5">
+                <label className="text-[13px] font-bold text-[#475569] uppercase tracking-wider">Post Type</label>
+                <div className="relative">
+                  <select name="topicType" value={form.topicType} onChange={handleChange} disabled={isPublished}
+                    className="w-full border border-[#e2e8f0] rounded-xl py-3 px-4 text-[14px] font-semibold text-[#0f172a] bg-white focus:outline-none focus:ring-2 focus:ring-[#2563eb] focus:border-transparent disabled:opacity-50 transition-all appearance-none">
+                    <option value="STANDARD">✨ Standard Update</option>
+                    <option value="EVENT">📅 Special Event</option>
+                    <option value="OFFER">🎁 Exclusive Offer</option>
+                  </select>
+                </div>
               </div>
-              <div>
-                <label className="block text-[13px] font-medium text-[var(--text-primary)] mb-1.5">Call to action</label>
-                <select name="ctaType" value={form.ctaType} onChange={handleChange} disabled={isPublished}
-                  className="w-full border border-[var(--border)] rounded-lg py-2.5 px-3 text-[14px] text-[var(--text-primary)] bg-white focus:outline-none focus:ring-2 focus:ring-[var(--accent)] focus:border-transparent disabled:opacity-50">
-                  <option value="">None</option>
-                  <option value="BOOK">Book</option>
-                  <option value="ORDER">Order online</option>
-                  <option value="LEARN_MORE">Learn more</option>
-                  <option value="SIGN_UP">Sign up</option>
-                  <option value="CALL">Call now</option>
-                </select>
+              <div className="space-y-1.5">
+                <label className="text-[13px] font-bold text-[#475569] uppercase tracking-wider">Call to Action</label>
+                <div className="relative">
+                  <select name="ctaType" value={form.ctaType} onChange={handleChange} disabled={isPublished}
+                    className="w-full border border-[#e2e8f0] rounded-xl py-3 px-4 text-[14px] font-semibold text-[#0f172a] bg-white focus:outline-none focus:ring-2 focus:ring-[#2563eb] focus:border-transparent disabled:opacity-50 transition-all appearance-none">
+                    <option value="">🚫 No Button</option>
+                    <option value="BOOK">📖 Book Now</option>
+                    <option value="ORDER">🛒 Order Online</option>
+                    <option value="LEARN_MORE">🔍 Learn More</option>
+                    <option value="SIGN_UP">✍️ Sign Up</option>
+                    <option value="CALL">📞 Call Now</option>
+                  </select>
+                </div>
               </div>
             </div>
 
             {/* Event fields */}
             {form.topicType === "EVENT" && (
-              <div className="border border-[var(--border)] rounded-lg p-4 bg-[var(--bg-secondary)]/50 space-y-4">
-                <h4 className="text-[13px] font-semibold text-[var(--text-primary)]">Event details</h4>
-                <div>
-                  <label className="block text-[12px] font-medium text-[var(--text-secondary)] mb-1">Event title</label>
+              <div className="border border-blue-100 rounded-2xl p-5 bg-blue-50/20 space-y-5 animate-in fade-in slide-in-from-top-4 duration-300">
+                <div className="flex items-center gap-2 pb-2 border-b border-blue-100/50">
+                  <Clock className="w-4 h-4 text-blue-500" />
+                  <h4 className="text-[14px] font-bold text-[#0f172a] uppercase tracking-tight">Event Logistics</h4>
+                </div>
+                <div className="space-y-1.5">
+                  <label className="text-[12px] font-bold text-[#64748b] uppercase">Event Title</label>
                   <input type="text" name="eventTitle" value={form.eventTitle} onChange={handleChange} disabled={isPublished}
-                    className="w-full border border-[var(--border)] rounded-lg py-2.5 px-3 text-[14px] text-[var(--text-primary)] bg-white focus:outline-none focus:ring-2 focus:ring-[var(--accent)] focus:border-transparent disabled:opacity-50"
-                    placeholder="e.g. Free Dental Checkup Day" />
+                    className="w-full border border-[#e2e8f0] rounded-xl py-3 px-4 text-[14px] font-medium text-[#0f172a] bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50 shadow-sm"
+                    placeholder="e.g. Grand Opening Celebration" />
                 </div>
                 <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-[12px] font-medium text-[var(--text-secondary)] mb-1">Start date</label>
+                  <div className="space-y-1.5">
+                    <label className="text-[12px] font-bold text-[#64748b] uppercase">Start Date</label>
                     <input type="date" name="eventStart" value={form.eventStart} onChange={handleChange} disabled={isPublished}
-                      className="w-full border border-[var(--border)] rounded-lg py-2.5 px-3 text-[13px] text-[var(--text-primary)] bg-white focus:outline-none focus:ring-2 focus:ring-[var(--accent)] focus:border-transparent disabled:opacity-50" />
+                      className="w-full border border-[#e2e8f0] rounded-xl py-3 px-4 text-[14px] font-medium text-[#0f172a] bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50 shadow-sm" />
                   </div>
-                  <div>
-                    <label className="block text-[12px] font-medium text-[var(--text-secondary)] mb-1">End date</label>
+                  <div className="space-y-1.5">
+                    <label className="text-[12px] font-bold text-[#64748b] uppercase">End Date</label>
                     <input type="date" name="eventEnd" value={form.eventEnd} onChange={handleChange} disabled={isPublished}
-                      className="w-full border border-[var(--border)] rounded-lg py-2.5 px-3 text-[13px] text-[var(--text-primary)] bg-white focus:outline-none focus:ring-2 focus:ring-[var(--accent)] focus:border-transparent disabled:opacity-50" />
+                      className="w-full border border-[#e2e8f0] rounded-xl py-3 px-4 text-[14px] font-medium text-[#0f172a] bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50 shadow-sm" />
                   </div>
                 </div>
               </div>
             )}
 
             {form.ctaType === "CALL" && (
-              <div className="flex items-start gap-2 px-3 py-2.5 bg-[var(--info-bg)] border border-[var(--info-border)] rounded-lg text-[12px] text-[var(--info)]">
-                <span className="font-semibold shrink-0">📞 Call Now:</span>
-                <span>Google will use the phone number already on your Business Profile. No URL needed.</span>
+              <div className="flex items-start gap-3 px-4 py-4 bg-blue-50 border border-blue-100 rounded-2xl text-[13px] text-blue-800 font-medium">
+                <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center shrink-0">
+                  <Phone className="w-4 h-4 text-blue-600" />
+                </div>
+                <div className="pt-1">
+                  <span className="font-bold block mb-0.5">Direct Call Integration</span>
+                  <p className="text-blue-600/80 leading-relaxed">Google will automatically use the primary phone number from your Business Profile. No URL is required for this action type.</p>
+                </div>
               </div>
             )}
 
             {form.ctaType && form.ctaType !== "CALL" && (
-              <div className="space-y-4">
-                <div>
-                  <label className="block text-[13px] font-medium text-[var(--text-primary)] mb-1.5">Landing page URL</label>
+              <div className="space-y-1.5 animate-in fade-in slide-in-from-top-2 duration-200">
+                <label className="text-[13px] font-bold text-[#475569] uppercase tracking-wider">Button Destination Link</label>
+                <div className="relative">
                   <input type="url" name="ctaUrl" value={form.ctaUrl} onChange={handleChange} disabled={isPublished}
-                    className="w-full border border-[var(--border)] rounded-lg py-2.5 px-3 text-[14px] text-[var(--text-primary)] focus:outline-none focus:ring-2 focus:ring-[var(--accent)] focus:border-transparent disabled:opacity-50"
-                    placeholder="https://example.com/page" />
+                    className="w-full border border-[#e2e8f0] rounded-xl py-3 pl-11 pr-4 text-[14px] font-medium text-[#0f172a] focus:outline-none focus:ring-2 focus:ring-[#2563eb] focus:border-transparent disabled:opacity-50 placeholder:text-gray-400 shadow-sm transition-all"
+                    placeholder="https://yourwebsite.com/promotion" />
+                  <LinkIcon className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-[#64748b]" />
                 </div>
               </div>
             )}
           </div>
 
           {/* Sidebar — Schedule */}
-          <div>
-            <div className="border border-[var(--border)] rounded-lg bg-[var(--bg-secondary)] overflow-hidden">
-              <div className="px-4 py-3 border-b border-[var(--border-light)]">
-                <h3 className="text-[13px] font-semibold text-[var(--text-primary)] flex items-center gap-2">
-                  <Clock className="w-4 h-4 text-[var(--text-tertiary)]" />
-                  Schedule
+          <div className="space-y-6">
+            <div className="border border-[#e2e8f0] rounded-2xl bg-[#f8fafc] overflow-hidden shadow-sm">
+              <div className="px-5 py-4 border-b border-[#f1f5f9] bg-white">
+                <h3 className="text-[14px] font-bold text-[#0f172a] flex items-center gap-2.5 uppercase tracking-tight">
+                  <Clock className="w-4 h-4 text-[#2563eb]" />
+                  Publish Schedule
                 </h3>
               </div>
 
               {/* Quick picks */}
-              <div className="px-4 py-3 border-b border-[var(--border-light)] flex gap-2">
-                <button onClick={() => setQuickDate("tomorrow")} disabled={minScheduleDays > 1} className={`flex-1 py-1.5 text-[12px] font-medium border border-[var(--border)] rounded-md transition-colors ${minScheduleDays > 1 ? "opacity-50 cursor-not-allowed bg-[var(--bg-secondary)] text-[var(--text-tertiary)]" : "hover:bg-white text-[var(--text-secondary)]"}`}>Tomorrow</button>
-                <button onClick={() => setQuickDate("dayafter")} disabled={minScheduleDays > 2} className={`flex-1 py-1.5 text-[12px] font-medium border border-[var(--border)] rounded-md transition-colors ${minScheduleDays > 2 ? "opacity-50 cursor-not-allowed bg-[var(--bg-secondary)] text-[var(--text-tertiary)]" : "hover:bg-white text-[var(--text-secondary)]"}`}>Day After</button>
+              <div className="px-4 py-4 border-b border-[#f1f5f9] flex gap-3">
+                <button onClick={() => setQuickDate("tomorrow")} disabled={minScheduleDays > 1} className={`flex-1 py-2 text-[12px] font-bold border border-[#e2e8f0] rounded-xl transition-all shadow-sm ${minScheduleDays > 1 ? "opacity-50 cursor-not-allowed bg-gray-50 text-gray-400" : "bg-white hover:border-blue-300 hover:text-blue-600 text-[#475569]"}`}>Tomorrow</button>
+                <button onClick={() => setQuickDate("dayafter")} disabled={minScheduleDays > 2} className={`flex-1 py-2 text-[12px] font-bold border border-[#e2e8f0] rounded-xl transition-all shadow-sm ${minScheduleDays > 2 ? "opacity-50 cursor-not-allowed bg-gray-50 text-gray-400" : "bg-white hover:border-blue-300 hover:text-blue-600 text-[#475569]"}`}>Day After</button>
               </div>
 
               {/* Mini calendar */}
-              <div className="px-3 py-3">
-                <div className="flex items-center justify-between mb-2">
+              <div className="px-4 py-5 bg-white">
+                <div className="flex items-center justify-between mb-4">
                   <button onClick={() => { if (calMonth === 0) { setCalMonth(11); setCalYear(y=>y-1); } else setCalMonth(m=>m-1); }}
-                    className="p-1 hover:bg-[var(--bg-tertiary)] rounded text-[var(--text-tertiary)]">‹</button>
-                  <span className="text-[12px] font-semibold text-[var(--text-primary)]">{monthNames[calMonth]} {calYear}</span>
+                    className="p-1.5 hover:bg-gray-100 rounded-lg text-gray-400 transition-colors">‹</button>
+                  <span className="text-[13px] font-bold text-[#0f172a] tracking-tight">{monthNames[calMonth]} {calYear}</span>
                   <button onClick={() => { if (calMonth === 11) { setCalMonth(0); setCalYear(y=>y+1); } else setCalMonth(m=>m+1); }}
-                    className="p-1 hover:bg-[var(--bg-tertiary)] rounded text-[var(--text-tertiary)]">›</button>
+                    className="p-1.5 hover:bg-gray-100 rounded-lg text-gray-400 transition-colors">›</button>
                 </div>
-                <div className="grid grid-cols-7 text-center text-[10px] text-[var(--text-tertiary)] font-medium mb-1">
+                <div className="grid grid-cols-7 text-center text-[10px] text-[#94a3b8] font-bold mb-2 uppercase tracking-widest">
                   {["S","M","T","W","T","F","S"].map((d,i) => <div key={i} className="py-1">{d}</div>)}
                 </div>
-                <div className="grid grid-cols-7 text-center">
+                <div className="grid grid-cols-7 text-center gap-y-1">
                   {Array.from({ length: firstDay }).map((_, i) => <div key={`e${i}`} />)}
                   {Array.from({ length: daysInMonth }).map((_, i) => {
                     const day = i + 1;
@@ -734,23 +772,19 @@ export function PostEditor({ initialData = null, timelineDate, onDateChange, loc
                     const isSelected = selectedDate === dateStr;
                     const isToday = day === todayDay && calMonth === now.getMonth() && calYear === now.getFullYear();
                     
-                    // Block past dates — always block days before today;
-                    // for team members with minScheduleDays, block additional future days
                     const dateObj = new Date(dateStr);
                     const todayObj = new Date(todayStr);
                     const diffTime = dateObj.getTime() - todayObj.getTime();
                     const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-                    // diffDays < 0 = past, diffDays === 0 = today, block past always
                     const isPast = diffDays < 0 || diffDays < minScheduleDays;
                     
                     return (
                       <button key={day} onClick={() => !isPast && selectCalDay(day)} disabled={isPast}
-                        style={isSelected ? { backgroundColor: "var(--accent)", color: "white" } : {}}
-                        className={`w-7 h-7 mx-auto rounded-full text-[11px] font-medium transition-colors ${
-                          isSelected ? "" :
-                          isToday && !isPast ? "border border-[var(--accent)] text-[var(--accent)]" :
-                          isPast ? "text-[var(--border)] cursor-not-allowed" :
-                          "text-[var(--text-secondary)] hover:bg-[var(--bg-tertiary)]"
+                        className={`w-8 h-8 mx-auto rounded-xl text-[12px] font-bold transition-all ${
+                          isSelected ? "bg-[#2563eb] text-white shadow-[0_4px_12px_rgba(37,99,235,0.3)] scale-110" :
+                          isToday && !isPast ? "border-2 border-[#2563eb] text-[#2563eb]" :
+                          isPast ? "text-gray-200 cursor-not-allowed" :
+                          "text-[#475569] hover:bg-gray-100"
                         }`}>
                         {day}
                       </button>
@@ -761,40 +795,50 @@ export function PostEditor({ initialData = null, timelineDate, onDateChange, loc
 
               {/* Time picker */}
               {selectedDate && (
-                <div className="px-4 py-3 border-t border-[var(--border-light)]">
-                  <label className="block text-[11px] font-medium text-[var(--text-tertiary)] uppercase tracking-wide mb-2">Time</label>
+                <div className="px-5 py-5 border-t border-[#f1f5f9] bg-[#f8fafc]">
+                  <label className="block text-[11px] font-bold text-[#64748b] uppercase tracking-widest mb-3">Target Time</label>
                   <input 
                     type="time" 
                     value={selectedTime}
                     min={selectedDate === todayStr ? nowTimeStr : undefined}
                     onChange={(e) => {
                       const val = e.target.value;
-                      // If today is selected, block past times
                       if (selectedDate === todayStr && val < nowTimeStr) {
                         setSelectedTime(getDefaultTimeForToday());
                       } else {
                         setSelectedTime(val);
                       }
                     }}
-                    className="w-full border border-[var(--border)] rounded-md py-2 px-3 text-[13px] text-[var(--text-primary)] focus:outline-none focus:ring-2 focus:ring-[var(--accent)] bg-white"
+                    className="w-full border border-[#e2e8f0] rounded-xl py-2.5 px-4 text-[14px] font-bold text-[#0f172a] focus:outline-none focus:ring-2 focus:ring-[#2563eb] bg-white shadow-sm transition-all"
                   />
                   {selectedDate === todayStr && (
-                    <p className="text-[10px] text-[var(--text-muted)] mt-1">Only future times are allowed for today.</p>
+                    <p className="text-[11px] text-blue-500 font-medium mt-2 flex items-center gap-1.5">
+                      <Clock className="w-3 h-3" />
+                      Future times only for today
+                    </p>
                   )}
                 </div>
               )}
 
               {/* Summary */}
-              <div className="px-4 py-3 border-t border-[var(--border-light)]">
+              <div className="px-5 py-4 border-t border-[#f1f5f9] bg-white">
                 {selectedDate && selectedTime ? (
                   <div className="flex items-center justify-between">
-                    <p className="text-[12px] text-[var(--text-primary)] font-medium">
-                      {new Date(`${selectedDate}T${selectedTime}`).toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" })} at {selectedTime}
-                    </p>
-                    <button onClick={clearSchedule} className="text-[11px] text-[var(--error)] hover:underline">Clear</button>
+                    <div className="flex flex-col">
+                      <span className="text-[10px] font-bold text-[#94a3b8] uppercase">Selected Slot</span>
+                      <p className="text-[13px] text-[#0f172a] font-bold">
+                        {new Date(`${selectedDate}T${selectedTime}`).toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" })} @ {selectedTime}
+                      </p>
+                    </div>
+                    <button onClick={clearSchedule} className="w-8 h-8 rounded-lg bg-red-50 text-red-500 flex items-center justify-center hover:bg-red-100 transition-all">
+                      <X className="w-4 h-4" />
+                    </button>
                   </div>
                 ) : (
-                  <p className="text-[12px] text-[var(--text-tertiary)]">No schedule — will save as draft.</p>
+                  <div className="flex items-center gap-2 text-[#64748b]">
+                    <div className="w-1.5 h-1.5 rounded-full bg-gray-300" />
+                    <p className="text-[12px] font-medium italic">No schedule — will save as draft</p>
+                  </div>
                 )}
               </div>
             </div>
@@ -802,27 +846,26 @@ export function PostEditor({ initialData = null, timelineDate, onDateChange, loc
         </div>
       </div>
 
-      <div className="border-t border-[var(--border)] px-6 py-4 flex justify-end gap-3 bg-[var(--bg-secondary)]">
+      <div className="border-t border-[#f1f5f9] px-8 py-6 flex justify-end gap-4 bg-white">
         {isPublished ? (
-          <div className="text-[12px] font-medium text-[var(--text-tertiary)] flex items-center gap-1.5">
-            <Lock className="w-3.5 h-3.5" /> Post is read-only
+          <div className="text-[14px] font-bold text-[#94a3b8] flex items-center gap-2 bg-gray-50 px-4 py-2 rounded-xl border border-gray-100 uppercase tracking-widest">
+            <Lock className="w-4 h-4" /> This post is live
           </div>
         ) : (
           <>
             {!canPublishNow && !canSchedule ? (
               <button onClick={() => handleSave("PENDING_APPROVAL")} disabled={saving || !form.locationId || !form.summary}
-                className="px-4 py-2 bg-[var(--accent)] hover:bg-[var(--accent-hover)] text-white text-[13px] font-medium rounded-lg transition-colors disabled:opacity-50 flex items-center gap-2">
-                {saving && savingType === "PENDING_APPROVAL" ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Save className="w-3.5 h-3.5" />}
+                className="px-8 py-3 bg-[#2563eb] hover:bg-[#1d4ed8] text-white text-[15px] font-bold rounded-xl shadow-[0_4px_12px_rgba(37,99,235,0.2)] transition-all hover:scale-[1.02] active:scale-[0.98] disabled:opacity-50 flex items-center gap-2.5 uppercase tracking-wide">
+                {saving && savingType === "PENDING_APPROVAL" ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
                 Submit for Approval
               </button>
             ) : (
               <>
-                {/* Save Draft — always visible */}
+                {/* Save Draft */}
                 <button onClick={() => handleSave("DRAFT")} disabled={saving || !form.locationId || !form.summary}
-                  className="px-4 py-2 border border-[var(--border)] text-[13px] font-medium text-[var(--text-secondary)] rounded-lg hover:bg-[var(--bg-elevated)] transition-colors disabled:opacity-50 flex items-center gap-2"
-                  style={{ background: "#f8fafc", color: "#374151" }}>
-                  {saving && savingType === "DRAFT" ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Save className="w-3.5 h-3.5" />}
-                  Save draft
+                  className="px-8 py-3 border-2 border-[#e2e8f0] text-[15px] font-bold text-[#475569] rounded-xl hover:bg-gray-50 hover:border-[#cbd5e1] transition-all disabled:opacity-50 flex items-center gap-2.5 uppercase tracking-wide">
+                  {saving && savingType === "DRAFT" ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+                  Save Draft
                 </button>
 
                 {isFutureScheduled ? (
@@ -830,18 +873,17 @@ export function PostEditor({ initialData = null, timelineDate, onDateChange, loc
                     <button
                       onClick={() => handleSave("SCHEDULED")}
                       disabled={saving || !form.locationId || !form.summary}
-                      className="px-4 py-2 text-[13px] font-medium rounded-lg transition-colors disabled:opacity-50 flex items-center gap-2"
-                      style={{ background: "#2563eb", color: "#ffffff", border: "1px solid #2563eb" }}
+                      className="px-8 py-3 bg-[#2563eb] hover:bg-[#1d4ed8] text-white text-[15px] font-bold rounded-xl shadow-[0_4px_12px_rgba(37,99,235,0.2)] transition-all hover:scale-[1.02] active:scale-[0.98] disabled:opacity-50 flex items-center gap-2.5 uppercase tracking-wide"
                     >
-                      {saving && savingType === "SCHEDULED" ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Clock className="w-3.5 h-3.5" />}
-                      Schedule now
+                      {saving && savingType === "SCHEDULED" ? <Loader2 className="w-4 h-4 animate-spin" /> : <Clock className="w-4 h-4" />}
+                      Schedule Post
                     </button>
                   ) : (
                     <div
-                      className="px-4 py-2 bg-[var(--bg-elevated)] text-[var(--text-tertiary)] text-[13px] font-medium rounded-lg flex items-center gap-2 cursor-not-allowed border border-[var(--border)]"
+                      className="px-8 py-3 bg-gray-100 text-[#94a3b8] text-[15px] font-bold rounded-xl flex items-center gap-2.5 cursor-not-allowed border-2 border-gray-200 uppercase tracking-wide opacity-50"
                       title="You do not have permission to schedule posts."
                     >
-                      <Clock className="w-3.5 h-3.5" /> Schedule now (Disabled)
+                      <Clock className="w-4 h-4" /> Schedule (Disabled)
                     </div>
                   )
                 ) : (
@@ -849,18 +891,17 @@ export function PostEditor({ initialData = null, timelineDate, onDateChange, loc
                     <button
                       onClick={() => handleSave("PUBLISH")}
                       disabled={saving || !form.locationId || !form.summary}
-                      className="px-4 py-2 text-[13px] font-medium rounded-lg transition-colors disabled:opacity-50 flex items-center gap-2"
-                      style={{ background: "#2563eb", color: "#ffffff", border: "1px solid #2563eb" }}
+                      className="px-8 py-3 bg-[#2563eb] hover:bg-[#1d4ed8] text-white text-[15px] font-bold rounded-xl shadow-[0_4px_12px_rgba(37,99,235,0.2)] transition-all hover:scale-[1.02] active:scale-[0.98] disabled:opacity-50 flex items-center gap-2.5 uppercase tracking-wide"
                     >
-                      {saving && savingType === "PUBLISH" ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Send className="w-3.5 h-3.5" />}
-                      Publish now
+                      {saving && savingType === "PUBLISH" ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
+                      Publish Now
                     </button>
                   ) : (
                     <div
-                      className="px-4 py-2 bg-[var(--bg-elevated)] text-[var(--text-tertiary)] text-[13px] font-medium rounded-lg flex items-center gap-2 cursor-not-allowed border border-[var(--border)]"
+                      className="px-8 py-3 bg-gray-100 text-[#94a3b8] text-[15px] font-bold rounded-xl flex items-center gap-2.5 cursor-not-allowed border-2 border-gray-200 uppercase tracking-wide opacity-50"
                       title={`You must schedule posts at least ${minScheduleDays} days in advance.`}
                     >
-                      <Send className="w-3.5 h-3.5" /> Publish now (Disabled)
+                      <Send className="w-4 h-4" /> Publish (Disabled)
                     </div>
                   )
                 )}

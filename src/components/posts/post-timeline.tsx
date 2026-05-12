@@ -18,10 +18,10 @@ interface Props {
 }
 
 const statusConfig = {
-  PUBLISHED: { label: "Published", color: "#1e8e3e", bg: "#e6f4ea", dot: "#1e8e3e" },
-  SCHEDULED:  { label: "Scheduled", color: "#f29900", bg: "#fef7e0", dot: "#f29900" },
-  DRAFT:      { label: "Draft",     color: "#70757a", bg: "#f1f3f4", dot: "#70757a" },
-  FAILED:     { label: "Failed",    color: "#d93025", bg: "#fce8e6", dot: "#d93025" },
+  PUBLISHED: { label: "Published", color: "#16a34a", bg: "#f0fdf4", dot: "#16a34a" },
+  SCHEDULED:  { label: "Scheduled", color: "#d97706", bg: "#fffbeb", dot: "#d97706" },
+  DRAFT:      { label: "Draft",     color: "#64748b", bg: "#f8fafc", dot: "#64748b" },
+  FAILED:     { label: "Failed",    color: "#dc2626", bg: "#fef2f2", dot: "#dc2626" },
 };
 
 export function PostTimeline({ onDateSelect, selectedDate, profileId }: Props) {
@@ -103,9 +103,9 @@ export function PostTimeline({ onDateSelect, selectedDate, profileId }: Props) {
   ];
 
   return (
-    <div style={{ background: "#fff", border: "1px solid #dadce0", borderRadius: 8, overflow: "hidden", marginBottom: 20 }}>
+    <div style={{ background: "#fff", border: "1px solid #e5e7eb", borderRadius: 14, overflow: "hidden", marginBottom: 24, boxShadow: "0 1px 3px rgba(0,0,0,0.02), 0 4px 6px -1px rgba(0,0,0,0.03)" }}>
       {/* Header */}
-      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "12px 16px", borderBottom: "1px solid #e8eaed", background: "#f8f9fa" }}>
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "14px 20px", borderBottom: "1px solid #f1f5f9", background: "#ffffff" }}>
         {/* Filter tabs */}
         <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
           {filters.map(f => (
@@ -114,20 +114,20 @@ export function PostTimeline({ onDateSelect, selectedDate, profileId }: Props) {
               onClick={() => setActiveFilter(f.key)}
               style={{
                 display: "flex", alignItems: "center", gap: 6,
-                padding: "5px 12px", borderRadius: 16, border: "none", cursor: "pointer",
-                fontSize: 13, fontWeight: 500,
-                background: activeFilter === f.key ? "#202124" : "transparent",
-                color: activeFilter === f.key ? "#fff" : "#5f6368",
-                transition: "all 0.1s",
+                padding: "6px 14px", borderRadius: 20, border: "none", cursor: "pointer",
+                fontSize: 13, fontWeight: 600,
+                background: activeFilter === f.key ? "#0f172a" : "transparent",
+                color: activeFilter === f.key ? "#fff" : "#64748b",
+                transition: "all 0.2s",
               }}
             >
               {f.label}
               {f.count > 0 && (
                 <span style={{
                   fontSize: 11, fontWeight: 600,
-                  background: activeFilter === f.key ? "rgba(255,255,255,0.25)" : "#e8eaed",
-                  color: activeFilter === f.key ? "#fff" : "#5f6368",
-                  borderRadius: 10, padding: "1px 6px",
+                  background: activeFilter === f.key ? "rgba(255,255,255,0.15)" : "#f1f5f9",
+                  color: activeFilter === f.key ? "#fff" : "#64748b",
+                  borderRadius: 10, padding: "1px 7px",
                 }}>
                   {f.count}
                 </span>
@@ -136,11 +136,11 @@ export function PostTimeline({ onDateSelect, selectedDate, profileId }: Props) {
           ))}
         </div>
         {/* Nav arrows */}
-        <div style={{ display: "flex", gap: 2 }}>
-          <button onClick={() => scroll("left")} style={{ width: 32, height: 32, borderRadius: "50%", border: "1px solid #dadce0", background: "#fff", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", color: "#5f6368" }}>
+        <div style={{ display: "flex", gap: 6 }}>
+          <button onClick={() => scroll("left")} style={{ width: 34, height: 34, borderRadius: 10, border: "1px solid #e2e8f0", background: "#fff", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", color: "#64748b", transition: "all 0.2s" }} className="hover-bg-muted">
             <ChevronLeft style={{ width: 16, height: 16 }} />
           </button>
-          <button onClick={() => scroll("right")} style={{ width: 32, height: 32, borderRadius: "50%", border: "1px solid #dadce0", background: "#fff", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", color: "#5f6368" }}>
+          <button onClick={() => scroll("right")} style={{ width: 34, height: 34, borderRadius: 10, border: "1px solid #e2e8f0", background: "#fff", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", color: "#64748b", transition: "all 0.2s" }} className="hover-bg-muted">
             <ChevronRight style={{ width: 16, height: 16 }} />
           </button>
         </div>
@@ -161,19 +161,19 @@ export function PostTimeline({ onDateSelect, selectedDate, profileId }: Props) {
               onClick={() => !d.isPast && onDateSelect?.(d.dateStr)}
               style={{
                 display: "flex", flexDirection: "column", alignItems: "center",
-                minWidth: 52, padding: "6px 4px 8px", borderRadius: 8,
+                minWidth: 56, padding: "8px 4px 10px", borderRadius: 12,
                 border: "none", cursor: d.isPast ? "default" : "pointer",
-                background: isSelected ? "#e8f0fe" : d.isToday ? "#f8f9fa" : "transparent",
-                outline: isSelected ? "2px solid #1a73e8" : d.isToday ? "1.5px solid #dadce0" : "none",
+                background: isSelected ? "#eff6ff" : d.isToday ? "#f8fafc" : "transparent",
+                outline: isSelected ? "2px solid #2563eb" : d.isToday ? "1px solid #e2e8f0" : "none",
                 opacity: d.isPast ? 0.45 : 1,
-                transition: "all 0.1s",
+                transition: "all 0.2s",
                 position: "relative",
               }}
             >
               {/* Month label above */}
               <span style={{
                 fontSize: 9, fontWeight: 600, letterSpacing: "0.08em", textTransform: "uppercase",
-                color: "#70757a", marginBottom: 2, height: 12,
+                color: "#94a3b8", marginBottom: 4, height: 12,
                 visibility: showMonthLabel ? "visible" : "hidden",
               }}>
                 {d.month}
@@ -181,23 +181,23 @@ export function PostTimeline({ onDateSelect, selectedDate, profileId }: Props) {
 
               {/* Day name */}
               <span style={{
-                fontSize: 10, fontWeight: 500, textTransform: "uppercase", letterSpacing: "0.04em",
-                color: d.isToday ? "#1a73e8" : d.isWeekend ? "#70757a" : "#5f6368",
-                marginBottom: 4,
+                fontSize: 10, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.04em",
+                color: d.isToday ? "#2563eb" : d.isWeekend ? "#94a3b8" : "#64748b",
+                marginBottom: 6,
               }}>
                 {d.isToday ? "Today" : d.dayName}
               </span>
 
               {/* Day number circle */}
               <div style={{
-                width: 34, height: 34, borderRadius: "50%",
-                background: isSelected ? "#1a73e8" : d.isToday ? "#1a73e8" : "transparent",
+                width: 36, height: 36, borderRadius: 10,
+                background: isSelected ? "#2563eb" : d.isToday ? "#2563eb" : "transparent",
                 display: "flex", alignItems: "center", justifyContent: "center",
-                marginBottom: 6,
+                marginBottom: 8,
               }}>
                 <span style={{
-                  fontSize: 15, fontWeight: d.isToday || isSelected ? 700 : 400,
-                  color: isSelected || d.isToday ? "#fff" : d.isWeekend ? "#70757a" : "#202124",
+                  fontSize: 16, fontWeight: d.isToday || isSelected ? 800 : 500,
+                  color: isSelected || d.isToday ? "#fff" : d.isWeekend ? "#94a3b8" : "#1e293b",
                 }}>
                   {d.day}
                 </span>
@@ -226,15 +226,15 @@ export function PostTimeline({ onDateSelect, selectedDate, profileId }: Props) {
       </div>
 
       {/* Legend */}
-      <div style={{ display: "flex", gap: 16, padding: "8px 16px 10px", borderTop: "1px solid #e8eaed", background: "#f8f9fa" }}>
+      <div style={{ display: "flex", gap: 20, padding: "12px 20px", borderTop: "1px solid #f1f5f9", background: "#ffffff" }}>
         {(Object.keys(statusConfig) as Array<keyof typeof statusConfig>).map(key => (
-          <span key={key} style={{ display: "flex", alignItems: "center", gap: 5, fontSize: 11, color: "#5f6368", fontWeight: 500 }}>
+          <span key={key} style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 12, color: "#64748b", fontWeight: 600 }}>
             <span style={{ width: 8, height: 8, borderRadius: "50%", background: statusConfig[key].dot, display: "inline-block" }} />
             {statusConfig[key].label}
           </span>
         ))}
         {selectedDate && (
-          <span style={{ marginLeft: "auto", fontSize: 11, fontWeight: 600, color: "#1a73e8" }}>
+          <span style={{ marginLeft: "auto", fontSize: 12, fontWeight: 700, color: "#2563eb" }}>
             Selected: {new Date(selectedDate).toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" })}
           </span>
         )}

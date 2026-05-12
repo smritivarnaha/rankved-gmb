@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import useSWR from "swr";
-import { Loader2, ArrowLeft, Save, Building2, Phone, Globe, FileText, CheckCircle2 } from "lucide-react";
+import { Loader2, ArrowLeft, Save, Building2, Phone, Globe, FileText, CheckCircle2, Upload } from "lucide-react";
 import Link from "next/link";
 
 const fetcher = (url: string) => fetch(url).then((res) => res.json());
@@ -20,7 +20,9 @@ export default function EditProfilePage({ params }: { params: { id: string } }) 
     description: "",
     phone: "",
     website: "",
+    logoUrl: "",
   });
+  const [logoFile, setLogoFile] = useState<File | null>(null);
 
   useEffect(() => {
     if (profileData?.data) {
@@ -30,6 +32,7 @@ export default function EditProfilePage({ params }: { params: { id: string } }) 
         description: gbp.profile?.description || "",
         phone: gbp.phoneNumbers?.primaryPhone || "",
         website: gbp.websiteUri || "",
+        logoUrl: gbp.logoUrl || "",
       });
     }
   }, [profileData]);
@@ -40,6 +43,7 @@ export default function EditProfilePage({ params }: { params: { id: string } }) 
     setMessage(null);
 
     try {
+      // 1. Sync GBP Text Details
       const res = await fetch(`/api/profiles/${params.id}/gbp`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
@@ -47,11 +51,22 @@ export default function EditProfilePage({ params }: { params: { id: string } }) 
       });
 
       const d = await res.json();
-      if (res.ok) {
-        setMessage({ type: "success", text: "Profile updated successfully on Google!" });
-      } else {
-        setMessage({ type: "error", text: d.error || "Failed to update profile." });
+      if (!res.ok) throw new Error(d.error || "Failed to update profile text details.");
+
+      // 2. Sync Logo if changed
+      if (logoFile) {
+        const logoFormData = new FormData();
+        logoFormData.append("id", params.id);
+        logoFormData.append("logo", logoFile);
+
+        const logoRes = await fetch("/api/profiles", { method: "PATCH", body: logoFormData });
+        if (!logoRes.ok) {
+          const lD = await logoRes.json();
+          throw new Error(lD.error || "Failed to update profile logo.");
+        }
       }
+
+      setMessage({ type: "success", text: "Profile updated successfully!" });
     } catch (err: any) {
       setMessage({ type: "error", text: err.message || "Network error." });
     } finally {
@@ -98,6 +113,29 @@ export default function EditProfilePage({ params }: { params: { id: string } }) 
         </div>
         <div className="card-body">
           <form onSubmit={handleSave} style={{ display: "flex", flexDirection: "column", gap: 20 }}>
+            {/* Logo Upload */}
+            <div>
+              <label style={{ fontSize: 13, fontWeight: 600, color: "#374151", marginBottom: 8, display: "block" }}>Profile Logo</label>
+              <div style={{ display: "flex", gap: 16, alignItems: "center" }}>
+                <div style={{ width: 64, height: 64, borderRadius: 12, background: "#f3f4f6", display: "flex", alignItems: "center", justifyContent: "center", overflow: "hidden", border: "1px solid #e5e7eb" }}>
+                  {logoFile ? (
+                    <img src={URL.createObjectURL(logoFile)} alt="Preview" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                  ) : formData.logoUrl ? (
+                    <img src={formData.logoUrl} alt="Current" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                  ) : (
+                    <span style={{ fontSize: 12, color: "#9ca3af" }}>No Logo</span>
+                  )}
+                </div>
+                <div>
+                  <label className="btn btn-primary" style={{ background: "#fff", color: "#2563eb", border: "1px solid #bfdbfe", padding: "6px 12px", fontSize: 12, cursor: "pointer" }}>
+                    Upload Image
+                    <input type="file" accept="image/*" style={{ display: "none" }} onChange={(e) => setLogoFile(e.target.files?.[0] || null)} />
+                  </label>
+                  <p style={{ fontSize: 11, color: "#6b7280", marginTop: 8 }}>Recommended: Square PNG/JPG.</p>
+                </div>
+              </div>
+            </div>
+
             <div>
               <label style={{ fontSize: 13, fontWeight: 600, color: "#374151", marginBottom: 6, display: "flex", alignItems: "center", gap: 6 }}>
                 <Building2 size={14} /> Business Name
