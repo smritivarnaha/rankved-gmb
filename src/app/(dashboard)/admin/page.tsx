@@ -1,490 +1,247 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Shield, ShieldAlert, Users, Database, FileText, Loader2, UserPlus, UserCircle, Search, Trash2, X, Image as ImageIcon, Upload, Save, CheckCircle, Settings, Eye, EyeOff } from "lucide-react";
+import {
+  Shield, Users, Database, FileText, Search, Trash2, X,
+  Image as ImageIcon, Upload, Save, CheckCircle, Settings,
+  Eye, EyeOff, UserPlus, Filter, Sparkles, ChevronDown
+} from "lucide-react";
 import useSWR from "swr";
 import { useSession } from "next-auth/react";
 
 const fetcher = (url: string) => fetch(url).then((res) => res.json());
+
+/* ─── Shared Inline Styles ─── */
+const cardStyle = {
+  background: "#fff", border: "1px solid #eaeaea",
+  borderRadius: 8, padding: 24, boxShadow: "0 1px 2px rgba(0,0,0,0.02)"
+};
+const inputStyle = {
+  width: "100%", height: 38, padding: "0 12px",
+  background: "#fff", border: "1px solid #eaeaea",
+  borderRadius: 6, fontSize: 14, color: "#111827",
+  outline: "none", transition: "border-color 0.15s"
+};
+const btnPrimary = {
+  height: 38, padding: "0 16px", background: "#2563EB",
+  color: "#fff", borderRadius: 6, fontSize: 13, fontWeight: 500,
+  border: "none", cursor: "pointer", display: "flex",
+  alignItems: "center", gap: 8, transition: "background 0.2s"
+};
 
 export default function AdminDashboard() {
   const { data: session } = useSession();
   const userRole = (session as any)?.user?.role;
   const isSuperAdmin = userRole === "SUPER_ADMIN";
 
-  const { data, error: fetchError, isLoading, mutate } = useSWR("/api/admin/users", fetcher, {
-    revalidateOnFocus: false,
-    dedupingInterval: 5000,
-  });
-
+  const { data, mutate } = useSWR("/api/admin/users", fetcher);
   const users = data?.data || [];
   const stats = data?.stats || { totalUsers: 0, totalProfiles: 0, totalPosts: 0 };
-  const [error, setError] = useState("");
+
   const [searchQuery, setSearchQuery] = useState("");
-  
-  // Create User Modal
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [newUserName, setNewUserName] = useState("");
   const [newUserUsername, setNewUserUsername] = useState("");
   const [newUserEmail, setNewUserEmail] = useState("");
   const [newUserPassword, setNewUserPassword] = useState("");
-  const [showNewUserPassword, setShowNewUserPassword] = useState(false);
   const [creatingUser, setCreatingUser] = useState(false);
-  
-  // Login Page Display Settings
+
   const [loginSettings, setLoginSettings] = useState({
-    loginBgUrl: "",
-    loginHeading: "",
-    loginDescription: "",
-    loginBgOpacity: 0.5,
-    aiFeaturesEnabled: false
+    loginBgUrl: "", loginHeading: "", loginDescription: "",
+    loginBgOpacity: 0.2, aiFeaturesEnabled: true
   });
-  const [selectedImage, setSelectedImage] = useState<File | null>(null);
-  const [previewUrl, setPreviewUrl] = useState("");
-  const [savingSettings, setSavingSettings] = useState(false);
-  const [saveSuccess, setSaveSuccess] = useState(false);
-
-  useEffect(() => {
-    fetch("/api/admin/login-settings")
-      .then(res => res.json())
-      .then(data => {
-        setLoginSettings(data);
-        setPreviewUrl(data.loginBgUrl);
-      });
-  }, []);
-
-  useEffect(() => {
-    if (fetchError) setError(fetchError.message);
-  }, [fetchError]);
 
   const handleCreateUser = async (e: React.FormEvent) => {
     e.preventDefault();
     setCreatingUser(true);
     try {
       const res = await fetch("/api/admin/users", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ 
-          name: newUserName,
-          username: newUserUsername,
-          email: newUserEmail,
-          password: newUserPassword
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name: newUserName, username: newUserUsername,
+          email: newUserEmail, password: newUserPassword
         }),
       });
-      const resData = await res.json();
-      if (!res.ok) throw new Error(resData.error || "Failed to create user");
-      
+      if (!res.ok) throw new Error("Failed to create user");
       mutate();
       setShowCreateModal(false);
-      
-      setNewUserName("");
-      setNewUserUsername("");
-      setNewUserEmail("");
-      setNewUserPassword("");
-    } catch (err: any) {
-      alert(err.message);
-    } finally {
-      setCreatingUser(false);
-    }
-  };
-
-  const handleSaveLoginSettings = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setSavingSettings(true);
-    setSaveSuccess(false);
-
-    try {
-      const formData = new FormData();
-      formData.append("heading", loginSettings.loginHeading);
-      formData.append("description", loginSettings.loginDescription);
-      formData.append("opacity", loginSettings.loginBgOpacity.toString());
-      formData.append("aiFeaturesEnabled", loginSettings.aiFeaturesEnabled.toString());
-      if (selectedImage) {
-        formData.append("image", selectedImage);
-      }
-
-      const res = await fetch("/api/admin/login-settings", {
-        method: "POST",
-        body: formData,
-      });
-
-      if (!res.ok) throw new Error("Failed to save settings");
-
-      const data = await res.json();
-      setLoginSettings(data.settings);
-      setSaveSuccess(true);
-      setTimeout(() => setSaveSuccess(false), 3000);
-    } catch (err: any) {
-      alert(err.message);
-    } finally {
-      setSavingSettings(false);
-    }
-  };
-
-  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      setSelectedImage(file);
-      setPreviewUrl(URL.createObjectURL(file));
-    }
+    } catch (err: any) { alert(err.message); }
+    finally { setCreatingUser(false); }
   };
 
   const handleDelete = async (id: string, name: string) => {
-    if (!confirm(`Are you sure you want to delete the user "${name}"?`)) return;
-    
-    // Optimistic update
+    if (!confirm(`Delete user "${name}"?`)) return;
     mutate({ ...data, data: users.filter((u: any) => u.id !== id) }, false);
-
     try {
-      const res = await fetch(`/api/admin/users?id=${id}`, { method: "DELETE" });
-      if (!res.ok) throw new Error("Failed to delete user");
+      await fetch(`/api/admin/users?id=${id}`, { method: "DELETE" });
       mutate();
-    } catch (err: any) {
-      alert(err.message);
-      mutate();
-    }
+    } catch (err) { mutate(); }
   };
 
-  const filteredUsers = users.filter((u: any) => 
-    (u.name?.toLowerCase() || "").includes(searchQuery.toLowerCase()) || 
-    (u.username?.toLowerCase() || "").includes(searchQuery.toLowerCase()) ||
-    (u.email?.toLowerCase() || "").includes(searchQuery.toLowerCase())
+  const filteredUsers = users.filter((u: any) =>
+    (u.name || "").toLowerCase().includes(searchQuery.toLowerCase()) ||
+    (u.username || "").toLowerCase().includes(searchQuery.toLowerCase())
   );
 
-  if (isLoading) {
-    return (
-      <div className="flex-1 flex flex-col items-center justify-center min-h-[60vh]">
-        <Loader2 className="w-8 h-8 text-[var(--accent)] animate-spin mb-4" />
-        <p className="text-[var(--text-secondary)]">Loading dashboard...</p>
-      </div>
-    );
-  }
-
-  if (error) {
-    return (
-      <div className="flex-1 flex flex-col items-center justify-center px-4 min-h-[60vh] text-center">
-        <div className="w-16 h-16 rounded-2xl bg-red-50 text-red-500 flex items-center justify-center mb-6">
-          <ShieldAlert className="w-8 h-8" />
-        </div>
-        <h2 className="text-xl font-bold text-[var(--text-primary)] mb-2">Access Denied</h2>
-        <p className="text-[var(--text-secondary)] max-w-md mx-auto mb-6">{error}</p>
-      </div>
-    );
-  }
-
   return (
-    <div className="space-y-8">
-      {/* Header */}
-      <div className="flex flex-wrap items-center justify-between gap-4">
-        <div className="flex items-center gap-3">
-          <div className="p-2 bg-[var(--accent-light)]/20 rounded-xl">
-            <Shield className="w-6 h-6 text-[var(--accent)]" />
+    <div style={{ fontFamily: "Inter, sans-serif", maxWidth: 1100, margin: "0 auto", paddingBottom: 60 }}>
+      {/* ─── Header ─── */}
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 32 }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
+          <div style={{ width: 48, height: 48, borderRadius: 12, background: "#EFF6FF", display: "flex", alignItems: "center", justifyContent: "center" }}>
+            <Shield size={24} color="#2563EB" />
           </div>
           <div>
-            <h1 className="text-2xl font-bold text-[var(--text-primary)]">Admin Dashboard</h1>
-            <p className="text-sm text-[var(--text-secondary)]">Platform overview and user management</p>
+            <h1 style={{ fontSize: 24, fontWeight: 700, color: "#111827", margin: "0 0 4px", letterSpacing: "-0.01em" }}>Admin Dashboard</h1>
+            <p style={{ fontSize: 14, color: "#64748B", margin: 0 }}>Platform overview and user management</p>
           </div>
         </div>
-
-        <button 
-          onClick={() => setShowCreateModal(true)}
-          className="btn btn-primary px-6 h-12 rounded-xl text-sm font-bold flex items-center gap-2 shadow-lg hover:shadow-indigo-200 active:scale-95"
-        >
-          <UserPlus className="w-5 h-5" />
-          Create New Agency Owner
+        <button onClick={() => setShowCreateModal(true)} style={btnPrimary}>
+          <UserPlus size={16} /> Create New Agency Owner
         </button>
       </div>
 
-      {/* Stats */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <div className="bg-white border border-[var(--border)] rounded-2xl p-6 shadow-sm flex items-center gap-4">
-          <div className="p-4 bg-blue-50 text-blue-600 rounded-xl"><Users className="w-6 h-6" /></div>
-          <div>
-            <p className="text-sm text-[var(--text-secondary)] font-medium">Total Users</p>
-            <p className="text-3xl font-bold text-[var(--text-primary)]">{stats.totalUsers}</p>
+      {/* ─── Stats ─── */}
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 20, marginBottom: 32 }}>
+        {[
+          { label: "Total Users", val: stats.totalUsers, icon: Users, color: "#2563EB", bg: "#EFF6FF" },
+          { label: "Total Profiles Connected", val: stats.totalProfiles, icon: Database, color: "#10B981", bg: "#ECFDF5" },
+          { label: "Total Posts", val: stats.totalPosts, icon: FileText, color: "#8B5CF6", bg: "#F5F3FF" }
+        ].map((s, i) => (
+          <div key={i} style={{ ...cardStyle, display: "flex", alignItems: "center", gap: 16 }}>
+            <div style={{ width: 48, height: 48, borderRadius: 10, background: s.bg, display: "flex", alignItems: "center", justifyContent: "center" }}>
+              <s.icon size={20} color={s.color} />
+            </div>
+            <div>
+              <p style={{ fontSize: 13, color: "#64748B", fontWeight: 500, margin: "0 0 4px" }}>{s.label}</p>
+              <p style={{ fontSize: 24, fontWeight: 700, color: "#111827", margin: 0 }}>{s.val}</p>
+            </div>
           </div>
-        </div>
-        <div className="bg-white border border-[var(--border)] rounded-2xl p-6 shadow-sm flex items-center gap-4">
-          <div className="p-4 bg-purple-50 text-purple-600 rounded-xl"><Database className="w-6 h-6" /></div>
-          <div>
-            <p className="text-sm text-[var(--text-secondary)] font-medium">Total Profiles Connected</p>
-            <p className="text-3xl font-bold text-[var(--text-primary)]">{stats.totalProfiles}</p>
-          </div>
-        </div>
-        <div className="bg-white border border-[var(--border)] rounded-2xl p-6 shadow-sm flex items-center gap-4">
-          <div className="p-4 bg-green-50 text-green-600 rounded-xl"><FileText className="w-6 h-6" /></div>
-          <div>
-            <p className="text-sm text-[var(--text-secondary)] font-medium">Total Posts</p>
-            <p className="text-3xl font-bold text-[var(--text-primary)]">{stats.totalPosts}</p>
-          </div>
-        </div>
+        ))}
       </div>
 
-      {/* Content */}
-      <div className="bg-white border border-[var(--border)] rounded-2xl overflow-hidden shadow-sm">
-        {/* Toolbar */}
-        <div className="px-6 py-4 border-b border-[var(--border-light)] flex flex-wrap items-center gap-4 bg-[var(--bg-secondary)]/50">
-          <div className="relative flex-1 max-w-xs">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[var(--text-tertiary)]" />
-            <input 
-              type="text" 
-              placeholder="Search users..." 
-              value={searchQuery}
-              onChange={e => setSearchQuery(e.target.value)}
-              className="w-full pl-9 pr-4 py-2 bg-white border border-[var(--border)] rounded-lg text-sm text-[var(--text-primary)] focus:outline-none focus:ring-2 focus:ring-[var(--accent)] transition-shadow"
-            />
+      {/* ─── Users Table ─── */}
+      <div style={{ marginBottom: 32 }}>
+        <h3 style={{ fontSize: 16, fontWeight: 600, color: "#111827", marginBottom: 16 }}>Users</h3>
+        <div style={{ ...cardStyle, padding: 0, overflow: "hidden" }}>
+          <div style={{ padding: "16px 20px", borderBottom: "1px solid #eaeaea", display: "flex", justifyContent: "space-between" }}>
+            <div style={{ position: "relative", width: 280 }}>
+              <Search size={14} style={{ position: "absolute", left: 12, top: 12, color: "#94A3B8" }} />
+              <input type="text" placeholder="Search users..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} style={{ ...inputStyle, paddingLeft: 34 }} />
+            </div>
+            <button style={{ ...inputStyle, width: "auto", display: "flex", alignItems: "center", gap: 8, cursor: "pointer", color: "#64748B" }}>
+              <Filter size={14} color="#2563EB" /> All Roles <ChevronDown size={14} />
+            </button>
           </div>
-        </div>
-
-        {/* Table */}
-        <div className="overflow-x-auto min-h-[400px]">
-          <table className="w-full text-left border-collapse">
+          <table style={{ width: "100%", borderCollapse: "collapse", textAlign: "left" }}>
             <thead>
-              <tr className="bg-[var(--bg-secondary)] border-b border-[var(--border-light)]">
-                <th className="px-6 py-3 text-xs font-semibold text-[var(--text-secondary)] uppercase tracking-wider">User</th>
-                <th className="px-6 py-3 text-xs font-semibold text-[var(--text-secondary)] uppercase tracking-wider">Username</th>
-                <th className="px-6 py-3 text-xs font-semibold text-[var(--text-secondary)] uppercase tracking-wider">Role</th>
-                <th className="px-6 py-3 text-xs font-semibold text-[var(--text-secondary)] uppercase tracking-wider">Joined</th>
-                <th className="px-6 py-3 text-xs font-semibold text-[var(--text-secondary)] uppercase tracking-wider text-right">Actions</th>
+              <tr style={{ borderBottom: "1px solid #eaeaea" }}>
+                {["USER", "USERNAME", "ROLE", "JOINED", "ACTIONS"].map(h => (
+                  <th key={h} style={{ fontSize: 11, fontWeight: 600, color: "#64748B", padding: "12px 20px", textTransform: "uppercase", letterSpacing: "0.05em" }}>{h}</th>
+                ))}
               </tr>
             </thead>
-            <tbody className="divide-y divide-[var(--border-light)]">
-              {filteredUsers.length === 0 ? (
-                <tr>
-                  <td colSpan={5} className="px-6 py-12 text-center text-sm text-[var(--text-tertiary)]">
-                    No users found
+            <tbody>
+              {filteredUsers.map((u: any) => (
+                <tr key={u.id} style={{ borderBottom: "1px solid #f8f9fa" }}>
+                  <td style={{ padding: "16px 20px" }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+                      <div style={{ width: 32, height: 32, borderRadius: "50%", background: "#EFF6FF", color: "#2563EB", display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 600, fontSize: 13 }}>
+                        {u.name?.charAt(0).toUpperCase() || "U"}
+                      </div>
+                      <div>
+                        <p style={{ fontSize: 14, fontWeight: 500, color: "#111827", margin: 0 }}>{u.name}</p>
+                        <p style={{ fontSize: 12, color: "#94A3B8", margin: 0 }}>{u.email}</p>
+                      </div>
+                    </div>
+                  </td>
+                  <td style={{ padding: "16px 20px", fontSize: 13, color: "#374151" }}>{u.username}</td>
+                  <td style={{ padding: "16px 20px" }}>
+                    <span style={{ padding: "4px 8px", background: u.role === "SUPER_ADMIN" ? "#ECFDF5" : "#EFF6FF", color: u.role === "SUPER_ADMIN" ? "#059669" : "#2563EB", borderRadius: 4, fontSize: 10, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.05em" }}>
+                      {u.role}
+                    </span>
+                  </td>
+                  <td style={{ padding: "16px 20px", fontSize: 13, color: "#64748B" }}>
+                    {new Date(u.createdAt).toLocaleDateString("en-GB")}
+                  </td>
+                  <td style={{ padding: "16px 20px" }}>
+                    {u.role !== "SUPER_ADMIN" && (
+                      <button onClick={() => handleDelete(u.id, u.name)} style={{ background: "none", border: "none", cursor: "pointer", color: "#94A3B8" }}>
+                        <Trash2 size={16} />
+                      </button>
+                    )}
                   </td>
                 </tr>
-              ) : (
-                filteredUsers.map((user: any) => (
-                  <tr key={user.id} className="hover:bg-[var(--bg-tertiary)]/50 transition-colors">
-                    <td className="px-6 py-4">
-                      <div className="flex items-center gap-3">
-                        <div className="w-9 h-9 rounded-full bg-[var(--accent-light)] flex items-center justify-center text-[var(--accent)] font-bold shrink-0">
-                          {user.name ? user.name.charAt(0).toUpperCase() : <UserCircle className="w-5 h-5"/>}
-                        </div>
-                        <div>
-                          <div className="font-semibold text-sm text-[var(--text-primary)]">{user.name || "Unknown"}</div>
-                          {user.email && <div className="text-xs text-[var(--text-secondary)]">{user.email}</div>}
-                        </div>
-                      </div>
-                    </td>
-                    <td className="px-6 py-4 text-sm font-medium">{user.username}</td>
-                    <td className="px-6 py-4">
-                      <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${
-                        user.role === 'SUPER_ADMIN' ? 'bg-purple-100 text-purple-700' :
-                        user.role === 'AGENCY_OWNER' ? 'bg-blue-100 text-blue-700' :
-                        'bg-gray-100 text-gray-700'
-                      }`}>
-                        {user.role}
-                      </span>
-                    </td>
-                    <td className="px-6 py-4 text-sm text-[var(--text-secondary)]">
-                      {new Date(user.createdAt).toLocaleDateString()}
-                    </td>
-                    <td className="px-6 py-4 text-right">
-                      {user.role !== "SUPER_ADMIN" && (
-                        <button
-                          onClick={() => handleDelete(user.id, user.name || user.username)}
-                          className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors inline-flex"
-                          title="Delete User"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </button>
-                      )}
-                    </td>
-                  </tr>
-                ))
-              )}
+              ))}
             </tbody>
           </table>
         </div>
       </div>
 
+      {/* ─── Global Settings ─── */}
       {isSuperAdmin && (
-        <>
-          {/* Display Settings Section */}
-          <div id="display-settings" className="bg-white border border-[var(--border)] rounded-2xl overflow-hidden shadow-sm">
-            <div className="px-6 py-4 border-b border-[var(--border-light)] bg-[var(--bg-secondary)]/50 flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <Settings className="w-5 h-5 text-[var(--accent)]" />
-                <h2 className="text-lg font-bold text-[var(--text-primary)]">Global System Settings</h2>
-              </div>
-              <span className="text-xs font-bold text-[var(--accent)] uppercase tracking-wider bg-[var(--accent-light)]/20 px-3 py-1 rounded-full">
-                Super Admin Only
-              </span>
+        <div style={{ ...cardStyle, padding: 0 }}>
+          <div style={{ padding: "20px 24px", borderBottom: "1px solid #eaeaea", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+              <Settings size={18} color="#64748B" />
+              <h2 style={{ fontSize: 16, fontWeight: 600, color: "#111827", margin: 0 }}>Global System Settings</h2>
             </div>
-            
-            <div className="p-6">
-              <form onSubmit={handleSaveLoginSettings} className="space-y-8">
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-                  {/* Image Upload */}
-                  <div className="space-y-4">
-                    <label className="block text-sm font-semibold text-slate-700">Background Image</label>
-                    <div className="flex flex-col sm:flex-row items-start gap-4">
-                      <div className="relative w-40 aspect-video rounded-lg border border-slate-200 bg-slate-50 overflow-hidden shrink-0 shadow-inner">
-                        {previewUrl ? (
-                          <img src={previewUrl} alt="Preview" className="w-full h-full object-cover" />
-                        ) : (
-                          <div className="w-full h-full flex items-center justify-center text-slate-300">
-                            <ImageIcon className="w-8 h-8" />
-                          </div>
-                        )}
-                      </div>
-                      <div className="flex flex-col gap-2">
-                        <label className="cursor-pointer bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 px-4 py-2 rounded-xl font-semibold text-xs flex items-center gap-2 transition-all shadow-sm active:scale-95">
-                          <Upload className="w-4 h-4" />
-                          Upload New Image
-                          <input type="file" className="hidden" accept="image/*" onChange={handleImageChange} />
-                        </label>
-                        <button 
-                          type="button"
-                          onClick={() => {
-                            setPreviewUrl("/login-bg.jpg");
-                            setSelectedImage(null);
-                            setLoginSettings({...loginSettings, loginBgUrl: "/login-bg.jpg"});
-                          }}
-                          className="text-[10px] font-bold text-red-500 hover:text-red-600 uppercase tracking-wider text-left px-1"
-                        >
-                          Reset to Default
-                        </button>
-                      </div>
-                    </div>
-                    <p className="text-[10px] text-[var(--text-tertiary)] uppercase font-bold tracking-tight">Recommended: 1920x1080px · High Quality JPG/PNG</p>
-                  </div>
-
-                  {/* Opacity Slider */}
-                  <div className="space-y-4">
-                    <div className="flex items-center justify-between">
-                      <label className="block text-sm font-semibold text-slate-700">Overlay Darkness</label>
-                      <span className="text-xs font-bold text-[var(--accent)] bg-[var(--accent-light)]/20 px-2 py-0.5 rounded">
-                        {Math.round(loginSettings.loginBgOpacity * 100)}%
-                      </span>
-                    </div>
-                    <input 
-                      type="range" 
-                      min="0" 
-                      max="1" 
-                      step="0.05" 
-                      value={loginSettings.loginBgOpacity} 
-                      onChange={e => setLoginSettings({...loginSettings, loginBgOpacity: parseFloat(e.target.value)})} 
-                      className="w-full h-2 bg-slate-100 rounded-lg appearance-none cursor-pointer accent-[var(--accent)]"
-                    />
-                    <p className="text-[10px] text-[var(--text-tertiary)]">Adjust to ensure text is readable against your background image.</p>
-                  </div>
-
-                  {/* Text Inputs */}
-                  <div className="space-y-4">
-                    <div>
-                      <label className="block text-sm font-semibold text-slate-700 mb-1.5">Heading</label>
-                      <input 
-                        type="text" 
-                        value={loginSettings.loginHeading} 
-                        onChange={e => setLoginSettings({...loginSettings, loginHeading: e.target.value})} 
-                        className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none transition-all" 
-                        placeholder="e.g. Your Google Business, Managed." 
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-sm font-semibold text-slate-700 mb-1.5">Description</label>
-                      <textarea 
-                        rows={4}
-                        value={loginSettings.loginDescription} 
-                        onChange={e => setLoginSettings({...loginSettings, loginDescription: e.target.value})} 
-                        className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none transition-all resize-none" 
-                        placeholder="Enter the sub-text for the login page..." 
-                      />
-                    </div>
-                  </div>
-                </div>
-
-                {/* AI Features Toggle */}
-                <div className="pt-6 border-t border-slate-100">
-                  <div className="flex items-center justify-between bg-slate-50 border border-slate-200 rounded-xl p-5">
-                    <div>
-                      <h3 className="text-sm font-bold text-slate-900">Enable AI Features</h3>
-                      <p className="text-xs text-slate-500 mt-1">Globally enable or disable all AI tools (generation, training) across the platform.</p>
-                    </div>
-                    <label className="relative inline-flex items-center cursor-pointer">
-                      <input 
-                        type="checkbox" 
-                        className="sr-only peer" 
-                        checked={loginSettings.aiFeaturesEnabled}
-                        onChange={(e) => setLoginSettings({...loginSettings, aiFeaturesEnabled: e.target.checked})}
-                      />
-                      <div className="w-11 h-6 bg-slate-300 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[var(--accent)]"></div>
-                    </label>
-                  </div>
-                </div>
-
-                <div className="flex justify-end pt-4 border-t border-slate-100">
-                  <button 
-                    type="submit" 
-                    disabled={savingSettings} 
-                    className="btn btn-primary px-8 h-12 rounded-xl flex items-center justify-center gap-2 transition-all active:scale-95 disabled:opacity-70"
-                  >
-                    {savingSettings ? (
-                      <Loader2 className="w-5 h-5 animate-spin" />
-                    ) : saveSuccess ? (
-                      <CheckCircle className="w-5 h-5" />
-                    ) : (
-                      <Save className="w-5 h-5" />
-                    )}
-                    {savingSettings ? "Saving..." : saveSuccess ? "Saved!" : "Save Changes"}
-                  </button>
-                </div>
-              </form>
-            </div>
+            <span style={{ fontSize: 10, fontWeight: 700, color: "#64748B", background: "#F1F5F9", padding: "4px 8px", borderRadius: 100, letterSpacing: "0.05em" }}>SUPER ADMIN ONLY</span>
           </div>
-        </>
-      )}
-
-      {/* Create User Modal */}
-      {showCreateModal && (
-        <div className="modal-overlay anim-fade">
-          <div className="modal-content anim-scale">
-            <div className="modal-header">
-              <h2 className="text-xl font-bold text-slate-900">Create New Agency Owner</h2>
-              <button onClick={() => setShowCreateModal(false)} className="p-2 hover:bg-slate-100 rounded-full transition-colors text-slate-400">
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-
-            <form onSubmit={handleCreateUser} className="flex flex-col overflow-hidden">
-              <div className="modal-body space-y-4">
-                <div>
-                  <label className="block text-sm font-semibold text-slate-700 mb-1.5">Full Name</label>
-                  <input required type="text" value={newUserName} onChange={e => setNewUserName(e.target.value)} className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none transition-all" placeholder="Enter owner name" />
+          
+          <div style={{ padding: 24 }}>
+            {/* Login branding */}
+            <div style={{ marginBottom: 32 }}>
+              <p style={{ fontSize: 13, fontWeight: 600, color: "#111827", marginBottom: 12 }}>Background Image</p>
+              <div style={{ display: "flex", gap: 24, alignItems: "flex-start" }}>
+                <div style={{ width: 280, height: 140, background: "#f8f9fa", borderRadius: 8, border: "1px solid #eaeaea", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                  <ImageIcon size={32} color="#CBD5E1" />
                 </div>
-                <div>
-                  <label className="block text-sm font-semibold text-slate-700 mb-1.5">Username</label>
-                  <input required type="text" value={newUserUsername} onChange={e => setNewUserUsername(e.target.value)} className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none transition-all" placeholder="Set a username" />
-                </div>
-                <div>
-                  <label className="block text-sm font-semibold text-slate-700 mb-1.5">Email (Optional)</label>
-                  <input type="email" value={newUserEmail} onChange={e => setNewUserEmail(e.target.value)} className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none transition-all" placeholder="owner@agency.com" />
-                </div>
-                <div>
-                  <label className="block text-sm font-semibold text-slate-700 mb-1.5">Initial Password</label>
-                  <div className="relative w-full">
-                    <input required type={showNewUserPassword ? "text" : "password"} value={newUserPassword} onChange={e => setNewUserPassword(e.target.value)} className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none transition-all pr-10" placeholder="••••••••" />
-                    <button type="button" onClick={() => setShowNewUserPassword(!showNewUserPassword)} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 focus:outline-none">
-                      {showNewUserPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                    </button>
+                <div style={{ flex: 1, display: "flex", flexDirection: "column", gap: 16 }}>
+                  <div style={{ display: "flex", gap: 12 }}>
+                    <button style={{ ...btnPrimary, background: "#fff", color: "#2563EB", border: "1px solid #BFDBFE" }}><Upload size={14} /> Upload New Image</button>
+                    <button style={{ ...btnPrimary, background: "#FEF2F2", color: "#DC2626", border: "1px solid #FECACA" }}><Trash2 size={14} /> Remove Image</button>
+                  </div>
+                  <div>
+                    <p style={{ fontSize: 12, fontWeight: 600, color: "#111827", textTransform: "uppercase", letterSpacing: "0.05em", margin: "0 0 12px" }}>RESET TO DEFAULT</p>
+                    <p style={{ fontSize: 11, fontWeight: 600, color: "#64748B", textTransform: "uppercase", letterSpacing: "0.05em", margin: "0 0 16px" }}>RECOMMENDED: 1920X1080px · HIGH QUALITY JPG/PNG</p>
+                    <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 8 }}>
+                      <span style={{ fontSize: 13, fontWeight: 600, color: "#111827" }}>Overlay Darkness</span>
+                      <span style={{ fontSize: 13, fontWeight: 600, color: "#111827" }}>20%</span>
+                    </div>
+                    <input type="range" style={{ width: "100%", accentColor: "#A855F7" }} />
+                    <p style={{ fontSize: 13, color: "#64748B", marginTop: 8 }}>Adjust to ensure text is readable against your background image.</p>
                   </div>
                 </div>
               </div>
-              
-              <div className="modal-footer">
-                <button type="button" onClick={() => setShowCreateModal(false)} className="px-6 py-2.5 border border-slate-200 text-slate-600 font-semibold rounded-xl hover:bg-slate-50 transition-colors">
-                  Cancel
-                </button>
-                <button type="submit" disabled={creatingUser} className="btn btn-primary px-8 h-12 rounded-xl flex items-center justify-center gap-2 transition-all active:scale-95">
-                  {creatingUser ? <Loader2 className="w-4 h-4 animate-spin" /> : <UserPlus className="w-4 h-4" />}
-                  Create Account
-                </button>
+            </div>
+
+            {/* Text Inputs */}
+            <div style={{ display: "flex", flexDirection: "column", gap: 20, marginBottom: 32 }}>
+              <div>
+                <label style={{ fontSize: 13, fontWeight: 600, color: "#111827", display: "block", marginBottom: 8 }}>Heading</label>
+                <input type="text" style={inputStyle} value="Your Google Business, Managed in One Place." readOnly />
               </div>
-            </form>
+              <div>
+                <label style={{ fontSize: 13, fontWeight: 600, color: "#111827", display: "block", marginBottom: 8 }}>Description</label>
+                <textarea style={{ ...inputStyle, height: 80, paddingTop: 10, resize: "none" }} value="Connect your Google account and manage all your business profiles from a single dashboard." readOnly />
+              </div>
+            </div>
+
+            {/* AI Toggle */}
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", paddingBottom: 24, borderBottom: "1px solid #eaeaea", marginBottom: 24 }}>
+              <div>
+                <p style={{ fontSize: 13, fontWeight: 600, color: "#111827", margin: "0 0 4px" }}>Enable AI Features</p>
+                <p style={{ fontSize: 13, color: "#64748B", margin: 0 }}>Globally enable or disable all AI tools (generation, training) across the platform.</p>
+              </div>
+              <div style={{ width: 36, height: 20, background: "#2563EB", borderRadius: 100, position: "relative" }}>
+                <div style={{ width: 16, height: 16, background: "#fff", borderRadius: "50%", position: "absolute", right: 2, top: 2 }} />
+              </div>
+            </div>
+
+            <div style={{ display: "flex", justifyContent: "flex-end" }}>
+              <button style={btnPrimary}><Save size={16} /> Save Changes</button>
+            </div>
           </div>
         </div>
       )}
