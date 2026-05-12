@@ -40,17 +40,21 @@ export function PerformanceView({ profile, onBack }: { profile: Profile, onBack?
       WEBSITE_CLICKS: 0, CALL_CLICKS: 0, BUSINESS_DIRECTION_REQUESTS: 0
     };
 
-    perfData.data.forEach((metricItem: any) => {
-      const metricName = metricItem.dailyMetric;
+    perfData.data.forEach((multiSeriesItem: any) => {
+      // Google returns an array of multiDailyMetricTimeSeries
+      // Each item contains an array of dailyMetricTimeSeries
+      const seriesArray = multiSeriesItem.dailyMetricTimeSeries || [];
       
-      // Google API can nest this variously depending on the exact version, 
-      // but usually it's metricItem.dailyMetricTimeSeries.timeSeries.datedValues
-      const seriesWrapper = metricItem.dailyMetricTimeSeries?.timeSeries || metricItem.timeSeries || {};
-      const datedValues = seriesWrapper.datedValues || [];
-      
-      datedValues.forEach((point: any) => {
-        const dateStr = `${point.date.year}-${String(point.date.month).padStart(2, '0')}-${String(point.date.day).padStart(2, '0')}`;
-        const val = parseInt(point.value) || 0;
+      seriesArray.forEach((series: any) => {
+        const metricName = series.dailyMetric;
+        if (!metricName) return;
+        
+        const datedValues = series.timeSeries?.datedValues || [];
+        
+        datedValues.forEach((point: any) => {
+          if (!point.date || point.value === undefined) return;
+          const dateStr = `${point.date.year}-${String(point.date.month).padStart(2, '0')}-${String(point.date.day).padStart(2, '0')}`;
+          const val = parseInt(point.value) || 0;
           
           if (!dateMap.has(dateStr)) {
             dateMap.set(dateStr, { date: dateStr, dateObj: new Date(dateStr), VIEWS: 0, INTERACTIONS: 0 });
@@ -71,6 +75,7 @@ export function PerformanceView({ profile, onBack }: { profile: Profile, onBack?
              calcTotals[metricName] += val;
           }
         });
+      });
     });
 
     const sortedData = Array.from(dateMap.values()).sort((a, b) => a.dateObj.getTime() - b.dateObj.getTime());
