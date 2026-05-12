@@ -24,7 +24,13 @@ export function PerformanceView({ profile, onBack }: { profile: Profile, onBack?
   );
 
   const { chartData, totals } = useMemo(() => {
-    if (!perfData?.data || !Array.isArray(perfData.data)) return { chartData: [], totals: {} as any };
+    const defaultTotals = {
+      VIEWS: 0, INTERACTIONS: 0,
+      BUSINESS_IMPRESSIONS_DESKTOP_MAPS: 0, BUSINESS_IMPRESSIONS_MOBILE_MAPS: 0,
+      BUSINESS_IMPRESSIONS_DESKTOP_SEARCH: 0, BUSINESS_IMPRESSIONS_MOBILE_SEARCH: 0,
+      WEBSITE_CLICKS: 0, CALL_CLICKS: 0, BUSINESS_DIRECTION_REQUESTS: 0
+    };
+    if (!perfData?.data || !Array.isArray(perfData.data)) return { chartData: [], totals: defaultTotals };
 
     const dateMap = new Map<string, any>();
     const calcTotals: Record<string, number> = {
@@ -36,10 +42,15 @@ export function PerformanceView({ profile, onBack }: { profile: Profile, onBack?
 
     perfData.data.forEach((metricItem: any) => {
       const metricName = metricItem.dailyMetric;
-      (metricItem.timeSeries?.timeSeries || []).forEach((series: any) => {
-        (series.datedValues || []).forEach((point: any) => {
-          const dateStr = `${point.date.year}-${String(point.date.month).padStart(2, '0')}-${String(point.date.day).padStart(2, '0')}`;
-          const val = parseInt(point.value) || 0;
+      
+      // Google API can nest this variously depending on the exact version, 
+      // but usually it's metricItem.dailyMetricTimeSeries.timeSeries.datedValues
+      const seriesWrapper = metricItem.dailyMetricTimeSeries?.timeSeries || metricItem.timeSeries || {};
+      const datedValues = seriesWrapper.datedValues || [];
+      
+      datedValues.forEach((point: any) => {
+        const dateStr = `${point.date.year}-${String(point.date.month).padStart(2, '0')}-${String(point.date.day).padStart(2, '0')}`;
+        const val = parseInt(point.value) || 0;
           
           if (!dateMap.has(dateStr)) {
             dateMap.set(dateStr, { date: dateStr, dateObj: new Date(dateStr), VIEWS: 0, INTERACTIONS: 0 });
@@ -60,7 +71,6 @@ export function PerformanceView({ profile, onBack }: { profile: Profile, onBack?
              calcTotals[metricName] += val;
           }
         });
-      });
     });
 
     const sortedData = Array.from(dateMap.values()).sort((a, b) => a.dateObj.getTime() - b.dateObj.getTime());
@@ -119,10 +129,10 @@ export function PerformanceView({ profile, onBack }: { profile: Profile, onBack?
             <Loader2 className="anim-spin" style={{ width: 32, height: 32, color: 'var(--accent)' }} />
             <p style={{ fontSize: 14, color: 'var(--text-muted)', marginTop: 16 }}>Fetching data from Google...</p>
           </div>
-        ) : error ? (
+        ) : (error || perfData?.error) ? (
           <div style={{ background: '#fff5f5', border: '1px solid #fed7d7', padding: 20, borderRadius: 12, color: '#c53030', display: 'flex', alignItems: 'center', gap: 12 }}>
             <AlertCircle className="w-5 h-5" />
-            <p style={{ fontSize: 14, fontWeight: 500 }}>{error.message || "Failed to load insights"}</p>
+            <p style={{ fontSize: 14, fontWeight: 500 }}>{error?.message || perfData?.error || "Failed to load insights"}</p>
           </div>
         ) : (
           <div className="anim-fade-up">
