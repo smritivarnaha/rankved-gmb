@@ -6,8 +6,6 @@ import { LogOut, ChevronDown, ChevronsUpDown } from "lucide-react";
 import { useState, useRef, useEffect } from "react";
 import { usePathname } from "next/navigation";
 
-const TABS = ["Deployment", "Resources", "Source", "Open Graph", "Bundle Sizes"];
-
 export function Topbar() {
   const { data: session } = useSession();
   const [showMenu, setShowMenu] = useState(false);
@@ -49,17 +47,8 @@ export function Topbar() {
           <ChevronsUpDown size={14} color="#888" />
         </div>
 
-        {/* Right: Breadcrumbs + Avatar */}
+        {/* Right: Avatar */}
         <div style={{ display: "flex", alignItems: "center", gap: 24 }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 13, color: "#666" }}>
-            <span>Deployments</span>
-            <span style={{ color: "#eaeaea" }}>/</span>
-            <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-              <div style={{ width: 8, height: 8, borderRadius: "50%", background: "#10B981" }} />
-              <span style={{ fontFamily: "monospace", color: "#111" }}>0wA...</span>
-            </div>
-          </div>
-
           <div style={{ position: "relative" }} ref={menuRef}>
             <button 
               onClick={() => setShowMenu(!showMenu)} 
@@ -94,27 +83,6 @@ export function Topbar() {
             )}
           </div>
         </div>
-      </div>
-
-      {/* ─── Bottom Row: Tabs ─── */}
-      <div style={{ display: "flex", alignItems: "center", gap: 4, padding: "0 24px", height: 48 }}>
-        {TABS.map((tab, i) => (
-          <button
-            key={tab}
-            style={{
-              padding: "6px 12px",
-              background: i === 0 ? "#eaeaea" : "transparent",
-              color: i === 0 ? "#111" : "#666",
-              border: "none", borderRadius: 6,
-              fontSize: 13, fontWeight: 500, cursor: "pointer",
-              transition: "color 0.2s"
-            }}
-            onMouseEnter={(e) => { if(i !== 0) e.currentTarget.style.color = "#111"; }}
-            onMouseLeave={(e) => { if(i !== 0) e.currentTarget.style.color = "#666"; }}
-          >
-            {tab}
-          </button>
-        ))}
       </div>
     </header>
   );

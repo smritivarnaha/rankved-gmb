@@ -12,28 +12,28 @@ import {
 import { useGlobalSettings } from "@/hooks/useGlobalSettings";
 
 const adminNav = [
-  { name: "Overview",   href: "/dashboard",   icon: LayoutDashboard },
-  { name: "Deployments", href: "/command-center", icon: Zap },
-  { name: "Analytics", href: "/performance", icon: BarChart3 },
-  { name: "Profiles",    href: "/profiles",    icon: MapPin },
-  { name: "Calendar",    href: "/calendar",    icon: CalendarDays },
-  { name: "Prompts",     href: "/prompts",     icon: FileText },
-  { name: "Team",        href: "/team",        icon: Users },
-  { name: "API Keys",    href: "/api-keys",    icon: Key },
-  { name: "Settings",    href: "/settings",    icon: Settings },
+  { name: "Dashboard",      href: "/dashboard",      icon: LayoutDashboard },
+  { name: "Command Center", href: "/command-center", icon: Zap },
+  { name: "Performance",    href: "/performance",    icon: BarChart3 },
+  { name: "Profiles",       href: "/profiles",       icon: MapPin },
+  { name: "Calendar",       href: "/calendar",       icon: CalendarDays },
+  { name: "Prompts",        href: "/prompts",        icon: FileText },
+  { name: "Team",           href: "/team",           icon: Users },
+  { name: "API Keys",       href: "/api-keys",       icon: Key },
+  { name: "Settings",       href: "/settings",       icon: Settings },
 ];
 
 const superAdminNav = [
   ...adminNav,
-  { name: "Admin Setup", href: "/admin", icon: Shield },
+  { name: "Admin Setup",    href: "/admin",          icon: Shield },
 ];
 
 const teamNav = [
-  { name: "Overview",   href: "/dashboard",   icon: LayoutDashboard },
-  { name: "Analytics", href: "/performance", icon: BarChart3 },
-  { name: "Profiles",    href: "/profiles",    icon: MapPin },
-  { name: "Calendar",    href: "/calendar",    icon: CalendarDays },
-  { name: "Prompts",     href: "/prompts",     icon: FileText },
+  { name: "Dashboard",      href: "/dashboard",      icon: LayoutDashboard },
+  { name: "Performance",    href: "/performance",    icon: BarChart3 },
+  { name: "Profiles",       href: "/profiles",       icon: MapPin },
+  { name: "Calendar",       href: "/calendar",       icon: CalendarDays },
+  { name: "Prompts",        href: "/prompts",        icon: FileText },
 ];
 
 export function Sidebar() {
@@ -61,13 +61,14 @@ export function Sidebar() {
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "8px 12px", cursor: "pointer", borderRadius: 6, marginBottom: 16 }}>
         <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
           <div style={{ width: 24, height: 24, background: "#111", borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center" }}>
-            <svg viewBox="0 0 76 65" fill="none" xmlns="http://www.w3.org/2000/svg" style={{ width: 12, height: 12, color: "white" }}>
-              <path d="M37.5274 0L75.0548 65H0L37.5274 0Z" fill="currentColor"/>
-            </svg>
+            <Image
+              src="https://rankved.com/wp-content/uploads/2025/04/Rankved-Logo-Official-Black.avif"
+              alt="RankVed" width={14} height={14} className="invert" priority
+            />
           </div>
           <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-            <span style={{ fontSize: 14, fontWeight: 600, color: "#111" }}>Acme</span>
-            <span style={{ fontSize: 11, fontWeight: 500, color: "#2563EB", background: "#EFF6FF", padding: "2px 6px", borderRadius: 100 }}>Pro</span>
+            <span style={{ fontSize: 14, fontWeight: 600, color: "#111" }}>RankVed</span>
+            <span style={{ fontSize: 11, fontWeight: 500, color: "#2563EB", background: "#EFF6FF", padding: "2px 6px", borderRadius: 100 }}>GMB</span>
           </div>
         </div>
         <ChevronsUpDown size={14} color="#888" />
@@ -107,10 +108,6 @@ export function Sidebar() {
                 <Icon size={16} strokeWidth={1.5} color={isActive ? "#111" : "#666"} />
                 <span style={{ fontSize: 13, fontWeight: 500, color: isActive ? "#111" : "#666" }}>{item.name}</span>
               </div>
-              {/* Fake > chevron for some items like Logs/Observability */}
-              {["Logs", "Observability", "Firewall"].includes(item.name) && (
-                <span style={{ fontSize: 12, color: "#888" }}>›</span>
-              )}
             </Link>
           );
         })}
