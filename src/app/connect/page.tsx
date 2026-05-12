@@ -4,7 +4,7 @@ import { useState, useEffect, useRef } from "react";
 import { signIn } from "next-auth/react";
 import {
   Search, MapPin, CheckCircle2, Sparkles, Loader2, Shield,
-  ChevronRight, X, Zap, BarChart3, TrendingUp, Users, Star
+  ChevronRight, X, Zap, TrendingUp, Users, Star, Construction, ArrowRight
 } from "lucide-react";
 import Image from "next/image";
 
@@ -14,6 +14,7 @@ export default function ConnectPage() {
   const [isSearching, setIsSearching]   = useState(false);
   const [selected, setSelected]         = useState<any>(null);
   const [showDropdown, setShowDropdown] = useState(false);
+  const [devModal, setDevModal]         = useState<string | null>(null);
   const dropRef = useRef<HTMLDivElement>(null);
 
   /* close dropdown on outside click */
@@ -58,7 +59,8 @@ export default function ConnectPage() {
   if (selected) {
     return (
       <div style={{ minHeight: "100vh", background: "#F9FAFB", fontFamily: "Inter, sans-serif", display: "flex", flexDirection: "column" }}>
-        <NavBar />
+        {devModal && <DevModal page={devModal} onClose={() => setDevModal(null)} />}
+        <NavBar onNavClick={setDevModal} />
         <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", padding: "40px 24px" }}>
           <div style={{ maxWidth: 520, width: "100%", textAlign: "center" }}>
             <div style={{ width: 72, height: 72, borderRadius: "50%", background: "#EFF6FF", border: "2px solid #BFDBFE", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 24px" }}>
@@ -106,7 +108,8 @@ export default function ConnectPage() {
   /* ── SEARCH SCREEN ── */
   return (
     <div style={{ minHeight: "100vh", background: "#F9FAFB", fontFamily: "Inter, sans-serif", display: "flex", flexDirection: "column" }}>
-      <NavBar />
+      {devModal && <DevModal page={devModal} onClose={() => setDevModal(null)} />}
+      <NavBar onNavClick={setDevModal} />
 
       <div style={{ flex: 1, display: "flex", alignItems: "flex-start", justifyContent: "center", padding: "60px 24px 40px" }}>
         <div style={{ maxWidth: 1100, width: "100%", display: "grid", gridTemplateColumns: "1fr 340px", gap: 64, alignItems: "start" }}>
@@ -236,27 +239,80 @@ export default function ConnectPage() {
   );
 }
 
-/* ── Shared navbar ── */
-function NavBar() {
+/* ── Dev-phase modal ── */
+function DevModal({ page, onClose }: { page: string; onClose: () => void }) {
   return (
-    <nav style={{ padding: "0 48px", height: 64, display: "flex", alignItems: "center", justifyContent: "space-between", background: "#fff", borderBottom: "1px solid #F3F4F6" }}>
+    <div
+      onClick={onClose}
+      style={{
+        position: "fixed", inset: 0, zIndex: 1000,
+        background: "rgba(0,0,0,0.45)", backdropFilter: "blur(4px)",
+        display: "flex", alignItems: "center", justifyContent: "center", padding: 24
+      }}
+    >
+      <div
+        onClick={(e) => e.stopPropagation()}
+        style={{
+          background: "#fff", borderRadius: 20, padding: "40px 48px",
+          maxWidth: 460, width: "100%", textAlign: "center",
+          boxShadow: "0 25px 60px rgba(0,0,0,0.15)"
+        }}
+      >
+        <div style={{ width: 64, height: 64, borderRadius: "50%", background: "#FFF7ED", border: "2px solid #FED7AA", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 24px" }}>
+          <Construction size={30} color="#F59E0B" />
+        </div>
+        <div style={{ display: "inline-block", padding: "4px 12px", background: "#FFF7ED", color: "#B45309", borderRadius: 99, fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 16 }}>
+          In Development
+        </div>
+        <h2 style={{ fontSize: 22, fontWeight: 800, color: "#111827", marginBottom: 12, letterSpacing: "-0.02em" }}>
+          {page} — Coming Soon
+        </h2>
+        <p style={{ fontSize: 14, color: "#6B7280", lineHeight: 1.7, marginBottom: 28 }}>
+          This page is currently <strong>not available for public use</strong>. We&apos;re actively building it as part of RankVed GMB Manager&apos;s public launch. Stay tuned!
+        </p>
+        <button
+          onClick={onClose}
+          style={{ height: 44, padding: "0 28px", background: "#111827", color: "#fff", borderRadius: 10, fontWeight: 600, fontSize: 14, border: "none", cursor: "pointer" }}
+        >
+          Got it, go back
+        </button>
+      </div>
+    </div>
+  );
+}
+
+/* ── Shared navbar ── */
+function NavBar({ onNavClick }: { onNavClick: (page: string) => void }) {
+  return (
+    <nav style={{ padding: "0 48px", height: 64, display: "flex", alignItems: "center", justifyContent: "space-between", background: "#fff", borderBottom: "1px solid #F3F4F6", position: "sticky", top: 0, zIndex: 100 }}>
       <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
         <Image
           src="https://rankved.com/wp-content/uploads/2025/04/Rankved-Logo-Official-Black.avif"
-          alt="RankVed"
-          width={32}
-          height={32}
-          style={{ borderRadius: 8 }}
-          unoptimized
+          alt="RankVed" width={32} height={32}
+          style={{ borderRadius: 8 }} unoptimized
         />
         <span style={{ fontSize: 17, fontWeight: 800, letterSpacing: "-0.02em", color: "#111827" }}>RANKVED</span>
       </div>
-      <div style={{ display: "flex", alignItems: "center", gap: 32 }}>
+      <div style={{ display: "flex", alignItems: "center", gap: 28 }}>
         {["How it works", "Features", "Pricing"].map((l) => (
-          <span key={l} style={{ fontSize: 14, color: "#6B7280", fontWeight: 500, cursor: "pointer" }}>{l}</span>
+          <button
+            key={l}
+            onClick={() => onNavClick(l)}
+            style={{ fontSize: 14, color: "#6B7280", fontWeight: 500, cursor: "pointer", background: "none", border: "none", padding: 0, fontFamily: "Inter, sans-serif" }}
+          >
+            {l}
+          </button>
         ))}
-        <span style={{ fontSize: 14, fontWeight: 600, color: "#111827", cursor: "pointer" }}>Sign in</span>
-        <button style={{ height: 36, padding: "0 18px", background: "#2563EB", color: "#fff", borderRadius: 8, fontWeight: 600, fontSize: 14, border: "none", cursor: "pointer" }}>
+        <button
+          onClick={() => signIn("google", { callbackUrl: "/" })}
+          style={{ fontSize: 14, fontWeight: 600, color: "#111827", cursor: "pointer", background: "none", border: "none", padding: 0, fontFamily: "Inter, sans-serif" }}
+        >
+          Sign in
+        </button>
+        <button
+          onClick={() => signIn("google", { callbackUrl: "/" })}
+          style={{ height: 36, padding: "0 18px", background: "#2563EB", color: "#fff", borderRadius: 8, fontWeight: 600, fontSize: 14, border: "none", cursor: "pointer" }}
+        >
           Get started
         </button>
       </div>
