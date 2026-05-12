@@ -169,15 +169,6 @@ function ProfileCard({
           <Eye style={{ width: 12, height: 12 }} /> View
         </Link>
 
-        <Link
-          href={`/performance?profileId=${profile.id}`}
-          style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", gap: 5,
-            padding: "8px 0", fontSize: 12, fontWeight: 500, color: "#2563eb",
-            background: "#eff6ff", border: "1px solid #bfdbfe", borderRadius: 8, textDecoration: "none" }}
-        >
-          <BarChart3 style={{ width: 12, height: 12 }} /> Deep Dive
-        </Link>
-
         {aiFeaturesEnabled && (
           <Link
             href={`/profiles/${profile.id}?tab=ai`}
