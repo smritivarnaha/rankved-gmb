@@ -15,35 +15,31 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
   const profile = await getProfileById(id, userId, role);
   if (!profile) return NextResponse.json({ error: "Profile not found or access denied" }, { status: 404 });
 
-  // Get all valid Google accounts and find the one that matches this profile's connected email
   const validAccounts = await getValidGoogleAccounts(userId);
   if (validAccounts.length === 0) {
     return NextResponse.json({ error: "No valid Google accounts connected. Please reconnect in Settings." }, { status: 400 });
   }
 
-  // Try to match the profile's googleEmail to the correct account token
   let accessToken: string | null = null;
   if (profile.googleEmail) {
     const matchedAccount = validAccounts.find(acc => getEmailFromIdToken(acc.id_token) === profile.googleEmail);
     if (matchedAccount) accessToken = matchedAccount.access_token;
   }
-  // Fallback: use the first available valid account token
   if (!accessToken) accessToken = validAccounts[0].access_token;
   if (!accessToken) return NextResponse.json({ error: "No valid access token available." }, { status: 400 });
 
-  // Build the correct full resource name: accounts/{accountId}/locations/{locationId}
-  // profile.accountId = "accounts/123456789", profile.googleName = "locations/987654321"
   const resourceName = profile.accountId && profile.googleName
     ? `${profile.accountId}/${profile.googleName}`
     : profile.googleName;
-  // Support dynamic date ranges
+    
   const { searchParams } = new URL(req.url);
-  const days = parseInt(searchParams.get("days") || "30");
+  const months = parseInt(searchParams.get("months") || "1"); // Default 1 month
 
-  // Google data has a ~3 day delay. End the range 3 days ago to ensure data presence.
   const now = new Date();
   const endDate = new Date(now.getTime() - 3 * 24 * 60 * 60 * 1000);
-  const startDate = new Date(now.getTime() - (days + 3) * 24 * 60 * 60 * 1000);
+  
+  const startDate = new Date(endDate);
+  startDate.setMonth(startDate.getMonth() - months);
 
   const startYear = startDate.getFullYear();
   const startMonth = startDate.getMonth() + 1;
@@ -80,29 +76,12 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
     }
 
     const data = await response.json();
-    console.log(`Fetched performance for ${profile.name}:`, JSON.stringify(data).substring(0, 500));
     
-    const totals: Record<string, number> = {};
-    
-    // Google returns an array of MultiDailyMetricTimeSeries
-    (data.multiDailyMetricTimeSeries || []).forEach((item: any) => {
-      // Each item has a dailyMetricTimeSeries array
-      (item.dailyMetricTimeSeries || []).forEach((series: any) => {
-        const metric = series.dailyMetric;
-        if (!metric) return;
-        
-        // Sum all values in the timeSeries
-        const sum = (series.timeSeries?.values || []).reduce((acc: number, point: any) => {
-          return acc + (parseInt(point.value) || 0);
-        }, 0);
-        
-        totals[metric] = (totals[metric] || 0) + sum;
-      });
-    });
-
-    return NextResponse.json({ data: totals });
+    // Return the raw timeseries data so the frontend can build charts AND calculate totals
+    return NextResponse.json({ data: data.multiDailyMetricTimeSeries || [] });
   } catch (err: any) {
     console.error("Performance API Catch:", err);
     return NextResponse.json({ error: err.message }, { status: 500 });
   }
 }
+
