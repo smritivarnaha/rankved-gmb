@@ -48,7 +48,6 @@ export function PostTimeline({ onDateSelect, selectedDate, profileId }: Props) {
       .catch(() => {});
   }, [profileId]);
 
-  // Generate 52 days: 7 past + today + 44 future
   const days = [];
   const toLocalDateString = (d: Date) => {
     const year = d.getFullYear();
@@ -72,14 +71,12 @@ export function PostTimeline({ onDateSelect, selectedDate, profileId }: Props) {
     });
   }
 
-  // Group posts by date
   const postsByDate: Record<string, PostSlot[]> = {};
   slots.forEach(s => {
     if (!postsByDate[s.date]) postsByDate[s.date] = [];
     postsByDate[s.date].push(s);
   });
 
-  // Scroll today into view
   useEffect(() => {
     if (scrollRef.current) {
       const todayEl = scrollRef.current.querySelector("[data-today='true']");
@@ -88,10 +85,9 @@ export function PostTimeline({ onDateSelect, selectedDate, profileId }: Props) {
   }, []);
 
   const scroll = (dir: "left" | "right") => {
-    scrollRef.current?.scrollBy({ left: dir === "left" ? -300 : 300, behavior: "smooth" });
+    scrollRef.current?.scrollBy({ left: dir === "left" ? -400 : 400, behavior: "smooth" });
   };
 
-  // Stats
   const counts = { PUBLISHED: 0, SCHEDULED: 0, DRAFT: 0, FAILED: 0 };
   slots.forEach(s => { if (counts[s.status] !== undefined) counts[s.status]++; });
 
@@ -103,56 +99,56 @@ export function PostTimeline({ onDateSelect, selectedDate, profileId }: Props) {
   ];
 
   return (
-    <div style={{ background: "#fff", border: "1px solid #e5e7eb", borderRadius: 14, overflow: "hidden", marginBottom: 24, boxShadow: "0 1px 3px rgba(0,0,0,0.02), 0 4px 6px -1px rgba(0,0,0,0.03)" }}>
-      {/* Header */}
-      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "14px 20px", borderBottom: "1px solid #f1f5f9", background: "#ffffff" }}>
-        {/* Filter tabs */}
-        <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
+    <div style={{ background: "#fff", border: "1px solid #eaeaea", borderRadius: 16, overflow: "hidden", marginBottom: 32 }}>
+      {/* ─── Header & Filter Tabs ─── */}
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "20px 24px", borderBottom: "1px solid #f5f5f7" }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
           {filters.map(f => (
             <button
               key={f.key}
               onClick={() => setActiveFilter(f.key)}
               style={{
-                display: "flex", alignItems: "center", gap: 6,
-                padding: "6px 14px", borderRadius: 20, border: "none", cursor: "pointer",
-                fontSize: 13, fontWeight: 600,
+                display: "flex", alignItems: "center", gap: 8,
+                padding: "8px 16px", borderRadius: 100, border: "none", cursor: "pointer",
+                fontSize: 14, fontWeight: activeFilter === f.key ? 700 : 500,
                 background: activeFilter === f.key ? "#0f172a" : "transparent",
                 color: activeFilter === f.key ? "#fff" : "#64748b",
-                transition: "all 0.2s",
+                transition: "all 0.15s"
               }}
             >
               {f.label}
-              {f.count > 0 && (
-                <span style={{
-                  fontSize: 11, fontWeight: 600,
-                  background: activeFilter === f.key ? "rgba(255,255,255,0.15)" : "#f1f5f9",
-                  color: activeFilter === f.key ? "#fff" : "#64748b",
-                  borderRadius: 10, padding: "1px 7px",
-                }}>
-                  {f.count}
-                </span>
-              )}
+              <span style={{
+                fontSize: 11, fontWeight: 700,
+                background: activeFilter === f.key ? "rgba(255,255,255,0.2)" : "#f1f5f9",
+                color: activeFilter === f.key ? "#fff" : "#64748b",
+                borderRadius: 10, padding: "1px 8px", marginLeft: 4
+              }}>
+                {f.count}
+              </span>
             </button>
           ))}
         </div>
-        {/* Nav arrows */}
-        <div style={{ display: "flex", gap: 6 }}>
-          <button onClick={() => scroll("left")} style={{ width: 34, height: 34, borderRadius: 10, border: "1px solid #e2e8f0", background: "#fff", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", color: "#64748b", transition: "all 0.2s" }} className="hover-bg-muted">
-            <ChevronLeft style={{ width: 16, height: 16 }} />
+        <div style={{ display: "flex", gap: 8 }}>
+          <button onClick={() => scroll("left")} style={{ width: 36, height: 36, borderRadius: 8, border: "1px solid #eaeaea", background: "#fff", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", color: "#666" }}>
+            <ChevronLeft size={16} />
           </button>
-          <button onClick={() => scroll("right")} style={{ width: 34, height: 34, borderRadius: 10, border: "1px solid #e2e8f0", background: "#fff", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", color: "#64748b", transition: "all 0.2s" }} className="hover-bg-muted">
-            <ChevronRight style={{ width: 16, height: 16 }} />
+          <button onClick={() => scroll("right")} style={{ width: 36, height: 36, borderRadius: 8, border: "1px solid #eaeaea", background: "#fff", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", color: "#666" }}>
+            <ChevronRight size={16} />
           </button>
         </div>
       </div>
 
-      {/* Calendar strip */}
-      <div ref={scrollRef} style={{ display: "flex", overflowX: "auto", padding: "12px 8px 8px", gap: 2, scrollbarWidth: "none" }}>
-        {days.map((d, i) => {
+      {/* ─── Calendar Strip ─── */}
+      <div 
+        ref={scrollRef} 
+        className="hide-scrollbar"
+        style={{ display: "flex", overflowX: "auto", padding: "24px 12px", gap: 4, scrollBehavior: "smooth" }}
+      >
+        <style jsx>{`.hide-scrollbar::-webkit-scrollbar { display: none; } .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }`}</style>
+        {days.map((d) => {
           const allPosts = postsByDate[d.dateStr] || [];
           const filteredPosts = activeFilter === "ALL" ? allPosts : allPosts.filter(p => p.status === activeFilter);
           const isSelected = selectedDate === d.dateStr;
-          const showMonthLabel = i === 0 || d.day === 1;
 
           return (
             <button
@@ -161,83 +157,62 @@ export function PostTimeline({ onDateSelect, selectedDate, profileId }: Props) {
               onClick={() => !d.isPast && onDateSelect?.(d.dateStr)}
               style={{
                 display: "flex", flexDirection: "column", alignItems: "center",
-                minWidth: 56, padding: "8px 4px 10px", borderRadius: 12,
+                minWidth: 64, padding: "12px 4px", borderRadius: 12,
                 border: "none", cursor: d.isPast ? "default" : "pointer",
-                background: isSelected ? "#eff6ff" : d.isToday ? "#f8fafc" : "transparent",
-                outline: isSelected ? "2px solid #2563eb" : d.isToday ? "1px solid #e2e8f0" : "none",
-                opacity: d.isPast ? 0.45 : 1,
-                transition: "all 0.2s",
-                position: "relative",
+                background: d.isToday ? "#eff6ff" : "transparent",
+                outline: d.isToday ? "1px solid #bfdbfe" : "none",
+                opacity: d.isPast ? 0.3 : 1,
+                transition: "all 0.15s",
+                position: "relative"
               }}
             >
-              {/* Month label above */}
-              <span style={{
-                fontSize: 9, fontWeight: 600, letterSpacing: "0.08em", textTransform: "uppercase",
-                color: "#94a3b8", marginBottom: 4, height: 12,
-                visibility: showMonthLabel ? "visible" : "hidden",
-              }}>
-                {d.month}
-              </span>
+              {/* Month/Day Name */}
+              <div style={{ fontSize: 9, fontWeight: 700, color: "#94a3b8", textTransform: "uppercase", marginBottom: 12, display: "flex", flexDirection: "column", alignItems: "center" }}>
+                <span style={{ marginBottom: 4 }}>{d.month}</span>
+                <span>{d.dayName}</span>
+              </div>
 
-              {/* Day name */}
-              <span style={{
-                fontSize: 10, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.04em",
-                color: d.isToday ? "#2563eb" : d.isWeekend ? "#94a3b8" : "#64748b",
-                marginBottom: 6,
-              }}>
-                {d.isToday ? "Today" : d.dayName}
-              </span>
-
-              {/* Day number circle */}
+              {/* Day Number (Special Today UI) */}
               <div style={{
-                width: 36, height: 36, borderRadius: 10,
-                background: isSelected ? "#2563eb" : d.isToday ? "#2563eb" : "transparent",
+                width: 44, height: 56, borderRadius: 10,
+                background: d.isToday ? "#2563eb" : isSelected ? "#f1f5f9" : "transparent",
                 display: "flex", alignItems: "center", justifyContent: "center",
-                marginBottom: 8,
+                marginBottom: 12, border: isSelected && !d.isToday ? "1px solid #cbd5e1" : "none",
+                boxShadow: d.isToday ? "0 4px 12px rgba(37,99,235,0.2)" : "none"
               }}>
+                {d.isToday && (
+                  <div style={{ position: "absolute", top: -8, left: "50%", transform: "translateX(-50%)", fontSize: 9, fontWeight: 800, color: "#2563eb", letterSpacing: "0.05em" }}>TODAY</div>
+                )}
                 <span style={{
-                  fontSize: 16, fontWeight: d.isToday || isSelected ? 800 : 500,
-                  color: isSelected || d.isToday ? "#fff" : d.isWeekend ? "#94a3b8" : "#1e293b",
+                  fontSize: 20, fontWeight: d.isToday ? 800 : 500,
+                  color: d.isToday ? "#fff" : "#1e293b",
                 }}>
                   {d.day}
                 </span>
               </div>
 
-              {/* Post dots */}
-              <div style={{ display: "flex", gap: 3, minHeight: 8, alignItems: "center" }}>
-                {filteredPosts.length > 0 ? (
-                  <>
-                    {filteredPosts.slice(0, 3).map((p, pi) => (
-                      <span key={pi} style={{
-                        width: 6, height: 6, borderRadius: "50%",
-                        background: statusConfig[p.status]?.dot || "#dadce0",
-                        display: "inline-block",
-                      }} />
-                    ))}
-                    {filteredPosts.length > 3 && (
-                      <span style={{ fontSize: 8, color: "#70757a", fontWeight: 600 }}>+{filteredPosts.length - 3}</span>
-                    )}
-                  </>
-                ) : null}
+              {/* Post Dots */}
+              <div style={{ display: "flex", gap: 4, minHeight: 8 }}>
+                {Array.from(new Set(filteredPosts.map(p => p.status))).map((status, si) => (
+                  <span key={si} style={{
+                    width: 6, height: 6, borderRadius: "50%",
+                    background: statusConfig[status as keyof typeof statusConfig]?.dot || "#dadce0"
+                  }} />
+                ))}
               </div>
             </button>
           );
         })}
       </div>
 
-      {/* Legend */}
-      <div style={{ display: "flex", gap: 20, padding: "12px 20px", borderTop: "1px solid #f1f5f9", background: "#ffffff" }}>
+      {/* ─── Legend ─── */}
+      <div style={{ display: "flex", gap: 24, padding: "16px 24px", borderTop: "1px solid #f5f5f7", background: "#ffffff" }}>
         {(Object.keys(statusConfig) as Array<keyof typeof statusConfig>).map(key => (
-          <span key={key} style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 12, color: "#64748b", fontWeight: 600 }}>
-            <span style={{ width: 8, height: 8, borderRadius: "50%", background: statusConfig[key].dot, display: "inline-block" }} />
+          <span key={key} style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 13, color: "#64748b", fontWeight: 600 }}>
+            <span style={{ width: 10, height: 10, borderRadius: "50%", background: statusConfig[key].dot }} />
             {statusConfig[key].label}
           </span>
         ))}
-        {selectedDate && (
-          <span style={{ marginLeft: "auto", fontSize: 12, fontWeight: 700, color: "#2563eb" }}>
-            Selected: {new Date(selectedDate).toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" })}
-          </span>
-        )}
       </div>
     </div>
   );
