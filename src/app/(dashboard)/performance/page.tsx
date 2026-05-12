@@ -4,6 +4,8 @@ import { useState } from "react";
 import useSWR from "swr";
 import { Loader2, MapPin, BarChart3, TrendingUp } from "lucide-react";
 import { PerformanceView } from "@/components/performance/PerformanceView";
+import { useSearchParams } from "next/navigation";
+import { useEffect } from "react";
 
 const fetcher = (url: string) => fetch(url).then((res) => res.json());
 
@@ -107,10 +109,20 @@ function ProfileStatCard({ profile, onClick }: { profile: any, onClick: () => vo
 }
 
 export default function PerformancePage() {
+  const searchParams = useSearchParams();
+  const urlProfileId = searchParams.get("profileId");
+  
   const { data, isLoading } = useSWR("/api/profiles", fetcher);
   const profiles = data?.data || [];
   
   const [selectedProfileId, setSelectedProfileId] = useState<string | null>(null);
+
+  // Sync state with URL param
+  useEffect(() => {
+    if (urlProfileId) {
+      setSelectedProfileId(urlProfileId);
+    }
+  }, [urlProfileId]);
 
   if (isLoading) {
     return (
