@@ -4,7 +4,7 @@ import { useSession, signIn } from "next-auth/react";
 import { useState, useEffect } from "react";
 import {
   Loader2, CheckCircle2, RefreshCw, MapPin, 
-  AlertCircle, User, Trash2
+  AlertCircle, User, Trash2, Image as ImageIcon, Upload, Save
 } from "lucide-react";
 import { useGlobalSettings } from "@/hooks/useGlobalSettings";
 
@@ -20,9 +20,10 @@ export default function SettingsPage() {
 
   const [localSettings, setLocalSettings] = useState<any>({});
   const [activeTemplate, setActiveTemplate] = useState<"SUCCESS" | "FAILURE" | "SCHEDULED">("SUCCESS");
-  const [savingNotifications, setSavingNotifications] = useState(false);
+  const [savingSettings, setSavingSettings] = useState(false);
+  const [selectedLogo, setSelectedLogo] = useState<File | null>(null);
   
-  const [activeTab, setActiveTab] = useState<"accounts" | "notifications" | "profiles">("accounts");
+  const [activeTab, setActiveTab] = useState<"accounts" | "notifications" | "profiles" | "branding">("accounts");
 
   useEffect(() => {
     if (settings) {
@@ -34,8 +35,8 @@ export default function SettingsPage() {
     setLocalSettings((prev: any) => ({ ...prev, ...updates }));
   };
 
-  const handleSaveNotifications = async () => {
-    setSavingNotifications(true);
+  const handleSaveSettings = async () => {
+    setSavingSettings(true);
     try {
       const formData = new FormData();
       Object.keys(localSettings).forEach(key => {
@@ -43,6 +44,9 @@ export default function SettingsPage() {
           formData.append(key, localSettings[key].toString());
         }
       });
+      if (selectedLogo) {
+        formData.append("sidebarLogo", selectedLogo);
+      }
 
       const res = await fetch("/api/admin/login-settings", {
         method: "POST",
@@ -50,7 +54,8 @@ export default function SettingsPage() {
       });
 
       if (res.ok) {
-        setFetchResult({ success: "Notification settings saved successfully." });
+        setFetchResult({ success: "Settings saved successfully." });
+        setSelectedLogo(null);
         mutate();
       } else {
         const data = await res.json();
@@ -59,7 +64,7 @@ export default function SettingsPage() {
     } catch {
       setFetchResult({ error: "Network error." });
     }
-    setSavingNotifications(false);
+    setSavingSettings(false);
   };
 
   const [connecting, setConnecting] = useState(false);
@@ -170,7 +175,8 @@ export default function SettingsPage() {
         {[
           { id: "accounts", label: "Google Accounts" },
           { id: "notifications", label: "Email Notifications" },
-          { id: "profiles", label: "Saved Profiles" }
+          { id: "profiles", label: "Saved Profiles" },
+          ...(isSuperAdmin ? [{ id: "branding", label: "Sidebar Branding" }] : [])
         ].map(tab => (
           <button
             key={tab.id}
@@ -347,12 +353,12 @@ export default function SettingsPage() {
 
               <div style={{ display: "flex", gap: 12, alignItems: "center", borderTop: "1px solid var(--border-light)", paddingTop: 16 }}>
                 <button 
-                  onClick={handleSaveNotifications}
-                  disabled={savingNotifications}
+                  onClick={handleSaveSettings}
+                  disabled={savingSettings}
                   className="btn btn-primary"
                   style={{ fontSize: 12, padding: "8px 14px" }}
                 >
-                  {savingNotifications ? <Loader2 className="anim-spin" style={{ width: 14, height: 14 }} /> : null}
+                  {savingSettings ? <Loader2 className="anim-spin" style={{ width: 14, height: 14 }} /> : null}
                   Save Notification Settings
                 </button>
                 <button 
@@ -426,6 +432,54 @@ export default function SettingsPage() {
           </div>
         </div>
       )}
+
+      {/* Branding List */}
+      {isSuperAdmin && activeTab === "branding" && (
+        <div className="card shadow-sm">
+          <div className="card-header">
+            <h2 className="card-title" style={{ fontSize: 14 }}>Sidebar Branding</h2>
+          </div>
+          <div className="card-body">
+            <div style={{ display: "flex", gap: 24, alignItems: "flex-start", marginBottom: 24 }}>
+              <div style={{ width: 140, height: 140, background: "#f8f9fa", borderRadius: 8, border: "1px solid #eaeaea", display: "flex", alignItems: "center", justifyContent: "center", overflow: "hidden" }}>
+                {selectedLogo ? (
+                  <img src={URL.createObjectURL(selectedLogo)} alt="Preview" style={{ width: "100%", height: "100%", objectFit: "contain" }} />
+                ) : localSettings?.sidebarLogoUrl ? (
+                  <img src={localSettings.sidebarLogoUrl} alt="Logo" style={{ width: "100%", height: "100%", objectFit: "contain" }} />
+                ) : (
+                  <ImageIcon size={32} color="#CBD5E1" />
+                )}
+              </div>
+              <div style={{ flex: 1, display: "flex", flexDirection: "column", gap: 16 }}>
+                <div style={{ display: "flex", gap: 12 }}>
+                  <label className="btn btn-primary" style={{ background: "#fff", color: "#2563EB", border: "1px solid #BFDBFE", fontSize: 13, height: 38, padding: "0 16px", cursor: "pointer", display: "flex", alignItems: "center", gap: 8 }}>
+                    <Upload size={14} /> Upload New Logo
+                    <input type="file" accept="image/*" style={{ display: "none" }} onChange={e => setSelectedLogo(e.target.files?.[0] || null)} />
+                  </label>
+                </div>
+                <div>
+                  <label style={{ fontSize: 13, fontWeight: 600, color: "#111827", display: "block", marginBottom: 8 }}>Sidebar Text</label>
+                  <input type="text" className="input" value={localSettings?.sidebarText || ""} onChange={e => updateSettings({ sidebarText: e.target.value })} placeholder="e.g. RankVed" style={{ width: "100%", height: 38, padding: "0 12px", background: "#fff", border: "1px solid #eaeaea", borderRadius: 6, fontSize: 14 }} />
+                  <p style={{ fontSize: 11, color: "#64748B", marginTop: 8 }}>The text that appears next to the logo in the sidebar.</p>
+                </div>
+              </div>
+            </div>
+
+            <div style={{ display: "flex", borderTop: "1px solid var(--border-light)", paddingTop: 16 }}>
+              <button 
+                onClick={handleSaveSettings}
+                disabled={savingSettings}
+                className="btn btn-primary"
+                style={{ fontSize: 12, padding: "8px 14px", marginLeft: "auto", display: "flex", alignItems: "center", gap: 8 }}
+              >
+                {savingSettings ? <Loader2 className="anim-spin" style={{ width: 14, height: 14 }} /> : <Save size={14} />}
+                {savingSettings ? "Saving..." : "Save Branding Changes"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
     </div>
   );
 }

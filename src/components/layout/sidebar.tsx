@@ -7,55 +7,49 @@ import { useSession } from "next-auth/react";
 import {
   LayoutDashboard, CalendarDays, Settings, MapPin,
   FileText, Users, Shield, BarChart3, Key, Zap,
-  Search, ChevronsUpDown, Command
+  Search, ChevronsUpDown, Command, User, Share2, 
+  Lock, Star, ArrowRight, ArrowLeft
 } from "lucide-react";
 import { useGlobalSettings } from "@/hooks/useGlobalSettings";
 
-const adminNav = [
-  { name: "Dashboard",      href: "/dashboard",      icon: LayoutDashboard },
-  { name: "Command Center", href: "/command-center", icon: Zap },
-  { name: "Performance",    href: "/performance",    icon: BarChart3 },
-  { name: "Profiles",       href: "/profiles",       icon: MapPin },
-  { name: "Calendar",       href: "/calendar",       icon: CalendarDays },
-  { name: "Prompts",        href: "/prompts",        icon: FileText },
-  { name: "Team",           href: "/team",           icon: Users },
-  { name: "API Keys",       href: "/api-keys",       icon: Key },
-  { name: "Settings",       href: "/settings",       icon: Settings },
-];
-
-const superAdminNav = [
-  ...adminNav,
-  { name: "Admin Setup",    href: "/admin",          icon: Shield },
-];
-
-const teamNav = [
-  { name: "Dashboard",      href: "/dashboard",      icon: LayoutDashboard },
-  { name: "Performance",    href: "/performance",    icon: BarChart3 },
-  { name: "Profiles",       href: "/profiles",       icon: MapPin },
-  { name: "Calendar",       href: "/calendar",       icon: CalendarDays },
-  { name: "Prompts",        href: "/prompts",        icon: FileText },
-];
+  const navCategories = [
+    {
+      label: "OVERVIEW",
+      items: [
+        { name: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
+        { name: "Command Center", href: "/command-center", icon: Share2 },
+        { name: "Profiles", href: "/profiles", icon: User },
+        { name: "Performance", href: "/performance", icon: BarChart3 },
+        { name: "Audience", href: "/audience", icon: Users },
+      ]
+    },
+    {
+      label: "MANAGEMENT",
+      items: [
+        { name: "Calendar", href: "/calendar", icon: CalendarDays },
+        { name: "Team", href: "/team", icon: Users, hideForTeam: true },
+        { name: "API Keys", href: "/api-keys", icon: Key, hideForTeam: true },
+      ]
+    },
+    {
+      label: "SYSTEM",
+      items: [
+        { name: "Settings", href: "/settings", icon: Settings },
+        { name: "Admin Setup", href: "/admin", icon: Lock, superAdminOnly: true },
+      ]
+    }
+  ];
 
 export function Sidebar() {
   const pathname = usePathname();
   const { data: session } = useSession();
   const { settings } = useGlobalSettings();
-  const aiFeaturesEnabled = settings?.aiFeaturesEnabled ?? false;
   const sidebarText = settings?.sidebarText || "RankVed";
   const sidebarLogoUrl = settings?.sidebarLogoUrl || "https://rankved.com/wp-content/uploads/2025/04/Rankved-Logo-Official-Black.avif";
 
   const user = (session as any)?.user;
   const role = user?.role;
   const isSuperAdmin = role === "SUPER_ADMIN" || user?.email?.toLowerCase() === "rankved.business@gmail.com";
-  
-  let navItems =
-    isSuperAdmin ? superAdminNav :
-    role === "AGENCY_OWNER" ? adminNav :
-    teamNav;
-
-  if (!aiFeaturesEnabled) {
-    navItems = navItems.filter(item => item.name !== "Prompts");
-  }
 
   return (
     <aside style={{ width: 260, borderRight: "1px solid #eaeaea", background: "#fcfcfc", display: "flex", flexDirection: "column", height: "100vh", padding: "16px 12px" }}>
@@ -86,31 +80,72 @@ export function Sidebar() {
         </div>
       </div>
 
-      {/* ─── Navigation ─── */}
-      <nav style={{ display: "flex", flexDirection: "column", gap: 4, padding: "0 4px" }}>
-        {navItems.map((item) => {
-          const isActive = pathname === item.href || pathname.startsWith(item.href + "/");
-          const Icon = item.icon;
+      {/* ─── Navigation Categories ─── */}
+      <div style={{ flex: 1, overflowY: "auto", padding: "0 4px", display: "flex", flexDirection: "column", gap: 24 }}>
+        {navCategories.map((cat) => {
+          const visibleItems = cat.items.filter((item: any) => {
+            if (item.superAdminOnly && !isSuperAdmin) return false;
+            if (item.hideForTeam && role !== "AGENCY_OWNER" && !isSuperAdmin) return false;
+            return true;
+          });
+
+          if (visibleItems.length === 0) return null;
+
           return (
-            <Link
-              key={item.name}
-              href={item.href}
-              style={{
-                display: "flex", alignItems: "center", justifyContent: "space-between",
-                padding: "8px 12px", borderRadius: 6, textDecoration: "none",
-                background: isActive ? "#eaeaea" : "transparent", transition: "background 0.2s"
-              }}
-              onMouseEnter={(e) => { if(!isActive) e.currentTarget.style.background = "#f5f5f5"; }}
-              onMouseLeave={(e) => { if(!isActive) e.currentTarget.style.background = "transparent"; }}
-            >
-              <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-                <Icon size={16} strokeWidth={1.5} color={isActive ? "#111" : "#666"} />
-                <span style={{ fontSize: 13, fontWeight: 500, color: isActive ? "#111" : "#666" }}>{item.name}</span>
-              </div>
-            </Link>
+            <div key={cat.label}>
+              <p style={{ fontSize: 11, fontWeight: 600, color: "#888", letterSpacing: "0.05em", padding: "0 12px", marginBottom: 8 }}>{cat.label}</p>
+              <nav style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+                {visibleItems.map((item) => {
+                  const isActive = pathname === item.href || pathname.startsWith(item.href + "/");
+                  const Icon = item.icon;
+                  return (
+                    <Link
+                      key={item.name}
+                      href={item.href}
+                      style={{
+                        display: "flex", alignItems: "center", justifyContent: "space-between",
+                        padding: "8px 12px", borderRadius: 6, textDecoration: "none",
+                        background: isActive ? "#eff6ff" : "transparent", transition: "background 0.2s",
+                        borderLeft: isActive ? "3px solid #2563eb" : "3px solid transparent",
+                        marginLeft: isActive ? -3 : 0
+                      }}
+                      onMouseEnter={(e) => { if(!isActive) e.currentTarget.style.background = "#f5f5f5"; }}
+                      onMouseLeave={(e) => { if(!isActive) e.currentTarget.style.background = "transparent"; }}
+                    >
+                      <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+                        <Icon size={16} strokeWidth={1.5} color={isActive ? "#2563eb" : "#666"} />
+                        <span style={{ fontSize: 13, fontWeight: 500, color: isActive ? "#2563eb" : "#666" }}>{item.name}</span>
+                      </div>
+                    </Link>
+                  );
+                })}
+              </nav>
+            </div>
           );
         })}
-      </nav>
+      </div>
+
+      {/* ─── Plan & Collapse ─── */}
+      <div style={{ marginTop: "auto", padding: "0 4px" }}>
+        <div style={{ background: "#fff", border: "1px solid #eaeaea", borderRadius: 12, padding: "16px", marginBottom: 12, boxShadow: "0 1px 2px rgba(0,0,0,0.02)" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8 }}>
+            <div style={{ width: 24, height: 24, background: "#eff6ff", borderRadius: 6, display: "flex", alignItems: "center", justifyContent: "center" }}>
+              <Star size={14} fill="#2563eb" color="#2563eb" />
+            </div>
+            <span style={{ fontSize: 13, fontWeight: 600, color: "#111" }}>Pro Plan</span>
+          </div>
+          <p style={{ fontSize: 11, color: "#888", margin: "0 0 8px" }}>12 of 50 profiles used</p>
+          <div style={{ width: "100%", height: 6, background: "#f1f5f9", borderRadius: 100, marginBottom: 16, overflow: "hidden" }}>
+            <div style={{ width: "24%", height: "100%", background: "#2563eb", borderRadius: 100 }} />
+          </div>
+          <button style={{ width: "100%", height: 32, background: "#fff", border: "1px solid #eaeaea", borderRadius: 6, fontSize: 12, fontWeight: 600, color: "#2563eb", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 4 }}>
+            Upgrade Plan <ArrowRight size={12} />
+          </button>
+        </div>
+        <button style={{ width: "100%", display: "flex", alignItems: "center", gap: 8, padding: "8px 12px", background: "transparent", border: "none", color: "#666", cursor: "pointer" }}>
+          <ArrowLeft size={16} /> <span style={{ fontSize: 13, fontWeight: 500 }}>Collapse</span>
+        </button>
+      </div>
     </aside>
   );
 }
