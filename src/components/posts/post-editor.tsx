@@ -3,7 +3,7 @@
 import { useState, useRef, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
-import { Save, Clock, Loader2, ImagePlus, X, Send, MapPin, Link as LinkIcon, Copy, Check, Lock } from "lucide-react";
+import { Save, Clock, Loader2, ImagePlus, X, Send, MapPin, Link as LinkIcon, Copy, Check, Lock, Phone } from "lucide-react";
 import { embedGPSInImage, CAMERA_TEMPLATES } from "@/lib/geo-exif";
 import Lottie from "lottie-react";
 
@@ -635,10 +635,8 @@ export function PostEditor({ initialData = null, timelineDate, onDateChange, loc
                       )}
                     </div>
                   )}
-                </div>
-              )}
             </div>
-
+            )}
             {/* Post content */}
             <div className="space-y-1.5">
               <div className="flex justify-between items-center">

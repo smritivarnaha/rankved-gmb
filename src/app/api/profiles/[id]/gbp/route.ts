@@ -6,12 +6,13 @@ import { getValidGoogleAccounts } from "@/lib/google-accounts";
 
 const INFO_API_BASE = "https://mybusinessbusinessinformation.googleapis.com/v1";
 
-export async function GET(req: NextRequest, { params }: { params: { id: string } }) {
+export async function GET(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params;
   const session = await getServerSession(authOptions);
   if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   try {
-    const loc = await prisma.location.findUnique({ where: { id: params.id } });
+    const loc = await prisma.location.findUnique({ where: { id } });
     if (!loc) return NextResponse.json({ error: "Location not found" }, { status: 404 });
 
     const accounts = await getValidGoogleAccounts((session.user as any).id);
@@ -20,7 +21,7 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
     const accessToken = accounts[0].access_token;
     const locationName = loc.gbpLocationId;
 
-    const res = await fetch(`${INFO_API_BASE}/${locationName}?readMask=title,profile,phoneNumbers,websiteUri,categories,regularHours,specialHours`, {
+    const res = await fetch(`${INFO_API_BASE}/${locationName}?readMask=title,profile,phoneNumbers,websiteUri,categories,regularHours,specialHours,serviceArea,attributes`, {
       headers: { Authorization: `Bearer ${accessToken}` }
     });
 
@@ -33,15 +34,16 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
   }
 }
 
-export async function PATCH(req: NextRequest, { params }: { params: { id: string } }) {
+export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params;
   const session = await getServerSession(authOptions);
   if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   try {
     const body = await req.json();
-    const { title, description, phone, website } = body;
+    const { title, description, phone, website, categories, regularHours, specialHours, serviceArea, attributes } = body;
 
-    const loc = await prisma.location.findUnique({ where: { id: params.id } });
+    const loc = await prisma.location.findUnique({ where: { id } });
     if (!loc) return NextResponse.json({ error: "Location not found" }, { status: 404 });
 
     const accounts = await getValidGoogleAccounts((session.user as any).id);
@@ -70,6 +72,26 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
       payload.websiteUri = website;
       updateMask.push("websiteUri");
     }
+    if (categories !== undefined) {
+      payload.categories = categories;
+      updateMask.push("categories");
+    }
+    if (regularHours !== undefined) {
+      payload.regularHours = regularHours;
+      updateMask.push("regularHours");
+    }
+    if (specialHours !== undefined) {
+      payload.specialHours = specialHours;
+      updateMask.push("specialHours");
+    }
+    if (serviceArea !== undefined) {
+      payload.serviceArea = serviceArea;
+      updateMask.push("serviceArea");
+    }
+    if (attributes !== undefined) {
+      payload.attributes = attributes;
+      updateMask.push("attributes");
+    }
 
     if (updateMask.length === 0) return NextResponse.json({ success: true });
 
@@ -87,7 +109,7 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
 
     // Also update our local DB mirror
     await prisma.location.update({
-      where: { id: params.id },
+      where: { id },
       data: {
         name: title !== undefined ? title : undefined,
         phone: phone !== undefined ? phone : undefined,

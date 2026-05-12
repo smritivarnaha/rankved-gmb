@@ -186,7 +186,7 @@ function ProfileCard({
           href={`/posts/new?profile=${profile.id}&from=profile`}
           style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", gap: 5,
             padding: "8px 0", fontSize: 12, fontWeight: 600, color: "#fff",
-            background: BRAND_BLUE, borderRadius: 8, border: "none", textDecoration: "none" }}
+            background: "#2563eb", borderRadius: 8, border: "none", textDecoration: "none" }}
         >
           <Plus style={{ width: 12, height: 12 }} /> Create Post
         </Link>
