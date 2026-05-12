@@ -56,37 +56,39 @@ export function Sidebar() {
   const isSuperAdmin = role === "SUPER_ADMIN" || user?.email?.toLowerCase() === "rankved.business@gmail.com";
 
   return (
-    <aside style={{ width: 260, borderRight: "1px solid #eaeaea", background: "#fcfcfc", display: "flex", flexDirection: "column", height: "100vh", overflow: "hidden" }}>
-      {/* ─── Organization Selector ─── */}
-      <div style={{ padding: "24px 16px 16px" }}>
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "8px 12px", cursor: "pointer", borderRadius: 6, background: "transparent" }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+    <aside style={{ width: 256, borderRight: "1px solid #eaeaea", background: "#ffffff", display: "flex", flexDirection: "column", height: "100vh", overflow: "hidden" }}>
+      {/* ─── Organization Selector (Vercel Style) ─── */}
+      <div style={{ padding: "16px 12px 8px" }}>
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "8px 12px", cursor: "pointer", borderRadius: 8, background: "transparent", border: "1px solid transparent" }} onMouseEnter={e => e.currentTarget.style.background = "#f5f5f5"} onMouseLeave={e => e.currentTarget.style.background = "transparent"}>
+          <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
             <div style={{ 
-              width: sidebarLogoSize, 
-              height: sidebarLogoSize, 
-              background: "transparent", 
-              borderRadius: sidebarLogoShape === "circle" ? "50%" : sidebarLogoShape === "rounded" ? "8px" : "0", 
+              width: 24, 
+              height: 24, 
+              background: "#000", 
+              borderRadius: "50%", 
               display: "flex", alignItems: "center", justifyContent: "center", overflow: "hidden" 
             }}>
-              <img src={sidebarLogoUrl} alt={sidebarText} style={{ width: "100%", height: "100%", objectFit: "contain" }} />
+               <img src={sidebarLogoUrl} alt={sidebarText} style={{ width: "100%", height: "100%", objectFit: "contain", filter: "invert(1)" }} />
             </div>
-            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-              <span style={{ fontSize: sidebarTextSize, fontWeight: 600, color: "#111" }}>{sidebarText}</span>
-              <span style={{ fontSize: 11, fontWeight: 500, color: "#2563EB", background: "#EFF6FF", padding: "2px 6px", borderRadius: 100 }}>GMB</span>
+            <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+              <span style={{ fontSize: 14, fontWeight: 500, color: "#000", letterSpacing: "-0.01em" }}>{sidebarText}</span>
+              <span style={{ fontSize: 11, fontWeight: 500, color: "#2563EB", background: "#EFF6FF", padding: "1px 6px", borderRadius: 100 }}>Pro</span>
             </div>
           </div>
-          <ChevronsUpDown size={14} color="#888" />
+          <ChevronsUpDown size={14} color="#666" />
         </div>
       </div>
 
       {/* ─── Search Bar ─── */}
-      <div style={{ padding: "0 16px", marginBottom: 24 }}>
+      <div style={{ padding: "0 12px", marginBottom: 16 }}>
         <div style={{ position: "relative" }}>
           <Search size={14} style={{ position: "absolute", left: 12, top: "50%", transform: "translateY(-50%)", color: "#888" }} />
           <input 
             type="text" 
             placeholder="Find..." 
-            style={{ width: "100%", height: 36, padding: "0 32px", background: "#fff", border: "1px solid #eaeaea", borderRadius: 6, fontSize: 13, outline: "none", color: "#111" }}
+            style={{ width: "100%", height: 34, padding: "0 34px", background: "#fff", border: "1px solid #eaeaea", borderRadius: 6, fontSize: 13, outline: "none", color: "#000", transition: "border-color 0.2s" }}
+            onFocus={e => e.currentTarget.style.borderColor = "#000"}
+            onBlur={e => e.currentTarget.style.borderColor = "#eaeaea"}
           />
           <div style={{ position: "absolute", right: 8, top: "50%", transform: "translateY(-50%)", display: "flex", alignItems: "center", justifyContent: "center", width: 20, height: 20, border: "1px solid #eaeaea", borderRadius: 4, background: "#fafafa" }}>
             <span style={{ fontSize: 10, color: "#888", fontWeight: 600 }}>F</span>
@@ -95,20 +97,20 @@ export function Sidebar() {
       </div>
 
       {/* ─── Navigation Categories ─── */}
-      <div className="custom-scrollbar" style={{ flex: 1, overflowY: "auto", padding: "0 16px", display: "flex", flexDirection: "column", gap: 24 }}>
+      <div className="custom-scrollbar" style={{ flex: 1, overflowY: "auto", padding: "0 12px", display: "flex", flexDirection: "column", gap: 32 }}>
         <style jsx>{`
           .custom-scrollbar::-webkit-scrollbar {
+            width: 0px;
+          }
+          .custom-scrollbar:hover::-webkit-scrollbar {
             width: 4px;
           }
           .custom-scrollbar::-webkit-scrollbar-track {
             background: transparent;
           }
           .custom-scrollbar::-webkit-scrollbar-thumb {
-            background: #e2e8f0;
+            background: #eaeaea;
             border-radius: 10px;
-          }
-          .custom-scrollbar::-webkit-scrollbar-thumb:hover {
-            background: #cbd5e1;
           }
         `}</style>
         {navCategories.map((cat) => {
@@ -123,8 +125,7 @@ export function Sidebar() {
 
           return (
             <div key={cat.label}>
-              <p style={{ fontSize: 11, fontWeight: 600, color: "#888", letterSpacing: "0.05em", padding: "0 12px", marginBottom: 8 }}>{cat.label}</p>
-              <nav style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+              <nav style={{ display: "flex", flexDirection: "column", gap: 1 }}>
                 {visibleItems.map((item) => {
                   const isActive = pathname === item.href || pathname.startsWith(item.href + "/");
                   const Icon = item.icon;
@@ -135,14 +136,15 @@ export function Sidebar() {
                       style={{
                         display: "flex", alignItems: "center", justifyContent: "space-between",
                         padding: "8px 12px", borderRadius: 6, textDecoration: "none",
-                        background: isActive ? "#eaeaea" : "transparent", transition: "background 0.2s"
+                        background: isActive ? "#f0f0f0" : "transparent", transition: "all 0.15s ease",
+                        color: isActive ? "#000" : "#666"
                       }}
                       onMouseEnter={(e) => { if(!isActive) e.currentTarget.style.background = "#f5f5f5"; }}
                       onMouseLeave={(e) => { if(!isActive) e.currentTarget.style.background = "transparent"; }}
                     >
-                      <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-                        <Icon size={16} strokeWidth={1.5} color={isActive ? "#111" : "#666"} />
-                        <span style={{ fontSize: 13, fontWeight: 500, color: isActive ? "#111" : "#666" }}>{item.name}</span>
+                      <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                        <Icon size={16} strokeWidth={isActive ? 2 : 1.5} color={isActive ? "#000" : "#666"} />
+                        <span style={{ fontSize: 13, fontWeight: isActive ? 500 : 400 }}>{item.name}</span>
                       </div>
                     </Link>
                   );
@@ -153,25 +155,10 @@ export function Sidebar() {
         })}
       </div>
 
-      {/* ─── Plan & Footer ─── */}
-      <div style={{ padding: "16px", borderTop: "1px solid #f1f5f9", background: "#fff" }}>
-        <div style={{ background: "#f8fafc", border: "1px solid #e2e8f0", borderRadius: 12, padding: "12px", marginBottom: 12 }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8 }}>
-            <div style={{ width: 20, height: 20, background: "#eff6ff", borderRadius: 6, display: "flex", alignItems: "center", justifyContent: "center" }}>
-              <Star size={12} fill="#2563eb" color="#2563eb" />
-            </div>
-            <span style={{ fontSize: 12, fontWeight: 600, color: "#0f172a" }}>Pro Plan</span>
-          </div>
-          <p style={{ fontSize: 10, color: "#64748b", margin: "0 0 6px" }}>12 of 50 profiles used</p>
-          <div style={{ width: "100%", height: 4, background: "#e2e8f0", borderRadius: 100, marginBottom: 12, overflow: "hidden" }}>
-            <div style={{ width: "24%", height: "100%", background: "#2563eb", borderRadius: 100 }} />
-          </div>
-          <button style={{ width: "100%", height: 28, background: "#fff", border: "1px solid #e2e8f0", borderRadius: 6, fontSize: 11, fontWeight: 700, color: "#2563eb", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 4 }}>
-            Upgrade <ArrowRight size={10} />
-          </button>
-        </div>
-        <button onClick={() => signOut({ callbackUrl: "/login" })} style={{ width: "100%", display: "flex", alignItems: "center", gap: 8, padding: "8px 12px", background: "transparent", border: "none", color: "#666", cursor: "pointer", transition: "color 0.2s" }} onMouseEnter={e => e.currentTarget.style.color = "#dc2626"} onMouseLeave={e => e.currentTarget.style.color = "#666"}>
-          <LogOut size={16} /> <span style={{ fontSize: 13, fontWeight: 500 }}>Sign out</span>
+      {/* ─── Footer ─── */}
+      <div style={{ padding: "12px", borderTop: "1px solid #f0f0f0" }}>
+        <button onClick={() => signOut({ callbackUrl: "/login" })} style={{ width: "100%", display: "flex", alignItems: "center", gap: 10, padding: "8px 12px", background: "transparent", border: "none", color: "#666", cursor: "pointer", borderRadius: 6, transition: "all 0.2s" }} onMouseEnter={e => { e.currentTarget.style.background = "#fef2f2"; e.currentTarget.style.color = "#dc2626"; }} onMouseLeave={e => { e.currentTarget.style.background = "transparent"; e.currentTarget.style.color = "#666"; }}>
+          <LogOut size={16} /> <span style={{ fontSize: 13, fontWeight: 400 }}>Sign out</span>
         </button>
       </div>
     </aside>
