@@ -26,7 +26,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
               <Loader2 className="w-8 h-8 animate-spin text-[var(--accent)]" />
             </div>
           }>
-            <div className="app-content-inner anim-fade-up">{children}</div>
+            <div className="app-content-inner">{children}</div>
           </Suspense>
         </main>
       </div>
