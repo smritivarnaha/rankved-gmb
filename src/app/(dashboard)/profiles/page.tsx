@@ -131,11 +131,27 @@ function ProfileCard({
 
           <div style={{ display: "flex", alignItems: "flex-start", gap: 12 }}>
             {/* Avatar */}
-            <div style={{ width: 52, height: 52, borderRadius: 10, flexShrink: 0, background: theme.bgLight, display: "flex", alignItems: "center", justifyContent: "center", border: `1px solid ${theme.border}20`, overflow: "hidden" }}>
+            <div style={{ 
+              width: 52, height: 52, borderRadius: 10, flexShrink: 0, 
+              background: profile.logoUrl ? theme.bgLight : "#f1f5f9", 
+              display: "flex", alignItems: "center", justifyContent: "center", 
+              border: `1px solid ${theme.border}20`, overflow: "hidden",
+              fontSize: 20, fontWeight: 700, color: theme.border
+            }}>
               {profile.logoUrl ? (
-                <img src={profile.logoUrl} alt={profile.name} style={{ width: "100%", height: "100%", objectFit: "cover" }} onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }} />
+                <img 
+                  src={profile.logoUrl} 
+                  alt={profile.name} 
+                  referrerPolicy="no-referrer"
+                  style={{ width: "100%", height: "100%", objectFit: "cover" }} 
+                  onError={(e) => { 
+                    (e.target as HTMLImageElement).onerror = null;
+                    (e.target as HTMLImageElement).src = "";
+                    (e.target as HTMLImageElement).parentElement!.innerHTML = `<span style="font-family: inherit;">${profile.name.charAt(0).toUpperCase()}</span>`;
+                  }} 
+                />
               ) : (
-                <GbpIcon size={32} />
+                <span style={{ fontFamily: "inherit" }}>{profile.name.charAt(0).toUpperCase()}</span>
               )}
             </div>
 
@@ -244,6 +260,25 @@ export default function ProfilesPage() {
     setDeleting(null);
   }
 
+  const [isSyncing, setIsSyncing] = useState(false);
+
+  async function handleSync() {
+    setIsSyncing(true);
+    try {
+      const res = await fetch("/api/profiles", { method: "POST" });
+      const data = await res.json();
+      if (res.ok) {
+        mutate();
+        setMessage({ type: "success", text: `Successfully synced ${data.count || profiles.length} profiles from Google.` });
+      } else {
+        setMessage({ type: "error", text: data.error || "Sync failed." });
+      }
+    } catch {
+      setMessage({ type: "error", text: "Network error during sync." });
+    }
+    setIsSyncing(false);
+  }
+
   return (
     <div>
       {/* Header */}
@@ -255,9 +290,20 @@ export default function ProfilesPage() {
             {profiles.length > 0 && <span style={{ color: "var(--text-muted)" }}> · {profiles.length} locations</span>}
           </p>
         </div>
-        <button onClick={() => mutate()} className="btn btn-ghost" style={{ border: "1px solid var(--border)" }}>
-          <RefreshCw style={{ width: 14, height: 14 }} /> Refresh
-        </button>
+        <div className="flex gap-3">
+          <button 
+            onClick={handleSync}
+            disabled={isSyncing}
+            className="btn btn-outline"
+            style={{ borderColor: "#2563eb", color: "#2563eb", background: "#fff" }}
+          >
+            {isSyncing ? <Loader2 size={14} className="animate-spin mr-2" /> : <RefreshCw size={14} className="mr-2" />}
+            Sync from Google
+          </button>
+          <button onClick={() => mutate()} className="btn btn-ghost" style={{ border: "1px solid var(--border)" }}>
+            <RefreshCw style={{ width: 14, height: 14 }} /> Refresh
+          </button>
+        </div>
       </div>
 
       {/* Alert */}
