@@ -92,18 +92,25 @@ export default function AdminDashboard() {
 
   const handleCreateUser = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!newUserName || !newUserUsername || !newUserPassword) {
+      alert("Name, Username and Password are required.");
+      return;
+    }
     setCreatingUser(true);
     try {
       const res = await fetch("/api/admin/users", {
         method: "POST", headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           name: newUserName, username: newUserUsername,
-          email: newUserEmail, password: newUserPassword
+          email: newUserEmail || undefined, password: newUserPassword
         }),
       });
-      if (!res.ok) throw new Error("Failed to create user");
+      const json = await res.json();
+      if (!res.ok) throw new Error(json.error || "Failed to create user");
       mutate();
       setShowCreateModal(false);
+      setNewUserName(""); setNewUserUsername(""); setNewUserEmail(""); setNewUserPassword("");
+      alert(`Agency owner "${newUserName}" created successfully!`);
     } catch (err: any) { alert(err.message); }
     finally { setCreatingUser(false); }
   };
@@ -323,6 +330,71 @@ export default function AdminDashboard() {
               </button>
             </div>
           </form>
+        </div>
+      )}
+
+      {/* ─── Create Agency Owner Modal ─── */}
+      {showCreateModal && (
+        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.4)", zIndex: 1000, display: "flex", alignItems: "center", justifyContent: "center", backdropFilter: "blur(4px)" }}>
+          <div style={{ background: "#fff", borderRadius: 16, padding: 32, width: 480, boxShadow: "0 20px 60px rgba(0,0,0,0.15)", border: "1px solid #eaeaea" }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 24 }}>
+              <div>
+                <h2 style={{ fontSize: 18, fontWeight: 700, color: "#111827", margin: 0 }}>Create Agency Owner</h2>
+                <p style={{ fontSize: 13, color: "#64748b", margin: "4px 0 0" }}>New account with full agency access</p>
+              </div>
+              <button onClick={() => setShowCreateModal(false)} style={{ background: "none", border: "none", cursor: "pointer", color: "#94a3b8", padding: 4 }}>
+                <X size={20} />
+              </button>
+            </div>
+
+            <form onSubmit={handleCreateUser} style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+              <div>
+                <label style={{ fontSize: 12, fontWeight: 600, color: "#374151", display: "block", marginBottom: 6, textTransform: "uppercase", letterSpacing: "0.04em" }}>Full Name *</label>
+                <input
+                  type="text" required value={newUserName} onChange={e => setNewUserName(e.target.value)}
+                  placeholder="e.g. Rahul Sharma"
+                  style={{ ...inputStyle }}
+                />
+              </div>
+              <div>
+                <label style={{ fontSize: 12, fontWeight: 600, color: "#374151", display: "block", marginBottom: 6, textTransform: "uppercase", letterSpacing: "0.04em" }}>Username *</label>
+                <input
+                  type="text" required value={newUserUsername}
+                  onChange={e => setNewUserUsername(e.target.value.toLowerCase().replace(/\s+/g, ""))}
+                  placeholder="e.g. rahul_agency"
+                  style={{ ...inputStyle }}
+                />
+                <p style={{ fontSize: 11, color: "#94a3b8", marginTop: 4 }}>Used for login. No spaces allowed.</p>
+              </div>
+              <div>
+                <label style={{ fontSize: 12, fontWeight: 600, color: "#374151", display: "block", marginBottom: 6, textTransform: "uppercase", letterSpacing: "0.04em" }}>Email (optional)</label>
+                <input
+                  type="email" value={newUserEmail} onChange={e => setNewUserEmail(e.target.value)}
+                  placeholder="rahul@agency.com"
+                  style={{ ...inputStyle }}
+                />
+              </div>
+              <div>
+                <label style={{ fontSize: 12, fontWeight: 600, color: "#374151", display: "block", marginBottom: 6, textTransform: "uppercase", letterSpacing: "0.04em" }}>Password *</label>
+                <input
+                  type="password" required value={newUserPassword} onChange={e => setNewUserPassword(e.target.value)}
+                  placeholder="Min 8 characters"
+                  style={{ ...inputStyle }}
+                />
+              </div>
+
+              <div style={{ display: "flex", gap: 12, marginTop: 8, paddingTop: 16, borderTop: "1px solid #f1f5f9" }}>
+                <button type="button" onClick={() => setShowCreateModal(false)}
+                  style={{ flex: 1, height: 40, border: "1px solid #e2e8f0", borderRadius: 8, background: "#fff", fontSize: 14, fontWeight: 600, color: "#64748b", cursor: "pointer" }}>
+                  Cancel
+                </button>
+                <button type="submit" disabled={creatingUser}
+                  style={{ ...btnPrimary, flex: 1, height: 40, justifyContent: "center", opacity: creatingUser ? 0.7 : 1, borderRadius: 8 }}>
+                  <UserPlus size={15} /> {creatingUser ? "Creating..." : "Create Account"}
+                </button>
+              </div>
+            </form>
+          </div>
         </div>
       )}
     </div>

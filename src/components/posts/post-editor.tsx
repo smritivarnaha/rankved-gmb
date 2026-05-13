@@ -105,8 +105,35 @@ export function PostEditor({
   const [geoLng, setGeoLng] = useState("");
   const [geoLngRef, setGeoLngRef] = useState("E");
   const [geoTemplate, setGeoTemplate] = useState("samsung_s23_ultra");
-  const [geoDate, setGeoDate] = useState("2026-01-20");
+  const [geoDate, setGeoDate] = useState(() => new Date().toISOString().split("T")[0]);
   const [geoApplied, setGeoApplied] = useState(false);
+
+  // Saved geo presets (persisted in localStorage)
+  const [geoPresets, setGeoPresets] = useState<{name:string;lat:string;latRef:string;lng:string;lngRef:string}[]>(() => {
+    try { return JSON.parse(localStorage.getItem("geoPresets") || "[]"); } catch { return []; }
+  });
+  const [newPresetName, setNewPresetName] = useState("");
+
+  const saveGeoPreset = () => {
+    if (!newPresetName.trim() || !geoLat || !geoLng) return;
+    const updated = [...geoPresets.filter(p => p.name !== newPresetName.trim()), 
+      { name: newPresetName.trim(), lat: geoLat, latRef: geoLatRef, lng: geoLng, lngRef: geoLngRef }];
+    setGeoPresets(updated);
+    localStorage.setItem("geoPresets", JSON.stringify(updated));
+    setNewPresetName("");
+  };
+
+  const loadGeoPreset = (name: string) => {
+    const p = geoPresets.find(p => p.name === name);
+    if (!p) return;
+    setGeoLat(p.lat); setGeoLatRef(p.latRef); setGeoLng(p.lng); setGeoLngRef(p.lngRef);
+  };
+
+  const deleteGeoPreset = (name: string) => {
+    const updated = geoPresets.filter(p => p.name !== name);
+    setGeoPresets(updated);
+    localStorage.setItem("geoPresets", JSON.stringify(updated));
+  };
 
   const now = new Date();
   const [calMonth, setCalMonth] = useState(now.getMonth());
@@ -497,18 +524,18 @@ export function PostEditor({
               <div className="space-y-4">
                 <label className="text-[11px] font-bold text-[#64748b] uppercase tracking-[0.1em]">Image Settings</label>
 
-                {/* Focus / SEO Keyword */}
+                {/* Focus / SEO Keyword — auto-hyphen */}
                 <div className="space-y-2">
                   <label className="text-[11px] font-semibold text-[#94a3b8] uppercase tracking-[0.08em]">SEO Filename Keyword</label>
                   <input
                     type="text"
                     name="focusKeyword"
                     value={form.focusKeyword}
-                    onChange={handleChange}
+                    onChange={e => setForm(f => ({ ...f, focusKeyword: e.target.value.toLowerCase().replace(/\s+/g, "-").replace(/[^a-z0-9-]/g, "") }))}
                     placeholder="e.g. dr-smith-dentist-delhi"
                     style={{ width: "100%", padding: "10px 14px", border: "1px solid #eaeaea", borderRadius: 10, fontSize: 13, fontWeight: 500, color: "#0f172a", background: "#fff" }}
                   />
-                  <p style={{ fontSize: 11, color: "#94a3b8" }}>Used as the image filename for SEO — no spaces, use hyphens</p>
+                  <p style={{ fontSize: 11, color: "#94a3b8" }}>Spaces auto-convert to hyphens — used as the image filename for SEO</p>
                 </div>
 
                 {/* Geo-Tagging Toggle */}
@@ -519,22 +546,37 @@ export function PostEditor({
                   </div>
                   <button
                     onClick={() => setGeoEnabled(g => !g)}
-                    style={{
-                      width: 44, height: 24, borderRadius: 12, border: "none", cursor: "pointer",
-                      background: geoEnabled ? "#2563eb" : "#e2e8f0",
-                      position: "relative", transition: "background 0.2s"
-                    }}
+                    style={{ width: 44, height: 24, borderRadius: 12, border: "none", cursor: "pointer", background: geoEnabled ? "#2563eb" : "#e2e8f0", position: "relative", transition: "background 0.2s" }}
                   >
-                    <div style={{
-                      position: "absolute", top: 2, left: geoEnabled ? 22 : 2,
-                      width: 20, height: 20, borderRadius: "50%", background: "#fff",
-                      boxShadow: "0 1px 4px rgba(0,0,0,0.2)", transition: "left 0.2s"
-                    }} />
+                    <div style={{ position: "absolute", top: 2, left: geoEnabled ? 22 : 2, width: 20, height: 20, borderRadius: "50%", background: "#fff", boxShadow: "0 1px 4px rgba(0,0,0,0.2)", transition: "left 0.2s" }} />
                   </button>
                 </div>
 
                 {geoEnabled && (
                   <div className="space-y-3" style={{ paddingTop: 8 }}>
+                    {/* Saved Presets */}
+                    {geoPresets.length > 0 && (
+                      <div className="space-y-1">
+                        <label className="text-[11px] font-semibold text-[#94a3b8] uppercase tracking-[0.08em]">Load Saved Location</label>
+                        <div style={{ display: "flex", gap: 8 }}>
+                          <select
+                            defaultValue=""
+                            onChange={e => { if (e.target.value) loadGeoPreset(e.target.value); }}
+                            style={{ flex: 1, padding: "9px 12px", border: "1px solid #eaeaea", borderRadius: 10, fontSize: 13, background: "#fff" }}
+                          >
+                            <option value="">— Select a saved location —</option>
+                            {geoPresets.map(p => (
+                              <option key={p.name} value={p.name}>{p.name} ({p.lat}°{p.latRef}, {p.lng}°{p.lngRef})</option>
+                            ))}
+                          </select>
+                          <button
+                            onClick={() => { const sel = (document.querySelector("[data-preset-sel]") as HTMLSelectElement)?.value; if (sel) deleteGeoPreset(sel); }}
+                            style={{ padding: "9px 12px", border: "1px solid #fee2e2", borderRadius: 10, background: "#fff5f5", color: "#ef4444", fontSize: 12, fontWeight: 600, cursor: "pointer" }}
+                          >×</button>
+                        </div>
+                      </div>
+                    )}
+
                     {/* Camera Template */}
                     <div className="space-y-1">
                       <label className="text-[11px] font-semibold text-[#94a3b8] uppercase tracking-[0.08em]">Camera Device Template</label>
@@ -550,43 +592,48 @@ export function PostEditor({
                     </div>
 
                     {/* Coordinates */}
-                    <div style={{ display: "grid", gridTemplateColumns: "1fr auto 1fr auto", gap: 8, alignItems: "center" }}>
-                      <input
-                        type="number"
-                        placeholder="Latitude"
-                        value={geoLat}
-                        onChange={e => setGeoLat(e.target.value)}
-                        step="0.000001"
-                        style={{ padding: "10px", border: "1px solid #eaeaea", borderRadius: 10, fontSize: 13, fontWeight: 500 }}
-                      />
-                      <select value={geoLatRef} onChange={e => setGeoLatRef(e.target.value)} style={{ padding: "10px 6px", border: "1px solid #eaeaea", borderRadius: 10, fontSize: 13, background: "#fff" }}>
-                        <option value="N">N</option>
-                        <option value="S">S</option>
-                      </select>
-                      <input
-                        type="number"
-                        placeholder="Longitude"
-                        value={geoLng}
-                        onChange={e => setGeoLng(e.target.value)}
-                        step="0.000001"
-                        style={{ padding: "10px", border: "1px solid #eaeaea", borderRadius: 10, fontSize: 13, fontWeight: 500 }}
-                      />
-                      <select value={geoLngRef} onChange={e => setGeoLngRef(e.target.value)} style={{ padding: "10px 6px", border: "1px solid #eaeaea", borderRadius: 10, fontSize: 13, background: "#fff" }}>
-                        <option value="E">E</option>
-                        <option value="W">W</option>
-                      </select>
+                    <div>
+                      <label className="text-[11px] font-semibold text-[#94a3b8] uppercase tracking-[0.08em]">Coordinates</label>
+                      <div style={{ display: "grid", gridTemplateColumns: "1fr auto 1fr auto", gap: 8, alignItems: "center", marginTop: 6 }}>
+                        <input type="number" placeholder="Latitude" value={geoLat} onChange={e => setGeoLat(e.target.value)} step="0.000001"
+                          style={{ padding: "10px", border: "1px solid #eaeaea", borderRadius: 10, fontSize: 13, fontWeight: 500 }} />
+                        <select value={geoLatRef} onChange={e => setGeoLatRef(e.target.value)} style={{ padding: "10px 6px", border: "1px solid #eaeaea", borderRadius: 10, fontSize: 13, background: "#fff" }}>
+                          <option value="N">N</option><option value="S">S</option>
+                        </select>
+                        <input type="number" placeholder="Longitude" value={geoLng} onChange={e => setGeoLng(e.target.value)} step="0.000001"
+                          style={{ padding: "10px", border: "1px solid #eaeaea", borderRadius: 10, fontSize: 13, fontWeight: 500 }} />
+                        <select value={geoLngRef} onChange={e => setGeoLngRef(e.target.value)} style={{ padding: "10px 6px", border: "1px solid #eaeaea", borderRadius: 10, fontSize: 13, background: "#fff" }}>
+                          <option value="E">E</option><option value="W">W</option>
+                        </select>
+                      </div>
                     </div>
 
                     {/* EXIF Date */}
                     <div className="space-y-1">
                       <label className="text-[11px] font-semibold text-[#94a3b8] uppercase tracking-[0.08em]">EXIF Date</label>
-                      <input
-                        type="date"
-                        value={geoDate}
-                        onChange={e => setGeoDate(e.target.value)}
-                        style={{ width: "100%", padding: "10px 14px", border: "1px solid #eaeaea", borderRadius: 10, fontSize: 13, fontWeight: 500, background: "#fff" }}
-                      />
+                      <input type="date" value={geoDate} onChange={e => setGeoDate(e.target.value)}
+                        style={{ width: "100%", padding: "10px 14px", border: "1px solid #eaeaea", borderRadius: 10, fontSize: 13, fontWeight: 500, background: "#fff" }} />
                     </div>
+
+                    {/* Save as Preset */}
+                    {geoLat && geoLng && (
+                      <div style={{ padding: "12px", background: "#f8fafc", borderRadius: 10, border: "1px solid #e2e8f0" }}>
+                        <p style={{ fontSize: 11, fontWeight: 700, color: "#475569", marginBottom: 8, textTransform: "uppercase", letterSpacing: "0.05em" }}>Save this location as preset</p>
+                        <div style={{ display: "flex", gap: 8 }}>
+                          <input
+                            type="text"
+                            placeholder="Preset name (e.g. Delhi Clinic)"
+                            value={newPresetName}
+                            onChange={e => setNewPresetName(e.target.value)}
+                            style={{ flex: 1, padding: "8px 12px", border: "1px solid #e2e8f0", borderRadius: 8, fontSize: 13 }}
+                          />
+                          <button onClick={saveGeoPreset} disabled={!newPresetName.trim()}
+                            style={{ padding: "8px 14px", background: "#2563eb", color: "#fff", border: "none", borderRadius: 8, fontSize: 12, fontWeight: 700, cursor: "pointer", opacity: !newPresetName.trim() ? 0.5 : 1 }}>
+                            Save
+                          </button>
+                        </div>
+                      </div>
+                    )}
 
                     {geoLat && geoLng && (
                       <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "8px 12px", background: "#f0fdf4", borderRadius: 8, border: "1px solid #bbf7d0" }}>
