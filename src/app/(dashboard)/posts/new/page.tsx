@@ -21,67 +21,57 @@ function NewPostContent() {
   const backLabel = from === "profile" && profileId ? "← Back to profile" : "← Back to profiles";
 
   return (
-    <div style={{ minHeight: "100vh", background: "#f8fafc", margin: "-32px -40px", padding: "40px" }}>
-      <div style={{ maxWidth: 1040, margin: "0 auto" }}>
-        {/* Header */}
-        <div style={{ marginBottom: 32, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-          <div>
-            <Link
-              href={backHref}
-              style={{ display: "inline-flex", alignItems: "center", gap: 6, fontSize: 13, fontWeight: 600, color: "#64748b", marginBottom: 12, textDecoration: "none", transition: "color 0.2s" }}
-              className="hover-text-primary"
+    <div style={{ maxWidth: 1200, margin: "0 auto", padding: "0 24px" }}>
+      {/* Header Area */}
+      <div style={{ marginBottom: 32, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+        <div>
+          <Link
+            href={backHref}
+            style={{ display: "inline-flex", alignItems: "center", gap: 6, fontSize: 13, fontWeight: 600, color: "#64748b", marginBottom: 10, textDecoration: "none" }}
+          >
+            <ArrowLeft style={{ width: 14, height: 14 }} />
+            {backLabel}
+          </Link>
+          <h1 style={{ fontSize: 28, fontWeight: 800, color: "#0f172a", marginBottom: 4, letterSpacing: "-0.02em" }}>Create Post</h1>
+          <p style={{ fontSize: 14, color: "#64748b", fontWeight: 500 }}>
+            Compose and schedule updates for your Google Business Profile.
+          </p>
+        </div>
+
+        <div style={{ display: "flex", gap: 12 }}>
+          {profileId && (
+            <button 
+              onClick={() => setIsAiModalOpen(true)}
+              className="btn btn-outline"
+              style={{ background: "#fff", color: "#2563eb", borderColor: "#e2e8f0", boxShadow: "0 1px 2px rgba(0,0,0,0.05)" }}
             >
-              <ArrowLeft style={{ width: 14, height: 14 }} />
-              {backLabel}
-            </Link>
-            <h1 style={{ fontSize: 32, fontWeight: 800, color: "#111", marginBottom: 4, letterSpacing: "-0.02em" }}>Create Post</h1>
-            <p style={{ fontSize: 14, color: "#666", fontWeight: 500 }}>
-              {profileId ? "Syncing directly with your Google Business Profile." : "Compose a new update for your locations."}
-            </p>
-          </div>
-
-          <div style={{ display: "flex", gap: 12 }}>
-            {profileId && (
-              <button 
-                onClick={() => setIsAiModalOpen(true)}
-                style={{ 
-                  display: "inline-flex", alignItems: "center", gap: 8, padding: "10px 24px", 
-                  background: "#fff", color: "#2563eb", border: "1px solid #e2e8f0", borderRadius: 12, 
-                  fontSize: 14, fontWeight: 600, cursor: "pointer",
-                  transition: "all 0.2s",
-                  boxShadow: "0 1px 2px rgba(0,0,0,0.05)"
-                }}
-                onMouseEnter={e => { e.currentTarget.style.background = "#eff6ff"; e.currentTarget.style.borderColor = "#bfdbfe"; }}
-                onMouseLeave={e => { e.currentTarget.style.background = "#fff"; e.currentTarget.style.borderColor = "#e2e8f0"; }}
-              >
-                <Sparkles style={{ width: 16, height: 16 }} /> AI Assistant
-              </button>
-            )}
-          </div>
+              <Sparkles style={{ width: 16, height: 16, marginRight: 8 }} /> AI Assistant
+            </button>
+          )}
         </div>
-
-        {/* Content Area */}
-        <div style={{ display: "flex", flexDirection: "column", gap: 32 }}>
-          {/* Timeline — profile-aware */}
-          <PostTimeline onDateSelect={setSharedDate} selectedDate={sharedDate} profileId={profileId} />
-
-          {/* Editor — locked to profile if given */}
-          <PostEditor timelineDate={sharedDate} onDateChange={setSharedDate} lockedProfileId={profileId} returnUrl={backHref} />
-        </div>
-
-        {profileId && (
-          <AiGenerationModal 
-            locationId={profileId}
-            isOpen={isAiModalOpen}
-            onClose={() => setIsAiModalOpen(false)}
-            onGenerated={() => {
-              setIsAiModalOpen(false);
-              if (from === "profile") router.push(`/profiles/${profileId}`);
-              else router.push("/profiles");
-            }}
-          />
-        )}
       </div>
+
+      {/* Main Container: 2-pane layout is handled INSIDE PostEditor */}
+      <PostEditor 
+        timelineDate={sharedDate} 
+        onDateChange={setSharedDate} 
+        lockedProfileId={profileId} 
+        returnUrl={backHref}
+        showTimelineTop={true} // We'll move timeline support into PostEditor or keep it here
+      />
+
+      {profileId && (
+        <AiGenerationModal 
+          locationId={profileId}
+          isOpen={isAiModalOpen}
+          onClose={() => setIsAiModalOpen(false)}
+          onGenerated={() => {
+            setIsAiModalOpen(false);
+            if (from === "profile") router.push(`/profiles/${profileId}`);
+            else router.push("/profiles");
+          }}
+        />
+      )}
     </div>
   );
 }

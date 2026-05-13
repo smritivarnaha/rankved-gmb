@@ -121,55 +121,59 @@ export async function POST(req: NextRequest) {
                   addressParts.postalCode || "",
                 ].filter(Boolean);
 
-                // Try to fetch profile logo from GBP Media API (Aggressive)
+                // ─── AGGRESSIVE LOGO FETCH (TRIPLE CHECK) ───
                 let logoUrl: string | undefined;
                 try {
-                  // Attempt 1: Fetch media for this specific location
-                  const mediaUrl = `https://mybusiness.googleapis.com/v4/${accountName}/${loc.name}/media?maxResults=20`;
+                  // Ensure we have a clean resource name for v4
+                  const v4LocationName = loc.name.startsWith("accounts/") ? loc.name : `${accountName}/${loc.name}`;
+                  
+                  // Attempt 1: Specific Location Media
+                  const mediaUrl = `https://mybusiness.googleapis.com/v4/${v4LocationName}/media?maxResults=50`;
                   const mediaRes = await fetchWithRetry(mediaUrl, { 
                     headers: { Authorization: `Bearer ${accessToken}` } 
                   });
                   
-                  let items = [];
+                  let mediaItems = [];
                   if (mediaRes.ok) {
-                    const mediaData = await mediaRes.json();
-                    items = mediaData.mediaItems || [];
+                    const data = await mediaRes.json();
+                    mediaItems = data.mediaItems || [];
                   } else {
-                    // Attempt 2: Fallback to account-wide media if location-specific fails (Some accounts prefer this)
-                    const accMediaUrl = `https://mybusiness.googleapis.com/v4/${accountName}/media?maxResults=100`;
-                    const accMediaRes = await fetchWithRetry(accMediaUrl, {
-                      headers: { Authorization: `Bearer ${accessToken}` },
+                    // Attempt 2: Account-wide fallback (useful for some account types)
+                    const accMediaUrl = `https://mybusiness.googleapis.com/v4/${accountName}/media?maxResults=200`;
+                    const accRes = await fetchWithRetry(accMediaUrl, {
+                      headers: { Authorization: `Bearer ${accessToken}` }
                     });
-                    if (accMediaRes.ok) {
-                      const accMediaData = await accMediaRes.json();
-                      const allItems = accMediaData.mediaItems || [];
-                      // Filter for this specific location resource name
-                      items = allItems.filter((m: any) => 
-                        m.locationAssociation?.locationName === `${accountName}/${loc.name}` ||
+                    if (accRes.ok) {
+                      const accData = await accRes.json();
+                      const allItems = accData.mediaItems || [];
+                      // Filter by matching location name
+                      mediaItems = allItems.filter((m: any) => 
+                        m.locationAssociation?.locationName === v4LocationName ||
                         m.locationAssociation?.locationName === loc.name
                       );
                     }
                   }
-                  
-                  if (items.length > 0) {
-                    // Search for Logo, then Profile, then Cover, then any first image
-                    const logo = items.find((m: any) => ["LOGO", "PROFILE", "COVER"].includes(m.locationAssociation?.category?.toUpperCase()))
-                              || items.find((m: any) => ["LOGO", "PROFILE", "COVER"].includes(m.category?.toUpperCase()))
-                              || items[0];
-                    
-                    if (logo?.googleUrl) {
-                      // Normalize URL to high-quality thumbnail
-                      logoUrl = logo.googleUrl.split("=")[0] + "=s400";
-                      console.log(`[Google Sync] Found logo for ${loc.title || loc.name}: ${logoUrl}`);
+
+                  if (mediaItems.length > 0) {
+                    // Attempt 3: Priority Category Match
+                    const bestMatch = mediaItems.find((m: any) => ["LOGO", "PROFILE", "COVER"].includes(m.locationAssociation?.category?.toUpperCase()))
+                                   || mediaItems.find((m: any) => ["LOGO", "PROFILE", "COVER"].includes(m.category?.toUpperCase()))
+                                   || mediaItems[0]; // Absolute fallback to first available image
+
+                    if (bestMatch?.googleUrl) {
+                      // Normalize to high-quality thumbnail (300-400px)
+                      const baseUrl = bestMatch.googleUrl.split("=")[0];
+                      logoUrl = `${baseUrl}=s400`;
+                      console.log(`[Google Sync] ✅ Found logo for ${loc.title || loc.name}: ${logoUrl}`);
                     }
                   }
                 } catch (err: any) {
-                  console.error(`[Google Sync] Logo fetch error for ${loc.name}:`, err.message);
+                  console.error(`[Google Sync] ❌ Media fetch failed for ${loc.name}:`, err.message);
                 }
 
                 fetchedProfiles.push({
                   id: crypto.randomUUID(),
-                  name: loc.title || loc.name || "Unnamed Location",
+                  name: loc.title || "Unnamed Location",
                   accountId: accountName,
                   accountName: accountDisplayName,
                   address: addressLines.join(", "),

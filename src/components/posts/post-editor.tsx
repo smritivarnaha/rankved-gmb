@@ -48,7 +48,23 @@ function getMonthDays(year: number, month: number) {
 
 const monthNames = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
 
-export function PostEditor({ initialData = null, timelineDate, onDateChange, lockedProfileId, returnUrl }: { initialData?: any; timelineDate?: string; onDateChange?: (d: string) => void; lockedProfileId?: string; returnUrl?: string }) {
+import { PostTimeline } from "./post-timeline";
+
+export function PostEditor({ 
+  initialData = null, 
+  timelineDate, 
+  onDateChange, 
+  lockedProfileId, 
+  returnUrl,
+  showTimelineTop = false
+}: { 
+  initialData?: any; 
+  timelineDate?: string; 
+  onDateChange?: (d: string) => void; 
+  lockedProfileId?: string; 
+  returnUrl?: string;
+  showTimelineTop?: boolean;
+}) {
   const router = useRouter();
   const { data: session } = useSession();
   const user = (session as any)?.user;
@@ -352,7 +368,7 @@ export function PostEditor({ initialData = null, timelineDate, onDateChange, loc
   const todayDay = now.getDate();
 
   return (
-    <>
+    <div className="space-y-8 animate-in fade-in duration-500">
       {(saving || successMessage) && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center bg-[#0f172a]/40 backdrop-blur-sm transition-opacity duration-500">
           <div className="bg-white rounded-2xl shadow-[0_20px_50px_rgba(0,0,0,0.15)] p-10 flex flex-col items-center justify-center max-w-sm w-full mx-4 transform transition-transform duration-300 scale-100 border border-[#f1f5f9]">
@@ -390,188 +406,152 @@ export function PostEditor({ initialData = null, timelineDate, onDateChange, loc
           </div>
         </div>
       )}
-      <div className="flex flex-col lg:flex-row gap-8">
-        {/* Main Editor Card */}
-        <div style={{ flex: 1, background: "#fff", border: "1px solid #eaeaea", borderRadius: 16, padding: "32px", boxShadow: "0 1px 3px rgba(0,0,0,0.02)" }}>
-          <div className="space-y-8">
-            {/* Lock banner — shown for PUBLISHED posts */}
-            {isLocked && (
-              <div style={{ display: "flex", alignItems: "center", gap: 12, padding: "16px", background: "#f0fdf4", border: "1px solid #bbf7d0", borderRadius: 12 }}>
-                <div style={{ width: 36, height: 36, borderRadius: "50%", background: "#dcfce7", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-                  <Lock style={{ width: 18, height: 18, color: "#166534" }} />
-                </div>
-                <div>
-                  <p style={{ fontSize: 14, fontWeight: 700, color: "#166534", margin: 0 }}>
-                    Published & Locked
-                  </p>
-                  <p style={{ fontSize: 13, color: "#15803d", margin: "2px 0 0", opacity: 0.8 }}>
-                    This post is live on Google Business Profile and cannot be edited.
-                  </p>
-                </div>
-              </div>
-            )}
-            {/* Profile Selection */}
-            <div className="space-y-2">
-              <label className="text-[12px] font-bold text-[#64748b] uppercase tracking-wider">Business Profile</label>
+
+      {/* Timeline Integration at Top */}
+      {showTimelineTop && (
+        <div className="animate-in slide-in-from-top-4 duration-500">
+          <PostTimeline 
+            onDateSelect={onDateChange} 
+            selectedDate={timelineDate} 
+            profileId={lockedProfileId || form.locationId} 
+          />
+        </div>
+      )}
+
+      <div style={{ display: "flex", gap: 32, alignItems: "flex-start" }}>
+        {/* Main Content Area */}
+        <div style={{ flex: 1, display: "flex", flexDirection: "column", gap: 24 }}>
+          
+          {/* Card 1: Business Profile Selection */}
+          <div style={{ background: "#fff", border: "1px solid #eaeaea", borderRadius: 16, padding: "24px", boxShadow: "0 1px 3px rgba(0,0,0,0.02)" }}>
+            <div className="space-y-4">
+              <label className="text-[11px] font-bold text-[#64748b] uppercase tracking-[0.1em]">Business Profile</label>
               {lockedProfileId ? (
-                <div className="w-full border border-[#eaeaea] rounded-xl py-3 px-4 text-[14px] text-[#111] bg-[#fcfcfc] flex items-center gap-3">
-                  <MapPin className="w-4 h-4 text-[#2563eb] shrink-0" />
-                  <span className="font-semibold">{locations.find(l => l.id === lockedProfileId)?.name || "Loading Profile..."}</span>
-                  <div className="ml-auto flex items-center gap-1.5 bg-white border border-[#eaeaea] px-2.5 py-1 rounded-full shadow-sm">
-                    <div className="w-1.5 h-1.5 rounded-full bg-[#2563eb]" />
-                    <span className="text-[10px] font-bold text-[#2563eb] uppercase">Selected</span>
-                  </div>
+                <div style={{ background: "#f8fafc", border: "1px solid #e2e8f0", borderRadius: 12, padding: "14px 16px", display: "flex", alignItems: "center", gap: 12 }}>
+                  <MapPin size={16} className="text-[#2563eb]" />
+                  <span style={{ fontSize: 15, fontWeight: 700, color: "#0f172a" }}>{locations.find(l => l.id === lockedProfileId)?.name || "Selected Profile"}</span>
+                  <div style={{ marginLeft: "auto", background: "#fff", border: "1px solid #e2e8f0", borderRadius: 20, padding: "4px 12px", fontSize: 10, fontWeight: 800, color: "#2563eb", textTransform: "uppercase" }}>Selected</div>
                 </div>
               ) : (
-                <div className="relative">
+                <div style={{ position: "relative" }}>
                   <select name="locationId" value={form.locationId} onChange={handleChange} disabled={isPublished}
-                    className="w-full border border-[#eaeaea] rounded-xl py-3 pl-11 pr-4 text-[15px] font-semibold text-[#111] bg-white focus:outline-none focus:ring-2 focus:ring-[#2563eb] focus:border-transparent disabled:opacity-50 appearance-none transition-all">
+                    style={{ width: "100%", padding: "14px 16px 14px 44px", border: "1px solid #eaeaea", borderRadius: 12, fontSize: 15, fontWeight: 600, color: "#0f172a", background: "#fff", appearance: "none" }}>
                     <option value="">Select a business profile...</option>
                     {locations.map((loc: any) => (
                       <option key={loc.id} value={loc.id}>{loc.name}</option>
                     ))}
                   </select>
-                  <MapPin className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-[#64748b]" />
+                  <MapPin size={18} className="text-[#64748b]" style={{ position: "absolute", left: 16, top: "50%", transform: "translateY(-50%)" }} />
                 </div>
               )}
             </div>
+          </div>
 
-            {/* Media Section */}
-            <div className="space-y-3">
-              <label className="text-[12px] font-bold text-[#64748b] uppercase tracking-wider">Visual Content</label>
+          {/* Card 2: Visual Content */}
+          <div style={{ background: "#fff", border: "1px solid #eaeaea", borderRadius: 16, padding: "24px", boxShadow: "0 1px 3px rgba(0,0,0,0.02)" }}>
+            <div className="space-y-4">
+              <label className="text-[11px] font-bold text-[#64748b] uppercase tracking-[0.1em]">Visual Content</label>
               {imagePreview ? (
-                <div className="relative rounded-2xl overflow-hidden border border-[#eaeaea] bg-[#fcfcfc] shadow-sm">
-                  <img src={imagePreview} alt="Post preview" className="w-full max-h-[400px] object-cover" />
+                <div style={{ position: "relative", borderRadius: 16, overflow: "hidden", border: "1px solid #f1f5f9" }}>
+                  <img src={imagePreview} alt="Preview" style={{ width: "100%", maxHeight: 400, objectFit: "cover" }} />
                   {!isPublished && (
-                    <button onClick={removeImage}
-                      className="absolute top-4 right-4 p-2 rounded-xl border border-[#eaeaea] bg-white transition-all shadow-lg hover:bg-red-50 hover:border-red-100 group">
-                      <X className="w-4 h-4 text-[#64748b] group-hover:text-red-500" />
+                    <button onClick={removeImage} style={{ position: "absolute", top: 12, right: 12, width: 36, height: 36, borderRadius: 12, background: "#fff", border: "1px solid #eaeaea", display: "flex", alignItems: "center", justifyContent: "center", color: "#ef4444", cursor: "pointer", boxShadow: "0 4px 12px rgba(0,0,0,0.1)" }}>
+                      <X size={18} />
                     </button>
-                  )}
-                  {imageFile && (
-                    <div className="px-4 py-3 bg-white border-t border-[#f1f5f9] flex items-center justify-between">
-                      <div className="flex items-center gap-2">
-                        <div className="w-8 h-8 rounded-lg bg-blue-50 flex items-center justify-center">
-                          <ImagePlus className="w-4 h-4 text-[#2563eb]" />
-                        </div>
-                        <span className="text-[13px] font-semibold text-[#111] truncate max-w-[200px]">{imageFile.name}</span>
-                      </div>
-                      <span className="text-[11px] font-bold text-[#64748b] bg-[#f1f5f9] px-2 py-0.5 rounded-md">{(imageFile.size / 1024).toFixed(0)} KB</span>
-                    </div>
                   )}
                 </div>
               ) : (
-                <button onClick={() => fileRef.current?.click()} disabled={isPublished}
-                  className="w-full border-2 border-dashed border-[#eaeaea] rounded-2xl py-16 flex flex-col items-center justify-center hover:border-[#2563eb] hover:bg-[#eff6ff] transition-all disabled:opacity-50 group">
-                  <div className="w-16 h-16 rounded-full bg-[#f8fafc] flex items-center justify-center group-hover:bg-[#dbeafe] transition-all mb-4">
-                    <ImagePlus className="w-8 h-8 text-[#94a3b8] group-hover:text-[#2563eb] transition-all" />
+                <div 
+                  onClick={() => !isPublished && fileRef.current?.click()}
+                  style={{ height: 200, border: "2px dashed #e2e8f0", borderRadius: 16, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 12, cursor: isPublished ? "default" : "pointer", background: "#fcfcfc", transition: "all 0.2s" }}
+                  className="hover:bg-[#f8fafc] hover:border-[#cbd5e1]"
+                >
+                  <div style={{ width: 48, height: 48, borderRadius: 14, background: "#f1f5f9", display: "flex", alignItems: "center", justifyContent: "center", color: "#64748b" }}>
+                    <ImagePlus size={24} />
                   </div>
-                  <span className="text-[16px] font-bold text-[#111]">Upload Media</span>
-                  <p className="text-[13px] text-[#666] mt-1">High-quality JPG, PNG or WebP (Max 10MB)</p>
-                </button>
+                  <div style={{ textAlign: "center" }}>
+                    <p style={{ fontSize: 14, fontWeight: 700, color: "#0f172a" }}>Upload Image</p>
+                    <p style={{ fontSize: 12, color: "#64748b", marginTop: 2 }}>JPG, PNG or GIF (max 5MB)</p>
+                  </div>
+                </div>
               )}
-              <input ref={fileRef} type="file" accept="image/*" onChange={handleImageSelect} className="hidden" />
-
-              {/* SEO Keyword */}
-              <div style={{ marginTop: 16 }}>
-                <div className="flex items-center justify-between mb-2">
-                  <label className="text-[11px] font-bold text-[#64748b] uppercase tracking-widest">SEO Filename Keyword</label>
-                </div>
-                <input type="text" name="focusKeyword" value={form.focusKeyword}
-                  onChange={handleChange} disabled={isPublished}
-                  placeholder="e.g. dental-implants-nyc"
-                  className="w-full border border-[#eaeaea] rounded-xl py-3 px-4 text-[14px] font-medium text-[#111] focus:outline-none focus:ring-2 focus:ring-[#2563eb] focus:border-transparent disabled:opacity-50 placeholder:text-gray-400 transition-all" />
-                <p className="text-[11px] text-[#666] mt-2 flex items-center gap-2">
-                  <Sparkles size={12} className="text-[#2563eb]" />
-                  Used to automatically rename your image for better local SEO ranking.
-                </p>
-              </div>
+              <input type="file" ref={fileRef} className="hidden" accept="image/*" onChange={handleImageSelect} />
             </div>
+          </div>
 
-            {/* Post Content Section */}
-            <div className="space-y-3">
-              <div className="flex justify-between items-center">
-                <label className="text-[12px] font-bold text-[#64748b] uppercase tracking-wider">Post Content</label>
-                <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${form.summary.length > 1500 ? 'text-red-600 bg-red-50' : 'text-gray-400 bg-gray-50'}`}>
-                  {form.summary.length} / 1500
-                </span>
+          {/* Card 3: Post Content */}
+          <div style={{ background: "#fff", border: "1px solid #eaeaea", borderRadius: 16, padding: "24px", boxShadow: "0 1px 3px rgba(0,0,0,0.02)" }}>
+            <div className="space-y-4">
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                <label className="text-[11px] font-bold text-[#64748b] uppercase tracking-[0.1em]">Post Content</label>
+                <span style={{ fontSize: 11, fontWeight: 600, color: form.summary.length > 1500 ? "#ef4444" : "#94a3b8" }}>{form.summary.length}/1500</span>
               </div>
-              <textarea name="summary" value={form.summary} onChange={handleChange} disabled={isPublished}
-                rows={10}
-                className="w-full border border-[#eaeaea] rounded-xl py-4 px-5 text-[15px] leading-relaxed text-[#111] focus:outline-none focus:ring-2 focus:ring-[#2563eb] focus:border-transparent resize-none disabled:opacity-50 disabled:bg-[#fcfcfc] placeholder:text-gray-400 shadow-sm transition-all"
-                placeholder="What would you like to share with your customers?"
+              
+              <textarea
+                name="summary" value={form.summary} onChange={handleChange} disabled={isPublished}
+                placeholder="What's new with your business?"
+                style={{ width: "100%", minHeight: 220, padding: "16px", border: "1px solid #eaeaea", borderRadius: 12, fontSize: 15, fontWeight: 500, color: "#0f172a", background: "#fff", outline: "none", resize: "vertical" }}
+                className="focus:ring-2 focus:ring-[#2563eb] focus:border-transparent transition-all"
               />
-            </div>
 
-            {/* Type & CTA */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div className="space-y-2">
-                <label className="text-[12px] font-bold text-[#64748b] uppercase tracking-wider">Post Type</label>
-                <select name="topicType" value={form.topicType} onChange={handleChange} disabled={isPublished}
-                  className="w-full border border-[#eaeaea] rounded-xl py-3 px-4 text-[14px] font-bold text-[#111] bg-white focus:outline-none focus:ring-2 focus:ring-[#2563eb] appearance-none">
-                  <option value="STANDARD">✨ Standard Update</option>
-                  <option value="EVENT">📅 Special Event</option>
-                  <option value="OFFER">🎁 Exclusive Offer</option>
-                </select>
-              </div>
-              <div className="space-y-2">
-                <label className="text-[12px] font-bold text-[#64748b] uppercase tracking-wider">Call to Action</label>
-                <select name="ctaType" value={form.ctaType} onChange={handleChange} disabled={isPublished}
-                  className="w-full border border-[#eaeaea] rounded-xl py-3 px-4 text-[14px] font-bold text-[#111] bg-white focus:outline-none focus:ring-2 focus:ring-[#2563eb] appearance-none">
-                  <option value="">🚫 No Button</option>
-                  <option value="BOOK">📖 Book Now</option>
-                  <option value="ORDER">🛒 Order Online</option>
-                  <option value="LEARN_MORE">🔍 Learn More</option>
-                  <option value="SIGN_UP">✍️ Sign Up</option>
-                  <option value="CALL">📞 Call Now</option>
-                </select>
-              </div>
-            </div>
-
-            {/* Conditional CTA Link */}
-            {form.ctaType && form.ctaType !== "CALL" && (
-              <div className="space-y-2 animate-in fade-in slide-in-from-top-2 duration-200">
-                <label className="text-[12px] font-bold text-[#64748b] uppercase tracking-wider">Button Destination Link</label>
-                <div className="relative">
-                  <input type="url" name="ctaUrl" value={form.ctaUrl} onChange={handleChange} disabled={isPublished}
-                    className="w-full border border-[#eaeaea] rounded-xl py-3 pl-11 pr-4 text-[14px] font-medium text-[#111] focus:outline-none focus:ring-2 focus:ring-[#2563eb] placeholder:text-gray-400"
-                    placeholder="https://yourwebsite.com/promotion" />
-                  <LinkIcon className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-[#64748b]" />
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
+                <div className="space-y-2">
+                  <label className="text-[11px] font-bold text-[#64748b] uppercase tracking-[0.05em]">Button Type</label>
+                  <select name="ctaType" value={form.ctaType} onChange={handleChange} disabled={isPublished}
+                    style={{ width: "100%", padding: "12px", border: "1px solid #eaeaea", borderRadius: 10, fontSize: 14, fontWeight: 600, color: "#0f172a", background: "#fff" }}>
+                    <option value="">No Button</option>
+                    <option value="BOOK">Book</option>
+                    <option value="ORDER">Order Online</option>
+                    <option value="SHOP">Buy</option>
+                    <option value="LEARN_MORE">Learn More</option>
+                    <option value="SIGN_UP">Sign Up</option>
+                    <option value="CALL">Call Now</option>
+                  </select>
                 </div>
+                {form.ctaType && form.ctaType !== "CALL" && (
+                  <div className="space-y-2">
+                    <label className="text-[11px] font-bold text-[#64748b] uppercase tracking-[0.05em]">Button Link</label>
+                    <div style={{ position: "relative" }}>
+                      <input type="url" name="ctaUrl" value={form.ctaUrl} onChange={handleChange} disabled={isPublished}
+                        style={{ width: "100%", padding: "12px 12px 12px 36px", border: "1px solid #eaeaea", borderRadius: 10, fontSize: 14, fontWeight: 500 }}
+                        placeholder="https://..." />
+                      <LinkIcon size={14} className="text-[#64748b]" style={{ position: "absolute", left: 12, top: "50%", transform: "translateY(-50%)" }} />
+                    </div>
+                  </div>
+                )}
               </div>
-            )}
+            </div>
           </div>
         </div>
 
-        {/* Sidebar Panel */}
-        <div style={{ width: 340, flexShrink: 0, position: "sticky", top: 24, height: "fit-content" }}>
-          {/* Publish Panel */}
+        {/* Sticky Sidebar Panel */}
+        <div style={{ width: 340, flexShrink: 0, position: "sticky", top: 24, display: "flex", flexDirection: "column", gap: 24 }}>
+          
+          {/* Scheduling Card */}
           <div style={{ background: "#fff", border: "1px solid #eaeaea", borderRadius: 16, overflow: "hidden", boxShadow: "0 1px 3px rgba(0,0,0,0.02)" }}>
-            <div style={{ padding: "20px", borderBottom: "1px solid #f1f5f9", background: "#fcfcfc" }}>
-              <h3 style={{ fontSize: 13, fontWeight: 700, color: "#111", display: "flex", alignItems: "center", gap: 10, textTransform: "uppercase", letterSpacing: "0.05em" }}>
-                <Clock size={16} className="text-[#2563eb]" />
-                Publish Schedule
-              </h3>
+            <div style={{ padding: "16px 20px", borderBottom: "1px solid #f1f5f9", background: "#fcfcfc", display: "flex", alignItems: "center", gap: 10 }}>
+              <Clock size={16} className="text-[#2563eb]" />
+              <h3 style={{ fontSize: 12, fontWeight: 800, color: "#0f172a", textTransform: "uppercase", letterSpacing: "0.05em" }}>Publishing</h3>
             </div>
             
-            <div style={{ padding: "24px" }}>
-              {/* Quick Picks */}
-              <div style={{ display: "flex", gap: 10, marginBottom: 20 }}>
-                <button onClick={() => setQuickDate("tomorrow")} disabled={minScheduleDays > 1} style={{ flex: 1, padding: "10px", fontSize: 12, fontWeight: 700, border: "1px solid #eaeaea", borderRadius: 10, background: "#fff", color: "#666", cursor: "pointer" }}>Tomorrow</button>
-                <button onClick={() => setQuickDate("dayafter")} disabled={minScheduleDays > 2} style={{ flex: 1, padding: "10px", fontSize: 12, fontWeight: 700, border: "1px solid #eaeaea", borderRadius: 10, background: "#fff", color: "#666", cursor: "pointer" }}>Day After</button>
+            <div style={{ padding: "20px" }}>
+              {/* Quick Date Selectors */}
+              <div style={{ display: "flex", gap: 8, marginBottom: 20 }}>
+                <button onClick={() => setQuickDate("tomorrow")} style={{ flex: 1, padding: "8px", fontSize: 12, fontWeight: 700, border: "1px solid #eaeaea", borderRadius: 8, background: "#fff", color: "#64748b", cursor: "pointer" }}>Tomorrow</button>
+                <button onClick={() => setQuickDate("dayafter")} style={{ flex: 1, padding: "8px", fontSize: 12, fontWeight: 700, border: "1px solid #eaeaea", borderRadius: 8, background: "#fff", color: "#64748b", cursor: "pointer" }}>Day After</button>
               </div>
 
               {/* Mini Calendar */}
               <div style={{ marginBottom: 24 }}>
-                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 16 }}>
-                  <button onClick={() => { if (calMonth === 0) { setCalMonth(11); setCalYear(y=>y-1); } else setCalMonth(m=>m-1); }} style={{ padding: 4, background: "none", border: "none", cursor: "pointer", color: "#999" }}>‹</button>
-                  <span style={{ fontSize: 14, fontWeight: 700, color: "#111" }}>{monthNames[calMonth]} {calYear}</span>
-                  <button onClick={() => { if (calMonth === 11) { setCalMonth(0); setCalYear(y=>y+1); } else setCalMonth(m=>m+1); }} style={{ padding: 4, background: "none", border: "none", cursor: "pointer", color: "#999" }}>›</button>
+                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 12 }}>
+                  <button onClick={() => { if (calMonth === 0) { setCalMonth(11); setCalYear(y=>y-1); } else setCalMonth(m=>m-1); }} style={{ padding: 4, background: "none", border: "none", cursor: "pointer", color: "#94a3b8" }}>‹</button>
+                  <span style={{ fontSize: 13, fontWeight: 700, color: "#0f172a" }}>{monthNames[calMonth]} {calYear}</span>
+                  <button onClick={() => { if (calMonth === 11) { setCalMonth(0); setCalYear(y=>y+1); } else setCalMonth(m=>m+1); }} style={{ padding: 4, background: "none", border: "none", cursor: "pointer", color: "#94a3b8" }}>›</button>
                 </div>
-                <div style={{ display: "grid", gridTemplateColumns: "repeat(7, 1fr)", textAlign: "center", fontSize: 11, fontWeight: 700, color: "#94a3b8", marginBottom: 12 }}>
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(7, 1fr)", textAlign: "center", fontSize: 10, fontWeight: 700, color: "#94a3b8", marginBottom: 8 }}>
                   {["S","M","T","W","T","F","S"].map(d => <div key={d}>{d}</div>)}
                 </div>
-                <div style={{ display: "grid", gridTemplateColumns: "repeat(7, 1fr)", gap: 4 }}>
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(7, 1fr)", gap: 2 }}>
                   {Array.from({ length: firstDay }).map((_, i) => <div key={`e${i}`} />)}
                   {Array.from({ length: daysInMonth }).map((_, i) => {
                     const day = i + 1;
@@ -579,18 +559,9 @@ export function PostEditor({ initialData = null, timelineDate, onDateChange, loc
                     const isSelected = selectedDate === dateStr;
                     const isToday = day === todayDay && calMonth === now.getMonth() && calYear === now.getFullYear();
                     const isPast = new Date(dateStr).getTime() < new Date(todayStr).getTime();
-                    
                     return (
                       <button key={day} onClick={() => !isPast && selectCalDay(day)} disabled={isPast}
-                        style={{
-                          width: 32, height: 32, borderRadius: 8, fontSize: 12, fontWeight: 700,
-                          background: isSelected ? "#2563eb" : "transparent",
-                          color: isSelected ? "#fff" : isPast ? "#eee" : "#666",
-                          border: isToday && !isSelected ? "1px solid #2563eb" : "none",
-                          cursor: isPast ? "default" : "pointer",
-                          transition: "all 0.2s"
-                        }}
-                      >
+                        style={{ width: 30, height: 30, borderRadius: 6, fontSize: 11, fontWeight: 700, background: isSelected ? "#2563eb" : "transparent", color: isSelected ? "#fff" : isPast ? "#eee" : "#64748b", border: isToday && !isSelected ? "1px solid #2563eb" : "none", cursor: isPast ? "default" : "pointer" }}>
                         {day}
                       </button>
                     );
@@ -598,43 +569,91 @@ export function PostEditor({ initialData = null, timelineDate, onDateChange, loc
                 </div>
               </div>
 
-              {/* Time & Final Actions */}
-              {selectedDate && (
-                <div style={{ paddingTop: 20, borderTop: "1px solid #f1f5f9" }}>
-                  <label style={{ display: "block", fontSize: 11, fontWeight: 700, color: "#64748b", textTransform: "uppercase", marginBottom: 10 }}>Target Time</label>
-                  <input type="time" value={selectedTime} onChange={e => setSelectedTime(e.target.value)} 
-                    style={{ width: "100%", padding: "12px", border: "1px solid #eaeaea", borderRadius: 10, fontSize: 14, fontWeight: 600, marginBottom: 24 }} />
-                </div>
-              )}
+              {/* Time Selection */}
+              <div style={{ marginBottom: 24 }}>
+                <label style={{ display: "block", fontSize: 11, fontWeight: 700, color: "#64748b", textTransform: "uppercase", marginBottom: 8, letterSpacing: "0.05em" }}>Target Time (IST)</label>
+                <select 
+                  value={selectedTime} 
+                  onChange={(e) => setSelectedTime(e.target.value)} 
+                  disabled={isPublished}
+                  style={{ width: "100%", padding: "12px", border: "1px solid #eaeaea", borderRadius: 12, fontSize: 14, fontWeight: 600, color: "#0f172a", background: "#fff", outline: "none" }}
+                  className="focus:ring-2 focus:ring-[#2563eb] transition-all"
+                >
+                  {timeSlots.map(t => <option key={t} value={t}>{t}</option>)}
+                </select>
+              </div>
 
+              {/* Main Action Buttons */}
               <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-                {!isLocked && (
+                {!isLocked ? (
                   <>
-                    {canPublishNow && (
-                      <button onClick={() => handleSave("PUBLISH")} disabled={saving} style={{ width: "100%", padding: "14px", background: "#111", color: "#fff", border: "none", borderRadius: 12, fontSize: 14, fontWeight: 700, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 10 }}>
-                        <Send size={16} /> Publish Now
-                      </button>
-                    )}
-                    {canSchedule && isFutureScheduled && (
-                      <button onClick={() => handleSave("SCHEDULED")} disabled={saving} style={{ width: "100%", padding: "14px", background: "#2563eb", color: "#fff", border: "none", borderRadius: 12, fontSize: 14, fontWeight: 700, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 10 }}>
-                        <Clock size={16} /> Schedule Post
-                      </button>
-                    )}
-                    <button onClick={() => handleSave("DRAFT")} disabled={saving} style={{ width: "100%", padding: "14px", background: "#fff", color: "#111", border: "1px solid #eaeaea", borderRadius: 12, fontSize: 14, fontWeight: 700, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 10 }}>
-                      <Save size={16} /> Save as Draft
+                    <button 
+                      onClick={() => handleSave("SCHEDULED")}
+                      disabled={saving}
+                      style={{ 
+                        width: "100%", padding: "14px", background: "#2563eb", color: "#fff", 
+                        borderRadius: 12, border: "none", fontSize: 14, fontWeight: 700, 
+                        cursor: "pointer", display: "flex", alignItems: "center", 
+                        justifyContent: "center", gap: 10, boxShadow: "0 4px 12px rgba(37,99,235,0.2)" 
+                      }}
+                    >
+                      {saving && savingType === "SCHEDULED" ? <Loader2 size={18} className="animate-spin" /> : <Clock size={18} />}
+                      {initialData ? "Update Schedule" : "Schedule Post"}
+                    </button>
+                    
+                    <button 
+                      onClick={() => handleSave("PUBLISH")}
+                      disabled={saving || !canPublishNow}
+                      style={{ 
+                        width: "100%", padding: "13px", background: "#fff", color: "#2563eb", 
+                        border: "1px solid #2563eb", borderRadius: 12, fontSize: 14, fontWeight: 700, 
+                        cursor: "pointer", display: "flex", alignItems: "center", 
+                        justifyContent: "center", gap: 8 
+                      }}
+                    >
+                      {saving && savingType === "PUBLISH" ? <Loader2 size={16} className="animate-spin" /> : <Send size={16} />}
+                      Publish Now
+                    </button>
+
+                    <button 
+                      onClick={() => handleSave("DRAFT")}
+                      disabled={saving}
+                      style={{ 
+                        width: "100%", padding: "10px", background: "#f8fafc", color: "#64748b", 
+                        border: "1px solid #e2e8f0", borderRadius: 12, fontSize: 13, fontWeight: 600, 
+                        cursor: "pointer" 
+                      }}
+                    >
+                      Save Draft
                     </button>
                   </>
-                )}
-                {isLocked && (
-                  <Link href={returnUrl || "/profiles"} style={{ width: "100%", padding: "14px", background: "#f1f5f9", color: "#64748b", borderRadius: 12, fontSize: 14, fontWeight: 700, textDecoration: "none", textAlign: "center" }}>
+                ) : (
+                  <Link 
+                    href={returnUrl || "/profiles"} 
+                    style={{ 
+                      width: "100%", padding: "14px", background: "#f1f5f9", color: "#64748b", 
+                      borderRadius: 12, fontSize: 14, fontWeight: 700, textDecoration: "none", 
+                      textAlign: "center" 
+                    }}
+                  >
                     Back to Dashboard
                   </Link>
                 )}
               </div>
             </div>
           </div>
+
+          {/* Pro Tip Card */}
+          <div style={{ background: "#eff6ff", border: "1px solid #bfdbfe", borderRadius: 16, padding: "20px" }}>
+            <h4 style={{ fontSize: 13, fontWeight: 800, color: "#1e40af", display: "flex", alignItems: "center", gap: 8, marginBottom: 8 }}>
+              <Sparkles size={16} /> Pro Tip
+            </h4>
+            <p style={{ fontSize: 12, color: "#1e40af", lineHeight: 1.6, fontWeight: 500 }}>
+              Posts with high-quality images and a clear Call-to-Action button get up to 3x more engagement on Google Maps.
+            </p>
+          </div>
         </div>
       </div>
-    </>
+    </div>
   );
 }
