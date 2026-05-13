@@ -113,15 +113,12 @@ function ProfileCard({
         <div style={{ width: 4, background: theme.border, flexShrink: 0 }} />
 
         <div style={{ flex: 1, padding: "16px 14px 14px", position: "relative" }}>
-          {/* 3-dot menu */}
+          {/* 3-dot kebab menu */}
           <div style={{ position: "absolute", top: 12, right: 10 }}>
-            <button onClick={() => onEdit(profile)} title="Options" style={{ background: "none", border: "none", cursor: "pointer", color: "#9ca3af", padding: 4 }}>
-              <Eye style={{ width: 14, height: 14, opacity: 0 }} /> {/* Placeholder, can implement dropdown later */}
-              <div style={{ position: "absolute", top: 4, right: 4, display: "flex", flexDirection: "column", gap: 2 }}>
-                <div style={{ width: 3, height: 3, background: "#9ca3af", borderRadius: "50%" }} />
-                <div style={{ width: 3, height: 3, background: "#9ca3af", borderRadius: "50%" }} />
-                <div style={{ width: 3, height: 3, background: "#9ca3af", borderRadius: "50%" }} />
-              </div>
+            <button onClick={() => onEdit(profile)} title="Options" style={{ background: "none", border: "none", cursor: "pointer", color: "#9ca3af", padding: 4, display: "flex", flexDirection: "column", gap: 2.5, alignItems: "center", justifyContent: "center", width: 20, height: 20 }}>
+              <div style={{ width: 3, height: 3, background: "#9ca3af", borderRadius: "50%" }} />
+              <div style={{ width: 3, height: 3, background: "#9ca3af", borderRadius: "50%" }} />
+              <div style={{ width: 3, height: 3, background: "#9ca3af", borderRadius: "50%" }} />
             </button>
           </div>
 
@@ -196,8 +193,8 @@ function ProfileCard({
           onMouseLeave={(e) => { e.currentTarget.style.background = "#fff"; e.currentTarget.style.borderColor = `${theme.border}30`; }}
         >
           <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-            <BarChart3 size={14} color={theme.icon} />
-            <span style={{ fontSize: 12, fontWeight: 700, color: theme.text }}>View Performance Report</span>
+            <Eye size={14} color={theme.icon} />
+            <span style={{ fontSize: 12, fontWeight: 700, color: theme.text }}>View Posts</span>
           </div>
           <ArrowRight size={14} color={theme.icon} />
         </Link>
