@@ -56,7 +56,7 @@ export function Sidebar() {
   const isSuperAdmin = role === "SUPER_ADMIN" || user?.email?.toLowerCase() === "rankved.business@gmail.com";
 
   return (
-    <aside style={{ width: 260, borderRight: "1px solid #eaeaea", background: "#fcfcfc", display: "flex", flexDirection: "column", height: "100vh", padding: "16px 12px" }}>
+    <aside style={{ width: 260, borderRight: "1px solid #eaeaea", background: "#fcfcfc", display: "flex", flexDirection: "column", height: "100vh", padding: "16px 12px", position: "sticky", top: 0, flexShrink: 0 }}>
       {/* ─── Organization Selector ─── */}
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "8px 12px", cursor: "pointer", borderRadius: 6, marginBottom: 16 }}>
         <div style={{ display: "flex", alignItems: "center", gap: 12 }}>

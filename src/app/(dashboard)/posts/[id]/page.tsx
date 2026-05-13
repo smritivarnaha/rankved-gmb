@@ -54,24 +54,26 @@ export default function EditPostPage({ params }: { params: Promise<{ id: string 
     "text-[var(--text-tertiary)] bg-[var(--bg-tertiary)]";
 
   return (
-    <div className="space-y-5 max-w-[900px] mx-auto">
-      <div>
-        <Link href={post.profileId ? `/profiles/${post.profileId}` : "/profiles"} className="inline-flex items-center gap-1.5 text-[13px] text-[var(--text-tertiary)] hover:text-[var(--text-primary)] mb-3 transition-colors">
-          <ArrowLeft className="w-3.5 h-3.5" /> Back to profile
-        </Link>
-        <div className="flex items-center gap-3">
-          <h1 className="text-[20px] font-semibold text-[var(--text-primary)]">Edit post</h1>
-          <span className={`text-[11px] font-medium px-2 py-0.5 rounded-full capitalize ${statusStyle}`}>
-            {post.status.toLowerCase()}
-          </span>
+    <div style={{ minHeight: "100vh", background: "#f8fafc", margin: "-32px -40px", padding: "40px" }}>
+      <div className="space-y-8 max-w-[1040px] mx-auto">
+        <div>
+          <Link href={post.profileId ? `/profiles/${post.profileId}` : "/profiles"} className="inline-flex items-center gap-1.5 text-[13px] font-semibold text-[#64748b] hover:text-[#2563eb] mb-4 transition-colors">
+            <ArrowLeft className="w-4 h-4" /> Back to profile
+          </Link>
+          <div className="flex items-center gap-4">
+            <h1 className="text-[32px] font-extrabold text-[#111] tracking-tight">Edit Post</h1>
+            <span className={`text-[12px] font-bold px-3 py-1 rounded-full uppercase tracking-wider ${statusStyle}`}>
+              {post.status}
+            </span>
+          </div>
+          <p className="text-[14px] text-[#666] font-medium mt-1">
+            Created by {post.createdBy} · {new Date(post.createdAt).toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" })}
+          </p>
         </div>
-        <p className="text-[12px] text-[var(--text-tertiary)] mt-0.5">
-          Created by {post.createdBy} · {new Date(post.createdAt).toLocaleDateString("en-US", { timeZone: "Asia/Kolkata" })}
-        </p>
-      </div>
 
-      <PostTimeline onDateSelect={setSharedDate} selectedDate={sharedDate} />
-      <PostEditor initialData={post} timelineDate={sharedDate} onDateChange={setSharedDate} />
+        <PostTimeline onDateSelect={setSharedDate} selectedDate={sharedDate} profileId={post.profileId} />
+        <PostEditor initialData={post} timelineDate={sharedDate} onDateChange={setSharedDate} returnUrl={post.profileId ? `/profiles/${post.profileId}` : "/profiles"} />
+      </div>
     </div>
   );
 }

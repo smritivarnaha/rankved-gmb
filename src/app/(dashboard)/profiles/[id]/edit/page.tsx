@@ -134,7 +134,8 @@ export default function EditProfilePage() {
   ];
 
   return (
-    <div style={{ maxWidth: 1000, margin: "0 auto" }}>
+    <div style={{ minHeight: "100vh", background: "#f8fafc", margin: "-32px -40px", padding: "40px" }}>
+      <div style={{ maxWidth: 1000, margin: "0 auto" }}>
       {/* Sticky Header */}
       <div style={{ 
         position: "sticky", top: 0, zIndex: 10, background: "rgba(255,255,255,0.9)", 
@@ -186,7 +187,7 @@ export default function EditProfilePage() {
 
       <div style={{ display: "flex", gap: 32 }}>
         {/* Left Sidebar Nav */}
-        <div style={{ width: 220, flexShrink: 0, position: "sticky", top: 100, height: "fit-content" }}>
+        <div style={{ width: 220, flexShrink: 0, position: "sticky", top: 80, height: "fit-content" }}>
           <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
             {sections.map(s => (
               <button
@@ -556,9 +557,9 @@ export default function EditProfilePage() {
               </div>
             </div>
           )}
-
         </div>
       </div>
     </div>
+  </div>
   );
 }

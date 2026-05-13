@@ -134,14 +134,13 @@ export async function POST(req: NextRequest) {
                     const items: any[] = mediaData.mediaItems || [];
                     
                     // Search for Logo, then Profile, then Cover
-                    const logo = items.find((m: any) => m.locationAssociation?.category?.toUpperCase() === "LOGO") 
-                              || items.find((m: any) => m.category?.toUpperCase() === "LOGO")
-                              || items.find((m: any) => m.locationAssociation?.category?.toUpperCase() === "PROFILE")
-                              || items.find((m: any) => m.category?.toUpperCase() === "PROFILE")
-                              || items.find((m: any) => m.category?.toUpperCase() === "COVER");
+                    const logo = items.find((m: any) => ["LOGO", "PROFILE", "COVER"].includes(m.locationAssociation?.category?.toUpperCase()))
+                              || items.find((m: any) => ["LOGO", "PROFILE", "COVER"].includes(m.category?.toUpperCase()))
+                              || items[0]; // Fallback to first image if none found
                     
                     if (logo?.googleUrl) {
-                      logoUrl = logo.googleUrl;
+                      // Append =s300 for a decent sized thumbnail
+                      logoUrl = logo.googleUrl.split("=")[0] + "=s300";
                       console.log(`[Google Sync] Found logo for ${loc.title || loc.name}: ${logoUrl}`);
                     }
                   } else {

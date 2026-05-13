@@ -28,7 +28,28 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
     const data = await res.json();
     if (!res.ok) throw new Error(data.error?.message || "Failed to fetch from Google API");
 
-    return NextResponse.json({ data: { ...data, logoUrl: loc.logoUrl } });
+    // Fetch live logo as well
+    let liveLogo = loc.logoUrl;
+    try {
+      const accountId = loc.gbpAccountId;
+      const mediaRes = await fetch(`https://mybusiness.googleapis.com/v4/${accountId}/${locationName}/media?maxResults=10`, {
+        headers: { Authorization: `Bearer ${accessToken}` }
+      });
+      if (mediaRes.ok) {
+        const mediaData = await mediaRes.json();
+        const items = mediaData.mediaItems || [];
+        const logo = items.find((m: any) => ["LOGO", "PROFILE", "COVER"].includes(m.locationAssociation?.category?.toUpperCase()))
+                  || items.find((m: any) => ["LOGO", "PROFILE", "COVER"].includes(m.category?.toUpperCase()))
+                  || items[0];
+        if (logo?.googleUrl) {
+          liveLogo = logo.googleUrl.split("=")[0] + "=s400";
+        }
+      }
+    } catch (e) {
+      console.warn("Failed to fetch live logo:", e);
+    }
+
+    return NextResponse.json({ data: { ...data, logoUrl: liveLogo } });
   } catch (err: any) {
     return NextResponse.json({ error: err.message }, { status: 500 });
   }
@@ -40,6 +61,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
   if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   try {
+    const body = await req.json();
     const { 
       title, description, phone, website, categories, 
       regularHours, specialHours, serviceArea, attributes,
