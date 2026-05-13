@@ -121,13 +121,14 @@ export async function POST(req: NextRequest) {
                   addressParts.postalCode || "",
                 ].filter(Boolean);
 
-                // ─── ULTIMATE LOGO FETCH (PATTERN MATCHING) ───
+                // ─── ULTIMATE LOGO FETCH (PATTERN MATCHING + MAPS FALLBACK) ───
                 let logoUrl: string | undefined;
                 try {
                   const v4FullName = loc.name.startsWith("accounts/") ? loc.name : `${accountName}/${loc.name}`;
                   const v4ShortName = loc.name; // locations/{id}
+                  const placeId = loc.metadata?.placeId;
                   
-                  // Try multiple URL patterns because Google APIs are inconsistent across accounts
+                  // Pattern 1: Business Profile Media API (v4)
                   const urlsToTry = [
                     `https://mybusiness.googleapis.com/v4/${v4FullName}/media?maxResults=50`,
                     `https://mybusiness.googleapis.com/v4/${v4ShortName}/media?maxResults=50`,
@@ -135,16 +136,12 @@ export async function POST(req: NextRequest) {
                   ];
 
                   let allFoundItems: any[] = [];
-                  
                   for (const url of urlsToTry) {
-                    const res = await fetchWithRetry(url, { 
-                      headers: { Authorization: `Bearer ${accessToken}` } 
-                    });
+                    const res = await fetchWithRetry(url, { headers: { Authorization: `Bearer ${accessToken}` } });
                     if (res.ok) {
                       const json = await res.json();
                       const items = json.mediaItems || json.media || [];
                       if (items.length > 0) {
-                        // If it's the account-wide list, filter by location name
                         if (url.includes("/media?maxResults=100")) {
                           const filtered = items.filter((m: any) => 
                             m.locationAssociation?.locationName === v4FullName ||
@@ -157,11 +154,10 @@ export async function POST(req: NextRequest) {
                         }
                       }
                     }
-                    if (allFoundItems.length > 10) break; // Optimization
+                    if (allFoundItems.length > 10) break;
                   }
 
                   if (allFoundItems.length > 0) {
-                    // Sort by priority categories
                     const bestMatch = allFoundItems.find((m: any) => ["LOGO", "PROFILE", "COVER"].includes(m.locationAssociation?.category?.toUpperCase()))
                                    || allFoundItems.find((m: any) => ["LOGO", "PROFILE", "COVER"].includes(m.category?.toUpperCase()))
                                    || allFoundItems[0];
@@ -169,8 +165,27 @@ export async function POST(req: NextRequest) {
                     const rawUrl = bestMatch?.googleUrl || bestMatch?.thumbnailUrl || bestMatch?.contentUrl;
                     if (rawUrl) {
                       logoUrl = rawUrl.split("=")[0] + "=s400";
-                      console.log(`[Google Sync] 🎯 SUCCESS for ${loc.title}: ${logoUrl}`);
                     }
+                  }
+
+                  // ─── FAIL-SAFE: GOOGLE PLACES API (MAPS) ───
+                  // If Media API is empty but we have a Place ID, fetch from Google Maps directly
+                  if (!logoUrl && placeId && process.env.GOOGLE_MAPS_API_KEY) {
+                    const apiKey = process.env.GOOGLE_MAPS_API_KEY.replace(/["\s\\]/g, "");
+                    const placeUrl = `https://maps.googleapis.com/maps/api/place/details/json?place_id=${placeId}&fields=photos&key=${apiKey}`;
+                    const placeRes = await fetch(placeUrl);
+                    if (placeRes.ok) {
+                      const placeData = await placeRes.json();
+                      const photo = placeData.result?.photos?.[0];
+                      if (photo?.photo_reference) {
+                        logoUrl = `https://maps.googleapis.com/maps/api/place/photo?maxwidth=400&photo_reference=${photo.photo_reference}&key=${apiKey}`;
+                        console.log(`[Google Sync] 📍 MAPS FALLBACK for ${loc.title}: ${logoUrl}`);
+                      }
+                    }
+                  }
+
+                  if (logoUrl) {
+                    console.log(`[Google Sync] 🎯 SUCCESS for ${loc.title}: ${logoUrl}`);
                   }
                 } catch (err: any) {
                   console.error(`[Google Sync] ❌ Ultimate fetch failed:`, err.message);
