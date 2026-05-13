@@ -161,22 +161,19 @@ function ProfileCard({
         </div>
       </div>
 
-      {/* Stats strip */}
-      <div style={{ margin: "0 14px", padding: "16px 0", background: theme.bgLight, borderRadius: 8, display: "grid", gridTemplateColumns: "1fr 1fr 1fr" }}>
-        <div style={{ textAlign: "center", borderRight: `1px solid ${theme.border}20` }}>
-          <FileText style={{ width: 14, height: 14, color: theme.icon, margin: "0 auto 6px" }} />
-          <p style={{ fontSize: 16, fontWeight: 700, color: "#111827", lineHeight: 1, marginBottom: 2 }}>{drafts}</p>
-          <p style={{ fontSize: 9, fontWeight: 600, color: "#6b7280" }}>Drafts</p>
+      {/* Stats strip — grey, no icons */}
+      <div style={{ margin: "0 14px", padding: "14px 0", background: "#f9fafb", borderRadius: 8, display: "grid", gridTemplateColumns: "1fr 1fr 1fr", border: "1px solid #f1f5f9" }}>
+        <div style={{ textAlign: "center", borderRight: "1px solid #e5e7eb" }}>
+          <p style={{ fontSize: 18, fontWeight: 700, color: "#111827", lineHeight: 1, marginBottom: 3 }}>{drafts}</p>
+          <p style={{ fontSize: 9, fontWeight: 600, color: "#9ca3af", textTransform: "uppercase", letterSpacing: "0.04em" }}>Drafts</p>
         </div>
-        <div style={{ textAlign: "center", borderRight: `1px solid ${theme.border}20` }}>
-          <CalendarDays style={{ width: 14, height: 14, color: theme.icon, margin: "0 auto 6px" }} />
-          <p style={{ fontSize: 16, fontWeight: 700, color: "#111827", lineHeight: 1, marginBottom: 2 }}>{scheduled}</p>
-          <p style={{ fontSize: 9, fontWeight: 600, color: "#6b7280" }}>Scheduled</p>
+        <div style={{ textAlign: "center", borderRight: "1px solid #e5e7eb" }}>
+          <p style={{ fontSize: 18, fontWeight: 700, color: "#111827", lineHeight: 1, marginBottom: 3 }}>{scheduled}</p>
+          <p style={{ fontSize: 9, fontWeight: 600, color: "#9ca3af", textTransform: "uppercase", letterSpacing: "0.04em" }}>Scheduled</p>
         </div>
         <div style={{ textAlign: "center" }}>
-          <CheckCircle2 style={{ width: 14, height: 14, color: theme.icon, margin: "0 auto 6px" }} />
-          <p style={{ fontSize: 16, fontWeight: 700, color: "#111827", lineHeight: 1, marginBottom: 2 }}>{published}</p>
-          <p style={{ fontSize: 9, fontWeight: 600, color: "#6b7280" }}>Published</p>
+          <p style={{ fontSize: 18, fontWeight: 700, color: "#111827", lineHeight: 1, marginBottom: 3 }}>{published}</p>
+          <p style={{ fontSize: 9, fontWeight: 600, color: "#9ca3af", textTransform: "uppercase", letterSpacing: "0.04em" }}>Published</p>
         </div>
       </div>
 
