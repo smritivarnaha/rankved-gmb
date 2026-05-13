@@ -525,7 +525,7 @@ export function PostEditor({
         </div>
 
         {/* Sticky Sidebar Panel */}
-        <div style={{ width: 340, flexShrink: 0, position: "sticky", top: 32, display: "flex", flexDirection: "column", gap: 24, zIndex: 10 }}>
+        <div style={{ width: 340, flexShrink: 0, alignSelf: "flex-start", position: "sticky", top: 0, display: "flex", flexDirection: "column", gap: 24 }}>
           
           {/* Scheduling Card */}
           <div style={{ background: "#fff", border: "1px solid #eaeaea", borderRadius: 16, overflow: "hidden", boxShadow: "0 1px 3px rgba(0,0,0,0.02)" }}>

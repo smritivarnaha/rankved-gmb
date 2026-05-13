@@ -27,12 +27,8 @@ const fetcher = (url: string) => fetch(url).then((r) => r.json());
 import { Skeleton } from "@/components/ui/Skeleton";
 
 const THEMES = [
-  { border: "#3b82f6", bgLight: "#eff6ff", text: "#1e3a8a", icon: "#3b82f6" }, // Blue
-  { border: "#f59e0b", bgLight: "#fffbeb", text: "#92400e", icon: "#f59e0b" }, // Yellow
+  { border: "#2563eb", bgLight: "#eff6ff", text: "#1e40af", icon: "#2563eb" }, // Blue
   { border: "#10b981", bgLight: "#ecfdf5", text: "#065f46", icon: "#10b981" }, // Green
-  { border: "#a855f7", bgLight: "#faf5ff", text: "#6b21a8", icon: "#a855f7" }, // Purple
-  { border: "#f97316", bgLight: "#fff7ed", text: "#9a3412", icon: "#f97316" }, // Peach/Orange
-  { border: "#14b8a6", bgLight: "#f0fdfa", text: "#115e59", icon: "#14b8a6" }, // Teal
 ];
 
 function getTheme(name: string) {
