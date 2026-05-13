@@ -476,8 +476,131 @@ export function PostEditor({
                 </div>
               )}
               <input type="file" ref={fileRef} className="hidden" accept="image/*" onChange={handleImageSelect} />
+              {converting && (
+                <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "10px 14px", background: "#f0f9ff", borderRadius: 10, border: "1px solid #bae6fd" }}>
+                  <Loader2 size={14} className="animate-spin" style={{ color: "#2563eb" }} />
+                  <span style={{ fontSize: 12, fontWeight: 600, color: "#0369a1" }}>Converting to JPEG (100% quality)...</span>
+                </div>
+              )}
+              {imagePreview && !converting && imageFile && (
+                <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "8px 12px", background: "#f0fdf4", borderRadius: 8, border: "1px solid #bbf7d0" }}>
+                  <Check size={12} style={{ color: "#16a34a" }} />
+                  <span style={{ fontSize: 11, fontWeight: 600, color: "#15803d" }}>Auto-converted to JPEG • {(imageFile.size / 1024).toFixed(0)} KB</span>
+                </div>
+              )}
             </div>
           </div>
+
+          {/* Card 2b: Image Settings (Geo + SEO) */}
+          {!isPublished && (
+            <div style={{ background: "#fff", border: "1px solid #eaeaea", borderRadius: 16, padding: "24px", boxShadow: "0 1px 3px rgba(0,0,0,0.02)" }}>
+              <div className="space-y-4">
+                <label className="text-[11px] font-bold text-[#64748b] uppercase tracking-[0.1em]">Image Settings</label>
+
+                {/* Focus / SEO Keyword */}
+                <div className="space-y-2">
+                  <label className="text-[11px] font-semibold text-[#94a3b8] uppercase tracking-[0.08em]">SEO Filename Keyword</label>
+                  <input
+                    type="text"
+                    name="focusKeyword"
+                    value={form.focusKeyword}
+                    onChange={handleChange}
+                    placeholder="e.g. dr-smith-dentist-delhi"
+                    style={{ width: "100%", padding: "10px 14px", border: "1px solid #eaeaea", borderRadius: 10, fontSize: 13, fontWeight: 500, color: "#0f172a", background: "#fff" }}
+                  />
+                  <p style={{ fontSize: 11, color: "#94a3b8" }}>Used as the image filename for SEO — no spaces, use hyphens</p>
+                </div>
+
+                {/* Geo-Tagging Toggle */}
+                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "12px 0", borderTop: "1px solid #f1f5f9" }}>
+                  <div>
+                    <p style={{ fontSize: 13, fontWeight: 700, color: "#0f172a" }}>GPS Geo-Tagging</p>
+                    <p style={{ fontSize: 11, color: "#94a3b8" }}>Embed location + camera EXIF data into image</p>
+                  </div>
+                  <button
+                    onClick={() => setGeoEnabled(g => !g)}
+                    style={{
+                      width: 44, height: 24, borderRadius: 12, border: "none", cursor: "pointer",
+                      background: geoEnabled ? "#2563eb" : "#e2e8f0",
+                      position: "relative", transition: "background 0.2s"
+                    }}
+                  >
+                    <div style={{
+                      position: "absolute", top: 2, left: geoEnabled ? 22 : 2,
+                      width: 20, height: 20, borderRadius: "50%", background: "#fff",
+                      boxShadow: "0 1px 4px rgba(0,0,0,0.2)", transition: "left 0.2s"
+                    }} />
+                  </button>
+                </div>
+
+                {geoEnabled && (
+                  <div className="space-y-3" style={{ paddingTop: 8 }}>
+                    {/* Camera Template */}
+                    <div className="space-y-1">
+                      <label className="text-[11px] font-semibold text-[#94a3b8] uppercase tracking-[0.08em]">Camera Device Template</label>
+                      <select
+                        value={geoTemplate}
+                        onChange={e => setGeoTemplate(e.target.value)}
+                        style={{ width: "100%", padding: "10px 14px", border: "1px solid #eaeaea", borderRadius: 10, fontSize: 13, fontWeight: 500, background: "#fff" }}
+                      >
+                        {Object.entries(CAMERA_TEMPLATES).map(([key, val]: [string, any]) => (
+                          <option key={key} value={key}>{val.make} {val.model}</option>
+                        ))}
+                      </select>
+                    </div>
+
+                    {/* Coordinates */}
+                    <div style={{ display: "grid", gridTemplateColumns: "1fr auto 1fr auto", gap: 8, alignItems: "center" }}>
+                      <input
+                        type="number"
+                        placeholder="Latitude"
+                        value={geoLat}
+                        onChange={e => setGeoLat(e.target.value)}
+                        step="0.000001"
+                        style={{ padding: "10px", border: "1px solid #eaeaea", borderRadius: 10, fontSize: 13, fontWeight: 500 }}
+                      />
+                      <select value={geoLatRef} onChange={e => setGeoLatRef(e.target.value)} style={{ padding: "10px 6px", border: "1px solid #eaeaea", borderRadius: 10, fontSize: 13, background: "#fff" }}>
+                        <option value="N">N</option>
+                        <option value="S">S</option>
+                      </select>
+                      <input
+                        type="number"
+                        placeholder="Longitude"
+                        value={geoLng}
+                        onChange={e => setGeoLng(e.target.value)}
+                        step="0.000001"
+                        style={{ padding: "10px", border: "1px solid #eaeaea", borderRadius: 10, fontSize: 13, fontWeight: 500 }}
+                      />
+                      <select value={geoLngRef} onChange={e => setGeoLngRef(e.target.value)} style={{ padding: "10px 6px", border: "1px solid #eaeaea", borderRadius: 10, fontSize: 13, background: "#fff" }}>
+                        <option value="E">E</option>
+                        <option value="W">W</option>
+                      </select>
+                    </div>
+
+                    {/* EXIF Date */}
+                    <div className="space-y-1">
+                      <label className="text-[11px] font-semibold text-[#94a3b8] uppercase tracking-[0.08em]">EXIF Date</label>
+                      <input
+                        type="date"
+                        value={geoDate}
+                        onChange={e => setGeoDate(e.target.value)}
+                        style={{ width: "100%", padding: "10px 14px", border: "1px solid #eaeaea", borderRadius: 10, fontSize: 13, fontWeight: 500, background: "#fff" }}
+                      />
+                    </div>
+
+                    {geoLat && geoLng && (
+                      <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "8px 12px", background: "#f0fdf4", borderRadius: 8, border: "1px solid #bbf7d0" }}>
+                        <MapPin size={12} style={{ color: "#16a34a" }} />
+                        <span style={{ fontSize: 11, fontWeight: 600, color: "#15803d" }}>
+                          GPS ready: {parseFloat(geoLat).toFixed(4)}°{geoLatRef}, {parseFloat(geoLng).toFixed(4)}°{geoLngRef}
+                        </span>
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
 
           {/* Card 3: Post Content */}
           <div style={{ background: "#fff", border: "1px solid #eaeaea", borderRadius: 16, padding: "24px", boxShadow: "0 1px 3px rgba(0,0,0,0.02)" }}>
