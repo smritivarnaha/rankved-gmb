@@ -21,14 +21,14 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
     const accessToken = accounts[0].access_token;
     const locationName = loc.gbpLocationId;
 
-    const res = await fetch(`${INFO_API_BASE}/${locationName}?readMask=title,profile,phoneNumbers,websiteUri,categories,regularHours,specialHours,serviceArea,attributes`, {
+    const res = await fetch(`${INFO_API_BASE}/${locationName}?readMask=title,profile,phoneNumbers,websiteUri,categories,regularHours,specialHours,serviceArea,attributes,morePhones,metadata,storefrontAddress,labels`, {
       headers: { Authorization: `Bearer ${accessToken}` }
     });
 
     const data = await res.json();
     if (!res.ok) throw new Error(data.error?.message || "Failed to fetch from Google API");
 
-    return NextResponse.json({ data });
+    return NextResponse.json({ data: { ...data, logoUrl: loc.logoUrl } });
   } catch (err: any) {
     return NextResponse.json({ error: err.message }, { status: 500 });
   }
@@ -40,8 +40,11 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
   if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   try {
-    const body = await req.json();
-    const { title, description, phone, website, categories, regularHours, specialHours, serviceArea, attributes } = body;
+    const { 
+      title, description, phone, website, categories, 
+      regularHours, specialHours, serviceArea, attributes,
+      morePhones, storefrontAddress, labels 
+    } = body;
 
     const loc = await prisma.location.findUnique({ where: { id } });
     if (!loc) return NextResponse.json({ error: "Location not found" }, { status: 404 });
@@ -91,6 +94,18 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
     if (attributes !== undefined) {
       payload.attributes = attributes;
       updateMask.push("attributes");
+    }
+    if (morePhones !== undefined) {
+      payload.phoneNumbers = { ...payload.phoneNumbers, additionalPhones: morePhones };
+      updateMask.push("phoneNumbers.additionalPhones");
+    }
+    if (storefrontAddress !== undefined) {
+      payload.storefrontAddress = storefrontAddress;
+      updateMask.push("storefrontAddress");
+    }
+    if (labels !== undefined) {
+      payload.labels = labels;
+      updateMask.push("labels");
     }
 
     if (updateMask.length === 0) return NextResponse.json({ success: true });

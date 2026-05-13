@@ -110,6 +110,9 @@ export async function POST(req: NextRequest) {
               pageToken = locData.nextPageToken;
 
               for (const loc of locations) {
+                // Throttle per location to avoid media API rate limits
+                await delay(1000);
+
                 const addressParts = loc.storefrontAddress || {};
                 const addressLines = [
                   ...(addressParts.addressLines || []),
@@ -122,21 +125,31 @@ export async function POST(req: NextRequest) {
                 let logoUrl: string | undefined;
                 try {
                   const mediaUrl = `https://mybusiness.googleapis.com/v4/${accountName}/${loc.name}/media?maxResults=20`;
-                  const mediaRes = await fetch(mediaUrl, { 
+                  const mediaRes = await fetchWithRetry(mediaUrl, { 
                     headers: { Authorization: `Bearer ${accessToken}` } 
                   });
                   
                   if (mediaRes.ok) {
                     const mediaData = await mediaRes.json();
                     const items: any[] = mediaData.mediaItems || [];
-                    const logo = items.find((m: any) => m.locationAssociation?.category === "LOGO") 
-                              || items.find((m: any) => m.locationAssociation?.category === "PROFILE")
-                              || items.find((m: any) => m.category === "LOGO")
-                              || items.find((m: any) => m.category === "PROFILE");
                     
-                    if (logo?.googleUrl) logoUrl = logo.googleUrl;
+                    // Search for Logo, then Profile, then Cover
+                    const logo = items.find((m: any) => m.locationAssociation?.category?.toUpperCase() === "LOGO") 
+                              || items.find((m: any) => m.category?.toUpperCase() === "LOGO")
+                              || items.find((m: any) => m.locationAssociation?.category?.toUpperCase() === "PROFILE")
+                              || items.find((m: any) => m.category?.toUpperCase() === "PROFILE")
+                              || items.find((m: any) => m.category?.toUpperCase() === "COVER");
+                    
+                    if (logo?.googleUrl) {
+                      logoUrl = logo.googleUrl;
+                      console.log(`[Google Sync] Found logo for ${loc.title || loc.name}: ${logoUrl}`);
+                    }
+                  } else {
+                    console.warn(`[Google Sync] Media API error for ${loc.name}: ${mediaRes.status}`);
                   }
-                } catch (err) {}
+                } catch (err: any) {
+                  console.error(`[Google Sync] Logo fetch error for ${loc.name}:`, err.message);
+                }
 
                 fetchedProfiles.push({
                   id: crypto.randomUUID(),

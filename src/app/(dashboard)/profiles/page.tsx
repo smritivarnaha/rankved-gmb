@@ -192,18 +192,25 @@ function ProfileCard({
       </div>
 
       {/* Quick Actions (Floating or bottom) */}
-      <div style={{ display: "flex", gap: 8, padding: "0 14px 14px" }}>
+      <div style={{ display: "flex", flexWrap: "wrap", gap: 8, padding: "0 14px 14px" }}>
         <button
           onClick={() => onBulkImport(profile.id)}
           title="Bulk Import"
-          style={{ flex: 1, height: 32, display: "flex", alignItems: "center", justifyContent: "center", gap: 6, background: "#f8fafc", border: "1px solid #e2e8f0", borderRadius: 8, color: "#64748b", fontSize: 11, fontWeight: 600, cursor: "pointer" }}
+          style={{ flex: 1, minWidth: 70, height: 32, display: "flex", alignItems: "center", justifyContent: "center", gap: 6, background: "#f8fafc", border: "1px solid #e2e8f0", borderRadius: 8, color: "#64748b", fontSize: 11, fontWeight: 600, cursor: "pointer" }}
         >
           <Upload size={12} /> Bulk
+        </button>
+        <button
+          onClick={() => onEdit(profile)}
+          title="Edit Profile"
+          style={{ flex: 1, minWidth: 70, height: 32, display: "flex", alignItems: "center", justifyContent: "center", gap: 6, background: "#fff", border: "1px solid #2563eb", borderRadius: 8, color: "#2563eb", fontSize: 11, fontWeight: 600, cursor: "pointer" }}
+        >
+          <Edit2 size={12} /> Edit
         </button>
         <Link
           href={`/posts/new?profile=${profile.id}&from=profile`}
           title="Create Post"
-          style={{ flex: 1, height: 32, display: "flex", alignItems: "center", justifyContent: "center", gap: 6, background: "#2563eb", border: "none", borderRadius: 8, color: "#fff", fontSize: 11, fontWeight: 600, textDecoration: "none" }}
+          style={{ flex: 1, minWidth: 70, height: 32, display: "flex", alignItems: "center", justifyContent: "center", gap: 6, background: "#2563eb", border: "none", borderRadius: 8, color: "#fff", fontSize: 11, fontWeight: 600, textDecoration: "none" }}
         >
           <Plus size={12} /> Post
         </Link>
