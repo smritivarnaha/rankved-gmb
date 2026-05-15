@@ -83,7 +83,7 @@ export default function BackupPage() {
     reader.onload = async (event) => {
       try {
         const json = JSON.parse(event.target?.result as string);
-        if (!confirm("RESTORE SYSTEM DATA?\n\nThis will overwrite or update existing profiles and posts with the data from this file. Proceed?")) return;
+        if (!confirm("RESTORE SYSTEM DATA?\n\nThis will fill in any missing profiles and posts from this file. Existing data will be SKIPPED and preserved. Proceed?")) return;
         
         setProcessing(true);
         setStatus({ type: "info", message: "Restoring system data... this may take a moment." });
@@ -98,7 +98,7 @@ export default function BackupPage() {
         if (result.success) {
           setStatus({ 
             type: "success", 
-            message: `Data restored successfully! ${result.skippedLocations > 0 ? `(${result.skippedLocations} locations skipped due to errors)` : ""}` 
+            message: `Restore complete: ${result.restoredCount} records added, ${result.skippedCount} records skipped (already present).` 
           });
         } else {
           setStatus({ type: "error", message: result.error || "Restore failed." });
@@ -112,7 +112,7 @@ export default function BackupPage() {
   };
 
   const handleRestoreFromId = async (id: string) => {
-    if (!confirm("Restore system to this state? Current profiles and posts will be updated.")) return;
+    if (!confirm("Restore system to this state? Missing data will be filled, and existing data will be SKIPPED.")) return;
     
     setProcessing(true);
     setStatus({ type: "info", message: "Restoring state from database..." });
@@ -124,7 +124,10 @@ export default function BackupPage() {
       });
       const data = await res.json();
       if (data.success) {
-        setStatus({ type: "success", message: "System state restored successfully!" });
+        setStatus({ 
+          type: "success", 
+          message: `Restore complete: ${data.restoredCount} records added, ${data.skippedCount} records skipped.` 
+        });
       } else {
         setStatus({ type: "error", message: data.error || "Restore failed" });
       }

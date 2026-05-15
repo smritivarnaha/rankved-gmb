@@ -77,39 +77,36 @@ export async function POST(req: NextRequest) {
 
     const { clients, locations, posts, promptTemplates } = backupData;
 
-    // Restore strategy:
+    // Restore strategy: Skip if exists (Non-destructive)
+    let skippedCount = 0;
+    let restoredCount = 0;
+
     // 1. Clients
     if (clients?.length) {
       for (const c of clients) {
-        await prisma.client.upsert({
-          where: { id: c.id },
-          update: { name: c.name, description: c.description, website: c.website, logo: c.logo },
-          create: { ...c }
-        });
+        const existing = await prisma.client.findUnique({ where: { id: c.id } });
+        if (!existing) {
+          await prisma.client.create({ data: { ...c } });
+          restoredCount++;
+        } else {
+          skippedCount++;
+        }
       }
     }
 
     // 2. Locations (Profiles)
-    let skippedLocations = 0;
     if (locations?.length) {
       for (const l of locations) {
         try {
-          await prisma.location.upsert({
-            where: { id: l.id },
-            update: { 
-              name: l.name, 
-              address: l.address, 
-              phone: l.phone,
-              aiInstructions: l.aiInstructions,
-              aiKeywords: l.aiKeywords,
-              aiTone: l.aiTone,
-              logoUrl: l.logoUrl
-            },
-            create: { ...l }
-          });
+          const existing = await prisma.location.findUnique({ where: { id: l.id } });
+          if (!existing) {
+            await prisma.location.create({ data: { ...l } });
+            restoredCount++;
+          } else {
+            skippedCount++;
+          }
         } catch (err) {
           console.error(`Failed to restore location ${l.name}:`, err);
-          skippedLocations++;
         }
       }
     }
@@ -121,32 +118,30 @@ export async function POST(req: NextRequest) {
         const loc = await prisma.location.findUnique({ where: { id: p.locationId } });
         if (!loc) continue;
 
-        await prisma.post.upsert({
-          where: { id: p.id },
-          update: { 
-            summary: p.summary, 
-            status: p.status, 
-            scheduledAt: p.scheduledAt, 
-            mediaUrl: p.mediaUrl,
-            focusKeyword: p.focusKeyword
-          },
-          create: { ...p }
-        });
+        const existing = await prisma.post.findUnique({ where: { id: p.id } });
+        if (!existing) {
+          await prisma.post.create({ data: { ...p } });
+          restoredCount++;
+        } else {
+          skippedCount++;
+        }
       }
     }
 
     // 4. Prompt Templates
     if (promptTemplates?.length) {
       for (const t of promptTemplates) {
-        await prisma.promptTemplate.upsert({
-          where: { id: t.id },
-          update: { title: t.title, content: t.content },
-          create: { ...t }
-        });
+        const existing = await prisma.promptTemplate.findUnique({ where: { id: t.id } });
+        if (!existing) {
+          await prisma.promptTemplate.create({ data: { ...t } });
+          restoredCount++;
+        } else {
+          skippedCount++;
+        }
       }
     }
 
-    return NextResponse.json({ success: true, skippedLocations });
+    return NextResponse.json({ success: true, restoredCount, skippedCount });
   } catch (err: any) {
     return NextResponse.json({ error: err.message }, { status: 500 });
   }
