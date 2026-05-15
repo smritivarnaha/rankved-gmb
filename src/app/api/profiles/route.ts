@@ -1,3 +1,6 @@
+// Extend Vercel function timeout to 60s for large account syncs
+export const maxDuration = 60;
+
 import { NextResponse, NextRequest } from "next/server";
 import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/lib/auth";
@@ -119,26 +122,9 @@ export async function POST(req: NextRequest) {
                 try {
                   const mapsKey = (process.env.GOOGLE_MAPS_API_KEY || "").replace(/["\s\\]/g, "");
 
-                  // Helper: Download an image URL and convert to base64 data URI
-                  // This stores the actual image bytes in DB — no proxy or auth needed at display time
-                  async function downloadAsBase64(imageUrl: string, authHeader?: string): Promise<string | undefined> {
-                    try {
-                      const headers: Record<string, string> = {};
-                      if (authHeader) headers["Authorization"] = authHeader;
-                      const r = await fetch(imageUrl, { headers });
-                      if (!r.ok) return undefined;
-                      const buf = await r.arrayBuffer();
-                      const contentType = r.headers.get("content-type") || "image/jpeg";
-                      const b64 = Buffer.from(buf).toString("base64");
-                      return `data:${contentType};base64,${b64}`;
-                    } catch {
-                      return undefined;
-                    }
-                  }
-
-                  // ── Strategy 1: GBP Media API v4 — LOGO category ONLY ──────────
-                  // Fetches the ACTUAL logo set by the business owner in GBP.
-                  // We ONLY accept items explicitly categorised as LOGO — never random photos.
+                  // ── Strategy 1: GBP Media API v4 — LOGO category ONLY ─────────
+                  // This is the ACTUAL logo set by the business owner in GBP manager.
+                  // We store the googleUrl; the frontend displays it via the OAuth proxy.
                   if (!logoUrl) {
                     const locFullName = loc.name.startsWith("accounts/") ? loc.name : `${accountName}/${loc.name}`;
                     const mediaRes = await fetchWithRetry(
@@ -147,72 +133,37 @@ export async function POST(req: NextRequest) {
                     );
                     if (mediaRes.ok) {
                       const { mediaItems = [] } = await mediaRes.json();
-                      console.log(`[Sync] GBP Media: ${mediaItems.length} items for "${loc.title}" — cats: ${mediaItems.map((m: any) => m.locationAssociation?.category || m.category).join(", ")}`);
-                      // STRICTLY only use LOGO category
                       const logoItem = mediaItems.find((m: any) =>
                         (m.locationAssociation?.category || m.category || "").toUpperCase() === "LOGO"
                       );
-                      if (logoItem) {
-                        const raw = logoItem.googleUrl || logoItem.thumbnailUrl;
-                        if (raw) {
-                          // Download and store as base64 — no auth needed at display time
-                          const b64 = await downloadAsBase64(raw, `Bearer ${accessToken}`);
-                          if (b64) {
-                            logoUrl = b64;
-                            console.log(`[Sync] ✅ GBP LOGO downloaded as base64 for "${loc.title}"`);
-                          }
-                        }
+                      if (logoItem?.googleUrl) {
+                        // Mark with gbp: prefix so the proxy knows to attach OAuth token
+                        logoUrl = `gbp:${logoItem.googleUrl}`;
+                        console.log(`[Sync] ✅ GBP LOGO found for "${loc.title}"`);
                       } else {
-                        console.warn(`[Sync] GBP Media: no LOGO category for "${loc.title}" (${mediaItems.length} items with other cats)`);
+                        console.warn(`[Sync] No LOGO category for "${loc.title}" (${mediaItems.length} items)`);
                       }
                     } else {
-                      const errText = await mediaRes.text();
-                      console.warn(`[Sync] GBP Media ${mediaRes.status} for "${loc.title}": ${errText.substring(0, 100)}`);
+                      const t = await mediaRes.text();
+                      console.warn(`[Sync] GBP Media ${mediaRes.status} for "${loc.title}": ${t.substring(0, 80)}`);
                     }
                   }
 
-                  // ── Strategy 2: Places API (New) — profile photo ────────────────
-                  // Uses the first photo from Places API. This is a public photo, 
-                  // typically the most prominent one on Google Maps.
-                  // Only run if GBP Media returned no LOGO.
+                  // ── Strategy 2: Classic Places API (public, uses Maps API key) ─
+                  // Photo URLs from this API include the key — no proxy needed.
                   if (!logoUrl && placeId && mapsKey) {
-                    const placesRes = await fetch(`https://places.googleapis.com/v1/places/${placeId}`, {
-                      headers: { Authorization: `Bearer ${accessToken}`, "X-Goog-FieldMask": "photos" },
-                    });
-                    if (placesRes.ok) {
-                      const placesData = await placesRes.json();
-                      const photoName = placesData.photos?.[0]?.name;
-                      if (photoName) {
-                        const photoUrl = `https://places.googleapis.com/v1/${photoName}/media?maxWidthPx=400&key=${mapsKey}`;
-                        const b64 = await downloadAsBase64(photoUrl);
-                        if (b64) {
-                          logoUrl = b64;
-                          console.log(`[Sync] ✅ Places API photo downloaded as base64 for "${loc.title}"`);
-                        }
-                      }
-                    }
-                  }
-
-                  // ── Strategy 3: Classic Places API ─────────────────────────────
-                  if (!logoUrl && placeId && mapsKey) {
-                    const detailsRes = await fetch(
+                    const det = await fetch(
                       `https://maps.googleapis.com/maps/api/place/details/json?place_id=${placeId}&fields=photos&key=${mapsKey}`
-                    );
-                    if (detailsRes.ok) {
-                      const det = await detailsRes.json();
-                      const ref = det.result?.photos?.[0]?.photo_reference;
-                      if (ref) {
-                        const photoUrl = `https://maps.googleapis.com/maps/api/place/photo?maxwidth=400&photo_reference=${ref}&key=${mapsKey}`;
-                        const b64 = await downloadAsBase64(photoUrl);
-                        if (b64) {
-                          logoUrl = b64;
-                          console.log(`[Sync] ✅ Classic Places photo downloaded as base64 for "${loc.title}"`);
-                        }
-                      }
+                    ).then(r => r.ok ? r.json() : null);
+                    const ref = det?.result?.photos?.[0]?.photo_reference;
+                    if (ref) {
+                      // This URL is publicly accessible — no proxy needed
+                      logoUrl = `https://maps.googleapis.com/maps/api/place/photo?maxwidth=400&photo_reference=${ref}&key=${mapsKey}`;
+                      console.log(`[Sync] ✅ Classic Places logo for "${loc.title}"`);
                     }
                   }
 
-                  if (!logoUrl) console.warn(`[Sync] ❌ No logo found for "${loc.title}"`);
+                  if (!logoUrl) console.warn(`[Sync] ❌ No logo for "${loc.title}"`);
                 } catch (e) {
                   console.error(`Logo error for ${loc.title}:`, e);
                 }

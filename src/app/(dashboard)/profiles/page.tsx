@@ -40,8 +40,19 @@ function getTheme(name: string) {
 function proxyUrl(url?: string) {
   if (!url) return undefined;
   if (url.startsWith("data:")) return url;
-  if (url.includes("lh3.googleusercontent.com")) return url; // Usually public
-  return `/api/proxy/media?url=${encodeURIComponent(url)}`;
+  
+  let targetUrl = url;
+  if (url.startsWith("gbp:")) {
+    targetUrl = url.replace("gbp:", "");
+  }
+  
+  // Classic Places API photos already have a public API key, no proxy needed
+  if (targetUrl.includes("maps.googleapis.com/maps/api/place/photo")) {
+    return targetUrl;
+  }
+  
+  // For GBP Media API (lh3.googleusercontent.com) we MUST proxy to attach the OAuth token
+  return `/api/proxy/media?url=${encodeURIComponent(targetUrl)}`;
 }
 
 function SkeletonProfileCard() {
@@ -278,6 +289,32 @@ export default function ProfilesPage() {
 
   return (
     <div>
+      {/* Full-screen Syncing Overlay */}
+      {isSyncing && (
+        <div style={{
+          position: "fixed", inset: 0, zIndex: 99999,
+          background: "rgba(255,255,255,0.8)", backdropFilter: "blur(4px)",
+          display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center"
+        }}>
+          <div style={{ background: "#fff", padding: "32px 48px", borderRadius: 20, boxShadow: "0 20px 40px rgba(0,0,0,0.1)", display: "flex", flexDirection: "column", alignItems: "center", gap: 16 }}>
+            <Loader2 size={40} className="animate-spin" color="#2563eb" />
+            <div style={{ textAlign: "center" }}>
+              <h3 style={{ margin: "0 0 4px", fontSize: 18, fontWeight: 700, color: "#111" }}>Syncing Profiles...</h3>
+              <p style={{ margin: 0, fontSize: 13, color: "#64748b" }}>Fetching latest updates and logos from Google</p>
+            </div>
+            <div style={{ width: 200, height: 4, background: "#f1f5f9", borderRadius: 2, overflow: "hidden", marginTop: 8 }}>
+              <div style={{ width: "100%", height: "100%", background: "#2563eb", borderRadius: 2, animation: "indeterminate 1.5s infinite ease-in-out" }} />
+            </div>
+            <style>{`
+              @keyframes indeterminate {
+                0% { transform: translateX(-100%); }
+                100% { transform: translateX(100%); }
+              }
+            `}</style>
+          </div>
+        </div>
+      )}
+
       {/* Header */}
       <div className="page-header">
         <div>

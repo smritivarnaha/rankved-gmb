@@ -16,8 +16,19 @@ const POSTS_PER_PAGE = 12;
 function proxyUrl(url?: string) {
   if (!url) return undefined;
   if (url.startsWith("data:")) return url;
-  if (url.includes("lh3.googleusercontent.com")) return url; // Usually public
-  return `/api/proxy/media?url=${encodeURIComponent(url)}`;
+  
+  let targetUrl = url;
+  if (url.startsWith("gbp:")) {
+    targetUrl = url.replace("gbp:", "");
+  }
+  
+  // Classic Places API photos already have a public API key, no proxy needed
+  if (targetUrl.includes("maps.googleapis.com/maps/api/place/photo")) {
+    return targetUrl;
+  }
+  
+  // For GBP Media API (lh3.googleusercontent.com) we MUST proxy to attach the OAuth token
+  return `/api/proxy/media?url=${encodeURIComponent(targetUrl)}`;
 }
 
 function getPostType(post: any): { label: string; color: string; bg: string; Icon: any } {
