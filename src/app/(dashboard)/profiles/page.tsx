@@ -282,6 +282,19 @@ export default function ProfilesPage() {
         </div>
         <div className="flex gap-3">
           <button 
+            onClick={() => {
+              const url = window.location.origin + "/link";
+              navigator.clipboard.writeText(url);
+              setMessage({ type: "success", text: "Onboarding link copied to clipboard! Share this with your clients." });
+            }}
+            className="btn btn-outline"
+            style={{ borderColor: "#0f172a", color: "#0f172a", background: "#fff" }}
+            title="Copy one-click authorization link for clients"
+          >
+            <Plus size={14} className="mr-2" />
+            Copy Onboarding Link
+          </button>
+          <button 
             onClick={handleSync}
             disabled={isSyncing}
             className="btn btn-outline"
