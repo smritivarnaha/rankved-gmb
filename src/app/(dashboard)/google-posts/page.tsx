@@ -3,7 +3,8 @@
 import { useState, useEffect } from "react";
 import { 
   Search, MapPin, ExternalLink, Trash2, Loader2, 
-  AlertCircle, RefreshCw, Globe, Calendar, FileText
+  AlertCircle, RefreshCw, Globe, Calendar, FileText,
+  ArrowRight
 } from "lucide-react";
 import Link from "next/link";
 
