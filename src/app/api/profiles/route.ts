@@ -150,24 +150,28 @@ export async function POST(req: NextRequest) {
                   }
 
                   // ── Strategy 2: Smart Places API (New) — Find the squarest business photo ──
-                  // Business logos are almost always square. Random Maps photos are usually landscape.
                   if (!logoUrl && placeId && mapsKey) {
+                    console.log(`[Sync] Strategy 2: Fetching photos for ${loc.title} (placeId: ${placeId})... Key prefix: ${mapsKey.substring(0, 4)}`);
                     const placesRes = await fetch(`https://places.googleapis.com/v1/places/${placeId}?key=${mapsKey}`, {
-                      headers: { "X-Goog-FieldMask": "photos,displayName" },
+                      headers: { "X-Goog-FieldMask": "photos.widthPx,photos.heightPx,photos.authorAttributions,photos.name,displayName" },
                     });
+                    
                     if (placesRes.ok) {
                       const data = await placesRes.json();
-                      const businessName = data.displayName?.text || "";
+                      const businessName = (data.displayName?.text || loc.title || "").toLowerCase();
                       const photos = data.photos || [];
+                      console.log(`[Sync] Strategy 2: Found ${photos.length} photos for "${loc.title}"`);
                       
                       // Filter for photos uploaded by the business itself
                       const bizPhotos = photos.filter((p: any) => 
-                        p.authorAttributions?.some((a: any) => 
-                          a.displayName?.toLowerCase().includes(businessName.toLowerCase()) ||
-                          businessName.toLowerCase().includes(a.displayName?.toLowerCase())
-                        )
+                        p.authorAttributions?.some((a: any) => {
+                          const author = (a.displayName || "").toLowerCase();
+                          return author.includes(businessName) || businessName.includes(author) || 
+                                 author.includes("business owner") || author.includes("owner");
+                        })
                       );
                       
+                      console.log(`[Sync] Strategy 2: ${bizPhotos.length} business-uploaded photos for "${loc.title}"`);
                       const candidatePhotos = bizPhotos.length > 0 ? bizPhotos : photos;
                       
                       // Find the squarest photo (ratio closest to 1.0)
@@ -185,32 +189,36 @@ export async function POST(req: NextRequest) {
                         }
                       }
                       
-                      if (bestPhoto && minDiff < 0.2) { // Only use if it's reasonably square
+                      if (bestPhoto && minDiff < 0.25) { 
                         logoUrl = `https://places.googleapis.com/v1/${bestPhoto.name}/media?maxWidthPx=400&key=${mapsKey}`;
-                        console.log(`[Sync] ✅ Smart Square Photo detected for "${loc.title}" (diff=${minDiff.toFixed(3)})`);
+                        console.log(`[Sync] Strategy 2: ✅ Picked squarest photo (diff=${minDiff.toFixed(3)})`);
                       } else if (photos[0]) {
-                        // Final fallback: just use the first photo if no square one found
                         logoUrl = `https://places.googleapis.com/v1/${photos[0].name}/media?maxWidthPx=400&key=${mapsKey}`;
-                        console.log(`[Sync] ⚠️ Using first available photo for "${loc.title}"`);
+                        console.log(`[Sync] Strategy 2: ⚠️ No square photo found, using first available.`);
                       }
+                    } else {
+                      const errText = await placesRes.text();
+                      console.error(`[Sync] Strategy 2: Places API Error (${placesRes.status}): ${errText.substring(0, 100)}`);
                     }
                   }
 
                   // ── Strategy 3: Classic Places API (Legacy Fallback) ─────────────
                   if (!logoUrl && placeId && mapsKey) {
+                    console.log(`[Sync] Strategy 3: Falling back to Classic Places for "${loc.title}"`);
                     const det = await fetch(
                       `https://maps.googleapis.com/maps/api/place/details/json?place_id=${placeId}&fields=photos&key=${mapsKey}`
                     ).then(r => r.ok ? r.json() : null);
+                    
                     const ref = det?.result?.photos?.[0]?.photo_reference;
                     if (ref) {
                       logoUrl = `https://maps.googleapis.com/maps/api/place/photo?maxwidth=400&photo_reference=${ref}&key=${mapsKey}`;
-                      console.log(`[Sync] ✅ Classic Places fallback logo for "${loc.title}"`);
+                      console.log(`[Sync] Strategy 3: ✅ Classic fallback photo obtained.`);
                     }
                   }
 
-                  if (!logoUrl) console.warn(`[Sync] ❌ No logo for "${loc.title}"`);
-                } catch (e) {
-                  console.error(`Logo error for ${loc.title}:`, e);
+                  if (!logoUrl) console.warn(`[Sync] ❌ FAILED to fetch any logo for "${loc.title}"`);
+                } catch (e: any) {
+                  console.error(`[Sync] Critical logo error for ${loc.title}:`, e.message);
                 }
 
 
