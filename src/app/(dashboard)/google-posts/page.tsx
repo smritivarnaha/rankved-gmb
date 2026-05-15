@@ -50,20 +50,24 @@ function PostModal({ post, onClose, onDelete }: { post: any; onClose: () => void
       style={{
         position: "fixed", inset: 0, zIndex: 9999,
         background: "rgba(15,23,42,0.65)", backdropFilter: "blur(8px)",
-        display: "flex", alignItems: "center", justifyContent: "center", padding: 20,
+        padding: 20, overflow: "hidden"
       }}
       onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
     >
       <div className="post-modal-inner" style={{
+        position: "absolute", top: "50%", left: "50%", 
+        transform: "translate(-50%, -50%)",
         background: "#fff", borderRadius: 24, 
+        maxWidth: 580, width: "calc(100% - 40px)",
+        maxHeight: "90vh",
         boxShadow: "0 32px 80px rgba(0,0,0,0.25)",
         display: "flex", flexDirection: "column",
-        animation: "modalIn 0.3s cubic-bezier(0.34,1.56,0.64,1)"
+        animation: "modalIn 0.4s cubic-bezier(0.16, 1, 0.3, 1)"
       }}>
         <style>{`
           @keyframes modalIn {
-            from { opacity: 0; transform: scale(0.95) translateY(20px); }
-            to   { opacity: 1; transform: scale(1) translateY(0); }
+            from { opacity: 0; transform: translate(-50%, -45%) scale(0.96); }
+            to   { opacity: 1; transform: translate(-50%, -50%) scale(1); }
           }
         `}</style>
 
