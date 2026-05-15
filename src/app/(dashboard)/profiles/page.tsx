@@ -37,6 +37,13 @@ function getTheme(name: string) {
   return THEMES[Math.abs(h) % THEMES.length];
 }
 
+function proxyUrl(url?: string) {
+  if (!url) return undefined;
+  if (url.startsWith("data:")) return url;
+  if (url.includes("lh3.googleusercontent.com")) return url; // Usually public
+  return `/api/proxy/media?url=${encodeURIComponent(url)}`;
+}
+
 function SkeletonProfileCard() {
   return (
     <div style={{ background: "#ffffff", borderRadius: 14, boxShadow: "0 1px 4px rgba(0,0,0,0.07)", border: "1px solid #eaeaea", overflow: "hidden", display: "flex", flexDirection: "column" }}>
@@ -133,7 +140,7 @@ function ProfileCard({
             }}>
               {profile.logoUrl ? (
                 <img 
-                  src={profile.logoUrl} 
+                  src={proxyUrl(profile.logoUrl)} 
                   alt={profile.name} 
                   referrerPolicy="no-referrer"
                   style={{ width: "100%", height: "100%", objectFit: "cover" }} 

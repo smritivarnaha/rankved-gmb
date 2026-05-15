@@ -13,6 +13,13 @@ import { ProfileItemSkeleton, PostCardSkeleton } from "@/components/ui/Skeleton"
 type SortOption = "newest" | "oldest" | "type";
 const POSTS_PER_PAGE = 12;
 
+function proxyUrl(url?: string) {
+  if (!url) return undefined;
+  if (url.startsWith("data:")) return url;
+  if (url.includes("lh3.googleusercontent.com")) return url; // Usually public
+  return `/api/proxy/media?url=${encodeURIComponent(url)}`;
+}
+
 function getPostType(post: any): { label: string; color: string; bg: string; Icon: any } {
   const topic = (post.topicType || "").toLowerCase();
   if (topic.includes("event"))  return { label: "Event",  color: "#7C3AED", bg: "#F5F3FF", Icon: Calendar };
@@ -90,8 +97,8 @@ function PostModal({ post, onClose, onDelete }: { post: any; onClose: () => void
           {/* Image */}
           {post.media?.length > 0 && (
             <div style={{ marginBottom: 24, borderRadius: 16, overflow: "hidden", border: "1px solid #f1f5f9", boxShadow: "0 4px 12px rgba(0,0,0,0.05)" }}>
-              <img src={post.media[0].googleUrl} alt="" style={{ width: "100%", maxHeight: 400, objectFit: "contain", background: "#f8fafc", display: "block" }} />
-            </div>
+            <img src={proxyUrl(post.media[0].googleUrl)} alt="" style={{ width: "100%", maxHeight: 400, objectFit: "contain", background: "#f8fafc", display: "block" }} />
+          </div>
           )}
 
           {/* Text Content */}
@@ -279,7 +286,7 @@ export default function GooglePostsPage() {
                   cursor: "pointer", transition: "all 0.2s"
                 }}>
                 <div style={{ width: 32, height: 32, borderRadius: 8, background: "#f1f5f9", flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center", border: "1px solid #e2e8f0", overflow: "hidden", backgroundSize: 'cover' }}>
-                  {p.logoUrl ? <img src={p.logoUrl} style={{ width: "100%", height: "100%", objectFit: "cover" }} alt="" /> : <MapPin size={14} style={{ color: "#94a3b8" }} />}
+                  {p.logoUrl ? <img src={proxyUrl(p.logoUrl)} style={{ width: "100%", height: "100%", objectFit: "cover" }} alt="" /> : <MapPin size={14} style={{ color: "#94a3b8" }} />}
                 </div>
                 <div style={{ minWidth: 0 }}>
                   <p style={{ fontSize: 13, fontWeight: 600, color: selectedProfileId === p.id ? "#2563EB" : "#334155", margin: 0, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
@@ -405,7 +412,7 @@ export default function GooglePostsPage() {
                           {/* Card image container */}
                           <div style={{ height: 180, overflow: "hidden", background: "#f8fafc", flexShrink: 0, position: 'relative' }}>
                             {hasImage ? (
-                              <img src={post.media[0].googleUrl} alt="" style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
+                              <img src={proxyUrl(post.media[0].googleUrl)} alt="" style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
                             ) : (
                               <div style={{ height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#cbd5e1' }}>
                                 <FileText size={40} />
