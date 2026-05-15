@@ -16,29 +16,52 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
   }
 
   try {
-    // Fetch profile details to get the gbpLocationId
+    // Fetch profile details to get the gbpLocationId and gbpAccountId
     const prisma = (await import("@/lib/prisma")).default;
     const location = await prisma.location.findUnique({ where: { id: locationId } });
     if (!location || !location.gbpLocationId) {
       return NextResponse.json({ error: "Location not found or not synced with Google." }, { status: 404 });
     }
 
-    // Google API requires full resource name or just locations/id? 
-    // In this app, gbpLocationId usually stores "locations/ID" or just "ID".
-    // If it's just the ID, we prefix with locations/
-    const resourceName = location.gbpLocationId.includes("/") ? location.gbpLocationId : `locations/${location.gbpLocationId}`;
+    // Normalise IDs — strip the "locations/" and "accounts/" prefixes if present
+    const rawLocationId = location.gbpLocationId.replace("locations/", "");
+    const rawAccountId  = (location.gbpAccountId || "").replace("accounts/", "");
 
-    const res = await fetch(`https://mybusiness.googleapis.com/v4/${resourceName}/localPosts?pageSize=20`, {
+    // The CORRECT Google My Business API endpoint requires the full account path:
+    // accounts/{accountId}/locations/{locationId}/localPosts
+    // Using just locations/{id}/localPosts returns a 404 HTML response.
+    let apiUrl: string;
+    if (rawAccountId) {
+      apiUrl = `https://mybusiness.googleapis.com/v4/accounts/${rawAccountId}/locations/${rawLocationId}/localPosts?pageSize=20`;
+    } else {
+      // Fallback (less reliable) — try without account prefix
+      apiUrl = `https://mybusiness.googleapis.com/v4/locations/${rawLocationId}/localPosts?pageSize=20`;
+    }
+
+    console.log(`[Google Posts API] Calling: ${apiUrl}`);
+
+    const res = await fetch(apiUrl, {
       headers: { Authorization: `Bearer ${accessToken}` },
     });
 
+    // Detect HTML error page (API returned wrong content type)
+    const contentType = res.headers.get("content-type") || "";
+    if (!contentType.includes("application/json")) {
+      const text = await res.text();
+      console.error(`[Google Posts API] Non-JSON response (${res.status}):`, text.substring(0, 200));
+      return NextResponse.json({ 
+        error: `Google API returned an unexpected response (HTTP ${res.status}). The account may not have access to this location's posts.`,
+        hint: "Ensure the Google account has the Business Profile Manager role for this location."
+      }, { status: 502 });
+    }
+
     if (!res.ok) {
       const err = await res.json().catch(() => ({}));
-      console.error(`[Google Posts API] Fetch failed for ${resourceName}:`, res.status, err);
+      console.error(`[Google Posts API] Fetch failed:`, res.status, err);
       return NextResponse.json({ 
         error: err?.error?.message || "Failed to fetch posts from Google",
         details: err?.error,
-        status: res.status
+        httpStatus: res.status
       }, { status: res.status });
     }
 

@@ -123,13 +123,13 @@ export default function GooglePostsPage() {
       <div style={{ display: "grid", gridTemplateColumns: "280px 1fr", gap: 24, alignItems: "start" }}>
         {/* Profile Sidebar */}
         <div style={{ ...cardStyle, padding: 0, overflow: "hidden", position: "sticky", top: 24 }}>
-          <div style={{ padding: "16px 20px", borderBottom: "1px solid #eaeaea" }}>
+          <div style={{ padding: "14px 16px", borderBottom: "1px solid #eaeaea" }}>
             <div style={{ position: "relative" }}>
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-[#94a3b8]" size={14} />
+              <Search style={{ position: "absolute", left: 10, top: "50%", transform: "translateY(-50%)", color: "#94a3b8", pointerEvents: "none" }} size={14} />
               <input 
                 type="text" 
                 placeholder="Search profiles..." 
-                style={{ width: "100%", height: 36, paddingLeft: 32, fontSize: 13, background: "#f8fafc", border: "1px solid #e2e8f0", borderRadius: 6, outline: "none" }}
+                style={{ width: "100%", height: 36, paddingLeft: 32, paddingRight: 12, fontSize: 13, background: "#f8fafc", border: "1px solid #e2e8f0", borderRadius: 6, outline: "none", boxSizing: "border-box" }}
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
               />
