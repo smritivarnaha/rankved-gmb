@@ -8,7 +8,7 @@ import {
   LayoutDashboard, CalendarDays, Settings, MapPin,
   FileText, Users, Shield, BarChart3, Key, Zap,
   Search, ChevronsUpDown, Command, User, Share2, 
-  Lock, Star, ArrowRight, LogOut
+  Lock, Star, ArrowRight, LogOut, Database, Globe
 } from "lucide-react";
 import { useGlobalSettings } from "@/hooks/useGlobalSettings";
 
@@ -27,6 +27,7 @@ import { useGlobalSettings } from "@/hooks/useGlobalSettings";
       label: "MANAGEMENT",
       items: [
         { name: "Calendar", href: "/calendar", icon: CalendarDays },
+        { name: "Posts from Google", href: "/google-posts", icon: Globe },
         { name: "Team", href: "/team", icon: Users, hideForTeam: true },
         { name: "API Keys", href: "/api-keys", icon: Key, hideForTeam: true },
       ]
@@ -35,6 +36,7 @@ import { useGlobalSettings } from "@/hooks/useGlobalSettings";
       label: "SYSTEM",
       items: [
         { name: "Settings", href: "/settings", icon: Settings },
+        { name: "Backup & Restore", href: "/settings/backup", icon: Database, superAdminOnly: true },
         { name: "Admin Setup", href: "/admin", icon: Shield, superAdminOnly: true },
       ]
     }

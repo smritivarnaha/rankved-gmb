@@ -41,10 +41,22 @@ export async function GET(req: NextRequest) {
   }
 
   console.log(`[CRON] Found ${duePosts.length} due posts to publish`);
-
+  
   const results: { id: string; status: string; error?: string }[] = [];
 
   for (const dbPost of duePosts) {
+    // Attempt to lock the post by updating its status from SCHEDULED to PUBLISHING.
+    // This atomic operation prevents concurrent cron runs from processing the same post.
+    try {
+      await prisma.post.update({
+        where: { id: dbPost.id, status: "SCHEDULED" },
+        data: { status: "PUBLISHING" },
+      });
+    } catch (e) {
+      console.log(`[CRON] Skipping post ${dbPost.id} - already being processed by another worker.`);
+      continue;
+    }
+
     // Use our new global helper to find the most appropriate access token
     // This takes care of looking up the admin/owner account and refreshing if needed
     const accessToken = await getGoogleAccessTokenForLocation(dbPost.locationId);

@@ -3,7 +3,7 @@
 import { useState, useRef, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
-import { Save, Clock, Loader2, ImagePlus, X, Send, MapPin, Link as LinkIcon, Copy, Check, Lock, Phone, Sparkles } from "lucide-react";
+import { Save, Clock, Loader2, ImagePlus, X, Send, MapPin, Link as LinkIcon, Copy, Check, Lock, Phone, Sparkles, Download } from "lucide-react";
 import Link from "next/link";
 import { embedGPSInImage, CAMERA_TEMPLATES } from "@/lib/geo-exif";
 import Lottie from "lottie-react";
@@ -309,7 +309,58 @@ export function PostEditor({
     return new Date(s).getTime() > Date.now();
   })();
 
+  const handleDownloadImage = async () => {
+    if (!imagePreview) return;
+    setSaving(true);
+    setSavingType("DOWNLOADING");
+    try {
+      let finalUrl = imagePreview;
+      if (geoEnabled && geoLat && geoLng) {
+        finalUrl = await embedGPSInImage(
+          imagePreview,
+          parseFloat(geoLat),
+          parseFloat(geoLng),
+          geoLatRef,
+          geoLngRef,
+          geoTemplate,
+          geoDate
+        );
+      }
+      
+      const link = document.createElement("a");
+      link.href = finalUrl;
+      link.download = `post-image-${Date.now()}.jpg`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    } catch (err) {
+      alert("Failed to download image with metadata.");
+    }
+    setSaving(false);
+    setSavingType("");
+  };
+
   const handleSave = async (type: string) => {
+    // 0. Duplicate Content Check
+    if (type === "PUBLISH" || type === "SCHEDULED") {
+      try {
+        const checkRes = await fetch("/api/posts/check-duplicate", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ locationId: form.locationId, summary: form.summary }),
+        });
+        const checkData = await checkRes.json();
+        if (checkData.isDuplicate) {
+          const confirmed = confirm(
+            "⚠️ DUPLICATE CONTENT DETECTED\n\nAn identical post was already published to this profile in the last 48 hours.\n\nDo you still want to publish this?"
+          );
+          if (!confirmed) return;
+        }
+      } catch (err) {
+        console.error("Duplicate check failed:", err);
+      }
+    }
+
     setSaving(true);
     setSavingType(type);
     try {
@@ -378,6 +429,8 @@ export function PostEditor({
         // Partial success — saved to DB but GBP publish failed
         alert(`⚠️ Post saved but could not publish to Google:\n\n${responseData.error}\n\nCheck Settings to reconnect your Google account.`);
         router.push(returnUrl || (form.locationId ? `/profiles/${form.locationId}` : "/profiles"));
+      } else if (res.status === 409) {
+        alert(responseData.error || "This post is already being processed.");
       } else {
         alert(responseData.error || "Failed to save post");
       }
@@ -389,7 +442,7 @@ export function PostEditor({
   };
 
   // PUBLISHED posts are locked — already sent to GBP, cannot be modified
-  const isLocked = initialData?.status === "PUBLISHED";
+  const isLocked = initialData?.status === "PUBLISHED" || initialData?.status === "PUBLISHING";
   const isPublished = isLocked;
   const { daysInMonth, firstDay } = getMonthDays(calYear, calMonth);
   const todayDay = now.getDate();
@@ -423,10 +476,13 @@ export function PostEditor({
                   {savingType === "PUBLISH" ? "Publishing Now" : 
                    savingType === "SCHEDULED" ? "Scheduling Post" : 
                    savingType === "PENDING_APPROVAL" ? "Submitting Post" :
+                   savingType === "DOWNLOADING" ? "Processing Download" :
                    "Saving Draft"}
                 </h3>
                 <p className="text-[15px] text-[#64748b] text-center font-medium">
-                  Sit tight, we're syncing with Google...
+                  {savingType === "PUBLISH" ? "Sit tight, we're syncing with Google..." : 
+                   savingType === "DOWNLOADING" ? "Embedding metadata & preparing file..." :
+                   "Updating your schedule..."}
                 </p>
               </div>
             )}
@@ -474,35 +530,134 @@ export function PostEditor({
             </div>
           </div>
 
-          {/* Card 2: Visual Content */}
+          {/* Card 2: Visual Content & Settings */}
           <div style={{ background: "#fff", border: "1px solid #eaeaea", borderRadius: 16, padding: "24px", boxShadow: "0 1px 3px rgba(0,0,0,0.02)" }}>
-            <div className="space-y-4">
+            <div className="space-y-6">
               <label className="text-[11px] font-bold text-[#64748b] uppercase tracking-[0.1em]">Visual Content</label>
+              
               {imagePreview ? (
-                <div style={{ position: "relative", borderRadius: 16, overflow: "hidden", border: "1px solid #f1f5f9" }}>
-                  <img src={imagePreview} alt="Preview" style={{ width: "100%", maxHeight: 400, objectFit: "cover" }} />
+                <div className="space-y-6">
+                  <div style={{ position: "relative", borderRadius: 16, overflow: "hidden", border: "1px solid #f1f5f9", background: "#f8fafc" }}>
+                    <img 
+                      src={imagePreview} 
+                      alt="Preview" 
+                      style={{ width: "100%", maxHeight: 400, objectFit: "contain", display: "block" }} 
+                      onError={(e) => {
+                        // If image is broken, still allow removal
+                        (e.target as HTMLImageElement).style.display = "none";
+                      }}
+                    />
+                    {!isPublished && (
+                      <div style={{ position: "absolute", top: 12, right: 12, display: "flex", gap: 8 }}>
+                        <button 
+                          onClick={handleDownloadImage}
+                          title="Download geo-tagged image"
+                          style={{ width: 36, height: 36, borderRadius: 12, background: "#fff", border: "1px solid #eaeaea", display: "flex", alignItems: "center", justifyContent: "center", color: "#2563eb", cursor: "pointer", boxShadow: "0 4px 12px rgba(0,0,0,0.1)", zIndex: 10 }}
+                        >
+                          <Download size={18} />
+                        </button>
+                        <button 
+                          onClick={removeImage} 
+                          style={{ width: 36, height: 36, borderRadius: 12, background: "#fff", border: "1px solid #eaeaea", display: "flex", alignItems: "center", justifyContent: "center", color: "#ef4444", cursor: "pointer", boxShadow: "0 4px 12px rgba(0,0,0,0.1)", zIndex: 10 }}
+                        >
+                          <X size={18} />
+                        </button>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Image specific settings — only show when image exists */}
                   {!isPublished && (
-                    <button onClick={removeImage} style={{ position: "absolute", top: 12, right: 12, width: 36, height: 36, borderRadius: 12, background: "#fff", border: "1px solid #eaeaea", display: "flex", alignItems: "center", justifyContent: "center", color: "#ef4444", cursor: "pointer", boxShadow: "0 4px 12px rgba(0,0,0,0.1)" }}>
-                      <X size={18} />
-                    </button>
+                    <div className="pt-4 border-t border-[#f1f5f9] space-y-5 animate-in fade-in slide-in-from-top-2 duration-300">
+                      {/* SEO Keyword */}
+                      <div className="space-y-2">
+                        <label className="text-[11px] font-bold text-[#94a3b8] uppercase tracking-[0.08em]">SEO Filename Keyword</label>
+                        <input
+                          type="text"
+                          name="focusKeyword"
+                          value={form.focusKeyword}
+                          onChange={e => setForm(f => ({ ...f, focusKeyword: e.target.value.toLowerCase().replace(/\s+/g, "-").replace(/[^a-z0-9-]/g, "") }))}
+                          placeholder="e.g. dr-smith-dentist-delhi"
+                          style={{ width: "100%", padding: "12px 14px", border: "1px solid #eaeaea", borderRadius: 12, fontSize: 14, fontWeight: 500, color: "#0f172a", background: "#fff" }}
+                        />
+                        <p style={{ fontSize: 11, color: "#94a3b8" }}>Used as the image filename to boost local SEO rankings.</p>
+                      </div>
+
+                      {/* Geo-Tagging Toggle */}
+                      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "12px 16px", background: "#f8fafc", borderRadius: 12, border: "1px solid #f1f5f9" }}>
+                        <div>
+                          <p style={{ fontSize: 13, fontWeight: 700, color: "#0f172a" }}>GPS Geo-Tagging</p>
+                          <p style={{ fontSize: 11, color: "#94a3b8" }}>Embed coordinates into image metadata</p>
+                        </div>
+                        <button
+                          onClick={() => setGeoEnabled(g => !g)}
+                          style={{ width: 44, height: 24, borderRadius: 12, border: "none", cursor: "pointer", background: geoEnabled ? "#2563eb" : "#e2e8f0", position: "relative", transition: "background 0.2s" }}
+                        >
+                          <div style={{ position: "absolute", top: 2, left: geoEnabled ? 22 : 2, width: 20, height: 20, borderRadius: "50%", background: "#fff", boxShadow: "0 1px 4px rgba(0,0,0,0.2)", transition: "left 0.2s" }} />
+                        </button>
+                      </div>
+
+                      {geoEnabled && (
+                        <div className="space-y-4 p-4 bg-[#f8fafc] rounded-xl border border-[#f1f5f9] animate-in zoom-in-95 duration-200">
+                          {geoPresets.length > 0 && (
+                            <div className="space-y-1.5">
+                              <label className="text-[11px] font-bold text-[#94a3b8] uppercase tracking-[0.05em]">Load Saved Location</label>
+                              <div style={{ display: "flex", gap: 8 }}>
+                                <select
+                                  defaultValue=""
+                                  onChange={e => { if (e.target.value) loadGeoPreset(e.target.value); }}
+                                  style={{ flex: 1, padding: "10px 12px", border: "1px solid #eaeaea", borderRadius: 10, fontSize: 13, background: "#fff" }}
+                                >
+                                  <option value="">— Select a saved location —</option>
+                                  {geoPresets.map(p => (
+                                    <option key={p.name} value={p.name}>{p.name} ({p.lat}°{p.latRef}, {p.lng}°{p.lngRef})</option>
+                                  ))}
+                                </select>
+                              </div>
+                            </div>
+                          )}
+                          
+                          <div className="grid grid-cols-2 gap-3">
+                            <div className="space-y-1.5">
+                              <label className="text-[11px] font-bold text-[#94a3b8] uppercase">Latitude</label>
+                              <input type="text" value={geoLat} onChange={e => setGeoLat(e.target.value)} placeholder="28.6139" style={{ width: "100%", padding: "10px", border: "1px solid #eaeaea", borderRadius: 10, fontSize: 13 }} />
+                            </div>
+                            <div className="space-y-1.5">
+                              <label className="text-[11px] font-bold text-[#94a3b8] uppercase">Longitude</label>
+                              <input type="text" value={geoLng} onChange={e => setGeoLng(e.target.value)} placeholder="77.2090" style={{ width: "100%", padding: "10px", border: "1px solid #eaeaea", borderRadius: 10, fontSize: 13 }} />
+                            </div>
+                          </div>
+                          
+                          <div className="space-y-2">
+                            <label className="text-[11px] font-bold text-[#94a3b8] uppercase">Save this location for later</label>
+                            <div className="flex gap-2">
+                              <input type="text" placeholder="Location Name (e.g. Clinic)" value={newPresetName} onChange={e => setNewPresetName(e.target.value)} style={{ flex: 1, padding: "10px", border: "1px solid #eaeaea", borderRadius: 10, fontSize: 13 }} />
+                              <button onClick={saveGeoPreset} className="px-4 py-2 bg-[#2563eb] text-white rounded-lg text-xs font-bold hover:bg-blue-600 transition-colors">Save</button>
+                            </div>
+                          </div>
+                        </div>
+                      )}
+                    </div>
                   )}
                 </div>
               ) : (
                 <div 
                   onClick={() => !isPublished && fileRef.current?.click()}
-                  style={{ height: 200, border: "2px dashed #e2e8f0", borderRadius: 16, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 12, cursor: isPublished ? "default" : "pointer", background: "#fcfcfc", transition: "all 0.2s" }}
-                  className="hover:bg-[#f8fafc] hover:border-[#cbd5e1]"
+                  style={{ height: 180, border: "2px dashed #e2e8f0", borderRadius: 16, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 12, cursor: isPublished ? "default" : "pointer", background: "#fcfcfc", transition: "all 0.2s" }}
+                  className="hover:bg-[#f8fafc] hover:border-[#cbd5e1] group"
                 >
-                  <div style={{ width: 48, height: 48, borderRadius: 14, background: "#f1f5f9", display: "flex", alignItems: "center", justifyContent: "center", color: "#64748b" }}>
+                  <div style={{ width: 48, height: 48, borderRadius: 14, background: "#f1f5f9", display: "flex", alignItems: "center", justifyContent: "center", color: "#64748b" }} className="group-hover:scale-110 transition-transform">
                     <ImagePlus size={24} />
                   </div>
                   <div style={{ textAlign: "center" }}>
-                    <p style={{ fontSize: 14, fontWeight: 700, color: "#0f172a" }}>Upload Image</p>
+                    <p style={{ fontSize: 14, fontWeight: 700, color: "#0f172a" }}>Upload Post Image</p>
                     <p style={{ fontSize: 12, color: "#64748b", marginTop: 2 }}>JPG, PNG or GIF (max 5MB)</p>
                   </div>
                 </div>
               )}
+
               <input type="file" ref={fileRef} className="hidden" accept="image/*" onChange={handleImageSelect} />
+              
               {converting && (
                 <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "10px 14px", background: "#f0f9ff", borderRadius: 10, border: "1px solid #bae6fd" }}>
                   <Loader2 size={14} className="animate-spin" style={{ color: "#2563eb" }} />
@@ -512,70 +667,11 @@ export function PostEditor({
               {imagePreview && !converting && imageFile && (
                 <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "8px 12px", background: "#f0fdf4", borderRadius: 8, border: "1px solid #bbf7d0" }}>
                   <Check size={12} style={{ color: "#16a34a" }} />
-                  <span style={{ fontSize: 11, fontWeight: 600, color: "#15803d" }}>Auto-converted to JPEG • {(imageFile.size / 1024).toFixed(0)} KB</span>
+                  <span style={{ fontSize: 11, fontWeight: 600, color: "#15803d" }}>Ready to publish • {(imageFile.size / 1024).toFixed(0)} KB</span>
                 </div>
               )}
             </div>
           </div>
-
-          {/* Card 2b: Image Settings (Geo + SEO) */}
-          {!isPublished && (
-            <div style={{ background: "#fff", border: "1px solid #eaeaea", borderRadius: 16, padding: "24px", boxShadow: "0 1px 3px rgba(0,0,0,0.02)" }}>
-              <div className="space-y-4">
-                <label className="text-[11px] font-bold text-[#64748b] uppercase tracking-[0.1em]">Image Settings</label>
-
-                {/* Focus / SEO Keyword — auto-hyphen */}
-                <div className="space-y-2">
-                  <label className="text-[11px] font-semibold text-[#94a3b8] uppercase tracking-[0.08em]">SEO Filename Keyword</label>
-                  <input
-                    type="text"
-                    name="focusKeyword"
-                    value={form.focusKeyword}
-                    onChange={e => setForm(f => ({ ...f, focusKeyword: e.target.value.toLowerCase().replace(/\s+/g, "-").replace(/[^a-z0-9-]/g, "") }))}
-                    placeholder="e.g. dr-smith-dentist-delhi"
-                    style={{ width: "100%", padding: "10px 14px", border: "1px solid #eaeaea", borderRadius: 10, fontSize: 13, fontWeight: 500, color: "#0f172a", background: "#fff" }}
-                  />
-                  <p style={{ fontSize: 11, color: "#94a3b8" }}>Spaces auto-convert to hyphens — used as the image filename for SEO</p>
-                </div>
-
-                {/* Geo-Tagging Toggle */}
-                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "12px 0", borderTop: "1px solid #f1f5f9" }}>
-                  <div>
-                    <p style={{ fontSize: 13, fontWeight: 700, color: "#0f172a" }}>GPS Geo-Tagging</p>
-                    <p style={{ fontSize: 11, color: "#94a3b8" }}>Embed location + camera EXIF data into image</p>
-                  </div>
-                  <button
-                    onClick={() => setGeoEnabled(g => !g)}
-                    style={{ width: 44, height: 24, borderRadius: 12, border: "none", cursor: "pointer", background: geoEnabled ? "#2563eb" : "#e2e8f0", position: "relative", transition: "background 0.2s" }}
-                  >
-                    <div style={{ position: "absolute", top: 2, left: geoEnabled ? 22 : 2, width: 20, height: 20, borderRadius: "50%", background: "#fff", boxShadow: "0 1px 4px rgba(0,0,0,0.2)", transition: "left 0.2s" }} />
-                  </button>
-                </div>
-
-                {geoEnabled && (
-                  <div className="space-y-3" style={{ paddingTop: 8 }}>
-                    {/* Saved Presets */}
-                    {geoPresets.length > 0 && (
-                      <div className="space-y-1">
-                        <label className="text-[11px] font-semibold text-[#94a3b8] uppercase tracking-[0.08em]">Load Saved Location</label>
-                        <div style={{ display: "flex", gap: 8 }}>
-                          <select
-                            defaultValue=""
-                            onChange={e => { if (e.target.value) loadGeoPreset(e.target.value); }}
-                            style={{ flex: 1, padding: "9px 12px", border: "1px solid #eaeaea", borderRadius: 10, fontSize: 13, background: "#fff" }}
-                          >
-                            <option value="">— Select a saved location —</option>
-                            {geoPresets.map(p => (
-                              <option key={p.name} value={p.name}>{p.name} ({p.lat}°{p.latRef}, {p.lng}°{p.lngRef})</option>
-                            ))}
-                          </select>
-                          <button
-                            onClick={() => { const sel = (document.querySelector("[data-preset-sel]") as HTMLSelectElement)?.value; if (sel) deleteGeoPreset(sel); }}
-                            style={{ padding: "9px 12px", border: "1px solid #fee2e2", borderRadius: 10, background: "#fff5f5", color: "#ef4444", fontSize: 12, fontWeight: 600, cursor: "pointer" }}
-                          >×</button>
-                        </div>
-                      </div>
-                    )}
 
                     {/* Camera Template */}
                     <div className="space-y-1">

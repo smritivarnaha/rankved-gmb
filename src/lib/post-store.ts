@@ -24,7 +24,7 @@ export interface PostData {
   eventTitle: string;
   eventStart: string;
   eventEnd: string;
-  status: "DRAFT" | "SCHEDULED" | "PUBLISHED" | "FAILED";
+  status: "DRAFT" | "SCHEDULED" | "PUBLISHED" | "FAILED" | "PUBLISHING";
   scheduledAt: string | null;
   publishedAt: string | null;
   gbpPostName?: string | null;
@@ -210,4 +210,20 @@ export async function deletePost(id: string): Promise<boolean> {
   } catch {
     return false;
   }
+}
+
+export async function checkDuplicateContent(locationId: string, summary: string): Promise<PostData | null> {
+  const fortyEightHoursAgo = new Date(Date.now() - 48 * 60 * 60 * 1000);
+  
+  const duplicate = await prisma.post.findFirst({
+    where: {
+      locationId,
+      summary: summary, // Exact match
+      status: "PUBLISHED",
+      publishedAt: { gte: fortyEightHoursAgo }
+    },
+    include: { location: { include: { client: true } }, user: true },
+  });
+
+  return duplicate ? mapPost(duplicate) : null;
 }

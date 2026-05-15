@@ -257,3 +257,10 @@ model PromptTemplate {
 
   @@index([userId])
 }
+
+model Backup {
+  id        String   @id @default(cuid())
+  name      String
+  data      Json
+  createdAt DateTime @default(now())
+}

@@ -27,14 +27,21 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
   try {
     const body = await req.json();
 
-    // Guard: block re-publishing already-published posts to prevent duplicate GBP posts
+    // Guard: block re-publishing already-published or currently-publishing posts
     const existing = await getPostById(id);
-    if (existing?.status === "PUBLISHED" && body.status === "PUBLISHED") {
+    if (!existing) return NextResponse.json({ error: "Post not found" }, { status: 404 });
+    
+    if (existing.status === "PUBLISHED" && body.status === "PUBLISHED") {
       return NextResponse.json({ error: "This post has already been published. To edit it, use Google Business Manager directly." }, { status: 409 });
     }
 
+    if (existing.status === "PUBLISHING" && body.status === "PUBLISHED") {
+      return NextResponse.json({ error: "This post is currently being published. Please wait a moment." }, { status: 409 });
+    }
+
     const requestedStatus = body.status;
-    const initialStatus = requestedStatus === "PUBLISHED" ? "DRAFT" : requestedStatus;
+    // If publishing now, we use "PUBLISHING" as an intermediate locking status
+    const initialStatus = requestedStatus === "PUBLISHED" ? "PUBLISHING" : requestedStatus;
 
     const profileId = body.profileId || body.locationId || (existing as any)?.profileId;
     const imageUrl = body.imageUrl || body.mediaUrl;
@@ -84,6 +91,7 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
               const template = await getTemplate("SUCCESS", post);
               await notifyAdmin(template);
             } else {
+              // If it fails, revert to FAILED (or could revert to DRAFT if preferred)
               await updatePost(id, { status: "FAILED", failureReason: result.error || "GBP publish failed", publishedAt: null });
               const template = await getTemplate("FAILURE", { ...post, error: result.error });
               await notifyAdmin(template);
