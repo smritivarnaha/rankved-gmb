@@ -134,169 +134,174 @@ export default function BackupPage() {
     setProcessing(false);
   };
 
+  // Styles matching the Dashboard 'Amazing UI'
+  const cardStyle = {
+    background: "#fff", border: "1px solid #eaeaea",
+    borderRadius: 8, padding: 24, boxShadow: "0 1px 2px rgba(0,0,0,0.02)"
+  };
+
+  const btnPrimary = {
+    height: 40, padding: "0 20px", background: "#2563EB",
+    color: "#fff", borderRadius: 6, fontSize: 13, fontWeight: 600,
+    border: "none", cursor: "pointer", display: "inline-flex",
+    alignItems: "center", gap: 8, transition: "all 0.2s",
+    textDecoration: "none"
+  };
+
+  const btnSecondary = {
+    height: 40, padding: "0 20px", background: "#fff",
+    color: "#475569", borderRadius: 6, fontSize: 13, fontWeight: 600,
+    border: "1px solid #e2e8f0", cursor: "pointer", display: "inline-flex",
+    alignItems: "center", gap: 8, transition: "all 0.2s",
+    textDecoration: "none"
+  };
+
   return (
-    <div style={{ maxWidth: 1200, margin: "0 auto", padding: "48px 24px" }} className="ds-anim-fade">
-      <div style={{ display: "flex", flexDirection: "column", md: "row", alignItems: "end", justifyContent: "between", gap: 32, marginBottom: 48 } as any}>
+    <div style={{ fontFamily: "Inter, sans-serif", maxWidth: 1100, margin: "0 auto", paddingBottom: 60 }} className="ds-anim-fade">
+      {/* Header */}
+      <div style={{ display: "flex", alignItems: "flex-end", justifyContent: "space-between", marginBottom: 32 }}>
         <div>
-          <div style={{ display: "flex", alignItems: "center", gap: 16, marginBottom: 16 }}>
-            <div style={{ 
-              width: 56, height: 56, borderRadius: "var(--radius-modal)", 
-              background: "var(--neutral-900)", display: "flex", 
-              alignItems: "center", justifyContent: "center",
-              boxShadow: "var(--shadow-md)", border: "4px solid var(--neutral-50)"
-            }}>
-              <Database className="text-white" size={28} strokeWidth={2.5} />
-            </div>
-            <div>
-              <h1 className="heading-section" style={{ fontSize: "var(--text-stat)", lineHeight: 1 }}>
-                Data Sovereignty
-              </h1>
-              <div style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 4 }}>
-                <div className="ds-dot ds-dot-published" style={{ width: 8, height: 8 }} />
-                <span style={{ fontSize: "var(--text-micro)", fontWeight: "var(--fw-bold)", color: "var(--success)", textTransform: "uppercase", letterSpacing: "var(--ls-wide)" }}>
-                  System Vault Active
-                </span>
-              </div>
-            </div>
-          </div>
-          <p className="text-secondary" style={{ fontSize: "var(--text-lg)", maxWidth: 500, lineHeight: 1.6 }}>
-            Infrastructure management for your business assets. Create snapshots or restore your environment with precision.
+          <h1 style={{ fontSize: 24, fontWeight: 700, color: "#111827", margin: "0 0 4px", letterSpacing: "-0.01em" }}>
+            Backup & Restore
+          </h1>
+          <p style={{ fontSize: 14, color: "#64748B", margin: 0 }}>
+            Protect your system data with cloud snapshots and local exports.
           </p>
         </div>
         
         <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-          <label className="ds-btn ds-btn-secondary" style={{ height: 44, padding: "0 24px" }}>
-            <Upload size={18} style={{ marginRight: 8 }} />
+          <label style={btnSecondary} className="hover-bg-muted">
+            <Upload size={16} />
             Import Archive
             <input type="file" accept=".json" className="hidden" onChange={handleFileUpload} disabled={processing} />
           </label>
           <button 
             onClick={handleCreate}
             disabled={processing}
-            className="ds-btn ds-btn-primary"
-            style={{ height: 44, padding: "0 28px" }}
+            style={btnPrimary}
+            className="hover-shadow-blue"
           >
-            {processing ? <Loader2 size={18} className="anim-spin" /> : <Save size={18} style={{ marginRight: 8 }} />}
+            {processing ? <Loader2 size={16} className="anim-spin" /> : <Save size={16} />}
             Snapshot Now
           </button>
         </div>
       </div>
 
       {status.message && (
-        <div className="ds-anim-fade" style={{ 
-          marginBottom: 40, padding: 20, borderRadius: "var(--radius-modal)", 
-          border: "1px solid", display: "flex", alignItems: "center", gap: 16,
-          background: status.type === "success" ? "var(--success-subtle)" : status.type === "error" ? "var(--danger-subtle)" : "var(--bg-subtle)",
-          borderColor: status.type === "success" ? "var(--success-muted)" : status.type === "error" ? "var(--danger-muted)" : "var(--border-subtle)",
-          color: status.type === "success" ? "var(--success-text)" : status.type === "error" ? "var(--danger-text)" : "var(--text-primary)"
+        <div style={{ 
+          marginBottom: 24, padding: "16px 20px",
+          background: status.type === "success" ? "#f0fdf4" : status.type === "error" ? "#fef2f2" : "#fff",
+          border: `1px solid ${status.type === "success" ? "#bbf7d0" : status.type === "error" ? "#fecaca" : "#eaeaea"}`,
+          borderLeft: `4px solid ${status.type === "success" ? "#16a34a" : status.type === "error" ? "#dc2626" : "#2563eb"}`,
+          borderRadius: 8, display: "flex", alignItems: "center", gap: 12,
+          boxShadow: "0 1px 2px rgba(0,0,0,0.02)"
         }}>
           <div style={{ 
-            width: 40, height: 40, borderRadius: 10, background: "white", 
+            width: 32, height: 32, borderRadius: 8, 
+            background: status.type === "success" ? "#dcfce7" : status.type === "error" ? "#fee2e2" : "#eff6ff",
             display: "flex", alignItems: "center", justifyContent: "center", shrink: 0 
           }}>
-            {status.type === "success" ? <CheckCircle2 size={20} /> : status.type === "error" ? <AlertTriangle size={20} /> : <RefreshCw size={20} className="anim-spin" />}
+            {status.type === "success" ? <CheckCircle2 size={18} className="text-emerald-600" /> : status.type === "error" ? <AlertTriangle size={18} className="text-rose-600" /> : <RefreshCw size={18} className="anim-spin text-blue-600" />}
           </div>
-          <div>
-            <p style={{ fontSize: "var(--text-sm)", fontWeight: "var(--fw-extrabold)", textTransform: "uppercase", letterSpacing: "var(--ls-label)" }}>
-              {status.type === "success" ? "Operation Successful" : status.type === "error" ? "Critical Error" : "Processing Request"}
-            </p>
-            <p style={{ fontSize: "var(--text-sm)", opacity: 0.8 }}>{status.message}</p>
-          </div>
+          <p style={{ fontSize: 14, fontWeight: 500, color: status.type === "success" ? "#166534" : status.type === "error" ? "#991b1b" : "#1e40af", margin: 0 }}>
+            {status.message}
+          </p>
         </div>
       )}
 
-      <div className="ds-card" style={{ padding: 0, overflow: "hidden", border: "1px solid var(--border-subtle)" }}>
-        <div style={{ padding: 24, borderBottom: "1px solid var(--border-subtle)", background: "var(--neutral-50)", display: "flex", alignItems: "center", justifyContent: "between" }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-            <HardDrive size={18} className="text-tertiary" />
-            <h2 style={{ fontSize: "var(--text-micro)", fontWeight: "var(--fw-extrabold)", color: "var(--neutral-500)", textTransform: "uppercase", letterSpacing: "0.2em" }}>
-              Stored Snapshots
-            </h2>
+      <div style={{ ...cardStyle, padding: 0, overflow: "hidden" }}>
+        <div style={{ padding: "16px 20px", borderBottom: "1px solid #eaeaea", background: "#f9fafb", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+            <HardDrive size={16} color="#64748B" />
+            <h2 style={{ fontSize: 15, fontWeight: 600, color: "#111827", margin: 0 }}>Available Snapshots</h2>
           </div>
-          <span className="ds-badge ds-badge-neutral">
-            {backups.length} Archives Found
+          <span style={{ fontSize: 11, background: "#fff", border: "1px solid #eaeaea", color: "#64748B", padding: "2px 10px", borderRadius: 100, fontWeight: 600 }}>
+            {backups.length} Archives
           </span>
         </div>
         
         <div style={{ display: "flex", flexDirection: "column" }}>
           {loading ? (
-            <div style={{ padding: 120, textAlign: "center" }}>
-              <div className="anim-spin" style={{ width: 48, height: 48, border: "4px solid var(--neutral-100)", borderTopColor: "var(--brand)", borderRadius: "50%", margin: "0 auto 24px" }} />
-              <p className="heading-card" style={{ textTransform: "uppercase", letterSpacing: "0.1em" }}>Scanning Repository</p>
+            <div style={{ padding: "60px 24px", textAlign: "center" }}>
+              <div className="anim-spin" style={{ width: 40, height: 40, border: "3px solid #f1f5f9", borderTopColor: "#2563eb", borderRadius: "50%", margin: "0 auto 16px" }} />
+              <p style={{ fontSize: 14, fontWeight: 600, color: "#64748B", margin: 0 }}>Scanning local storage...</p>
             </div>
           ) : backups.length > 0 ? (
-            backups.map((b) => (
-              <div key={b.id} style={{ padding: 24, display: "flex", alignItems: "center", justifyContent: "between", borderBottom: "1px solid var(--border-subtle)" }} className="ds-card-hover">
-                <div style={{ display: "flex", alignItems: "center", gap: 24 }}>
-                  <div style={{ 
-                    width: 56, height: 56, borderRadius: 16, background: "var(--neutral-50)", 
-                    display: "flex", alignItems: "center", justifyContent: "center",
-                    color: "var(--neutral-400)", border: "1px solid var(--border-subtle)"
-                  }}>
-                    <FileJson size={24} />
-                  </div>
-                  <div>
-                    <h3 className="heading-card" style={{ marginBottom: 4 }}>{b.name}</h3>
-                    <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-                      <p style={{ fontSize: "var(--text-xs)", color: "var(--text-tertiary)", fontWeight: "var(--fw-bold)", textTransform: "uppercase" }}>
+            <table style={{ width: "100%", borderCollapse: "collapse", textAlign: "left" }}>
+              <thead>
+                <tr style={{ borderBottom: "1px solid #eaeaea", background: "#fff" }}>
+                  <th style={{ fontSize: 11, fontWeight: 600, color: "#64748B", padding: "12px 20px", textTransform: "uppercase", letterSpacing: "0.05em" }}>SNAPSHOT NAME</th>
+                  <th style={{ fontSize: 11, fontWeight: 600, color: "#64748B", padding: "12px 20px", textTransform: "uppercase", letterSpacing: "0.05em" }}>CREATED ON</th>
+                  <th style={{ fontSize: 11, fontWeight: 600, color: "#64748B", padding: "12px 20px", textTransform: "uppercase", letterSpacing: "0.05em", textAlign: "right" }}>ACTIONS</th>
+                </tr>
+              </thead>
+              <tbody>
+                {backups.map((b) => (
+                  <tr key={b.id} style={{ borderBottom: "1px solid #f8f9fa" }} className="hover-bg-muted">
+                    <td style={{ padding: "16px 20px" }}>
+                      <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+                        <div style={{ width: 36, height: 36, borderRadius: 8, background: "#f8f9fa", border: "1px solid #eaeaea", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                          <FileJson size={16} color="#64748B" />
+                        </div>
+                        <span style={{ fontSize: 14, fontWeight: 600, color: "#111827" }}>{b.name}</span>
+                      </div>
+                    </td>
+                    <td style={{ padding: "16px 20px" }}>
+                      <p style={{ fontSize: 13, color: "#475569", margin: 0 }}>
                         {new Date(b.createdAt).toLocaleDateString("en-IN", { day: '2-digit', month: 'short', year: 'numeric' })}
                       </p>
-                      <div style={{ width: 4, height: 4, borderRadius: "50%", background: "var(--neutral-200)" }} />
-                      <p style={{ fontSize: "var(--text-xs)", color: "var(--text-tertiary)", fontWeight: "var(--fw-bold)", textTransform: "uppercase" }}>
+                      <p style={{ fontSize: 11, color: "#94A3B8", margin: 0 }}>
                         {new Date(b.createdAt).toLocaleTimeString("en-IN", { hour: '2-digit', minute: '2-digit' })}
                       </p>
-                    </div>
-                  </div>
-                </div>
-                
-                <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-                  <button 
-                    onClick={() => handleRestoreFromId(b.id)}
-                    disabled={processing}
-                    className="ds-btn ds-btn-secondary"
-                    style={{ fontSize: "var(--text-xs)", fontWeight: "var(--fw-extrabold)", textTransform: "uppercase" }}
-                  >
-                    Restore
-                  </button>
-                  <button onClick={() => handleDownload(b.id, b.name)} className="ds-btn ds-btn-ghost" style={{ width: 40, height: 40, padding: 0 }} title="Export Local">
-                    <Download size={18} />
-                  </button>
-                  <button onClick={() => handleDelete(b.id)} className="ds-btn ds-btn-danger" style={{ width: 40, height: 40, padding: 0, background: "transparent" }} title="Purge Data">
-                    <Trash2 size={18} />
-                  </button>
-                </div>
-              </div>
-            ))
+                    </td>
+                    <td style={{ padding: "16px 20px", textAlign: "right" }}>
+                      <div style={{ display: "flex", alignItems: "center", justifyContent: "flex-end", gap: 8 }}>
+                        <button 
+                          onClick={() => handleRestoreFromId(b.id)}
+                          disabled={processing}
+                          style={{ ...btnSecondary, height: 32, fontSize: 12, padding: "0 12px" }}
+                        >
+                          Restore
+                        </button>
+                        <button onClick={() => handleDownload(b.id, b.name)} style={{ width: 32, height: 32, display: "flex", alignItems: "center", justifyContent: "center", background: "#f8f9fa", border: "1px solid #eaeaea", borderRadius: 6, color: "#64748B", cursor: "pointer" }} title="Export Local">
+                          <Download size={14} />
+                        </button>
+                        <button onClick={() => handleDelete(b.id)} style={{ width: 32, height: 32, display: "flex", alignItems: "center", justifyContent: "center", background: "#fef2f2", border: "1px solid #fee2e2", borderRadius: 6, color: "#dc2626", cursor: "pointer" }} title="Delete Forever">
+                          <Trash2 size={14} />
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           ) : (
-            <div style={{ padding: 120, textAlign: "center" }}>
-              <div style={{ width: 80, height: 80, borderRadius: 28, background: "var(--neutral-50)", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 24px" }}>
-                <Database className="text-muted" size={40} />
-              </div>
-              <h3 className="heading-section">No Snapshots Found</h3>
-              <p className="text-secondary" style={{ maxWidth: 300, margin: "8px auto 0" }}>
-                Your archive is currently empty. Initialize your first snapshot to protect your configuration.
-              </p>
+            <div style={{ padding: "60px 24px", textAlign: "center" }}>
+              <Database style={{ width: 40, height: 40, color: "#CBD5E1", margin: "0 auto 16px" }} />
+              <p style={{ fontSize: 15, fontWeight: 600, color: "#111827", margin: "0 0 4px" }}>No snapshots found</p>
+              <p style={{ fontSize: 13, color: "#64748B", margin: 0 }}>Create your first snapshot to secure your system data.</p>
             </div>
           )}
         </div>
       </div>
 
+      {/* Advisory Banner */}
       <div style={{ 
-        marginTop: 48, padding: 32, background: "var(--neutral-900)", 
-        borderRadius: "var(--radius-modal)", display: "flex", 
-        flexDirection: "column", md: "row", alignItems: "center", gap: 32 
-      } as any}>
-        <div style={{ width: 56, height: 56, borderRadius: 14, background: "rgba(255,255,255,0.1)", display: "flex", alignItems: "center", justifyContent: "center", shrink: 0 }}>
-          <AlertTriangle className="text-warning" size={28} />
+        marginTop: 32, padding: "20px 24px", 
+        background: "#111827", borderRadius: 8, 
+        display: "flex", alignItems: "center", gap: 20 
+      }}>
+        <div style={{ width: 40, height: 40, borderRadius: 10, background: "rgba(255,255,255,0.05)", display: "flex", alignItems: "center", justifyContent: "center", shrink: 0 }}>
+          <AlertTriangle className="text-amber-400" size={20} />
         </div>
         <div style={{ flex: 1 }}>
-          <h4 style={{ fontSize: "var(--text-micro)", fontWeight: "var(--fw-extrabold)", color: "white", textTransform: "uppercase", letterSpacing: "0.2em", marginBottom: 8 }}>Protocol Advisory</h4>
-          <p style={{ fontSize: "var(--text-sm)", color: "var(--neutral-400)", lineHeight: 1.6 }}>
-            Restoration cycles will synchronize your current environment with the snapshot state. Missing profiles will be bypassed. Post-restoration, manual verification of Google OAuth tokens is recommended for security compliance.
+          <p style={{ fontSize: 14, color: "#fff", fontWeight: 600, margin: "0 0 2px" }}>Protocol Advisory</p>
+          <p style={{ fontSize: 13, color: "#94A3B8", margin: 0, lineHeight: 1.5 }}>
+            Restoration cycles will synchronize your current environment with the snapshot state. Missing profiles will be bypassed. Access tokens are not backed up for security.
           </p>
         </div>
-        <div className="ds-badge ds-badge-neutral" style={{ background: "rgba(255,255,255,0.05)", color: "var(--neutral-400)", padding: "8px 16px" }}>
-          Security Level: High
+        <div style={{ fontSize: 11, fontWeight: 700, color: "#475569", background: "rgba(255,255,255,0.05)", padding: "4px 10px", borderRadius: 4, textTransform: "uppercase", letterSpacing: "0.05em" }}>
+          Security: High
         </div>
       </div>
     </div>

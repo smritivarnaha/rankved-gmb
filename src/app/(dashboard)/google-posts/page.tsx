@@ -78,55 +78,68 @@ export default function GooglePostsPage() {
 
   const selectedProfile = profiles.find(p => p.id === selectedProfileId);
 
+  // Styles matching the Dashboard 'Amazing UI'
+  const cardStyle = {
+    background: "#fff", border: "1px solid #eaeaea",
+    borderRadius: 8, padding: 24, boxShadow: "0 1px 2px rgba(0,0,0,0.02)"
+  };
+
+  const btnPrimary = {
+    height: 38, padding: "0 16px", background: "#2563EB",
+    color: "#fff", borderRadius: 6, fontSize: 13, fontWeight: 500,
+    border: "none", cursor: "pointer", display: "inline-flex",
+    alignItems: "center", gap: 8, transition: "background 0.2s",
+    textDecoration: "none"
+  };
+
+  const btnSecondary = {
+    height: 38, padding: "0 16px", background: "#fff",
+    color: "#475569", borderRadius: 6, fontSize: 13, fontWeight: 500,
+    border: "1px solid #e2e8f0", cursor: "pointer", display: "inline-flex",
+    alignItems: "center", gap: 8, transition: "background 0.2s",
+    textDecoration: "none"
+  };
+
   return (
-    <div style={{ maxWidth: 1200, margin: "0 auto", padding: "40px 24px" }} className="ds-anim-fade">
+    <div style={{ fontFamily: "Inter, sans-serif", maxWidth: 1100, margin: "0 auto", paddingBottom: 60 }} className="ds-anim-fade">
       {/* Header section */}
-      <div style={{ display: "flex", flexDirection: "column", gap: 12, marginBottom: 40 }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
-          <div style={{ 
-            width: 52, height: 52, borderRadius: "var(--radius-modal)", 
-            background: "var(--neutral-900)", display: "flex", 
-            alignItems: "center", justifyContent: "center",
-            boxShadow: "var(--shadow-md)" 
-          }}>
-            <Globe className="text-white" size={24} />
-          </div>
-          <div>
-            <h1 className="heading-section" style={{ fontSize: "var(--text-3xl)", marginBottom: 4 }}>
-              Live Feed
-            </h1>
-            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-              <div className="ds-dot ds-dot-published" style={{ width: 8, height: 8 }} />
-              <span style={{ fontSize: "var(--text-micro)", fontWeight: "var(--fw-bold)", color: "var(--success)", textTransform: "uppercase", letterSpacing: "var(--ls-wide)" }}>
-                Live Sync Active
-              </span>
-            </div>
-          </div>
+      <div style={{ marginBottom: 32, display: "flex", justifyContent: "space-between", alignItems: "flex-end" }}>
+        <div>
+          <h1 style={{ fontSize: 24, fontWeight: 700, color: "#111827", margin: "0 0 4px", letterSpacing: "-0.01em" }}>
+            Live Feed
+          </h1>
+          <p style={{ fontSize: 14, color: "#64748B", margin: 0 }}>
+            Real-time transparency. Manage posts currently live on Google.
+          </p>
         </div>
-        <p className="text-secondary" style={{ fontSize: "var(--text-md)", maxWidth: 600 }}>
-          Direct transparency. View and manage posts currently live on Google Business Profile in real-time.
-        </p>
+        <div style={{ display: "flex", alignItems: "center", gap: 8, background: "#f0fdf4", padding: "6px 12px", borderRadius: 6, border: "1px solid #bbf7d0" }}>
+          <div className="ds-dot ds-dot-published" style={{ width: 6, height: 6 }} />
+          <span style={{ fontSize: 11, fontWeight: 700, color: "#166534", textTransform: "uppercase", letterSpacing: "0.05em" }}>
+            Live Sync Active
+          </span>
+        </div>
       </div>
 
-      <div style={{ display: "grid", gridTemplateColumns: "320px 1fr", gap: 32, alignItems: "start" }}>
+      <div style={{ display: "grid", gridTemplateColumns: "280px 1fr", gap: 24, alignItems: "start" }}>
         {/* Profile Sidebar */}
-        <div className="ds-card" style={{ padding: 20, position: "sticky", top: 24 }}>
-          <div style={{ position: "relative", marginBottom: 20 }}>
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-tertiary" size={16} />
-            <input 
-              type="text" 
-              placeholder="Search profiles..." 
-              className="ds-input"
-              style={{ paddingLeft: 36, height: 40 }}
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-            />
+        <div style={{ ...cardStyle, padding: 0, overflow: "hidden", position: "sticky", top: 24 }}>
+          <div style={{ padding: "16px 20px", borderBottom: "1px solid #eaeaea" }}>
+            <div style={{ position: "relative" }}>
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-[#94a3b8]" size={14} />
+              <input 
+                type="text" 
+                placeholder="Search profiles..." 
+                style={{ width: "100%", height: 36, pl: "32px", fontSize: 13, background: "#f8fafc", border: "1px solid #e2e8f0", borderRadius: 6, outline: "none", paddingLeft: 32 }}
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+              />
+            </div>
           </div>
 
-          <div style={{ display: "flex", flexDirection: "column", gap: 4, maxHeight: "calc(100vh - 300px)", overflowY: "auto" }} className="no-scrollbar">
+          <div style={{ maxHeight: "calc(100vh - 300px)", overflowY: "auto" }}>
             {loadingProfiles ? (
               <div style={{ padding: "40px 0", textAlign: "center" }}>
-                <Loader2 className="anim-spin" style={{ color: "var(--brand)" }} size={24} />
+                <Loader2 className="anim-spin" style={{ color: "#2563EB" }} size={20} />
               </div>
             ) : filteredProfiles.length > 0 ? (
               filteredProfiles.map((p) => (
@@ -137,41 +150,36 @@ export default function GooglePostsPage() {
                     fetchGooglePosts(p.id);
                   }}
                   style={{
-                    width: "100%", textAlign: "left", padding: "12px 14px", borderRadius: "var(--radius-btn)",
-                    display: "flex", alignItems: "center", gap: 12, transition: "all var(--transition-base)",
-                    background: selectedProfileId === p.id ? "var(--bg-active)" : "transparent",
-                    border: "none", cursor: "pointer"
+                    width: "100%", textAlign: "left", padding: "12px 20px", 
+                    display: "flex", alignItems: "center", gap: 12, transition: "all 0.2s",
+                    background: selectedProfileId === p.id ? "#eff6ff" : "transparent",
+                    border: "none", borderLeft: `3px solid ${selectedProfileId === p.id ? "#2563EB" : "transparent"}`,
+                    cursor: "pointer"
                   }}
-                  className={selectedProfileId !== p.id ? "ds-card-hover" : ""}
+                  className={selectedProfileId !== p.id ? "hover-bg-muted" : ""}
                 >
                   <div style={{ 
-                    width: 40, height: 40, borderRadius: 8, flexShrink: 0,
-                    background: p.logoUrl ? "transparent" : "var(--neutral-100)",
+                    width: 32, height: 32, borderRadius: 6, flexShrink: 0,
+                    background: p.logoUrl ? "transparent" : "#f1f5f9",
                     display: "flex", alignItems: "center", justifyContent: "center",
-                    overflow: "hidden", border: "1px solid var(--border-subtle)"
+                    overflow: "hidden", border: "1px solid #eaeaea"
                   }}>
                     {p.logoUrl ? (
                       <img src={p.logoUrl} style={{ width: "100%", height: "100%", objectFit: "cover" }} alt="" />
                     ) : (
-                      <MapPin size={18} className="text-tertiary" />
+                      <MapPin size={14} className="text-[#94a3b8]" />
                     )}
                   </div>
                   <div style={{ minWidth: 0, flex: 1 }}>
-                    <p style={{ fontSize: "var(--text-sm)", fontWeight: "var(--fw-bold)", color: "var(--text-primary)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+                    <p style={{ fontSize: 13, fontWeight: 600, color: selectedProfileId === p.id ? "#2563EB" : "#111827", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", margin: 0 }}>
                       {p.name}
                     </p>
-                    <p style={{ fontSize: "var(--text-micro)", color: "var(--text-tertiary)", textTransform: "uppercase", letterSpacing: "var(--ls-wide)" }}>
-                      {p.accountName}
-                    </p>
                   </div>
-                  {selectedProfileId === p.id && (
-                    <ArrowRight size={14} style={{ color: "var(--brand)" }} />
-                  )}
                 </button>
               ))
             ) : (
-              <div style={{ padding: "40px 0", textAlign: "center", color: "var(--text-muted)" }}>
-                <p style={{ fontSize: "var(--text-xs)", fontWeight: "var(--fw-bold)" }}>NO RESULTS</p>
+              <div style={{ padding: "40px 0", textAlign: "center", color: "#94a3b8" }}>
+                <p style={{ fontSize: 11, fontWeight: 600 }}>NO RESULTS</p>
               </div>
             )}
           </div>
@@ -180,96 +188,93 @@ export default function GooglePostsPage() {
         {/* Live Posts Feed */}
         <div style={{ minWidth: 0 }}>
           {!selectedProfileId ? (
-            <div className="ds-card" style={{ padding: "80px 24px", textAlign: "center", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center" }}>
-              <div style={{ width: 80, height: 80, borderRadius: 24, background: "var(--bg-subtle)", display: "flex", alignItems: "center", justifyContent: "center", marginBottom: 24 }}>
-                <Globe className="text-muted" size={40} />
+            <div style={{ ...cardStyle, padding: "100px 24px", textAlign: "center", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center" }}>
+              <div style={{ width: 64, height: 64, borderRadius: 16, background: "#f8fafc", display: "flex", alignItems: "center", justifyContent: "center", marginBottom: 20, border: "1px solid #eaeaea" }}>
+                <Globe style={{ color: "#cbd5e1" }} size={32} />
               </div>
-              <h2 className="heading-section" style={{ marginBottom: 8 }}>Select a Profile</h2>
-              <p className="text-secondary" style={{ maxWidth: 300 }}>
-                Choose a business profile from the left to access its live post repository.
+              <h2 style={{ fontSize: 18, fontWeight: 700, color: "#111827", margin: "0 0 8px" }}>Select a Profile</h2>
+              <p style={{ fontSize: 14, color: "#64748B", maxWidth: 300, margin: 0 }}>
+                Choose a business profile from the left to view its live feed.
               </p>
             </div>
           ) : (
-            <div style={{ display: "flex", flexDirection: "column", gap: 24 }} className="ds-anim-fade">
-              <div className="ds-card" style={{ display: "flex", alignItems: "center", justifyContent: "between", padding: "16px 24px" }}>
-                <div style={{ flex: 1 }}>
+            <div style={{ display: "flex", flexDirection: "column", gap: 20 }} className="ds-anim-fade">
+              <div style={{ ...cardStyle, display: "flex", alignItems: "center", justifyContent: "space-between", padding: "16px 24px" }}>
+                <div>
                   <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 2 }}>
-                    <h2 className="heading-section" style={{ fontSize: "var(--text-xl)" }}>{selectedProfile?.name}</h2>
-                    <ExternalLink size={14} className="text-tertiary" />
+                    <h2 style={{ fontSize: 16, fontWeight: 700, color: "#111827", margin: 0 }}>{selectedProfile?.name}</h2>
+                    <ExternalLink size={12} className="text-[#94a3b8]" />
                   </div>
-                  <p className="text-meta" style={{ fontWeight: "var(--fw-bold)", textTransform: "uppercase", letterSpacing: "var(--ls-label)" }}>
+                  <p style={{ fontSize: 11, fontWeight: 600, color: "#64748B", textTransform: "uppercase", letterSpacing: "0.05em", margin: 0 }}>
                     {posts.length} Live Publications
                   </p>
                 </div>
                 <button 
                   onClick={() => fetchGooglePosts(selectedProfileId)}
-                  className="ds-btn ds-btn-secondary"
-                  style={{ width: 44, height: 44, padding: 0 }}
+                  style={{ ...btnSecondary, width: 36, height: 36, padding: 0, justifyContent: "center" }}
+                  className="hover-bg-muted"
                 >
-                  <RefreshCw size={20} className={loadingPosts ? "anim-spin" : ""} />
+                  <RefreshCw size={16} className={loadingPosts ? "anim-spin" : ""} />
                 </button>
               </div>
 
               {loadingPosts ? (
-                <div className="ds-card" style={{ padding: "100px 24px", textAlign: "center" }}>
-                  <div className="anim-spin" style={{ width: 40, height: 40, border: "3px solid var(--neutral-100)", borderTopColor: "var(--brand)", borderRadius: "50%", margin: "0 auto 20px" }} />
-                  <p className="heading-card">Querying Google API...</p>
-                  <p className="text-meta">Fetching real-time post metrics</p>
+                <div style={{ ...cardStyle, padding: "100px 24px", textAlign: "center" }}>
+                  <div className="anim-spin" style={{ width: 32, height: 32, border: "3px solid #f1f5f9", borderTopColor: "#2563eb", borderRadius: "50%", margin: "0 auto 16px" }} />
+                  <p style={{ fontSize: 14, fontWeight: 600, color: "#64748B" }}>Syncing with Google...</p>
                 </div>
               ) : error ? (
-                <div style={{ padding: 32, background: "var(--danger-subtle)", borderRadius: "var(--radius-modal)", border: "1px solid var(--danger-muted)", display: "flex", gap: 20 }}>
-                  <div style={{ width: 48, height: 48, borderRadius: 12, background: "white", display: "flex", alignItems: "center", justifyContent: "center", boxShadow: "var(--shadow-sm)" }}>
-                    <AlertCircle className="text-danger" size={24} />
-                  </div>
-                  <div style={{ flex: 1 }}>
-                    <h3 className="heading-card" style={{ color: "var(--danger-text)", marginBottom: 4 }}>Authorization Required</h3>
-                    <p className="text-meta" style={{ color: "var(--danger-text)", opacity: 0.8, lineHeight: 1.5 }}>{error}</p>
-                    <button onClick={() => fetchGooglePosts(selectedProfileId)} className="ds-btn ds-btn-ghost" style={{ marginTop: 12, paddingLeft: 0, color: "var(--danger-text)", fontWeight: "var(--fw-bold)", textDecoration: "underline" }}>Retry Request</button>
+                <div style={{ ...cardStyle, background: "#fef2f2", border: "1px solid #fecaca", borderLeft: "4px solid #dc2626", display: "flex", gap: 16 }}>
+                  <AlertCircle className="text-rose-600" size={20} style={{ flexShrink: 0 }} />
+                  <div>
+                    <h3 style={{ fontSize: 14, fontWeight: 700, color: "#991b1b", marginBottom: 4 }}>Authorization Error</h3>
+                    <p style={{ fontSize: 13, color: "#991b1b", opacity: 0.8, margin: 0 }}>{error}</p>
+                    <button onClick={() => fetchGooglePosts(selectedProfileId)} style={{ fontSize: 12, fontWeight: 700, color: "#dc2626", background: "none", border: "none", padding: 0, marginTop: 8, cursor: "pointer", textDecoration: "underline" }}>Retry Sync</button>
                   </div>
                 </div>
               ) : posts.length > 0 ? (
                 <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
                   {posts.map((post) => (
-                    <div key={post.name} className="ds-card ds-card-hover" style={{ padding: 0, overflow: "hidden" }}>
+                    <div key={post.name} style={{ ...cardStyle, padding: 0, overflow: "hidden" }} className="hover-border-accent">
                       <div style={{ display: "flex", flexDirection: "column", md: "row" } as any}>
                         {post.media?.length > 0 && (
-                          <div style={{ width: 140, height: 140, flexShrink: 0, background: "var(--bg-subtle)", borderRight: "1px solid var(--border-subtle)" }}>
+                          <div style={{ width: 140, height: 140, flexShrink: 0, background: "#f9fafb", borderRight: "1px solid #eaeaea" }}>
                             <img src={post.media[0].googleUrl} style={{ width: "100%", height: "100%", objectFit: "cover" }} alt="" />
                           </div>
                         )}
                         <div style={{ flex: 1, padding: 20 }}>
-                          <div style={{ display: "flex", alignItems: "center", justifyContent: "between", marginBottom: 12 }}>
+                          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 12 }}>
                             <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-                              <span className="ds-badge ds-badge-success" style={{ fontSize: 10 }}>
+                              <span style={{ fontSize: 10, fontWeight: 700, background: "#ecfdf5", color: "#059669", padding: "2px 8px", borderRadius: 4, textTransform: "uppercase" }}>
                                 {post.state}
                               </span>
-                              <div className="text-meta" style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                              <div style={{ fontSize: 11, color: "#94a3b8", display: "flex", alignItems: "center", gap: 6, fontWeight: 500 }}>
                                 <Calendar size={12} />
                                 {new Date(post.createTime).toLocaleDateString('en-IN', {
                                   day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit'
                                 })}
                               </div>
                             </div>
-                            <div style={{ display: "flex", gap: 8 }}>
-                              <a href={post.searchUrl} target="_blank" rel="noreferrer" className="ds-btn ds-btn-secondary" style={{ width: 32, height: 32, padding: 0 }}>
-                                <ExternalLink size={14} />
+                            <div style={{ display: "flex", gap: 6 }}>
+                              <a href={post.searchUrl} target="_blank" rel="noreferrer" style={{ width: 28, height: 28, display: "flex", alignItems: "center", justifyContent: "center", background: "#f8fafc", border: "1px solid #e2e8f0", borderRadius: 4, color: "#64748B" }}>
+                                <ExternalLink size={12} />
                               </a>
-                              <button onClick={() => handleDelete(post.name)} className="ds-btn ds-btn-danger" style={{ width: 32, height: 32, padding: 0 }}>
-                                <Trash2 size={14} />
+                              <button onClick={() => handleDelete(post.name)} style={{ width: 28, height: 28, display: "flex", alignItems: "center", justifyContent: "center", background: "#fef2f2", border: "1px solid #fee2e2", borderRadius: 4, color: "#dc2626", cursor: "pointer" }}>
+                                <Trash2 size={12} />
                               </button>
                             </div>
                           </div>
-                          <p style={{ fontSize: "var(--text-base)", color: "var(--text-secondary)", lineHeight: 1.6, marginBottom: 16 }} className="line-clamp-3">
+                          <p style={{ fontSize: 14, color: "#475569", lineHeight: 1.5, margin: "0 0 16px" }} className="line-clamp-2">
                             {post.summary}
                           </p>
-                          <div style={{ display: "flex", alignItems: "center", justifyContent: "between" }}>
+                          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
                             {post.callToAction && (
-                              <div className="ds-badge ds-badge-neutral" style={{ padding: "4px 10px", fontSize: 10 }}>
-                                <ArrowRight size={12} style={{ marginRight: 6, opacity: 0.5 }} />
+                              <div style={{ fontSize: 10, fontWeight: 700, background: "#f1f5f9", color: "#475569", padding: "4px 10px", borderRadius: 4, textTransform: "uppercase", display: "flex", alignItems: "center", gap: 4 }}>
+                                <ArrowRight size={10} />
                                 {post.callToAction.actionType.replace('_', ' ')}
                               </div>
                             )}
-                            <span className="text-meta" style={{ fontSize: 11 }}>API: {post.name.split('/').pop()}</span>
+                            <span style={{ fontSize: 10, color: "#94a3b8", fontWeight: 600 }}>API REF: {post.name.split('/').pop()}</span>
                           </div>
                         </div>
                       </div>
@@ -277,12 +282,10 @@ export default function GooglePostsPage() {
                   ))}
                 </div>
               ) : (
-                <div className="ds-card" style={{ padding: "80px 24px", textAlign: "center" }}>
-                  <div style={{ width: 64, height: 64, borderRadius: 16, background: "var(--bg-subtle)", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 20px" }}>
-                    <FileText className="text-muted" size={32} />
-                  </div>
-                  <h2 className="heading-card">Clean Slate</h2>
-                  <p className="text-meta">No live publications found on this profile.</p>
+                <div style={{ ...cardStyle, padding: "100px 24px", textAlign: "center" }}>
+                  <FileText style={{ width: 40, height: 40, color: "#cbd5e1", margin: "0 auto 16px" }} />
+                  <h2 style={{ fontSize: 16, fontWeight: 700, color: "#111827", margin: "0 0 4px" }}>No posts found</h2>
+                  <p style={{ fontSize: 14, color: "#64748B", margin: 0 }}>This profile hasn't published any posts yet.</p>
                 </div>
               )}
             </div>
