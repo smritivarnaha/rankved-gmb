@@ -119,11 +119,26 @@ export async function POST(req: NextRequest) {
                 try {
                   const mapsKey = (process.env.GOOGLE_MAPS_API_KEY || "").replace(/["\s\\]/g, "");
 
-                  // ── Strategy 1: GBP Media API v4 — LOGO category ──────────────
-                  // This is the ACTUAL business logo set by the owner in Google Business Profile.
-                  // Must check this FIRST before falling back to Places photos.
-                  // loc.name = "locations/XXXX"; accountName = "accounts/XXXX"
-                  // GBP Media v4 path: accounts/{id}/locations/{id}/media  (no maxResults param)
+                  // Helper: Download an image URL and convert to base64 data URI
+                  // This stores the actual image bytes in DB — no proxy or auth needed at display time
+                  async function downloadAsBase64(imageUrl: string, authHeader?: string): Promise<string | undefined> {
+                    try {
+                      const headers: Record<string, string> = {};
+                      if (authHeader) headers["Authorization"] = authHeader;
+                      const r = await fetch(imageUrl, { headers });
+                      if (!r.ok) return undefined;
+                      const buf = await r.arrayBuffer();
+                      const contentType = r.headers.get("content-type") || "image/jpeg";
+                      const b64 = Buffer.from(buf).toString("base64");
+                      return `data:${contentType};base64,${b64}`;
+                    } catch {
+                      return undefined;
+                    }
+                  }
+
+                  // ── Strategy 1: GBP Media API v4 — LOGO category ONLY ──────────
+                  // Fetches the ACTUAL logo set by the business owner in GBP.
+                  // We ONLY accept items explicitly categorised as LOGO — never random photos.
                   if (!logoUrl) {
                     const locFullName = loc.name.startsWith("accounts/") ? loc.name : `${accountName}/${loc.name}`;
                     const mediaRes = await fetchWithRetry(
@@ -132,32 +147,53 @@ export async function POST(req: NextRequest) {
                     );
                     if (mediaRes.ok) {
                       const { mediaItems = [] } = await mediaRes.json();
-                      // Priority: LOGO > PROFILE > COVER > anything else
-                      const logoItem = mediaItems.find((m: any) => 
+                      console.log(`[Sync] GBP Media: ${mediaItems.length} items for "${loc.title}" — cats: ${mediaItems.map((m: any) => m.locationAssociation?.category || m.category).join(", ")}`);
+                      // STRICTLY only use LOGO category
+                      const logoItem = mediaItems.find((m: any) =>
                         (m.locationAssociation?.category || m.category || "").toUpperCase() === "LOGO"
                       );
-                      const fallbackItem = !logoItem && (
-                        mediaItems.find((m: any) => 
-                          ["PROFILE", "COVER"].includes((m.locationAssociation?.category || m.category || "").toUpperCase())
-                        ) || mediaItems[0]
-                      );
-                      const best = logoItem || fallbackItem;
-                      const raw = best?.googleUrl || best?.thumbnailUrl;
-                      if (raw) {
-                        logoUrl = raw.includes("=") ? raw.split("=")[0] + "=s400" : raw;
-                        const cat = best?.locationAssociation?.category || best?.category || "UNKNOWN";
-                        console.log(`[Sync] ✅ GBP Media [${cat}] for "${loc.title}"`);
+                      if (logoItem) {
+                        const raw = logoItem.googleUrl || logoItem.thumbnailUrl;
+                        if (raw) {
+                          // Download and store as base64 — no auth needed at display time
+                          const b64 = await downloadAsBase64(raw, `Bearer ${accessToken}`);
+                          if (b64) {
+                            logoUrl = b64;
+                            console.log(`[Sync] ✅ GBP LOGO downloaded as base64 for "${loc.title}"`);
+                          }
+                        }
                       } else {
-                        console.warn(`[Sync] GBP Media: ${mediaItems.length} items, no logo for "${loc.title}"`);
+                        console.warn(`[Sync] GBP Media: no LOGO category for "${loc.title}" (${mediaItems.length} items with other cats)`);
                       }
                     } else {
-                      console.warn(`[Sync] GBP Media ${mediaRes.status} for "${loc.title}"`);
+                      const errText = await mediaRes.text();
+                      console.warn(`[Sync] GBP Media ${mediaRes.status} for "${loc.title}": ${errText.substring(0, 100)}`);
                     }
                   }
 
-                  // ── Strategy 2: Classic Places API ────────────────────────────
-                  // Returns public photos from Google Maps — NOT the business logo.
-                  // Only use as a last resort when GBP Media has nothing.
+                  // ── Strategy 2: Places API (New) — profile photo ────────────────
+                  // Uses the first photo from Places API. This is a public photo, 
+                  // typically the most prominent one on Google Maps.
+                  // Only run if GBP Media returned no LOGO.
+                  if (!logoUrl && placeId && mapsKey) {
+                    const placesRes = await fetch(`https://places.googleapis.com/v1/places/${placeId}`, {
+                      headers: { Authorization: `Bearer ${accessToken}`, "X-Goog-FieldMask": "photos" },
+                    });
+                    if (placesRes.ok) {
+                      const placesData = await placesRes.json();
+                      const photoName = placesData.photos?.[0]?.name;
+                      if (photoName) {
+                        const photoUrl = `https://places.googleapis.com/v1/${photoName}/media?maxWidthPx=400&key=${mapsKey}`;
+                        const b64 = await downloadAsBase64(photoUrl);
+                        if (b64) {
+                          logoUrl = b64;
+                          console.log(`[Sync] ✅ Places API photo downloaded as base64 for "${loc.title}"`);
+                        }
+                      }
+                    }
+                  }
+
+                  // ── Strategy 3: Classic Places API ─────────────────────────────
                   if (!logoUrl && placeId && mapsKey) {
                     const detailsRes = await fetch(
                       `https://maps.googleapis.com/maps/api/place/details/json?place_id=${placeId}&fields=photos&key=${mapsKey}`
@@ -166,33 +202,21 @@ export async function POST(req: NextRequest) {
                       const det = await detailsRes.json();
                       const ref = det.result?.photos?.[0]?.photo_reference;
                       if (ref) {
-                        logoUrl = `https://maps.googleapis.com/maps/api/place/photo?maxwidth=400&photo_reference=${ref}&key=${mapsKey}`;
-                        console.log(`[Sync] ✅ Classic Places (fallback) for "${loc.title}"`);
-                      } else {
-                        console.warn(`[Sync] Classic Places: no photos for "${loc.title}", status=${det.status}`);
+                        const photoUrl = `https://maps.googleapis.com/maps/api/place/photo?maxwidth=400&photo_reference=${ref}&key=${mapsKey}`;
+                        const b64 = await downloadAsBase64(photoUrl);
+                        if (b64) {
+                          logoUrl = b64;
+                          console.log(`[Sync] ✅ Classic Places photo downloaded as base64 for "${loc.title}"`);
+                        }
                       }
                     }
                   }
 
-                  // ── Strategy 3: Places API (New) with OAuth ────────────────────
-                  if (!logoUrl && placeId) {
-                    const placesRes = await fetch(`https://places.googleapis.com/v1/places/${placeId}`, {
-                      headers: { Authorization: `Bearer ${accessToken}`, "X-Goog-FieldMask": "photos" },
-                    });
-                    if (placesRes.ok) {
-                      const placesData = await placesRes.json();
-                      const photoName = placesData.photos?.[0]?.name;
-                      if (photoName && mapsKey) {
-                        logoUrl = `https://places.googleapis.com/v1/${photoName}/media?maxWidthPx=400&key=${mapsKey}`;
-                        console.log(`[Sync] ✅ Places API (New) for "${loc.title}"`);
-                      }
-                    }
-                  }
-
-                  if (!logoUrl) console.warn(`[Sync] ❌ No logo found for "${loc.title}" (placeId=${placeId})`);
+                  if (!logoUrl) console.warn(`[Sync] ❌ No logo found for "${loc.title}"`);
                 } catch (e) {
                   console.error(`Logo error for ${loc.title}:`, e);
                 }
+
 
                 fetchedProfiles.push({
                   id: crypto.randomUUID(),
