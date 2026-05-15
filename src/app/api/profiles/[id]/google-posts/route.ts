@@ -4,11 +4,11 @@ import { authOptions } from "@/lib/auth";
 import { getGoogleAccessTokenForLocation } from "@/lib/google-token";
 
 // GET /api/profiles/[id]/google-posts — Fetch live posts from Google
-export async function GET(req: NextRequest, { params }: { params: { id: string } }) {
+export async function GET(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+  const { id: locationId } = await params;
   const session = await getServerSession(authOptions);
   if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-  const locationId = params.id;
   const accessToken = await getGoogleAccessTokenForLocation(locationId);
 
   if (!accessToken) {
@@ -16,14 +16,19 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
   }
 
   try {
-    // Fetch profile details to get the googleName (e.g. accounts/xxx/locations/yyy)
+    // Fetch profile details to get the gbpLocationId
     const prisma = (await import("@/lib/prisma")).default;
     const location = await prisma.location.findUnique({ where: { id: locationId } });
-    if (!location || !location.googleName) {
+    if (!location || !location.gbpLocationId) {
       return NextResponse.json({ error: "Location not found or not synced with Google." }, { status: 404 });
     }
 
-    const res = await fetch(`https://mybusiness.googleapis.com/v4/${location.googleName}/localPosts?pageSize=20`, {
+    // Google API requires full resource name or just locations/id? 
+    // In this app, gbpLocationId usually stores "locations/ID" or just "ID".
+    // If it's just the ID, we prefix with locations/
+    const resourceName = location.gbpLocationId.includes("/") ? location.gbpLocationId : `locations/${location.gbpLocationId}`;
+
+    const res = await fetch(`https://mybusiness.googleapis.com/v4/${resourceName}/localPosts?pageSize=20`, {
       headers: { Authorization: `Bearer ${accessToken}` },
     });
 
@@ -40,11 +45,11 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
 }
 
 // DELETE /api/profiles/[id]/google-posts?postName=xxx — Delete a post from Google
-export async function DELETE(req: NextRequest, { params }: { params: { id: string } }) {
+export async function DELETE(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+  const { id: locationId } = await params;
   const session = await getServerSession(authOptions);
   if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-  const locationId = params.id;
   const { searchParams } = new URL(req.url);
   const postName = searchParams.get("postName");
 
