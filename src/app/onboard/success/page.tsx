@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { CheckCircle2, Loader2, Globe, ArrowRight } from "lucide-react";
 import Link from "next/link";
+import { LottieWrapper } from "@/components/ui/lottie-wrapper";
 
 export default function OnboardSuccessPage() {
   useEffect(() => {
@@ -30,17 +31,11 @@ export default function OnboardSuccessPage() {
         boxShadow: "0 20px 50px rgba(0,0,0,0.04)"
       }} className="ds-anim-fade">
         
-        {/* Success Icon */}
+        {/* Success Animation */}
         <div style={{ 
-          width: 80, height: 80, borderRadius: 28, background: "#EFF6FF", 
-          display: "flex", alignItems: "center", justifyContent: "center",
-          margin: "0 auto 32px", position: "relative"
+          width: 160, height: 160, margin: "0 auto 16px"
         }}>
-          <CheckCircle2 size={40} style={{ color: "#2563EB" }} />
-          <div style={{ 
-            position: "absolute", inset: -4, border: "2px solid #2563EB", 
-            borderRadius: 32, opacity: 0.1 
-          }} className="anim-pulse" />
+          <LottieWrapper url="https://assets3.lottiefiles.com/packages/lf20_yupe0msc.json" />
         </div>
 
         {/* Congratulatory Text */}
