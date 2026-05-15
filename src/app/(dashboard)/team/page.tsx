@@ -4,6 +4,7 @@ import { useSession } from "next-auth/react";
 import { useState, useEffect } from "react";
 import { Users, Plus, Trash2, Loader2, ShieldAlert, X, Shield, Search, UserCircle, MapPin, Mail, Settings, UserPlus, Eye, EyeOff } from "lucide-react";
 import useSWR from "swr";
+import { Skeleton } from "@/components/ui/Skeleton";
 
 const fetcher = (url: string) => fetch(url).then((res) => res.json());
 
@@ -91,9 +92,35 @@ export default function TeamPage() {
 
   if (loading) {
     return (
-      <div className="flex-1 flex flex-col items-center justify-center min-h-[60vh]">
-        <Loader2 className="w-8 h-8 text-[var(--accent)] animate-spin mb-4" />
-        <p className="text-[var(--text-secondary)]">Loading team members...</p>
+      <div className="space-y-8">
+        {/* Header skeleton */}
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+          <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+            <Skeleton height={26} width={220} borderRadius={6} />
+            <Skeleton height={13} width={280} />
+          </div>
+          <Skeleton height={44} width={180} borderRadius={12} />
+        </div>
+        {/* Table skeleton */}
+        <div style={{ background: "#fff", border: "1px solid #eaeaea", borderRadius: 16, overflow: "hidden" }}>
+          <div style={{ padding: "16px 24px", borderBottom: "1px solid #f1f5f9" }}>
+            <Skeleton height={36} width={240} borderRadius={8} />
+          </div>
+          {Array.from({ length: 5 }).map((_, i) => (
+            <div key={i} style={{ display: "grid", gridTemplateColumns: "2fr 1.2fr 1.5fr 0.5fr", gap: 16, padding: "16px 24px", borderBottom: "1px solid #f8f9fa", alignItems: "center" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+                <Skeleton width={36} height={36} borderRadius="50%" />
+                <div style={{ flex: 1, display: "flex", flexDirection: "column", gap: 6 }}>
+                  <Skeleton height={13} width="70%" />
+                  <Skeleton height={10} width="50%" />
+                </div>
+              </div>
+              <Skeleton height={22} width={90} borderRadius={20} />
+              <Skeleton height={13} width="80%" />
+              <Skeleton height={28} width={28} borderRadius={8} style={{ marginLeft: "auto" }} />
+            </div>
+          ))}
+        </div>
       </div>
     );
   }

@@ -2,11 +2,12 @@
 
 import { useState, useEffect, useMemo } from "react";
 import {
-  Search, MapPin, ExternalLink, Trash2, Loader2,
+  Search, MapPin, ExternalLink, Trash2,
   AlertCircle, RefreshCw, Globe, Calendar, FileText,
   ArrowRight, Eye, X, ChevronDown, Tag, Megaphone, Gift, Star
 } from "lucide-react";
 import Link from "next/link";
+import { ProfileItemSkeleton, PostCardSkeleton } from "@/components/ui/Skeleton";
 
 type SortOption = "newest" | "oldest" | "type";
 
@@ -234,8 +235,8 @@ export default function GooglePostsPage() {
           {/* Profile list */}
           <div style={{ maxHeight: "calc(100vh - 260px)", overflowY: "auto" }}>
             {loadingProfiles ? (
-              <div style={{ padding: "40px 0", textAlign: "center" }}>
-                <Loader2 style={{ color: "#2563EB" }} size={20} className="anim-spin" />
+              <div style={{ paddingTop: 8 }}>
+                {Array.from({ length: 6 }).map((_, i) => <ProfileItemSkeleton key={i} />)}
               </div>
             ) : filteredProfiles.length > 0 ? filteredProfiles.map(p => (
               <button key={p.id}
@@ -306,11 +307,10 @@ export default function GooglePostsPage() {
                 </div>
               </div>
 
-              {/* Loading */}
+              {/* Loading — skeleton grid */}
               {loadingPosts && (
-                <div style={{ ...cardStyle, padding: "80px 24px", textAlign: "center" }}>
-                  <div className="anim-spin" style={{ width: 32, height: 32, border: "3px solid #f1f5f9", borderTopColor: "#2563eb", borderRadius: "50%", margin: "0 auto 14px" }} />
-                  <p style={{ fontSize: 13, fontWeight: 600, color: "#64748B", margin: 0 }}>Syncing with Google...</p>
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(300px, 1fr))", gap: 16 }}>
+                  {Array.from({ length: 6 }).map((_, i) => <PostCardSkeleton key={i} />)}
                 </div>
               )}
 

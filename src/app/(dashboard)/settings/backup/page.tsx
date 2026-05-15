@@ -3,9 +3,10 @@
 import { useState, useEffect } from "react";
 import { 
   Download, Trash2, Upload, Database, 
-  RefreshCw, FileJson, AlertTriangle, 
-  Loader2, CheckCircle2, Save, HardDrive
+  RefreshCw, FileJson, AlertTriangle, Loader2,
+  CheckCircle2, Save, HardDrive
 } from "lucide-react";
+import { TableRowSkeleton } from "@/components/ui/Skeleton";
 
 export default function BackupPage() {
   const [backups, setBackups] = useState<any[]>([]);
@@ -225,10 +226,11 @@ export default function BackupPage() {
         
         <div style={{ display: "flex", flexDirection: "column" }}>
           {loading ? (
-            <div style={{ padding: "60px 24px", textAlign: "center" }}>
-              <div className="anim-spin" style={{ width: 40, height: 40, border: "3px solid #f1f5f9", borderTopColor: "#2563eb", borderRadius: "50%", margin: "0 auto 16px" }} />
-              <p style={{ fontSize: 14, fontWeight: 600, color: "#64748B", margin: 0 }}>Scanning local storage...</p>
-            </div>
+            <table style={{ width: "100%", borderCollapse: "collapse" }}>
+              <tbody>
+                {Array.from({ length: 4 }).map((_, i) => <TableRowSkeleton key={i} />)}
+              </tbody>
+            </table>
           ) : backups.length > 0 ? (
             <table style={{ width: "100%", borderCollapse: "collapse", textAlign: "left" }}>
               <thead>

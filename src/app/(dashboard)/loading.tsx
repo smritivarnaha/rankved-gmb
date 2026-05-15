@@ -1,11 +1,19 @@
-import { Loader2 } from "lucide-react";
+import { StatCardSkeleton, ProfileCardSkeleton, PageHeaderSkeleton } from "@/components/ui/Skeleton";
 
 export default function DashboardLoading() {
   return (
-    <div className="flex h-[60vh] items-center justify-center anim-fade">
-      <div className="flex flex-col items-center gap-4">
-        <Loader2 className="w-10 h-10 animate-spin text-[var(--accent)]" />
-        <p className="text-sm font-medium text-[var(--text-secondary)]">Loading Workspace...</p>
+    <div style={{ fontFamily: "Inter, sans-serif", paddingBottom: 60 }} className="anim-fade">
+      {/* Page header skeleton */}
+      <PageHeaderSkeleton />
+
+      {/* Stats strip skeleton */}
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 16, marginBottom: 28 }}>
+        {Array.from({ length: 4 }).map((_, i) => <StatCardSkeleton key={i} />)}
+      </div>
+
+      {/* Profile cards skeleton */}
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(290px, 1fr))", gap: 16 }}>
+        {Array.from({ length: 8 }).map((_, i) => <ProfileCardSkeleton key={i} />)}
       </div>
     </div>
   );
