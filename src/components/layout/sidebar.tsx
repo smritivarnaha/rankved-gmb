@@ -8,7 +8,7 @@ import {
   LayoutDashboard, CalendarDays, Settings, MapPin,
   FileText, Users, Shield, BarChart3, Key, Zap,
   Search, ChevronsUpDown, Command, User, Share2, 
-  Lock, Star, ArrowRight, LogOut, Database, Globe
+  Lock, Star, ArrowRight, LogOut, Database, Globe, Edit3, MessageSquare
 } from "lucide-react";
 import { useGlobalSettings } from "@/hooks/useGlobalSettings";
 
@@ -24,10 +24,17 @@ import { useGlobalSettings } from "@/hooks/useGlobalSettings";
       ]
     },
     {
+      label: "GOOGLE OFFICIAL",
+      items: [
+        { name: "Live Posts Feed", href: "/google-posts", icon: Globe },
+        { name: "Edit Profile", href: "/profiles", icon: Edit3 },
+        { name: "Reviews", href: "/reviews", icon: MessageSquare },
+      ]
+    },
+    {
       label: "MANAGEMENT",
       items: [
         { name: "Calendar", href: "/calendar", icon: CalendarDays },
-        { name: "Posts from Google", href: "/google-posts", icon: Globe },
         { name: "Team", href: "/team", icon: Users, hideForTeam: true },
         { name: "API Keys", href: "/api-keys", icon: Key, hideForTeam: true },
       ]
@@ -106,31 +113,54 @@ export function Sidebar() {
 
           return (
             <div key={cat.label}>
-              <p style={{ fontSize: 11, fontWeight: 600, color: "#888", letterSpacing: "0.05em", padding: "0 12px", marginBottom: 8 }}>{cat.label}</p>
-              <nav style={{ display: "flex", flexDirection: "column", gap: 4 }}>
-                {visibleItems.map((item) => {
-                  const isActive = pathname === item.href || pathname.startsWith(item.href + "/");
-                  const Icon = item.icon;
-                  return (
-                    <Link
-                      key={item.name}
-                      href={item.href}
-                      style={{
-                        display: "flex", alignItems: "center", justifyContent: "space-between",
-                        padding: "8px 12px", borderRadius: 6, textDecoration: "none",
-                        background: isActive ? "#eaeaea" : "transparent", transition: "background 0.2s"
-                      }}
-                      onMouseEnter={(e) => { if(!isActive) e.currentTarget.style.background = "#f5f5f5"; }}
-                      onMouseLeave={(e) => { if(!isActive) e.currentTarget.style.background = "transparent"; }}
-                    >
-                      <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-                        <Icon size={16} strokeWidth={1.5} color={isActive ? "#111" : "#666"} />
-                        <span style={{ fontSize: 13, fontWeight: 500, color: isActive ? "#111" : "#666" }}>{item.name}</span>
-                      </div>
-                    </Link>
-                  );
-                })}
-              </nav>
+              {cat.label === "GOOGLE OFFICIAL" ? (
+                <div style={{ marginBottom: 8, padding: "10px 12px 6px", background: "linear-gradient(135deg, #eff6ff 0%, #f0fdf4 100%)", borderRadius: 10, border: "1px solid #dbeafe" }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 8 }}>
+                    <div style={{ width: 16, height: 16, borderRadius: 4, background: "linear-gradient(135deg, #4285F4, #34A853)", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                      <span style={{ fontSize: 9, fontWeight: 900, color: "#fff" }}>G</span>
+                    </div>
+                    <p style={{ fontSize: 10, fontWeight: 700, color: "#2563eb", letterSpacing: "0.06em", margin: 0 }}>GOOGLE OFFICIAL</p>
+                  </div>
+                  <nav style={{ display: "flex", flexDirection: "column", gap: 2 }}>
+                    {visibleItems.map((item) => {
+                      const isActive = pathname === item.href || pathname.startsWith(item.href + "/");
+                      const Icon = item.icon;
+                      return (
+                        <Link key={item.name} href={item.href}
+                          style={{ display: "flex", alignItems: "center", gap: 10, padding: "7px 10px", borderRadius: 7, textDecoration: "none", background: isActive ? "#dbeafe" : "transparent", transition: "background 0.15s" }}
+                          onMouseEnter={e => { if (!isActive) e.currentTarget.style.background = "rgba(37,99,235,0.07)"; }}
+                          onMouseLeave={e => { if (!isActive) e.currentTarget.style.background = "transparent"; }}
+                        >
+                          <Icon size={15} strokeWidth={1.5} color={isActive ? "#2563eb" : "#60a5fa"} />
+                          <span style={{ fontSize: 13, fontWeight: 500, color: isActive ? "#1d4ed8" : "#3b82f6" }}>{item.name}</span>
+                        </Link>
+                      );
+                    })}
+                  </nav>
+                </div>
+              ) : (
+                <>
+                  <p style={{ fontSize: 11, fontWeight: 600, color: "#888", letterSpacing: "0.05em", padding: "0 12px", marginBottom: 8 }}>{cat.label}</p>
+                  <nav style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+                    {visibleItems.map((item) => {
+                      const isActive = pathname === item.href || pathname.startsWith(item.href + "/");
+                      const Icon = item.icon;
+                      return (
+                        <Link key={item.name} href={item.href}
+                          style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "8px 12px", borderRadius: 6, textDecoration: "none", background: isActive ? "#eaeaea" : "transparent", transition: "background 0.2s" }}
+                          onMouseEnter={e => { if (!isActive) e.currentTarget.style.background = "#f5f5f5"; }}
+                          onMouseLeave={e => { if (!isActive) e.currentTarget.style.background = "transparent"; }}
+                        >
+                          <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+                            <Icon size={16} strokeWidth={1.5} color={isActive ? "#111" : "#666"} />
+                            <span style={{ fontSize: 13, fontWeight: 500, color: isActive ? "#111" : "#666" }}>{item.name}</span>
+                          </div>
+                        </Link>
+                      );
+                    })}
+                  </nav>
+                </>
+              )}
             </div>
           );
         })}
