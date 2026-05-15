@@ -206,7 +206,7 @@ export default function GooglePostsPage() {
       {viewPost && <PostModal post={viewPost} onClose={() => setViewPost(null)} onDelete={handleDelete} />}
 
       {/* Header */}
-      <div style={{ marginBottom: 28, display: "flex", justifyContent: "space-between", alignItems: "flex-end" }}>
+      <div className="live-feed-page-header">
         <div>
           <h1 style={{ fontSize: 24, fontWeight: 700, color: "#111827", margin: "0 0 4px", letterSpacing: "-0.01em" }}>Live Feed</h1>
           <p style={{ fontSize: 14, color: "#64748B", margin: 0 }}>Real-time transparency. Manage posts currently live on Google.</p>
@@ -217,10 +217,10 @@ export default function GooglePostsPage() {
         </div>
       </div>
 
-      <div style={{ display: "grid", gridTemplateColumns: "260px 1fr", gap: 20, alignItems: "start" }}>
+      <div className="live-feed-layout">
 
         {/* ── Sidebar ─────────────────────────────────────────────── */}
-        <div style={{ ...cardStyle, padding: 0, overflow: "hidden", position: "sticky", top: 24 }}>
+        <div className="live-feed-sidebar" style={{ ...cardStyle, padding: 0, overflow: "hidden", position: "sticky", top: 24 }}>
           {/* Search */}
           <div style={{ padding: "12px 14px", borderBottom: "1px solid #eaeaea" }}>
             <div style={{ position: "relative" }}>
@@ -233,7 +233,7 @@ export default function GooglePostsPage() {
             </div>
           </div>
           {/* Profile list */}
-          <div style={{ maxHeight: "calc(100vh - 260px)", overflowY: "auto" }}>
+          <div className="live-feed-sidebar-list" style={{ maxHeight: "calc(100vh - 260px)", overflowY: "auto" }}>
             {loadingProfiles ? (
               <div style={{ paddingTop: 8 }}>
                 {Array.from({ length: 6 }).map((_, i) => <ProfileItemSkeleton key={i} />)}
@@ -274,10 +274,10 @@ export default function GooglePostsPage() {
               <p style={{ fontSize: 13, color: "#64748B", margin: 0 }}>Choose a business profile from the left to view its live posts.</p>
             </div>
           ) : (
-            <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+            <div className="live-feed-content">
 
               {/* Profile header bar */}
-              <div style={{ ...cardStyle, padding: "14px 20px", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+              <div className="live-feed-header-bar" style={{ ...cardStyle, padding: "14px 20px" }}>
                 <div>
                   <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 2 }}>
                     <h2 style={{ fontSize: 15, fontWeight: 700, color: "#111827", margin: 0 }}>{selectedProfile?.name}</h2>
@@ -309,7 +309,7 @@ export default function GooglePostsPage() {
 
               {/* Loading — skeleton grid */}
               {loadingPosts && (
-                <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(300px, 1fr))", gap: 16 }}>
+                <div className="post-cards-grid">
                   {Array.from({ length: 6 }).map((_, i) => <PostCardSkeleton key={i} />)}
                 </div>
               )}
@@ -350,7 +350,7 @@ export default function GooglePostsPage() {
 
               {/* ── Post Cards Grid ─────────────────────────────── */}
               {!loadingPosts && !error && sortedPosts.length > 0 && (
-                <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(300px, 1fr))", gap: 16 }}>
+                <div className="post-cards-grid">
                   {sortedPosts.map(post => {
                     const type = getPostType(post);
                     const TypeIcon = type.Icon;

@@ -6,13 +6,13 @@ export default function DashboardLoading() {
       {/* Page header skeleton */}
       <PageHeaderSkeleton />
 
-      {/* Stats strip skeleton */}
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 16, marginBottom: 28 }}>
+      {/* Stats strip — responsive via .dash-skel-stats */}
+      <div className="dash-skel-stats">
         {Array.from({ length: 4 }).map((_, i) => <StatCardSkeleton key={i} />)}
       </div>
 
-      {/* Profile cards skeleton */}
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(290px, 1fr))", gap: 16 }}>
+      {/* Profile cards — responsive via .dash-skel-profiles */}
+      <div className="dash-skel-profiles">
         {Array.from({ length: 8 }).map((_, i) => <ProfileCardSkeleton key={i} />)}
       </div>
     </div>

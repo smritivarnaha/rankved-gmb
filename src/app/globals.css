@@ -826,3 +826,171 @@ tr:hover td { background: var(--bg-hover); }
 .mb-4 { margin-bottom: 16px; }
 .mb-6 { margin-bottom: 24px; }
 .ml-auto { margin-left: auto; }
+
+/* ══════════════════════════════════════════════════════════
+   RESPONSIVE — New Layouts Added in May 2026 Sprint
+   Covers: Live Feed, Backup, Team, Onboarding, Card Grids
+   Safe-only additions — no existing rules modified.
+   ══════════════════════════════════════════════════════════ */
+
+/* ── Live Feed sidebar + main grid ── */
+.live-feed-layout {
+  display: grid;
+  grid-template-columns: 260px 1fr;
+  gap: 20px;
+  align-items: start;
+}
+@media (max-width: 900px) {
+  .live-feed-layout {
+    grid-template-columns: 1fr;
+  }
+  .live-feed-sidebar {
+    position: static !important;
+    max-height: 280px;
+  }
+  .live-feed-sidebar-list {
+    max-height: 200px !important;
+  }
+}
+
+/* ── Live Feed post card grid ── */
+.post-cards-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 16px;
+}
+@media (max-width: 640px) {
+  .post-cards-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* ── Dashboard loading skeleton stat strip ── */
+.dash-skel-stats {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 16px;
+  margin-bottom: 28px;
+}
+@media (max-width: 1024px) {
+  .dash-skel-stats { grid-template-columns: repeat(2, 1fr); }
+}
+@media (max-width: 640px) {
+  .dash-skel-stats { grid-template-columns: 1fr; }
+}
+
+/* ── Dashboard loading skeleton profile grid ── */
+.dash-skel-profiles {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(290px, 1fr));
+  gap: 16px;
+}
+@media (max-width: 640px) {
+  .dash-skel-profiles { grid-template-columns: 1fr; }
+}
+
+/* ── Live Feed profile header bar ── */
+.live-feed-header-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+@media (max-width: 640px) {
+  .live-feed-header-bar {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 12px;
+  }
+  .live-feed-header-bar .sort-controls {
+    width: 100%;
+    display: flex;
+    justify-content: flex-end;
+  }
+}
+
+/* ── Backup table — horizontal scroll on small screens ── */
+.backup-table-wrap {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* ── Team page skeleton grid ── */
+.team-skel-row {
+  display: grid;
+  grid-template-columns: 2fr 1.2fr 1.5fr 0.5fr;
+  gap: 16px;
+  padding: 16px 24px;
+  border-bottom: 1px solid #f8f9fa;
+  align-items: center;
+}
+@media (max-width: 768px) {
+  .team-skel-row {
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+  }
+  .team-skel-row > *:nth-child(3),
+  .team-skel-row > *:nth-child(4) { display: none; }
+}
+
+/* ── Onboarding / Link / Success pages ── */
+.onboard-card {
+  max-width: 480px;
+  width: 100%;
+}
+@media (max-width: 520px) {
+  .onboard-card {
+    margin: 0 12px;
+  }
+  .onboard-card > div {
+    padding: 36px 24px 32px !important;
+    border-radius: 20px !important;
+  }
+}
+
+/* ── Post modal ── */
+.post-modal-inner {
+  max-width: 580px;
+  width: 100%;
+  max-height: 90vh;
+  overflow: auto;
+}
+@media (max-width: 640px) {
+  .post-modal-inner {
+    max-width: 100%;
+    max-height: 95vh;
+    border-radius: 16px !important;
+    margin: 0 8px;
+  }
+}
+
+/* ── Live Feed page header (title + badge) ── */
+.live-feed-page-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  margin-bottom: 28px;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+/* ── Mobile: collapse sort controls into compact row ── */
+@media (max-width: 480px) {
+  .live-feed-page-header { align-items: flex-start; }
+}
+
+/* ── line-clamp polyfill for older WebKit ── */
+.line-clamp-2 {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* ── Live Feed content column ── */
+.live-feed-content {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  min-width: 0;
+}
