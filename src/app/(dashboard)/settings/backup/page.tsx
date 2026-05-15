@@ -199,7 +199,7 @@ export default function BackupPage() {
           <div style={{ 
             width: 32, height: 32, borderRadius: 8, 
             background: status.type === "success" ? "#dcfce7" : status.type === "error" ? "#fee2e2" : "#eff6ff",
-            display: "flex", alignItems: "center", justifyContent: "center", shrink: 0 
+            display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 
           }}>
             {status.type === "success" ? <CheckCircle2 size={18} className="text-emerald-600" /> : status.type === "error" ? <AlertTriangle size={18} className="text-rose-600" /> : <RefreshCw size={18} className="anim-spin text-blue-600" />}
           </div>
@@ -291,7 +291,7 @@ export default function BackupPage() {
         background: "#111827", borderRadius: 8, 
         display: "flex", alignItems: "center", gap: 20 
       }}>
-        <div style={{ width: 40, height: 40, borderRadius: 10, background: "rgba(255,255,255,0.05)", display: "flex", alignItems: "center", justifyContent: "center", shrink: 0 }}>
+        <div style={{ width: 40, height: 40, borderRadius: 10, background: "rgba(255,255,255,0.05)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
           <AlertTriangle className="text-amber-400" size={20} />
         </div>
         <div style={{ flex: 1 }}>

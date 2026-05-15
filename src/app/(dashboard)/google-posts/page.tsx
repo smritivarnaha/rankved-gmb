@@ -129,7 +129,7 @@ export default function GooglePostsPage() {
               <input 
                 type="text" 
                 placeholder="Search profiles..." 
-                style={{ width: "100%", height: 36, pl: "32px", fontSize: 13, background: "#f8fafc", border: "1px solid #e2e8f0", borderRadius: 6, outline: "none", paddingLeft: 32 }}
+                style={{ width: "100%", height: 36, paddingLeft: 32, fontSize: 13, background: "#f8fafc", border: "1px solid #e2e8f0", borderRadius: 6, outline: "none" }}
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
               />
