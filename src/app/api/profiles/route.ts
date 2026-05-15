@@ -166,8 +166,13 @@ export async function POST(req: NextRequest) {
                       const bizPhotos = photos.filter((p: any) => 
                         p.authorAttributions?.some((a: any) => {
                           const author = (a.displayName || "").toLowerCase();
-                          return author.includes(businessName) || businessName.includes(author) || 
-                                 author.includes("business owner") || author.includes("owner");
+                          const cleanAuthor = author.replace(/[^a-z0-9]/g, "");
+                          const cleanBizName = businessName.replace(/[^a-z0-9]/g, "");
+                          
+                          return cleanAuthor.includes(cleanBizName) || 
+                                 cleanBizName.includes(cleanAuthor) || 
+                                 author.includes("business owner") || 
+                                 author.includes("owner");
                         })
                       );
                       
