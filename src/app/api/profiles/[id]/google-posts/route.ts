@@ -34,7 +34,12 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
 
     if (!res.ok) {
       const err = await res.json().catch(() => ({}));
-      return NextResponse.json({ error: err?.error?.message || "Failed to fetch posts from Google" }, { status: res.status });
+      console.error(`[Google Posts API] Fetch failed for ${resourceName}:`, res.status, err);
+      return NextResponse.json({ 
+        error: err?.error?.message || "Failed to fetch posts from Google",
+        details: err?.error,
+        status: res.status
+      }, { status: res.status });
     }
 
     const data = await res.json();

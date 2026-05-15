@@ -224,12 +224,38 @@ export default function GooglePostsPage() {
                   <p style={{ fontSize: 14, fontWeight: 600, color: "#64748B" }}>Syncing with Google...</p>
                 </div>
               ) : error ? (
-                <div style={{ ...cardStyle, background: "#fef2f2", border: "1px solid #fecaca", borderLeft: "4px solid #dc2626", display: "flex", gap: 16 }}>
-                  <AlertCircle className="text-rose-600" size={20} style={{ flexShrink: 0 }} />
-                  <div>
-                    <h3 style={{ fontSize: 14, fontWeight: 700, color: "#991b1b", marginBottom: 4 }}>Authorization Error</h3>
-                    <p style={{ fontSize: 13, color: "#991b1b", opacity: 0.8, margin: 0 }}>{error}</p>
-                    <button onClick={() => fetchGooglePosts(selectedProfileId)} style={{ fontSize: 12, fontWeight: 700, color: "#dc2626", background: "none", border: "none", padding: 0, marginTop: 8, cursor: "pointer", textDecoration: "underline" }}>Retry Sync</button>
+                <div style={{ ...cardStyle, background: "#fff", border: "1px solid #fee2e2", borderLeft: "4px solid #dc2626", display: "flex", gap: 16 }}>
+                  <div style={{ 
+                    width: 40, height: 40, borderRadius: 10, background: "#fef2f2", 
+                    display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 
+                  }}>
+                    <AlertCircle className="text-rose-600" size={20} />
+                  </div>
+                  <div style={{ flex: 1 }}>
+                    <h3 style={{ fontSize: 14, fontWeight: 700, color: "#111827", marginBottom: 4 }}>
+                      {error.includes("access token") || error.includes("Unauthorized") ? "Authorization Required" : "Fetch Interrupted"}
+                    </h3>
+                    <p style={{ fontSize: 13, color: "#64748B", lineHeight: 1.5, margin: "0 0 16px" }}>
+                      {error}
+                    </p>
+                    <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+                      <button 
+                        onClick={() => fetchGooglePosts(selectedProfileId)} 
+                        style={{ ...btnSecondary, height: 32, fontSize: 12, padding: "0 12px" }}
+                      >
+                        <RefreshCw size={14} className={loadingPosts ? "anim-spin" : ""} />
+                        Retry Sync
+                      </button>
+                      
+                      {(error.includes("token") || error.includes("Unauthorized") || error.includes("expired")) && (
+                        <Link 
+                          href="/onboard" 
+                          style={{ ...btnPrimary, height: 32, fontSize: 12, padding: "0 12px", background: "#0f172a" }}
+                        >
+                          Reconnect Account
+                        </Link>
+                      )}
+                    </div>
                   </div>
                 </div>
               ) : posts.length > 0 ? (
