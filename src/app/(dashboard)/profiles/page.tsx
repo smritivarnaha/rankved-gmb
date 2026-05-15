@@ -46,8 +46,8 @@ function proxyUrl(url?: string) {
     targetUrl = url.replace("gbp:", "");
   }
   
-  // Classic Places API photos already have a public API key, no proxy needed
-  if (targetUrl.includes("maps.googleapis.com/maps/api/place/photo")) {
+  // Classic & New Places API photos already have a public API key, no proxy needed
+  if (targetUrl.includes("maps.googleapis.com") || targetUrl.includes("places.googleapis.com")) {
     return targetUrl;
   }
   

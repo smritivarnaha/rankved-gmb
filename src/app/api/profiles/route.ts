@@ -149,17 +149,62 @@ export async function POST(req: NextRequest) {
                     }
                   }
 
-                  // ── Strategy 2: Classic Places API (public, uses Maps API key) ─
-                  // Photo URLs from this API include the key — no proxy needed.
+                  // ── Strategy 2: Smart Places API (New) — Find the squarest business photo ──
+                  // Business logos are almost always square. Random Maps photos are usually landscape.
+                  if (!logoUrl && placeId && mapsKey) {
+                    const placesRes = await fetch(`https://places.googleapis.com/v1/places/${placeId}?key=${mapsKey}`, {
+                      headers: { "X-Goog-FieldMask": "photos,displayName" },
+                    });
+                    if (placesRes.ok) {
+                      const data = await placesRes.json();
+                      const businessName = data.displayName?.text || "";
+                      const photos = data.photos || [];
+                      
+                      // Filter for photos uploaded by the business itself
+                      const bizPhotos = photos.filter((p: any) => 
+                        p.authorAttributions?.some((a: any) => 
+                          a.displayName?.toLowerCase().includes(businessName.toLowerCase()) ||
+                          businessName.toLowerCase().includes(a.displayName?.toLowerCase())
+                        )
+                      );
+                      
+                      const candidatePhotos = bizPhotos.length > 0 ? bizPhotos : photos;
+                      
+                      // Find the squarest photo (ratio closest to 1.0)
+                      let bestPhoto = null;
+                      let minDiff = 1.0;
+                      
+                      for (const p of candidatePhotos) {
+                        if (p.widthPx && p.heightPx) {
+                          const ratio = p.widthPx / p.heightPx;
+                          const diff = Math.abs(ratio - 1.0);
+                          if (diff < minDiff) {
+                            minDiff = diff;
+                            bestPhoto = p;
+                          }
+                        }
+                      }
+                      
+                      if (bestPhoto && minDiff < 0.2) { // Only use if it's reasonably square
+                        logoUrl = `https://places.googleapis.com/v1/${bestPhoto.name}/media?maxWidthPx=400&key=${mapsKey}`;
+                        console.log(`[Sync] ✅ Smart Square Photo detected for "${loc.title}" (diff=${minDiff.toFixed(3)})`);
+                      } else if (photos[0]) {
+                        // Final fallback: just use the first photo if no square one found
+                        logoUrl = `https://places.googleapis.com/v1/${photos[0].name}/media?maxWidthPx=400&key=${mapsKey}`;
+                        console.log(`[Sync] ⚠️ Using first available photo for "${loc.title}"`);
+                      }
+                    }
+                  }
+
+                  // ── Strategy 3: Classic Places API (Legacy Fallback) ─────────────
                   if (!logoUrl && placeId && mapsKey) {
                     const det = await fetch(
                       `https://maps.googleapis.com/maps/api/place/details/json?place_id=${placeId}&fields=photos&key=${mapsKey}`
                     ).then(r => r.ok ? r.json() : null);
                     const ref = det?.result?.photos?.[0]?.photo_reference;
                     if (ref) {
-                      // This URL is publicly accessible — no proxy needed
                       logoUrl = `https://maps.googleapis.com/maps/api/place/photo?maxwidth=400&photo_reference=${ref}&key=${mapsKey}`;
-                      console.log(`[Sync] ✅ Classic Places logo for "${loc.title}"`);
+                      console.log(`[Sync] ✅ Classic Places fallback logo for "${loc.title}"`);
                     }
                   }
 

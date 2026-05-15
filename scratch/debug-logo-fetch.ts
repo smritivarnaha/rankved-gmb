@@ -43,16 +43,16 @@ async function main() {
   console.log(`✅ Access token obtained`);
 
   // Pick the first location from DB
-  const loc = await prisma.location.findFirst({ orderBy: { createdAt: "desc" } });
-  if (!loc) { console.error("No locations in DB"); return; }
-  console.log(`\nTesting: "${loc.name}"`);
-  console.log(`  gbpLocationId: ${loc.gbpLocationId}`);
-  console.log(`  gbpAccountId:  ${loc.gbpAccountId}`);
+  const gbpAccountId = "accounts/103802222035622991626";
+  const gbpLocationId = "locations/12205397657247840250";
+  console.log(`\nTesting: "Dr Anurag Lamba Neuro Clinic"`);
+  console.log(`  gbpLocationId: ${gbpLocationId}`);
+  console.log(`  gbpAccountId:  ${gbpAccountId}`);
 
   // --- Fetch placeId live ---
   console.log(`\n[STEP 1] Fetching location metadata to get placeId...`);
   const locRes = await fetch(
-    `https://mybusinessbusinessinformation.googleapis.com/v1/${loc.gbpLocationId}?readMask=name,title,metadata`,
+    `https://mybusinessbusinessinformation.googleapis.com/v1/${gbpLocationId}?readMask=name,title,metadata`,
     { headers: { Authorization: `Bearer ${accessToken}` } }
   );
   console.log(`  HTTP: ${locRes.status}`);
@@ -86,23 +86,24 @@ async function main() {
   // --- Strategy 2: GBP Media API v4 ---
   console.log(`\n[STRATEGY 2] GBP Media API v4`);
   // Try both path patterns
-  for (const v4Name of [`${loc.gbpAccountId}/${loc.gbpLocationId}`, loc.gbpLocationId]) {
-    const mediaUrl = `https://mybusiness.googleapis.com/v4/${v4Name}/media?maxResults=10`;
-    console.log(`  Trying: ${mediaUrl.substring(0, 100)}`);
+  for (const v4Name of [`${gbpAccountId}/${gbpLocationId}`, gbpLocationId]) {
+    const mediaUrl = `https://mybusiness.googleapis.com/v4/${v4Name}/media`;
+    console.log(`  Trying: ${mediaUrl}`);
     const r = await fetch(mediaUrl, { headers: { Authorization: `Bearer ${accessToken}` } });
     console.log(`  HTTP: ${r.status}`);
     if (r.ok) {
       const d = await r.json() as any;
       const items = d.mediaItems || [];
       console.log(`  Media items: ${items.length}`);
-      items.slice(0, 5).forEach((m: any) => {
-        const cat = m.category || m.locationAssociation?.category || "UNKNOWN";
+      items.forEach((m: any) => {
+        const cat = (m.locationAssociation?.category || m.category || "UNKNOWN").toUpperCase();
         const url = (m.googleUrl || m.thumbnailUrl || "").substring(0, 80);
         console.log(`  ✅  cat=${cat} | url=${url}`);
       });
       break;
     } else {
-      console.log(`  Error: ${(await r.text()).substring(0, 200)}`);
+      const t = await r.text();
+      console.log(`  Error: ${t.substring(0, 300)}`);
     }
   }
 
