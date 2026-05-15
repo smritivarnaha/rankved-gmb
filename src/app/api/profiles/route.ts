@@ -88,6 +88,7 @@ export async function POST(req: NextRequest) {
           
           do {
             const url = new URL(`https://mybusinessbusinessinformation.googleapis.com/v1/${accountName}/locations`);
+            // IMPORTANT: 'metadata' must be in readMask to get placeId for logo lookup
             url.searchParams.set("readMask", "name,title,storefrontAddress,phoneNumbers,websiteUri,metadata");
             url.searchParams.set("pageSize", "100");
             if (pageToken) url.searchParams.set("pageToken", pageToken);
@@ -116,52 +117,70 @@ export async function POST(req: NextRequest) {
                 const placeId = loc.metadata?.placeId;
 
                 try {
-                  // Strategy 1: Places API (New)
-                  if (placeId && !logoUrl) {
-                    const placesRes = await fetch(`https://places.googleapis.com/v1/places/${placeId}`, {
-                      headers: {
-                        Authorization: `Bearer ${accessToken}`,
-                        "X-Goog-FieldMask": "photos",
-                      },
-                    });
-                    if (placesRes.ok) {
-                      const placesData = await placesRes.json();
-                      const photoName = placesData.photos?.[0]?.name;
-                      if (photoName) {
-                        logoUrl = `https://places.googleapis.com/v1/${photoName}/media?maxWidthPx=400&skipHttpRedirect=true`;
+                  const mapsKey = (process.env.GOOGLE_MAPS_API_KEY || "").replace(/["\s\\]/g, "");
+
+                  // Strategy 1: Classic Places API (most reliable for photos)
+                  // placeId comes from loc.metadata.placeId — requires 'metadata' in readMask above
+                  if (placeId && mapsKey && !logoUrl) {
+                    const detailsRes = await fetch(
+                      `https://maps.googleapis.com/maps/api/place/details/json?place_id=${placeId}&fields=photos&key=${mapsKey}`
+                    );
+                    if (detailsRes.ok) {
+                      const det = await detailsRes.json();
+                      const ref = det.result?.photos?.[0]?.photo_reference;
+                      if (ref) {
+                        logoUrl = `https://maps.googleapis.com/maps/api/place/photo?maxwidth=400&photo_reference=${ref}&key=${mapsKey}`;
+                        console.log(`[Sync] ✅ Classic Places for "${loc.title}"`);
+                      } else {
+                        console.warn(`[Sync] Classic Places: no photos for "${loc.title}", status=${det.status}`);
                       }
                     }
                   }
 
                   // Strategy 2: GBP Media API v4
+                  // loc.name = "locations/XXXX"; accountName = "accounts/XXXX"
+                  // Correct v4 path: accounts/{id}/locations/{id}/media  (no maxResults param)
                   if (!logoUrl) {
-                    const v4Name = loc.name.startsWith("accounts/") ? loc.name : `${accountName}/${loc.name}`;
+                    const locShortId = loc.name.startsWith("accounts/") ? loc.name : `${accountName}/${loc.name}`;
                     const mediaRes = await fetchWithRetry(
-                      `https://mybusiness.googleapis.com/v4/${v4Name}/media?maxResults=25`,
+                      `https://mybusiness.googleapis.com/v4/${locShortId}/media`,
                       { headers: { Authorization: `Bearer ${accessToken}` } }
                     );
                     if (mediaRes.ok) {
                       const { mediaItems = [] } = await mediaRes.json();
-                      const best = mediaItems.find((m: any) => (m.category || m.locationAssociation?.category || "").toUpperCase() === "LOGO") 
-                                 || mediaItems.find((m: any) => ["PROFILE", "INTERIOR", "EXTERIOR"].includes((m.category || m.locationAssociation?.category || "").toUpperCase()))
-                                 || mediaItems[0];
+                      const best = 
+                        mediaItems.find((m: any) => (m.locationAssociation?.category || m.category || "").toUpperCase() === "LOGO") ||
+                        mediaItems.find((m: any) => ["PROFILE", "COVER", "EXTERIOR", "INTERIOR"].includes((m.locationAssociation?.category || m.category || "").toUpperCase())) ||
+                        mediaItems[0];
                       const raw = best?.googleUrl || best?.thumbnailUrl;
-                      if (raw) logoUrl = raw.split("=")[0] + "=s400";
+                      if (raw) {
+                        logoUrl = raw.includes("=") ? raw.split("=")[0] + "=s400" : raw;
+                        console.log(`[Sync] ✅ GBP Media for "${loc.title}"`);
+                      } else {
+                        console.warn(`[Sync] GBP Media: ${mediaItems.length} items but no usable URL for "${loc.title}"`);
+                      }
+                    } else {
+                      const errText = await mediaRes.text();
+                      console.warn(`[Sync] GBP Media ${mediaRes.status} for "${loc.title}": ${errText.substring(0, 100)}`);
                     }
                   }
 
-                  // Strategy 3: Classic Places fallback
-                  if (placeId && !logoUrl) {
-                    const mapsKey = (process.env.GOOGLE_MAPS_API_KEY || "").replace(/["\s\\]/g, "");
-                    if (mapsKey) {
-                      const detailsRes = await fetch(`https://maps.googleapis.com/maps/api/place/details/json?place_id=${placeId}&fields=photos&key=${mapsKey}`);
-                      if (detailsRes.ok) {
-                        const det = await detailsRes.json();
-                        const ref = det.result?.photos?.[0]?.photo_reference;
-                        if (ref) logoUrl = `https://maps.googleapis.com/maps/api/place/photo?maxwidth=400&photo_reference=${ref}&key=${mapsKey}`;
+                  // Strategy 3: Places API (New) using OAuth — for when Maps API key is missing
+                  if (!logoUrl && placeId) {
+                    const placesRes = await fetch(`https://places.googleapis.com/v1/places/${placeId}`, {
+                      headers: { Authorization: `Bearer ${accessToken}`, "X-Goog-FieldMask": "photos" },
+                    });
+                    if (placesRes.ok) {
+                      const placesData = await placesRes.json();
+                      const photoName = placesData.photos?.[0]?.name;
+                      if (photoName && mapsKey) {
+                        logoUrl = `https://places.googleapis.com/v1/${photoName}/media?maxWidthPx=400&key=${mapsKey}`;
+                        console.log(`[Sync] ✅ Places API (New) for "${loc.title}"`);
                       }
                     }
                   }
+
+                  if (!logoUrl) console.warn(`[Sync] ❌ No logo found for "${loc.title}" (placeId=${placeId})`);
                 } catch (e) {
                   console.error(`Logo error for ${loc.title}:`, e);
                 }

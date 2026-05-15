@@ -3,23 +3,26 @@ import { PrismaClient } from "@prisma/client";
 const prisma = new PrismaClient();
 
 async function main() {
-  const locations = await prisma.location.findMany({
-    select: {
-      id: true,
-      name: true,
-      logoUrl: true
-    }
+  const locs = await prisma.location.findMany({
+    select: { id: true, name: true, logoUrl: true },
+    take: 10,
+    orderBy: { createdAt: "desc" },
   });
 
-  console.log("Total locations:", locations.length);
-  locations.forEach(loc => {
-    console.log(`- ${loc.name}: ${loc.logoUrl ? "HAS LOGO" : "MISSING LOGO"}`);
-    if (loc.logoUrl) {
-        console.log(`  URL: ${loc.logoUrl.substring(0, 50)}...`);
+  console.log(`\n=== Logo URL Status (last 10 profiles) ===`);
+  locs.forEach((l) => {
+    if (!l.logoUrl) {
+      console.log(`❌ ${l.name}: NULL`);
+    } else if (l.logoUrl.startsWith("data:")) {
+      console.log(`✅ ${l.name}: BASE64 (manual upload)`);
+    } else {
+      console.log(`🔗 ${l.name}: ${l.logoUrl.substring(0, 120)}`);
     }
   });
 }
 
 main()
-  .catch(e => console.error(e))
-  .finally(() => prisma.$disconnect());
+  .catch(console.error)
+  .finally(async () => {
+    await prisma.$disconnect();
+  });
