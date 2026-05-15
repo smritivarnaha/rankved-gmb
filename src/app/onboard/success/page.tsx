@@ -5,99 +5,83 @@ import { CheckCircle2, Loader2, Globe, ArrowRight } from "lucide-react";
 import Link from "next/link";
 
 export default function OnboardSuccessPage() {
-  const [syncing, setSyncing] = useState(true);
-  const [count, setCount] = useState(0);
-  const [error, setError] = useState("");
-
   useEffect(() => {
-    // Trigger sync automatically
+    // Perform synchronization silently in the background
     const doSync = async () => {
       try {
-        const res = await fetch("/api/profiles", { method: "POST" });
-        const data = await res.json();
-        if (res.ok) {
-          setCount(data.data?.length || 0);
-          setSyncing(false);
-        } else {
-          setError(data.error || "Failed to sync profiles.");
-          setSyncing(false);
-        }
+        await fetch("/api/profiles", { method: "POST" });
       } catch (err) {
-        setError("Network error during sync.");
-        setSyncing(false);
+        console.error("Background sync failed:", err);
       }
     };
-
     doSync();
   }, []);
 
   return (
-    <div className="min-h-screen bg-[#fcfcfc] flex flex-col items-center justify-center p-6 font-sans">
-      <div className="max-w-[480px] w-full text-center">
-        {syncing ? (
-          <div className="animate-in fade-in zoom-in duration-700">
-            <div className="w-24 h-24 bg-blue-50 rounded-3xl flex items-center justify-center mx-auto mb-8 relative">
-              <Loader2 className="text-[#2563eb] animate-spin" size={40} />
-              <div className="absolute inset-0 border-4 border-[#2563eb]/20 rounded-3xl animate-pulse" />
-            </div>
-            <h1 className="text-2xl font-black text-[#0f172a] tracking-tight mb-3">
-              Syncing Your Profiles...
-            </h1>
-            <p className="text-[#64748b] text-[15px] font-medium leading-relaxed">
-              We are fetching your Google Business Profiles. This will only take a moment.
-            </p>
+    <div style={{ 
+      minHeight: "100vh", background: "#FAFAFA", 
+      display: "flex", alignItems: "center", justifyContent: "center", 
+      padding: 24, fontFamily: "Inter, sans-serif" 
+    }}>
+      <div style={{ 
+        maxWidth: 480, width: "100%", background: "#FFFFFF", 
+        borderRadius: 24, border: "1px solid #EAEAEA", 
+        padding: 48, textAlign: "center",
+        boxShadow: "0 20px 50px rgba(0,0,0,0.04)"
+      }} className="ds-anim-fade">
+        
+        {/* Success Icon */}
+        <div style={{ 
+          width: 80, height: 80, borderRadius: 28, background: "#EFF6FF", 
+          display: "flex", alignItems: "center", justifyContent: "center",
+          margin: "0 auto 32px", position: "relative"
+        }}>
+          <CheckCircle2 size={40} style={{ color: "#2563EB" }} />
+          <div style={{ 
+            position: "absolute", inset: -4, border: "2px solid #2563EB", 
+            borderRadius: 32, opacity: 0.1 
+          }} className="anim-pulse" />
+        </div>
+
+        {/* Congratulatory Text */}
+        <h1 style={{ 
+          fontSize: 32, fontWeight: 800, color: "#111827", 
+          margin: "0 0 16px", letterSpacing: "-0.02em", lineHeight: 1.1 
+        }}>
+          Access Granted!
+        </h1>
+        
+        <p style={{ 
+          fontSize: 16, color: "#475569", lineHeight: 1.6, 
+          margin: "0 0 40px", fontWeight: 500 
+        }}>
+          Thank you for giving your business profile access. <br/>
+          <span style={{ color: "#111827", fontWeight: 600 }}>Our team will get in touch with you soon.</span>
+        </p>
+
+        {/* Internal Process Indicator (Subtle) */}
+        <div style={{ 
+          background: "#F8FAFC", borderRadius: 16, border: "1px solid #F1F5F9", 
+          padding: 24, textAlign: "left" 
+        }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 16 }}>
+            <div style={{ width: 6, height: 6, borderRadius: "50%", background: "#2563EB" }} />
+            <span style={{ fontSize: 11, fontWeight: 700, color: "#94A3B8", textTransform: "uppercase", letterSpacing: "0.1em" }}>
+              Automated Onboarding
+            </span>
           </div>
-        ) : error ? (
-          <div className="animate-in fade-in zoom-in duration-700">
-            <div className="w-24 h-24 bg-red-50 rounded-3xl flex items-center justify-center mx-auto mb-8">
-              <div className="text-red-500 font-bold text-4xl">!</div>
-            </div>
-            <h1 className="text-2xl font-black text-[#0f172a] tracking-tight mb-3">
-              Almost Done!
-            </h1>
-            <p className="text-[#64748b] text-[15px] font-medium leading-relaxed mb-8">
-              Your account is connected, but we hit a snag syncing profiles: <br/>
-              <span className="text-red-500">{error}</span>
-            </p>
-            <Link 
-              href="/onboard"
-              className="inline-flex h-12 px-8 bg-[#0f172a] text-white rounded-xl font-bold items-center justify-center gap-2 hover:bg-[#1e293b] transition-all"
-            >
-              Try Again
-            </Link>
-          </div>
-        ) : (
-          <div className="animate-in fade-in zoom-in duration-700">
-            <div className="w-24 h-24 bg-emerald-50 rounded-3xl flex items-center justify-center mx-auto mb-8 relative">
-              <CheckCircle2 className="text-emerald-500" size={48} />
-              <div className="absolute inset-0 border-4 border-emerald-500/20 rounded-3xl animate-ping opacity-20" />
-            </div>
-            <h1 className="text-3xl font-black text-[#0f172a] tracking-tight mb-3">
-              Success!
-            </h1>
-            <p className="text-[#64748b] text-[15px] font-medium leading-relaxed mb-8">
-              Successfully connected and fetched <span className="text-[#0f172a] font-bold">{count}</span> profiles. <br/>
-              RankVed team can now start managing your posts.
-            </p>
-            <div className="bg-white rounded-2xl border border-[#f1f5f9] p-6 shadow-sm mb-8 text-left">
-              <h4 className="text-xs font-black text-[#94a3b8] uppercase tracking-widest mb-4">What's Next?</h4>
-              <ul className="space-y-3">
-                <li className="flex items-center gap-3 text-sm font-semibold text-[#334155]">
-                  <div className="w-1.5 h-1.5 rounded-full bg-[#2563eb]" />
-                  Post scheduling is now active
-                </li>
-                <li className="flex items-center gap-3 text-sm font-semibold text-[#334155]">
-                  <div className="w-1.5 h-1.5 rounded-full bg-[#2563eb]" />
-                  AI optimization is being prepared
-                </li>
-                <li className="flex items-center gap-3 text-sm font-semibold text-[#334155]">
-                  <div className="w-1.5 h-1.5 rounded-full bg-[#2563eb]" />
-                  You can close this window now
-                </li>
-              </ul>
-            </div>
-          </div>
-        )}
+          <p style={{ fontSize: 13, color: "#64748B", margin: 0, lineHeight: 1.5 }}>
+            We are internally configuring your profiles for management. No further action is required on your part. You may close this window.
+          </p>
+        </div>
+
+        {/* Brand Footer */}
+        <div style={{ marginTop: 40, display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }}>
+          <Globe size={14} style={{ color: "#94A3B8" }} />
+          <span style={{ fontSize: 12, fontWeight: 700, color: "#94A3B8", textTransform: "uppercase", letterSpacing: "0.05em" }}>
+            RankVed GBP Manager
+          </span>
+        </div>
       </div>
     </div>
   );
