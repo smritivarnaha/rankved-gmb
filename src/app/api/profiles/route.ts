@@ -119,9 +119,46 @@ export async function POST(req: NextRequest) {
                 try {
                   const mapsKey = (process.env.GOOGLE_MAPS_API_KEY || "").replace(/["\s\\]/g, "");
 
-                  // Strategy 1: Classic Places API (most reliable for photos)
-                  // placeId comes from loc.metadata.placeId — requires 'metadata' in readMask above
-                  if (placeId && mapsKey && !logoUrl) {
+                  // ── Strategy 1: GBP Media API v4 — LOGO category ──────────────
+                  // This is the ACTUAL business logo set by the owner in Google Business Profile.
+                  // Must check this FIRST before falling back to Places photos.
+                  // loc.name = "locations/XXXX"; accountName = "accounts/XXXX"
+                  // GBP Media v4 path: accounts/{id}/locations/{id}/media  (no maxResults param)
+                  if (!logoUrl) {
+                    const locFullName = loc.name.startsWith("accounts/") ? loc.name : `${accountName}/${loc.name}`;
+                    const mediaRes = await fetchWithRetry(
+                      `https://mybusiness.googleapis.com/v4/${locFullName}/media`,
+                      { headers: { Authorization: `Bearer ${accessToken}` } }
+                    );
+                    if (mediaRes.ok) {
+                      const { mediaItems = [] } = await mediaRes.json();
+                      // Priority: LOGO > PROFILE > COVER > anything else
+                      const logoItem = mediaItems.find((m: any) => 
+                        (m.locationAssociation?.category || m.category || "").toUpperCase() === "LOGO"
+                      );
+                      const fallbackItem = !logoItem && (
+                        mediaItems.find((m: any) => 
+                          ["PROFILE", "COVER"].includes((m.locationAssociation?.category || m.category || "").toUpperCase())
+                        ) || mediaItems[0]
+                      );
+                      const best = logoItem || fallbackItem;
+                      const raw = best?.googleUrl || best?.thumbnailUrl;
+                      if (raw) {
+                        logoUrl = raw.includes("=") ? raw.split("=")[0] + "=s400" : raw;
+                        const cat = best?.locationAssociation?.category || best?.category || "UNKNOWN";
+                        console.log(`[Sync] ✅ GBP Media [${cat}] for "${loc.title}"`);
+                      } else {
+                        console.warn(`[Sync] GBP Media: ${mediaItems.length} items, no logo for "${loc.title}"`);
+                      }
+                    } else {
+                      console.warn(`[Sync] GBP Media ${mediaRes.status} for "${loc.title}"`);
+                    }
+                  }
+
+                  // ── Strategy 2: Classic Places API ────────────────────────────
+                  // Returns public photos from Google Maps — NOT the business logo.
+                  // Only use as a last resort when GBP Media has nothing.
+                  if (!logoUrl && placeId && mapsKey) {
                     const detailsRes = await fetch(
                       `https://maps.googleapis.com/maps/api/place/details/json?place_id=${placeId}&fields=photos&key=${mapsKey}`
                     );
@@ -130,42 +167,14 @@ export async function POST(req: NextRequest) {
                       const ref = det.result?.photos?.[0]?.photo_reference;
                       if (ref) {
                         logoUrl = `https://maps.googleapis.com/maps/api/place/photo?maxwidth=400&photo_reference=${ref}&key=${mapsKey}`;
-                        console.log(`[Sync] ✅ Classic Places for "${loc.title}"`);
+                        console.log(`[Sync] ✅ Classic Places (fallback) for "${loc.title}"`);
                       } else {
                         console.warn(`[Sync] Classic Places: no photos for "${loc.title}", status=${det.status}`);
                       }
                     }
                   }
 
-                  // Strategy 2: GBP Media API v4
-                  // loc.name = "locations/XXXX"; accountName = "accounts/XXXX"
-                  // Correct v4 path: accounts/{id}/locations/{id}/media  (no maxResults param)
-                  if (!logoUrl) {
-                    const locShortId = loc.name.startsWith("accounts/") ? loc.name : `${accountName}/${loc.name}`;
-                    const mediaRes = await fetchWithRetry(
-                      `https://mybusiness.googleapis.com/v4/${locShortId}/media`,
-                      { headers: { Authorization: `Bearer ${accessToken}` } }
-                    );
-                    if (mediaRes.ok) {
-                      const { mediaItems = [] } = await mediaRes.json();
-                      const best = 
-                        mediaItems.find((m: any) => (m.locationAssociation?.category || m.category || "").toUpperCase() === "LOGO") ||
-                        mediaItems.find((m: any) => ["PROFILE", "COVER", "EXTERIOR", "INTERIOR"].includes((m.locationAssociation?.category || m.category || "").toUpperCase())) ||
-                        mediaItems[0];
-                      const raw = best?.googleUrl || best?.thumbnailUrl;
-                      if (raw) {
-                        logoUrl = raw.includes("=") ? raw.split("=")[0] + "=s400" : raw;
-                        console.log(`[Sync] ✅ GBP Media for "${loc.title}"`);
-                      } else {
-                        console.warn(`[Sync] GBP Media: ${mediaItems.length} items but no usable URL for "${loc.title}"`);
-                      }
-                    } else {
-                      const errText = await mediaRes.text();
-                      console.warn(`[Sync] GBP Media ${mediaRes.status} for "${loc.title}": ${errText.substring(0, 100)}`);
-                    }
-                  }
-
-                  // Strategy 3: Places API (New) using OAuth — for when Maps API key is missing
+                  // ── Strategy 3: Places API (New) with OAuth ────────────────────
                   if (!logoUrl && placeId) {
                     const placesRes = await fetch(`https://places.googleapis.com/v1/places/${placeId}`, {
                       headers: { Authorization: `Bearer ${accessToken}`, "X-Goog-FieldMask": "photos" },
