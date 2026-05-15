@@ -79,206 +79,197 @@ export default function GooglePostsPage() {
   const selectedProfile = profiles.find(p => p.id === selectedProfileId);
 
   return (
-    <div className="max-w-[1400px] mx-auto py-10 px-6 animate-in fade-in duration-1000">
-      <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 mb-12">
-        <div>
-          <div className="flex items-center gap-3 mb-4">
-            <div className="w-12 h-12 rounded-2xl bg-[#0f172a] flex items-center justify-center shadow-lg shadow-slate-200">
-              <Globe className="text-white" size={24} />
-            </div>
-            <h1 className="text-4xl font-black text-[#0f172a] tracking-tight">
+    <div style={{ maxWidth: 1200, margin: "0 auto", padding: "40px 24px" }} className="ds-anim-fade">
+      {/* Header section */}
+      <div style={{ display: "flex", flexDirection: "column", gap: 12, marginBottom: 40 }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
+          <div style={{ 
+            width: 52, height: 52, borderRadius: "var(--radius-modal)", 
+            background: "var(--neutral-900)", display: "flex", 
+            alignItems: "center", justifyContent: "center",
+            boxShadow: "var(--shadow-md)" 
+          }}>
+            <Globe className="text-white" size={24} />
+          </div>
+          <div>
+            <h1 className="heading-section" style={{ fontSize: "var(--text-3xl)", marginBottom: 4 }}>
               Live Feed
             </h1>
-          </div>
-          <p className="text-[#64748b] text-lg font-medium max-w-[600px]">
-            Direct transparency. View and manage posts currently live on Google Business Profile in real-time.
-          </p>
-        </div>
-        <div className="flex items-center gap-3">
-          <div className="px-4 py-2 bg-emerald-50 text-emerald-600 rounded-xl text-xs font-bold flex items-center gap-2 border border-emerald-100">
-            <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-            Live Sync Active
+            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+              <div className="ds-dot ds-dot-published" style={{ width: 8, height: 8 }} />
+              <span style={{ fontSize: "var(--text-micro)", fontWeight: "var(--fw-bold)", color: "var(--success)", textTransform: "uppercase", letterSpacing: "var(--ls-wide)" }}>
+                Live Sync Active
+              </span>
+            </div>
           </div>
         </div>
+        <p className="text-secondary" style={{ fontSize: "var(--text-md)", maxWidth: 600 }}>
+          Direct transparency. View and manage posts currently live on Google Business Profile in real-time.
+        </p>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-10">
+      <div style={{ display: "grid", gridTemplateColumns: "320px 1fr", gap: 32, alignItems: "start" }}>
         {/* Profile Sidebar */}
-        <div className="lg:col-span-4">
-          <div className="bg-white rounded-[24px] border border-[#f1f5f9] shadow-[0_8px_30px_rgb(0,0,0,0.02)] p-5 sticky top-24">
-            <div className="relative mb-6">
-              <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-[#94a3b8]" size={18} />
-              <input 
-                type="text" 
-                placeholder="Search profiles..." 
-                className="w-full h-12 pl-12 pr-4 bg-[#f8fafc] border border-[#f1f5f9] rounded-2xl text-[15px] font-medium outline-none focus:ring-2 focus:ring-[#0f172a]/5 focus:border-[#0f172a] transition-all"
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-              />
-            </div>
+        <div className="ds-card" style={{ padding: 20, position: "sticky", top: 24 }}>
+          <div style={{ position: "relative", marginBottom: 20 }}>
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-tertiary" size={16} />
+            <input 
+              type="text" 
+              placeholder="Search profiles..." 
+              className="ds-input"
+              style={{ paddingLeft: 36, height: 40 }}
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+            />
+          </div>
 
-            <div className="space-y-2 max-h-[calc(100vh-320px)] overflow-y-auto pr-2 custom-scrollbar">
-              {loadingProfiles ? (
-                <div className="flex flex-col items-center justify-center py-20 gap-4">
-                  <Loader2 className="animate-spin text-[#0f172a]" size={32} />
-                  <p className="text-sm font-bold text-[#94a3b8] uppercase tracking-widest">Loading Profiles</p>
-                </div>
-              ) : filteredProfiles.length > 0 ? (
-                filteredProfiles.map((p) => (
-                  <button
-                    key={p.id}
-                    onClick={() => {
-                      setSelectedProfileId(p.id);
-                      fetchGooglePosts(p.id);
-                    }}
-                    className={`w-full text-left p-4 rounded-2xl transition-all flex items-center gap-4 group ${
-                      selectedProfileId === p.id 
-                        ? "bg-[#0f172a] text-white shadow-xl shadow-slate-200" 
-                        : "hover:bg-[#f8fafc] text-[#475569]"
-                    }`}
-                  >
-                    <div className={`w-12 h-12 rounded-xl flex items-center justify-center shrink-0 transition-transform group-hover:scale-105 ${
-                      selectedProfileId === p.id ? "bg-white/10" : "bg-white shadow-sm border border-[#f1f5f9]"
-                    }`}>
-                      {p.logoUrl ? (
-                        <img src={p.logoUrl} className="w-full h-full object-cover rounded-xl" alt="" />
-                      ) : (
-                        <MapPin size={22} className={selectedProfileId === p.id ? "text-white" : "text-[#94a3b8]"} />
-                      )}
-                    </div>
-                    <div className="min-w-0 flex-1">
-                      <p className={`text-[15px] font-bold truncate mb-0.5 ${selectedProfileId === p.id ? "text-white" : "text-[#0f172a]"}`}>
-                        {p.name}
-                      </p>
-                      <p className={`text-[12px] font-medium truncate opacity-70 ${selectedProfileId === p.id ? "text-slate-300" : "text-[#64748b]"}`}>
-                        {p.accountName}
-                      </p>
-                    </div>
-                    {selectedProfileId === p.id && (
-                      <ArrowRight size={16} className="text-white/40" />
+          <div style={{ display: "flex", flexDirection: "column", gap: 4, maxHeight: "calc(100vh - 300px)", overflowY: "auto" }} className="no-scrollbar">
+            {loadingProfiles ? (
+              <div style={{ padding: "40px 0", textAlign: "center" }}>
+                <Loader2 className="anim-spin" style={{ color: "var(--brand)" }} size={24} />
+              </div>
+            ) : filteredProfiles.length > 0 ? (
+              filteredProfiles.map((p) => (
+                <button
+                  key={p.id}
+                  onClick={() => {
+                    setSelectedProfileId(p.id);
+                    fetchGooglePosts(p.id);
+                  }}
+                  style={{
+                    width: "100%", textAlign: "left", padding: "12px 14px", borderRadius: "var(--radius-btn)",
+                    display: "flex", alignItems: "center", gap: 12, transition: "all var(--transition-base)",
+                    background: selectedProfileId === p.id ? "var(--bg-active)" : "transparent",
+                    border: "none", cursor: "pointer"
+                  }}
+                  className={selectedProfileId !== p.id ? "ds-card-hover" : ""}
+                >
+                  <div style={{ 
+                    width: 40, height: 40, borderRadius: 8, flexShrink: 0,
+                    background: p.logoUrl ? "transparent" : "var(--neutral-100)",
+                    display: "flex", alignItems: "center", justifyContent: "center",
+                    overflow: "hidden", border: "1px solid var(--border-subtle)"
+                  }}>
+                    {p.logoUrl ? (
+                      <img src={p.logoUrl} style={{ width: "100%", height: "100%", objectFit: "cover" }} alt="" />
+                    ) : (
+                      <MapPin size={18} className="text-tertiary" />
                     )}
-                  </button>
-                ))
-              ) : (
-                <div className="text-center py-20">
-                  <div className="w-16 h-16 bg-slate-50 rounded-2xl flex items-center justify-center mx-auto mb-4">
-                    <Search size={24} className="text-slate-300" />
                   </div>
-                  <p className="text-sm font-bold text-slate-400">NO RESULTS</p>
-                </div>
-              )}
-            </div>
+                  <div style={{ minWidth: 0, flex: 1 }}>
+                    <p style={{ fontSize: "var(--text-sm)", fontWeight: "var(--fw-bold)", color: "var(--text-primary)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+                      {p.name}
+                    </p>
+                    <p style={{ fontSize: "var(--text-micro)", color: "var(--text-tertiary)", textTransform: "uppercase", letterSpacing: "var(--ls-wide)" }}>
+                      {p.accountName}
+                    </p>
+                  </div>
+                  {selectedProfileId === p.id && (
+                    <ArrowRight size={14} style={{ color: "var(--brand)" }} />
+                  )}
+                </button>
+              ))
+            ) : (
+              <div style={{ padding: "40px 0", textAlign: "center", color: "var(--text-muted)" }}>
+                <p style={{ fontSize: "var(--text-xs)", fontWeight: "var(--fw-bold)" }}>NO RESULTS</p>
+              </div>
+            )}
           </div>
         </div>
 
         {/* Live Posts Feed */}
-        <div className="lg:col-span-8">
+        <div style={{ minWidth: 0 }}>
           {!selectedProfileId ? (
-            <div className="bg-white rounded-[32px] border border-[#f1f5f9] shadow-sm p-24 flex flex-col items-center justify-center text-center">
-              <div className="w-24 h-24 rounded-[28px] bg-[#f8fafc] flex items-center justify-center mb-8 transform hover:rotate-12 transition-transform duration-500">
-                <Globe className="text-slate-300" size={48} />
+            <div className="ds-card" style={{ padding: "80px 24px", textAlign: "center", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center" }}>
+              <div style={{ width: 80, height: 80, borderRadius: 24, background: "var(--bg-subtle)", display: "flex", alignItems: "center", justifyContent: "center", marginBottom: 24 }}>
+                <Globe className="text-muted" size={40} />
               </div>
-              <h2 className="text-2xl font-black text-[#0f172a] mb-3">Select a Profile</h2>
-              <p className="text-[#64748b] text-[15px] font-medium max-w-[340px]">
+              <h2 className="heading-section" style={{ marginBottom: 8 }}>Select a Profile</h2>
+              <p className="text-secondary" style={{ maxWidth: 300 }}>
                 Choose a business profile from the left to access its live post repository.
               </p>
             </div>
           ) : (
-            <div className="space-y-8 animate-in slide-in-from-bottom-4 duration-700">
-              <div className="flex items-center justify-between bg-white p-6 rounded-[24px] border border-[#f1f5f9] shadow-sm">
-                <div>
-                  <div className="flex items-center gap-2 mb-1">
-                    <h2 className="text-xl font-black text-[#0f172a]">
-                      {selectedProfile?.name}
-                    </h2>
-                    <ExternalLink size={14} className="text-slate-300" />
+            <div style={{ display: "flex", flexDirection: "column", gap: 24 }} className="ds-anim-fade">
+              <div className="ds-card" style={{ display: "flex", alignItems: "center", justifyContent: "between", padding: "16px 24px" }}>
+                <div style={{ flex: 1 }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 2 }}>
+                    <h2 className="heading-section" style={{ fontSize: "var(--text-xl)" }}>{selectedProfile?.name}</h2>
+                    <ExternalLink size={14} className="text-tertiary" />
                   </div>
-                  <p className="text-[13px] font-bold text-[#64748b] uppercase tracking-wider">
+                  <p className="text-meta" style={{ fontWeight: "var(--fw-bold)", textTransform: "uppercase", letterSpacing: "var(--ls-label)" }}>
                     {posts.length} Live Publications
                   </p>
                 </div>
                 <button 
                   onClick={() => fetchGooglePosts(selectedProfileId)}
-                  className="w-12 h-12 bg-[#f8fafc] hover:bg-[#f1f5f9] rounded-2xl flex items-center justify-center transition-all text-[#0f172a] hover:rotate-180 duration-500"
+                  className="ds-btn ds-btn-secondary"
+                  style={{ width: 44, height: 44, padding: 0 }}
                 >
-                  <RefreshCw size={20} className={loadingPosts ? "animate-spin" : ""} />
+                  <RefreshCw size={20} className={loadingPosts ? "anim-spin" : ""} />
                 </button>
               </div>
 
               {loadingPosts ? (
-                <div className="bg-white rounded-[32px] border border-[#f1f5f9] shadow-sm p-32 flex flex-col items-center justify-center">
-                  <div className="w-16 h-16 border-4 border-slate-100 border-t-[#0f172a] rounded-full animate-spin mb-6" />
-                  <p className="text-[#0f172a] font-bold text-lg">Querying Google API...</p>
-                  <p className="text-[#64748b] text-sm font-medium">Fetching real-time post metrics</p>
+                <div className="ds-card" style={{ padding: "100px 24px", textAlign: "center" }}>
+                  <div className="anim-spin" style={{ width: 40, height: 40, border: "3px solid var(--neutral-100)", borderTopColor: "var(--brand)", borderRadius: "50%", margin: "0 auto 20px" }} />
+                  <p className="heading-card">Querying Google API...</p>
+                  <p className="text-meta">Fetching real-time post metrics</p>
                 </div>
               ) : error ? (
-                <div className="bg-red-50 border border-red-100 rounded-[24px] p-8 flex items-start gap-5 text-red-700">
-                  <div className="w-12 h-12 rounded-xl bg-white flex items-center justify-center shrink-0 shadow-sm">
-                    <AlertCircle className="text-red-500" size={24} />
+                <div style={{ padding: 32, background: "var(--danger-subtle)", borderRadius: "var(--radius-modal)", border: "1px solid var(--danger-muted)", display: "flex", gap: 20 }}>
+                  <div style={{ width: 48, height: 48, borderRadius: 12, background: "white", display: "flex", alignItems: "center", justifyContent: "center", boxShadow: "var(--shadow-sm)" }}>
+                    <AlertCircle className="text-danger" size={24} />
                   </div>
-                  <div>
-                    <h3 className="font-black text-lg mb-1">Authorization Snippet Required</h3>
-                    <p className="text-[15px] font-medium opacity-80 leading-relaxed">{error}</p>
-                    <button onClick={() => fetchGooglePosts(selectedProfileId)} className="mt-4 text-sm font-bold underline underline-offset-4">Retry Request</button>
+                  <div style={{ flex: 1 }}>
+                    <h3 className="heading-card" style={{ color: "var(--danger-text)", marginBottom: 4 }}>Authorization Required</h3>
+                    <p className="text-meta" style={{ color: "var(--danger-text)", opacity: 0.8, lineHeight: 1.5 }}>{error}</p>
+                    <button onClick={() => fetchGooglePosts(selectedProfileId)} className="ds-btn ds-btn-ghost" style={{ marginTop: 12, paddingLeft: 0, color: "var(--danger-text)", fontWeight: "var(--fw-bold)", textDecoration: "underline" }}>Retry Request</button>
                   </div>
                 </div>
               ) : posts.length > 0 ? (
-                <div className="grid grid-cols-1 gap-6">
+                <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
                   {posts.map((post) => (
-                    <div key={post.name} className="bg-white rounded-[24px] border border-[#f1f5f9] shadow-sm overflow-hidden hover:shadow-xl hover:shadow-slate-200/40 transition-all group border-l-4 border-l-transparent hover:border-l-[#0f172a]">
-                      <div className="p-6 flex flex-col md:flex-row gap-6">
+                    <div key={post.name} className="ds-card ds-card-hover" style={{ padding: 0, overflow: "hidden" }}>
+                      <div style={{ display: "flex", flexDirection: "column", md: "row" } as any}>
                         {post.media?.length > 0 && (
-                          <div className="w-full md:w-32 md:h-32 rounded-2xl overflow-hidden shrink-0 bg-slate-50 border border-[#f1f5f9]">
-                            <img src={post.media[0].googleUrl} className="w-full h-full object-cover transition-transform group-hover:scale-110 duration-700" alt="" />
+                          <div style={{ width: 140, height: 140, flexShrink: 0, background: "var(--bg-subtle)", borderRight: "1px solid var(--border-subtle)" }}>
+                            <img src={post.media[0].googleUrl} style={{ width: "100%", height: "100%", objectFit: "cover" }} alt="" />
                           </div>
                         )}
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-start justify-between gap-4 mb-4">
-                            <div className="flex flex-wrap items-center gap-3">
-                              <span className={`px-3 py-1 rounded-lg text-[10px] font-black tracking-[0.1em] uppercase ${
-                                post.state === "LIVE" ? "bg-emerald-50 text-emerald-600 border border-emerald-100" : "bg-slate-50 text-slate-600 border border-slate-100"
-                              }`}>
+                        <div style={{ flex: 1, padding: 20 }}>
+                          <div style={{ display: "flex", alignItems: "center", justifyContent: "between", marginBottom: 12 }}>
+                            <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+                              <span className="ds-badge ds-badge-success" style={{ fontSize: 10 }}>
                                 {post.state}
                               </span>
-                              <div className="flex items-center gap-2 text-[11px] font-bold text-[#94a3b8] uppercase tracking-widest">
+                              <div className="text-meta" style={{ display: "flex", alignItems: "center", gap: 6 }}>
                                 <Calendar size={12} />
                                 {new Date(post.createTime).toLocaleDateString('en-IN', {
                                   day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit'
                                 })}
                               </div>
                             </div>
-                            <div className="flex items-center gap-2">
-                              <a 
-                                href={post.searchUrl} 
-                                target="_blank" 
-                                rel="noreferrer"
-                                className="w-9 h-9 bg-slate-50 hover:bg-slate-100 text-slate-600 rounded-xl flex items-center justify-center transition-all"
-                                title="Open Live Link"
-                              >
+                            <div style={{ display: "flex", gap: 8 }}>
+                              <a href={post.searchUrl} target="_blank" rel="noreferrer" className="ds-btn ds-btn-secondary" style={{ width: 32, height: 32, padding: 0 }}>
                                 <ExternalLink size={14} />
                               </a>
-                              <button 
-                                onClick={() => handleDelete(post.name)}
-                                className="w-9 h-9 bg-red-50 hover:bg-red-500 hover:text-white text-red-500 rounded-xl flex items-center justify-center transition-all"
-                                title="Delete Forever"
-                              >
+                              <button onClick={() => handleDelete(post.name)} className="ds-btn ds-btn-danger" style={{ width: 32, height: 32, padding: 0 }}>
                                 <Trash2 size={14} />
                               </button>
                             </div>
                           </div>
-                          <p className="text-[15px] text-[#334155] font-medium leading-relaxed line-clamp-3 mb-4">
+                          <p style={{ fontSize: "var(--text-base)", color: "var(--text-secondary)", lineHeight: 1.6, marginBottom: 16 }} className="line-clamp-3">
                             {post.summary}
                           </p>
-                          <div className="flex items-center gap-4">
+                          <div style={{ display: "flex", alignItems: "center", justifyContent: "between" }}>
                             {post.callToAction && (
-                              <div className="inline-flex items-center gap-2 px-3 py-1.5 bg-[#f8fafc] border border-[#f1f5f9] rounded-xl text-[10px] font-black text-[#0f172a] uppercase tracking-widest">
-                                <ArrowRight size={12} className="text-slate-400" />
+                              <div className="ds-badge ds-badge-neutral" style={{ padding: "4px 10px", fontSize: 10 }}>
+                                <ArrowRight size={12} style={{ marginRight: 6, opacity: 0.5 }} />
                                 {post.callToAction.actionType.replace('_', ' ')}
                               </div>
                             )}
-                            <div className="text-[11px] font-bold text-slate-400 uppercase tracking-widest ml-auto">
-                              API Ref: {post.name.split('/').pop()}
-                            </div>
+                            <span className="text-meta" style={{ fontSize: 11 }}>API: {post.name.split('/').pop()}</span>
                           </div>
                         </div>
                       </div>
@@ -286,12 +277,12 @@ export default function GooglePostsPage() {
                   ))}
                 </div>
               ) : (
-                <div className="bg-white rounded-[32px] border border-[#f1f5f9] shadow-sm p-32 flex flex-col items-center justify-center text-center">
-                  <div className="w-20 h-20 rounded-[24px] bg-slate-50 flex items-center justify-center mb-6">
-                    <FileText className="text-slate-300" size={40} />
+                <div className="ds-card" style={{ padding: "80px 24px", textAlign: "center" }}>
+                  <div style={{ width: 64, height: 64, borderRadius: 16, background: "var(--bg-subtle)", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 20px" }}>
+                    <FileText className="text-muted" size={32} />
                   </div>
-                  <h2 className="text-xl font-black text-[#0f172a] mb-2">Clean Slate</h2>
-                  <p className="text-sm text-[#64748b] font-medium">No live publications found on this profile.</p>
+                  <h2 className="heading-card">Clean Slate</h2>
+                  <p className="text-meta">No live publications found on this profile.</p>
                 </div>
               )}
             </div>
