@@ -36,12 +36,13 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
   const { searchParams } = new URL(req.url);
   const months = parseInt(searchParams.get("months") || "1");
 
-  // Calculate monthly range (API only accepts month ranges, not days)
   const now = new Date();
-  const startMonth = new Date(now);
-  startMonth.setMonth(now.getMonth() - months); // Get last X months of keywords
 
-  const url = `https://businessprofileperformance.googleapis.com/v1/${resourceName}/searchkeywords/impressions/monthly?monthlyRange.startMonth.year=${startMonth.getFullYear()}&monthlyRange.startMonth.month=${startMonth.getMonth() + 1}&monthlyRange.endMonth.year=${now.getFullYear()}&monthlyRange.endMonth.month=${now.getMonth() + 1}&pageSize=50`;
+  // Use calendar month boundaries to match Google's period (start on 1st of month X months ago)
+  const startMonthDate = new Date(now.getFullYear(), now.getMonth() - months, 1);
+  const endMonthDate   = new Date(now.getFullYear(), now.getMonth(), 1); // current month
+
+  const url = `https://businessprofileperformance.googleapis.com/v1/${resourceName}/searchkeywords/impressions/monthly?monthlyRange.startMonth.year=${startMonthDate.getFullYear()}&monthlyRange.startMonth.month=${startMonthDate.getMonth() + 1}&monthlyRange.endMonth.year=${endMonthDate.getFullYear()}&monthlyRange.endMonth.month=${endMonthDate.getMonth() + 1}&pageSize=50`;
 
   try {
     const response = await fetch(url, {

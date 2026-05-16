@@ -33,21 +33,24 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
   const resourceName = profile.googleName;
     
   const { searchParams } = new URL(req.url);
-  const months = parseInt(searchParams.get("months") || "1"); // Default 1 month
+  const months = parseInt(searchParams.get("months") || "1");
 
   const now = new Date();
+
+  // Use calendar month boundaries to match Google's period display (e.g. Dec 1 – May 13)
+  // Google shows "Dec 2025–May 2026", so we start on the 1st of the month X months ago
+  const startDate = new Date(now.getFullYear(), now.getMonth() - months, 1); // 1st of month, X months ago
+
+  // End date: 3 days ago (Google API has ~3-day data lag)
   const endDate = new Date(now.getTime() - 3 * 24 * 60 * 60 * 1000);
-  
-  const startDate = new Date(endDate);
-  startDate.setMonth(startDate.getMonth() - months);
 
-  const startYear = startDate.getFullYear();
+  const startYear  = startDate.getFullYear();
   const startMonth = startDate.getMonth() + 1;
-  const startDay = startDate.getDate();
+  const startDay   = 1; // always 1st of month
 
-  const endYear = endDate.getFullYear();
+  const endYear  = endDate.getFullYear();
   const endMonth = endDate.getMonth() + 1;
-  const endDay = endDate.getDate();
+  const endDay   = endDate.getDate();
 
   const metrics = [
     "BUSINESS_IMPRESSIONS_DESKTOP_MAPS",

@@ -445,11 +445,11 @@ export function PerformanceView({ profile, onBack }: { profile: any; onBack?: ()
                       </linearGradient>
                     </defs>
                     <CartesianGrid
-                      strokeDasharray="6 4"
+                      strokeDasharray="5 5"
                       vertical={true}
                       horizontal={false}
-                      stroke="#94A3B8"
-                      strokeOpacity={0.35}
+                      stroke="#64748B"
+                      strokeOpacity={0.65}
                     />
                     <XAxis dataKey="label" axisLine={false} tickLine={false} tick={{ fontSize:12, fill:"#94A3B8", fontFamily:"Inter" }} interval={0}/>
                     <YAxis axisLine={false} tickLine={false} tick={{ fontSize:11, fill:"#94A3B8", fontFamily:"Inter" }} width={36} tickFormatter={v=>v>=1000?`${(v/1000).toFixed(0)}k`:v}/>
