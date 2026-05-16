@@ -166,9 +166,61 @@ function DiscoveryPanel({ rawData, kwData, kwLoading, isLoading, periodLabel }: 
         </div>
       </div>
 
-      <p style={{ fontSize:11, color:"#94A3B8", margin:0 }}>
-        Showing data for <strong>{periodLabel}</strong> · Data via Google Business Profile API (may vary ±2–5% from dashboard due to processing lag)
-      </p>
+      {/* ── Premium API Limitation Banner ── */}
+      <div style={{
+        position:"relative",
+        borderRadius:14,
+        padding:"1px",
+        background:"linear-gradient(135deg,#4285F4 0%,#FBBC04 33%,#34A853 66%,#EA4335 100%)",
+        boxShadow:"0 4px 20px rgba(66,133,244,0.15)",
+      }}>
+        <div style={{
+          borderRadius:13,
+          background:"linear-gradient(135deg,#f0f6ff 0%,#fffdf0 50%,#f0fff4 100%)",
+          padding:"14px 18px",
+          display:"flex",
+          gap:14,
+          alignItems:"flex-start",
+        }}>
+          {/* Google G colored dot cluster */}
+          <div style={{ flexShrink:0, marginTop:2 }}>
+            <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:3, width:22 }}>
+              {["#4285F4","#FBBC04","#34A853","#EA4335"].map((c,i)=>(
+                <div key={i} style={{ width:9, height:9, borderRadius:"50%", background:c }}/>
+              ))}
+            </div>
+          </div>
+
+          <div style={{ flex:1 }}>
+            <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", marginBottom:8, flexWrap:"wrap", gap:6 }}>
+              <p style={{ fontSize:12, fontWeight:700, color:"#111827", margin:0, letterSpacing:"-0.01em" }}>
+                Google API Data Limitations
+              </p>
+              {/* Trust badge */}
+              <span style={{
+                fontSize:10, fontWeight:600, color:"#4285F4",
+                background:"rgba(66,133,244,0.08)", border:"1px solid rgba(66,133,244,0.2)",
+                borderRadius:20, padding:"2px 8px", whiteSpace:"nowrap",
+              }}>
+                ✓ Same source as GBP Dashboard
+              </span>
+            </div>
+
+            <div style={{ display:"flex", flexDirection:"column", gap:5 }}>
+              {[
+                { dot:"#FBBC04", text:`Showing ${periodLabel} · starts 1st of month to match Google's calendar period` },
+                { dot:"#EA4335", text:"±2–5% variance possible due to Google's 3–5 day processing lag on their API" },
+                { dot:"#34A853", text:"Keyword counts use Google's privacy thresholds (rounded) — totals are approximate" },
+              ].map((item,i)=>(
+                <div key={i} style={{ display:"flex", alignItems:"flex-start", gap:7 }}>
+                  <div style={{ width:6, height:6, borderRadius:"50%", background:item.dot, flexShrink:0, marginTop:4 }}/>
+                  <span style={{ fontSize:11, color:"#475569", lineHeight:1.5 }}>{item.text}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      </div>
 
       {/* Platform + Keywords */}
       <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:14, alignItems:"start" }} className="disc-detail-grid">
