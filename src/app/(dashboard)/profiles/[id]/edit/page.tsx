@@ -15,6 +15,27 @@ const fetcher = (url: string) => fetch(url).then((res) => res.json());
 
 const DAYS = ["MONDAY", "TUESDAY", "WEDNESDAY", "THURSDAY", "FRIDAY", "SATURDAY", "SUNDAY"];
 
+// Proxy Google lh3 URLs through our authenticated media proxy
+function proxyLogoUrl(url?: string) {
+  if (!url) return "";
+  if (url.startsWith("data:")) return url;
+  if (url.includes("maps.googleapis.com") || url.includes("places.googleapis.com")) return url;
+  return `/api/proxy/media?url=${encodeURIComponent(url)}`;
+}
+
+// Google GBP field rules
+const GBP_RULES = {
+  title: { max: 750, label: "Business Name" },
+  description: { max: 750, label: "Description" },
+  phone: { pattern: /^[+\d][\d\s().\-+]{6,19}$/, label: "Phone" },
+  website: { pattern: /^https?:\/\/.+/, label: "Website" },
+};
+
+function phoneFilter(val: string) {
+  // Only allow digits, +, -, (, ), spaces — strip everything else
+  return val.replace(/[^\d+\-().\s]/g, "");
+}
+
 export default function EditProfilePage() {
   const router = useRouter();
   const params = useParams();
@@ -61,10 +82,10 @@ export default function EditProfilePage() {
         categories: gbp.categories || { primaryCategory: { displayName: "", name: "" }, additionalCategories: [] },
         regularHours: gbp.regularHours || { periods: [] },
         storefrontAddress: gbp.storefrontAddress || {},
-        serviceArea: gbp.serviceArea || { businessRegionCodes: [] },
+        serviceArea: gbp.serviceArea || { places: { placeInfos: [] } },
         labels: gbp.labels || [],
         metadata: gbp.metadata || {},
-        attributes: gbp.attributes || [],
+        openInfo: gbp.openInfo || {},
         specialHours: gbp.specialHours || {},
         morePhones: gbp.phoneNumbers?.additionalPhones || [],
       });
@@ -247,7 +268,7 @@ export default function EditProfilePage() {
           
           {/* About Section */}
           {activeTab === "about" && (
-            <div className="card" style={{ background: "#fff", border: "1px solid #eaeaea", borderRadius: 12, padding: 0, overflow: "hidden" }}>
+            <div className="card" style={{ background: "#fff", border: "1px solid #eaeaea", borderRadius: 12, padding: 0 }}>
               <div style={{ padding: "16px 20px", borderBottom: "1px solid #f1f5f9", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                 <h2 style={{ fontSize: 16, fontWeight: 700, margin: 0 }}>Business Information</h2>
                 <Tag size={18} color="#9ca3af" />
@@ -255,11 +276,11 @@ export default function EditProfilePage() {
               <div style={{ padding: 24, display: "flex", flexDirection: "column", gap: 24 }}>
                 {/* Logo */}
                 <div style={{ display: "flex", gap: 20, alignItems: "center" }}>
-                  <div style={{ width: 80, height: 80, borderRadius: 12, background: "#f8fafc", border: "1px solid #e2e8f0", display: "flex", alignItems: "center", justifyContent: "center", overflow: "hidden" }}>
+                  <div style={{ width: 80, height: 80, borderRadius: 12, background: "#f8fafc", border: "1px solid #e2e8f0", display: "flex", alignItems: "center", justifyContent: "center", overflow: "hidden", flexShrink: 0 }}>
                     {logoFile ? (
                       <img src={URL.createObjectURL(logoFile)} alt="Preview" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
                     ) : formData.logoUrl ? (
-                      <img src={formData.logoUrl} alt="Logo" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                      <img src={proxyLogoUrl(formData.logoUrl)} alt="Logo" referrerPolicy="no-referrer" style={{ width: "100%", height: "100%", objectFit: "cover" }} onError={e => { (e.target as HTMLImageElement).style.display = "none"; }} />
                     ) : (
                       <GbpIcon size={40} />
                     )}
@@ -274,14 +295,19 @@ export default function EditProfilePage() {
                 </div>
 
                 <div>
-                  <label style={{ fontSize: 13, fontWeight: 600, color: "#374151", marginBottom: 8, display: "block" }}>Business Name</label>
-                  <input 
-                    type="text" 
-                    value={formData.title} 
-                    onChange={e => setFormData({...formData, title: e.target.value})} 
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
+                    <label style={{ fontSize: 13, fontWeight: 600, color: "#374151" }}>Business Name</label>
+                    <span style={{ fontSize: 11, color: formData.title?.length > 700 ? "#ef4444" : "#9ca3af" }}>{formData.title?.length || 0}/750</span>
+                  </div>
+                  <input
+                    type="text"
+                    value={formData.title}
+                    onChange={e => e.target.value.length <= 750 && setFormData({...formData, title: e.target.value})}
                     className="input w-full"
                     placeholder="e.g. Acme Coffee"
+                    maxLength={750}
                   />
+                  <p style={{ fontSize: 11, color: "#9ca3af", marginTop: 4 }}>Use your real-world business name. Don't add keywords or locations.</p>
                 </div>
 
                 {/* Primary Category */}
@@ -358,15 +384,20 @@ export default function EditProfilePage() {
                 </div>
 
                 <div>
-                  <label style={{ fontSize: 13, fontWeight: 600, color: "#374151", marginBottom: 8, display: "block" }}>Business Description</label>
-                  <textarea 
-                    value={formData.description} 
-                    onChange={e => setFormData({...formData, description: e.target.value})} 
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
+                    <label style={{ fontSize: 13, fontWeight: 600, color: "#374151" }}>Business Description</label>
+                    <span style={{ fontSize: 11, color: (formData.description?.length || 0) > 700 ? "#ef4444" : "#9ca3af" }}>{formData.description?.length || 0}/750</span>
+                  </div>
+                  <textarea
+                    value={formData.description}
+                    onChange={e => e.target.value.length <= 750 && setFormData({...formData, description: e.target.value})}
                     className="input w-full"
                     rows={5}
-                    placeholder="Describe your business to customers..."
+                    placeholder="Describe your business. Avoid promotional content, URLs, or HTML tags."
                     style={{ resize: "vertical" }}
+                    maxLength={750}
                   />
+                  <p style={{ fontSize: 11, color: "#9ca3af", marginTop: 4 }}>Max 750 characters. Don't include URLs, phone numbers, or HTML.</p>
                 </div>
               </div>
             </div>
@@ -380,35 +411,41 @@ export default function EditProfilePage() {
               </div>
               <div style={{ padding: 24, display: "flex", flexDirection: "column", gap: 24 }}>
                 <div>
-                  <label style={{ fontSize: 13, fontWeight: 600, color: "#374151", marginBottom: 8, display: "block" }}>Primary Phone</label>
-                  <div style={{ display: "flex", gap: 12 }}>
-                    <div style={{ flex: 1, position: "relative" }}>
-                      <Phone size={14} style={{ position: "absolute", left: 12, top: "50%", transform: "translateY(-50%)", color: "#9ca3af" }} />
-                      <input 
-                        type="text" 
-                        value={formData.phone} 
-                        onChange={e => setFormData({...formData, phone: e.target.value})} 
-                        className="input w-full" 
-                        style={{ paddingLeft: 36 }}
-                        placeholder="+1 234 567 890"
-                      />
-                    </div>
+                  <label style={{ fontSize: 13, fontWeight: 600, color: "#374151", marginBottom: 6, display: "block" }}>Primary Phone</label>
+                  <p style={{ fontSize: 11, color: "#9ca3af", marginBottom: 8, marginTop: 0 }}>Include country code. Digits, +, -, (, ) and spaces only.</p>
+                  <div style={{ position: "relative" }}>
+                    <Phone size={14} style={{ position: "absolute", left: 12, top: "50%", transform: "translateY(-50%)", color: "#9ca3af" }} />
+                    <input
+                      type="tel"
+                      value={formData.phone}
+                      onChange={e => setFormData({...formData, phone: phoneFilter(e.target.value)})}
+                      className="input w-full"
+                      style={{ paddingLeft: 36 }}
+                      placeholder="+91 98765 43210"
+                      pattern="[+\d][\d\s().\-+]{6,19}"
+                    />
                   </div>
+                  {formData.phone && !/^[+\d][\d\s().\-+]{6,19}$/.test(formData.phone) && (
+                    <p style={{ fontSize: 11, color: "#ef4444", marginTop: 4 }}>Enter a valid phone number with country code (e.g. +91 98765 43210)</p>
+                  )}
                 </div>
 
                 <div>
-                  <label style={{ fontSize: 13, fontWeight: 600, color: "#374151", marginBottom: 8, display: "block" }}>Website</label>
+                  <label style={{ fontSize: 13, fontWeight: 600, color: "#374151", marginBottom: 6, display: "block" }}>Website</label>
                   <div style={{ position: "relative" }}>
                     <Globe size={14} style={{ position: "absolute", left: 12, top: "50%", transform: "translateY(-50%)", color: "#9ca3af" }} />
-                    <input 
-                      type="url" 
-                      value={formData.website} 
-                      onChange={e => setFormData({...formData, website: e.target.value})} 
-                      className="input w-full" 
+                    <input
+                      type="url"
+                      value={formData.website}
+                      onChange={e => setFormData({...formData, website: e.target.value})}
+                      className="input w-full"
                       style={{ paddingLeft: 36 }}
                       placeholder="https://example.com"
                     />
                   </div>
+                  {formData.website && !/^https?:\/\/.+/.test(formData.website) && (
+                    <p style={{ fontSize: 11, color: "#ef4444", marginTop: 4 }}>Must start with http:// or https://</p>
+                  )}
                 </div>
               </div>
             </div>
@@ -521,17 +558,28 @@ export default function EditProfilePage() {
                 </div>
 
                 <div>
-                  <label style={{ fontSize: 13, fontWeight: 600, color: "#374151", marginBottom: 8, display: "block" }}>Service Areas</label>
-                  <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
-                    {formData.serviceArea?.businessRegionCodes?.map((code: string) => (
-                      <div key={code} style={{ background: "#eff6ff", color: "#2563eb", padding: "4px 10px", borderRadius: 100, fontSize: 12, fontWeight: 600, display: "flex", alignItems: "center", gap: 6 }}>
-                        {code}
-                        <X size={12} style={{ cursor: "pointer" }} />
-                      </div>
-                    )) || <span style={{ fontSize: 13, color: "#9ca3af" }}>No service areas defined.</span>}
-                    <button style={{ background: "none", border: "1px dashed #cbd5e1", borderRadius: 100, padding: "4px 10px", fontSize: 12, color: "#64748b", cursor: "pointer" }}>
-                      <Plus size={12} /> Add area
-                    </button>
+                  <label style={{ fontSize: 13, fontWeight: 600, color: "#374151", marginBottom: 4, display: "block" }}>Service Areas</label>
+                  <p style={{ fontSize: 11, color: "#9ca3af", marginBottom: 10, marginTop: 0 }}>Businesses that serve customers at their location. Managed directly on Google Maps.</p>
+                  <div style={{ padding: 14, background: "#f8fafc", borderRadius: 8, border: "1px solid #e2e8f0" }}>
+                    {(() => {
+                      const places = formData.serviceArea?.places?.placeInfos || [];
+                      const regionCodes = formData.serviceArea?.regionCodes || [];
+                      const all = [
+                        ...places.map((p: any) => p.displayName || p.name || p.placeId),
+                        ...regionCodes
+                      ].filter(Boolean);
+                      return all.length > 0 ? (
+                        <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
+                          {all.map((area: string, i: number) => (
+                            <div key={i} style={{ background: "#eff6ff", color: "#2563eb", padding: "4px 12px", borderRadius: 100, fontSize: 12, fontWeight: 600, display: "flex", alignItems: "center", gap: 6, border: "1px solid #bfdbfe" }}>
+                              <MapPin size={11} /> {area}
+                            </div>
+                          ))}
+                        </div>
+                      ) : (
+                        <p style={{ fontSize: 13, color: "#9ca3af", margin: 0 }}>No service areas configured. Set up service areas directly in your Google Business Profile.</p>
+                      );
+                    })()}
                   </div>
                 </div>
               </div>
