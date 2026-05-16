@@ -2,7 +2,7 @@
 
 import { useState, useMemo } from "react";
 import {
-  LineChart, Line, XAxis, YAxis, CartesianGrid,
+  AreaChart, Area, XAxis, YAxis, CartesianGrid,
   Tooltip, ResponsiveContainer, LabelList, PieChart, Pie, Cell
 } from "recharts";
 import { ArrowLeft, Info, Eye, Search, Phone, Globe, Navigation, TrendingUp } from "lucide-react";
@@ -412,15 +412,36 @@ export function PerformanceView({ profile, onBack }: { profile: any; onBack?: ()
             ) : (
               <div style={{ height:260 }}>
                 <ResponsiveContainer width="100%" height="100%">
-                  <LineChart data={chartData} margin={{ top:40, right:20, left:0, bottom:0 }}>
-                    <CartesianGrid strokeDasharray="4 4" vertical={false} stroke="#F1F5F9"/>
+                  <AreaChart data={chartData} margin={{ top:40, right:20, left:0, bottom:0 }}>
+                    <defs>
+                      <linearGradient id="chartGradient" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="5%"  stopColor="#2563EB" stopOpacity={0.22}/>
+                        <stop offset="95%" stopColor="#2563EB" stopOpacity={0}/>
+                      </linearGradient>
+                    </defs>
+                    {/* Horizontal light lines + dashed vertical separators (GBP style) */}
+                    <CartesianGrid
+                      strokeDasharray="5 5"
+                      vertical={true}
+                      horizontal={true}
+                      stroke="#E2E8F0"
+                      verticalFill={undefined}
+                    />
                     <XAxis dataKey="label" axisLine={false} tickLine={false} tick={{ fontSize:12, fill:"#94A3B8", fontFamily:"Inter" }} interval={0}/>
                     <YAxis axisLine={false} tickLine={false} tick={{ fontSize:11, fill:"#94A3B8", fontFamily:"Inter" }} width={36} tickFormatter={v=>v>=1000?`${(v/1000).toFixed(0)}k`:v}/>
                     <Tooltip content={<CustomTooltip/>}/>
-                    <Line type="monotone" dataKey="value" stroke="#2563EB" strokeWidth={2.5} dot={{ r:5, fill:"#fff", stroke:"#2563EB", strokeWidth:2.5 }} activeDot={{ r:7, fill:"#2563EB", stroke:"#fff", strokeWidth:2.5 }}>
+                    <Area
+                      type="monotone"
+                      dataKey="value"
+                      stroke="#2563EB"
+                      strokeWidth={2.5}
+                      fill="url(#chartGradient)"
+                      dot={{ r:5, fill:"#fff", stroke:"#2563EB", strokeWidth:2.5 }}
+                      activeDot={{ r:7, fill:"#2563EB", stroke:"#fff", strokeWidth:2.5 }}
+                    >
                       <LabelList dataKey="value" content={<CustomDotLabel/>}/>
-                    </Line>
-                  </LineChart>
+                    </Area>
+                  </AreaChart>
                 </ResponsiveContainer>
               </div>
             )}
