@@ -167,7 +167,7 @@ function ProfileCard({
             </div>
 
             <div style={{ minWidth: 0, flex: 1, paddingRight: 20 }}>
-              <Link href={`/profiles/${profile.id}`} title={profile.name} style={{ fontSize: 14, fontWeight: 700, color: "#111827", display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical", overflow: "hidden", lineHeight: 1.3, textDecoration: "none" }}>
+              <Link href={`/profiles/${profile.id}/edit`} title={profile.name} style={{ fontSize: 14, fontWeight: 700, color: "#111827", display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical", overflow: "hidden", lineHeight: 1.3, textDecoration: "none" }}>
                 {profile.name}
               </Link>
               <div style={{ display: "flex", alignItems: "center", gap: 4, marginTop: 6, background: "#f0fdf4", color: "#16a34a", padding: "2px 6px", borderRadius: 4, width: "fit-content" }}>
@@ -195,48 +195,20 @@ function ProfileCard({
         </div>
       </div>
 
-      {/* Actions */}
-      <div style={{ padding: "12px 14px" }}>
+      {/* Action — Edit Profile only */}
+      <div style={{ padding: "12px 14px 14px" }}>
         <Link
-          href={`/profiles/${profile.id}`}
-          style={{ 
-            display: "flex", alignItems: "center", justifyContent: "space-between", 
-            padding: "10px 14px", background: "#fff", border: `1px solid ${theme.border}30`, 
-            borderRadius: 10, textDecoration: "none", transition: "all 0.2s"
+          href={`/profiles/${profile.id}/edit`}
+          style={{
+            display: "flex", alignItems: "center", justifyContent: "center",
+            gap: 8, height: 36, background: "#2563eb", border: "none",
+            borderRadius: 8, color: "#fff", fontSize: 12, fontWeight: 700,
+            textDecoration: "none", transition: "background 150ms ease",
           }}
-          onMouseEnter={(e) => { e.currentTarget.style.background = theme.bgLight; e.currentTarget.style.borderColor = theme.border; }}
-          onMouseLeave={(e) => { e.currentTarget.style.background = "#fff"; e.currentTarget.style.borderColor = `${theme.border}30`; }}
+          onMouseEnter={e => e.currentTarget.style.background = "#1d4ed8"}
+          onMouseLeave={e => e.currentTarget.style.background = "#2563eb"}
         >
-          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-            <Eye size={14} color={theme.icon} />
-            <span style={{ fontSize: 12, fontWeight: 700, color: theme.text }}>View Posts</span>
-          </div>
-          <ArrowRight size={14} color={theme.icon} />
-        </Link>
-      </div>
-
-      {/* Quick Actions (Floating or bottom) */}
-      <div style={{ display: "flex", flexWrap: "wrap", gap: 8, padding: "0 14px 14px" }}>
-        <button
-          onClick={() => onBulkImport(profile.id)}
-          title="Bulk Import"
-          style={{ flex: 1, minWidth: 70, height: 32, display: "flex", alignItems: "center", justifyContent: "center", gap: 6, background: "#f8fafc", border: "1px solid #e2e8f0", borderRadius: 8, color: "#64748b", fontSize: 11, fontWeight: 600, cursor: "pointer" }}
-        >
-          <Upload size={12} /> Bulk
-        </button>
-        <button
-          onClick={() => onEdit(profile)}
-          title="Edit Profile"
-          style={{ flex: 1, minWidth: 70, height: 32, display: "flex", alignItems: "center", justifyContent: "center", gap: 6, background: "#fff", border: "1px solid #2563eb", borderRadius: 8, color: "#2563eb", fontSize: 11, fontWeight: 600, cursor: "pointer" }}
-        >
-          <Edit2 size={12} /> Edit
-        </button>
-        <Link
-          href={`/posts/new?profile=${profile.id}&from=profile`}
-          title="Create Post"
-          style={{ flex: 1, minWidth: 70, height: 32, display: "flex", alignItems: "center", justifyContent: "center", gap: 6, background: "#2563eb", border: "none", borderRadius: 8, color: "#fff", fontSize: 11, fontWeight: 600, textDecoration: "none" }}
-        >
-          <Plus size={12} /> Post
+          <Edit2 size={13} /> Edit Profile
         </Link>
       </div>
     </div>

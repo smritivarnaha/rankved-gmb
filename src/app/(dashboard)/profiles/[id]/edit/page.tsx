@@ -149,15 +149,6 @@ export default function EditProfilePage() {
       </div>
     );
   }
-  if (apiError) {
-    return (
-      <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: "80px 0", gap: 12 }}>
-        <AlertCircle size={32} color="var(--danger)" />
-        <p style={{ fontSize: 15, fontWeight: 700, color: "var(--text-primary)", margin: 0 }}>Failed to load profile</p>
-        <p style={{ fontSize: 13, color: "var(--text-tertiary)", margin: 0, maxWidth: 400, textAlign: "center" }}>{apiError}</p>
-      </div>
-    );
-  }
 
   const sections = [
     { id: "about", label: "About", icon: Info },
@@ -197,7 +188,7 @@ export default function EditProfilePage() {
             className="btn btn-primary" 
             style={{ padding: "8px 20px", display: "flex", alignItems: "center", gap: 8, borderRadius: 8 }}
           >
-            {saving ? <Loader2 className="animate-spin" size={16} /> : <Save size={16} />}
+            {saving ? <Loader2 className="anim-spin" size={16} /> : <Save size={16} />}
             {saving ? "Saving..." : "Save Changes"}
           </button>
         </div>
@@ -205,7 +196,7 @@ export default function EditProfilePage() {
 
       {message && (
         <div style={{
-          padding: "12px 16px", borderRadius: 8, marginBottom: 24, fontSize: 13,
+          padding: "12px 16px", borderRadius: 8, marginBottom: 16, fontSize: 13,
           display: "flex", alignItems: "center", gap: 8,
           background: message.type === "success" ? "#f0fdf4" : "#fef2f2",
           border: `1px solid ${message.type === "success" ? "#bbf7d0" : "#fecaca"}`,
@@ -216,6 +207,15 @@ export default function EditProfilePage() {
           <button onClick={() => setMessage(null)} style={{ marginLeft: "auto", background: "none", border: "none", cursor: "pointer", color: "inherit" }}>
             <X size={14} />
           </button>
+        </div>
+      )}
+
+      {apiError && (
+        <div style={{ padding: "12px 16px", borderRadius: 8, marginBottom: 16, fontSize: 13, display: "flex", alignItems: "center", gap: 8, background: "#fff7ed", border: "1px solid #fed7aa", color: "#c2410c" }}>
+          <AlertCircle size={14} style={{ flexShrink: 0 }} />
+          <span>Could not load live data from Google: {apiError}. You can still edit using the form below.</span>
+          <button onClick={() => mutate()} style={{ marginLeft: "auto", background: "none", border: "1px solid #fed7aa", borderRadius: 6, padding: "2px 10px", cursor: "pointer", color: "#c2410c", fontSize: 11, fontWeight: 600, whiteSpace: "nowrap" }}>Retry</button>
+          <button onClick={() => setApiError(null)} style={{ background: "none", border: "none", cursor: "pointer", color: "inherit", display: "flex" }}><X size={13} /></button>
         </div>
       )}
 
