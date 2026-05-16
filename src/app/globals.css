@@ -676,7 +676,7 @@ tr:hover td { background: var(--bg-hover); }
   .app-main  { height: auto; overflow: visible; }
   .app-content {
     overflow-y: visible;
-    padding: 16px 16px 76px; /* extra bottom for bottom nav */
+    padding: 16px 16px 96px; /* floating nav: 64px height + 12px bottom margin + breathing room */
     min-height: calc(100vh - 56px);
   }
 
@@ -749,7 +749,7 @@ tr:hover td { background: var(--bg-hover); }
 /* ── Small mobile: ≤480px ── */
 @media (max-width: 480px) {
   .stats-grid { grid-template-columns: 1fr; }
-  .app-content { padding: 12px 12px 76px; }
+  .app-content { padding: 12px 12px 96px; }
   .page-title { font-size: 15px; }
   .btn { font-size: 12px; }
   [style*="repeat(auto-fit, minmax"] { grid-template-columns: 1fr !important; }
