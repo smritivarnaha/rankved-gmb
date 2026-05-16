@@ -165,13 +165,31 @@ export default function SettingsPage() {
 
   return (
     <div style={{ ...sectionGap, maxWidth: 900 }}>
+      <style>{`
+        /* ── Settings page mobile fixes ── */
+        @media (max-width: 768px) {
+          .stabs { overflow-x: auto; -webkit-overflow-scrolling: touch; scrollbar-width: none; flex-wrap: nowrap !important; padding-bottom: 1px; }
+          .stabs::-webkit-scrollbar { display: none; }
+          .stabs button { white-space: nowrap; flex-shrink: 0; padding: 8px 14px !important; font-size: 13px !important; }
+          .snotif-grid { grid-template-columns: 1fr !important; }
+          .sbrand-3col { grid-template-columns: 1fr 1fr !important; }
+          .sbrand-top { flex-direction: column !important; align-items: stretch !important; }
+          .sbrand-logo { width: 100% !important; height: 100px !important; }
+          .sprofiles-grid { grid-template-columns: 1fr !important; }
+          .sactions { flex-wrap: wrap !important; gap: 8px !important; }
+          .sactions button, .sactions a { flex: 1; min-width: 120px; justify-content: center; }
+        }
+        @media (max-width: 480px) {
+          .sbrand-3col { grid-template-columns: 1fr !important; }
+        }
+      `}</style>
       <div>
         <h1 className="page-title">Settings</h1>
         <p className="page-subtitle">{aiFeaturesEnabled ? "Configure RankVed's AI engines and your Google connections." : "Configure your Google connections."}</p>
       </div>
 
       {/* ─── Settings Tabs ─── */}
-      <div style={{ display: "flex", alignItems: "center", gap: 8, borderBottom: "1px solid #eaeaea", paddingBottom: 0 }}>
+      <div style={{ display: "flex", alignItems: "center", gap: 4, borderBottom: "1px solid #eaeaea", paddingBottom: 0, overflowX: "auto" }} className="stabs">
         {[
           { id: "accounts", label: "Google Accounts" },
           { id: "notifications", label: "Email Notifications" },
@@ -237,7 +255,7 @@ export default function SettingsPage() {
                   ))}
                 </div>
                 
-                <div style={{ display: "flex", gap: 12, flexWrap: "wrap", alignItems: "center" }}>
+                <div style={{ display: "flex", gap: 12, flexWrap: "wrap", alignItems: "center" }} className="sactions">
                   <button onClick={handleGoogleConnect} disabled={connecting} className="btn btn-primary" style={{ fontSize: 12, padding: "8px 14px" }}>
                     {connecting ? <Loader2 className="anim-spin" style={{ width: 14, height: 14 }} /> : null}
                     Connect Another Account
@@ -279,7 +297,7 @@ export default function SettingsPage() {
           <div className="card-body">
             <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
               {/* Recipient Emails */}
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }} className="snotif-grid">
                 <div>
                   <label style={{ fontSize: 12, fontWeight: 600, display: "block", marginBottom: 6 }}>Recipient Emails (To)</label>
                   <input 
@@ -422,7 +440,7 @@ export default function SettingsPage() {
             {loadingProfiles ? (
               <div style={{ padding: "24px 0", display: "flex", justifyContent: "center" }}><Loader2 className="anim-spin" style={{ width: 16, height: 16, color: "var(--text-muted)" }} /></div>
             ) : profiles.length > 0 ? (
-              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))", gap: 12 }}>
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))", gap: 12 }} className="sprofiles-grid">
                 {profiles.map((p) => (
                   <div key={p.id} style={{ padding: 12, borderRadius: 10, border: "1px solid var(--border-light)", background: "var(--bg-elevated)", display: "flex", alignItems: "center", gap: 12 }}>
                     <div style={{ width: 44, height: 44, borderRadius: 8, background: "#f1f5f9", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, overflow: "hidden" }}>
@@ -460,8 +478,8 @@ export default function SettingsPage() {
             <h2 className="card-title" style={{ fontSize: 14 }}>Sidebar Branding</h2>
           </div>
           <div className="card-body">
-            <div style={{ display: "flex", gap: 24, alignItems: "flex-start", marginBottom: 24 }}>
-              <div style={{ width: 140, height: 140, background: "#f8f9fa", borderRadius: 8, border: "1px solid #eaeaea", display: "flex", alignItems: "center", justifyContent: "center", overflow: "hidden" }}>
+            <div style={{ display: "flex", gap: 24, alignItems: "flex-start", marginBottom: 24 }} className="sbrand-top">
+              <div style={{ width: 140, height: 140, background: "#f8f9fa", borderRadius: 8, border: "1px solid #eaeaea", display: "flex", alignItems: "center", justifyContent: "center", overflow: "hidden", flexShrink: 0 }} className="sbrand-logo">
                 {selectedLogo ? (
                   <img src={URL.createObjectURL(selectedLogo)} alt="Preview" style={{ width: "100%", height: "100%", objectFit: "contain" }} />
                 ) : localSettings?.sidebarLogoUrl ? (
@@ -483,7 +501,7 @@ export default function SettingsPage() {
                   <p style={{ fontSize: 11, color: "#64748B", marginTop: 8 }}>The text that appears next to the logo in the sidebar.</p>
                 </div>
 
-                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 16 }}>
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 16 }} className="sbrand-3col">
                   <div>
                     <label style={{ fontSize: 13, fontWeight: 600, color: "#111827", display: "block", marginBottom: 8 }}>Logo Shape</label>
                     <select 
