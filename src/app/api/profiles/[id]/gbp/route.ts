@@ -21,12 +21,18 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
     const accessToken = accounts[0].access_token;
     const locationName = loc.gbpLocationId;
 
-    const res = await fetch(`${INFO_API_BASE}/${locationName}?readMask=title,profile,phoneNumbers,websiteUri,categories,regularHours,specialHours,serviceArea,attributes,metadata,storefrontAddress,labels`, {
+    // Valid readMask fields for Business Information API v1 — 'attributes' is NOT valid here
+    const readMask = "title,profile,phoneNumbers,websiteUri,categories,regularHours,specialHours,serviceArea,metadata,storefrontAddress,labels,openInfo";
+
+    const res = await fetch(`${INFO_API_BASE}/${locationName}?readMask=${readMask}`, {
       headers: { Authorization: `Bearer ${accessToken}` }
     });
 
     const data = await res.json();
-    if (!res.ok) throw new Error(data.error?.message || "Failed to fetch from Google API");
+    if (!res.ok) {
+      console.error("[GBP Edit] API error:", res.status, JSON.stringify(data?.error || data).substring(0, 300));
+      throw new Error(data.error?.message || "Failed to fetch from Google API");
+    }
 
     // Fetch live logo as well
     let liveLogo = loc.logoUrl;
