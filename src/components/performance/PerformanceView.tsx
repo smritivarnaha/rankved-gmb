@@ -3,9 +3,9 @@
 import { useState, useMemo } from "react";
 import {
   LineChart, Line, XAxis, YAxis, CartesianGrid,
-  Tooltip, ResponsiveContainer, LabelList
+  Tooltip, ResponsiveContainer, LabelList, PieChart, Pie, Cell
 } from "recharts";
-import { ArrowLeft, Info } from "lucide-react";
+import { ArrowLeft, Info, Eye, Search, MapPin, Phone, Globe, Navigation } from "lucide-react";
 import { AuditReport } from "./AuditReport";
 import useSWR from "swr";
 
@@ -20,150 +20,170 @@ const PERIODS = [
 const METRIC_TABS = [
   { key: "overview",   label: "Overview" },
   { key: "calls",      label: "Calls" },
-  { key: "website",    label: "Website clicks" },
+  { key: "website",    label: "Website" },
   { key: "directions", label: "Directions" },
   { key: "messages",   label: "Messages" },
 ] as const;
 
 type MetricKey = typeof METRIC_TABS[number]["key"];
 
-/* ─────────────────────────────────────────────────────────
-   Smart data processing:
-   • months=1  → group by WEEK  (W1, W2, W3, W4)
-   • months=3/6 → group by MONTH (Jan, Feb … )
-───────────────────────────────────────────────────────── */
+/* ── Sum a specific metric across all data ── */
+function sumMetric(dataRaw: any[], metricKeyword: string): number {
+  if (!Array.isArray(dataRaw)) return 0;
+  let total = 0;
+  dataRaw.forEach((item: any) => {
+    (item.dailyMetricTimeSeries || []).forEach((series: any) => {
+      if ((series.dailyMetric || "").includes(metricKeyword)) {
+        (series.timeSeries?.datedValues || []).forEach((p: any) => {
+          total += parseInt(p.value) || 0;
+        });
+      }
+    });
+  });
+  return total;
+}
+
+/* ── Platform breakdown ── */
+function computePlatformBreakdown(dataRaw: any[]) {
+  const mobileSearch  = sumMetric(dataRaw, "MOBILE_SEARCH");
+  const mapsSearch    = sumMetric(dataRaw, "MOBILE_MAPS");
+  const desktopSearch = sumMetric(dataRaw, "DESKTOP_SEARCH");
+  const desktopMaps   = sumMetric(dataRaw, "DESKTOP_MAPS");
+  const totalViews = mobileSearch + mapsSearch + desktopSearch + desktopMaps;
+
+  return {
+    totalViews,
+    platforms: [
+      { label: "Google Search – mobile", value: mobileSearch,  color: "#FBBC04" },
+      { label: "Google Maps – mobile",   value: mapsSearch,    color: "#EA4335" },
+      { label: "Google Search – desktop",value: desktopSearch, color: "#4285F4" },
+      { label: "Google Maps – desktop",  value: desktopMaps,   color: "#34A853" },
+    ].filter(p => p.value > 0),
+  };
+}
+
+/* ── Chart data ── */
 function processRaw(dataRaw: any[], activeMetric: MetricKey, months: 1 | 3 | 6) {
   const dailyMap: Record<string, number> = {};
   let total = 0;
-
   if (!Array.isArray(dataRaw)) return { total: 0, chartData: [] };
 
   dataRaw.forEach((item: any) => {
     (item.dailyMetricTimeSeries || []).forEach((series: any) => {
       const metric: string = series.dailyMetric || "";
       const points: any[] = series.timeSeries?.datedValues || [];
-
-      const isImpression = metric.includes("IMPRESSIONS");
-      const isCall       = metric.includes("CALL_CLICKS");
-      const isWebsite    = metric.includes("WEBSITE_CLICKS");
-      const isDirection  = metric.includes("DIRECTION");
-      const isMessage    = metric.includes("CONVERSATIONS");
-
       const include =
-        activeMetric === "overview"   ? isImpression :
-        activeMetric === "calls"      ? isCall :
-        activeMetric === "website"    ? isWebsite :
-        activeMetric === "directions" ? isDirection :
-        activeMetric === "messages"   ? isMessage : false;
-
+        activeMetric === "overview"   ? metric.includes("IMPRESSIONS") :
+        activeMetric === "calls"      ? metric.includes("CALL_CLICKS") :
+        activeMetric === "website"    ? metric.includes("WEBSITE_CLICKS") :
+        activeMetric === "directions" ? metric.includes("DIRECTION") :
+        activeMetric === "messages"   ? metric.includes("CONVERSATIONS") : false;
       if (!include) return;
-
       points.forEach((p: any) => {
         if (!p.date) return;
-        const key = `${p.date.year}-${String(p.date.month).padStart(2, "0")}-${String(p.date.day).padStart(2, "0")}`;
+        const key = `${p.date.year}-${String(p.date.month).padStart(2,"0")}-${String(p.date.day).padStart(2,"0")}`;
         dailyMap[key] = (dailyMap[key] || 0) + (parseInt(p.value) || 0);
       });
     });
   });
 
-  const sorted = Object.entries(dailyMap).sort(([a], [b]) => a.localeCompare(b));
-
-  // Determine grouping strategy
+  const sorted = Object.entries(dailyMap).sort(([a],[b]) => a.localeCompare(b));
   const bucketMap: Record<string, number> = {};
-
   sorted.forEach(([dateStr, val]) => {
     const d = new Date(dateStr);
     total += val;
-
     let bucketKey: string;
     if (months === 1) {
-      // Weekly: "Week 1", "Week 2", "Week 3", "Week 4"
-      const weekNum = Math.min(Math.ceil(d.getDate() / 7), 4);
-      bucketKey = `Week ${weekNum}`;
+      bucketKey = `Week ${Math.min(Math.ceil(d.getDate() / 7), 4)}`;
     } else {
-      // Monthly: "Jan", "Feb", "Mar" …
       bucketKey = d.toLocaleString("default", { month: "short" });
     }
-
     bucketMap[bucketKey] = (bucketMap[bucketKey] || 0) + val;
   });
 
-  // Preserve insertion order (sorted by date → buckets come out chronologically)
   const chartData = Object.entries(bucketMap).map(([label, value]) => ({ label, value }));
-
   return { total, chartData };
 }
 
-/* ── Custom floating label above each dot ─────── */
-const CustomDotLabel = (props: any) => {
-  const { x, y, value } = props;
-  if (!value && value !== 0) return null;
-  const display = value >= 1000 ? `${(value / 1000).toFixed(1)}k` : String(value);
-  return (
-    <g>
-      <rect
-        x={x - 18} y={y - 30}
-        width={36} height={20}
-        rx={6} ry={6}
-        fill="#1E293B"
-        opacity={0.85}
-      />
-      <text
-        x={x} y={y - 16}
-        textAnchor="middle"
-        fill="#fff"
-        fontSize={10}
-        fontWeight={600}
-        fontFamily="Inter, sans-serif"
-      >
-        {display}
-      </text>
-    </g>
-  );
-};
-
-/* ── Tooltip ──────────────────────────────────── */
+/* ── Tooltip ── */
 function CustomTooltip({ active, payload, label }: any) {
   if (!active || !payload?.length) return null;
   return (
-    <div style={{
-      background: "#fff", border: "1px solid #E2E8F0",
-      borderRadius: 8, padding: "10px 14px", fontSize: 12,
-      boxShadow: "0 4px 16px rgba(0,0,0,0.10)"
-    }}>
-      <p style={{ fontWeight: 600, color: "#475569", marginBottom: 4, margin: "0 0 4px" }}>{label}</p>
-      <p style={{ color: "#2563EB", fontWeight: 700, margin: 0 }}>{payload[0].value?.toLocaleString()}</p>
+    <div style={{ background:"#fff", border:"1px solid #E2E8F0", borderRadius:8, padding:"10px 14px", fontSize:12, boxShadow:"0 4px 16px rgba(0,0,0,0.10)" }}>
+      <p style={{ fontWeight:600, color:"#475569", margin:"0 0 4px" }}>{label}</p>
+      <p style={{ color:"#2563EB", fontWeight:700, margin:0 }}>{payload[0].value?.toLocaleString()}</p>
     </div>
   );
 }
 
-/* ── Skeleton loader ──────────────────────────── */
-function Skeleton({ h, w }: { h: number; w?: number | string }) {
+/* ── Custom dot label ── */
+const CustomDotLabel = (props: any) => {
+  const { x, y, value } = props;
+  if (!value && value !== 0) return null;
+  const display = value >= 1000 ? `${(value/1000).toFixed(1)}k` : String(value);
   return (
-    <div style={{
-      height: h, width: w ?? "100%",
-      background: "linear-gradient(90deg, #F1F5F9 25%, #E2E8F0 50%, #F1F5F9 75%)",
-      backgroundSize: "200% 100%",
-      borderRadius: 8,
-      animation: "shimmer 1.4s infinite linear"
-    }} />
+    <g>
+      <rect x={x-18} y={y-30} width={36} height={20} rx={6} ry={6} fill="#1E293B" opacity={0.85} />
+      <text x={x} y={y-16} textAnchor="middle" fill="#fff" fontSize={10} fontWeight={600} fontFamily="Inter, sans-serif">{display}</text>
+    </g>
+  );
+};
+
+/* ── Skeleton ── */
+function Skeleton({ h, w }: { h: number; w?: number | string }) {
+  return <div style={{ height:h, width:w??"100%", background:"linear-gradient(90deg,#F1F5F9 25%,#E2E8F0 50%,#F1F5F9 75%)", backgroundSize:"200% 100%", borderRadius:8, animation:"shimmer 1.4s infinite linear" }} />;
+}
+
+/* ── Stat box ── */
+function StatBox({ value, label, icon: Icon, loading }: { value:number; label:string; icon:any; loading:boolean }) {
+  return (
+    <div style={{ flex:1, background:"#fff", border:"1px solid #E2E8F0", borderRadius:14, padding:"20px 20px 16px" }}>
+      {loading ? (
+        <><Skeleton h={44} w={120} /><div style={{marginTop:10}}><Skeleton h={16} w={160} /></div></>
+      ) : (
+        <>
+          <div style={{ fontSize:40, fontWeight:700, color:"#111827", letterSpacing:"-0.03em", lineHeight:1 }}>{value.toLocaleString()}</div>
+          <div style={{ display:"flex", alignItems:"center", gap:6, marginTop:8, fontSize:13, color:"#64748B" }}>
+            <Icon size={14} /> {label}
+          </div>
+        </>
+      )}
+    </div>
   );
 }
 
-/* ── Main component ───────────────────────────── */
+/* ═══════════════════════ MAIN ═══════════════════════ */
 export function PerformanceView({ profile, onBack }: { profile: any; onBack?: () => void }) {
-  const [months, setMonths]         = useState<1 | 3 | 6>(6);
+  const [months, setMonths]         = useState<1|3|6>(6);
   const [activeMetric, setMetric]   = useState<MetricKey>("overview");
-  const [activeView, setActiveView] = useState<"performance" | "audit">("performance");
+  const [activeView, setActiveView] = useState<"performance"|"audit">("performance");
 
   const { data: perfData, isLoading } = useSWR(
     profile ? `/api/profiles/${profile.id}/performance?months=${months}` : null,
     fetcher
   );
 
+  const { data: kwData, isLoading: kwLoading } = useSWR(
+    profile ? `/api/profiles/${profile.id}/keywords?months=${months}` : null,
+    fetcher
+  );
+
+  const rawData = perfData?.data || [];
+  const keywords: { keyword: string; count: number }[] = kwData?.data || [];
+
   const { total, chartData } = useMemo(
-    () => processRaw(perfData?.data || [], activeMetric, months),
-    [perfData, activeMetric, months]
+    () => processRaw(rawData, activeMetric, months),
+    [rawData, activeMetric, months]
+  );
+
+  const { totalViews, platforms } = useMemo(
+    () => computePlatformBreakdown(rawData),
+    [rawData]
+  );
+
+  const totalSearches = useMemo(
+    () => sumMetric(rawData, "IMPRESSIONS_DESKTOP_SEARCH") + sumMetric(rawData, "IMPRESSIONS_MOBILE_SEARCH"),
+    [rawData]
   );
 
   if (!profile) return null;
@@ -172,48 +192,44 @@ export function PerformanceView({ profile, onBack }: { profile: any; onBack?: ()
     activeMetric === "overview"   ? "Business Profile interactions" :
     activeMetric === "calls"      ? "Calls" :
     activeMetric === "website"    ? "Website clicks" :
-    activeMetric === "directions" ? "Direction requests" :
-    "Messages";
+    activeMetric === "directions" ? "Direction requests" : "Messages";
 
   const periodLabel = months === 1 ? "this month" : `last ${months} months`;
 
   return (
-    <div style={{ fontFamily: "Inter, -apple-system, sans-serif", maxWidth: 900 }}>
-
-      {/* shimmer keyframe injected once */}
-      <style>{`@keyframes shimmer { 0%{background-position:200% 0} 100%{background-position:-200% 0} }`}</style>
+    <div style={{ fontFamily:"Inter, -apple-system, sans-serif", maxWidth:960 }}>
+      <style>{`
+        @keyframes shimmer { 0%{background-position:200% 0} 100%{background-position:-200% 0} }
+        @media (max-width: 768px) {
+          .perf-discovery { flex-direction: column !important; }
+          .perf-stat-row  { flex-direction: column !important; }
+          .perf-metric-tabs { overflow-x: auto; scrollbar-width: none; }
+          .perf-metric-tabs::-webkit-scrollbar { display: none; }
+        }
+      `}</style>
 
       {/* ── Header ── */}
-      <div style={{ display: "flex", alignItems: "center", gap: 16, marginBottom: 24, flexWrap: "wrap" }}>
+      <div style={{ display:"flex", alignItems:"center", gap:16, marginBottom:24, flexWrap:"wrap" }}>
         {onBack && (
-          <button onClick={onBack} style={{
-            width: 32, height: 32, borderRadius: "50%", border: "1px solid #E2E8F0",
-            background: "#fff", cursor: "pointer", display: "flex", alignItems: "center",
-            justifyContent: "center", color: "#94A3B8", flexShrink: 0
-          }}>
+          <button onClick={onBack} style={{ width:32,height:32,borderRadius:"50%",border:"1px solid #E2E8F0",background:"#fff",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",color:"#94A3B8",flexShrink:0 }}>
             <ArrowLeft size={14} />
           </button>
         )}
-
-        <div style={{ flex: 1 }}>
-          <p style={{ fontSize: 12, color: "#94A3B8", margin: 0, fontWeight: 500 }}>Performance</p>
-          <h1 style={{ fontSize: 20, fontWeight: 700, color: "#111827", margin: 0, letterSpacing: "-0.01em" }}>
-            {profile.name}
-          </h1>
+        <div style={{ flex:1 }}>
+          <p style={{ fontSize:12, color:"#94A3B8", margin:0, fontWeight:500 }}>Analytics</p>
+          <h1 style={{ fontSize:20, fontWeight:700, color:"#111827", margin:0, letterSpacing:"-0.01em" }}>{profile.name}</h1>
         </div>
-
-        {/* Performance / Audit toggle */}
-        <div style={{ display: "flex", gap: 4, background: "#F1F5F9", borderRadius: 8, padding: 3 }}>
-          {(["performance", "audit"] as const).map((v) => (
+        <div style={{ display:"flex", gap:4, background:"#F1F5F9", borderRadius:8, padding:3 }}>
+          {(["performance","audit"] as const).map(v => (
             <button key={v} onClick={() => setActiveView(v)} style={{
-              padding: "5px 16px", borderRadius: 6, border: "none", cursor: "pointer",
-              fontSize: 13, fontWeight: 600,
-              background: activeView === v ? "#fff" : "transparent",
-              color: activeView === v ? "#111827" : "#94A3B8",
-              boxShadow: activeView === v ? "0 1px 3px rgba(0,0,0,0.08)" : "none",
-              transition: "all 0.15s"
+              padding:"5px 16px", borderRadius:6, border:"none", cursor:"pointer",
+              fontSize:13, fontWeight:600,
+              background: activeView===v?"#fff":"transparent",
+              color: activeView===v?"#111827":"#94A3B8",
+              boxShadow: activeView===v?"0 1px 3px rgba(0,0,0,0.08)":"none",
+              transition:"all 0.15s"
             }}>
-              {v === "performance" ? "Performance" : "Audit"}
+              {v==="performance"?"Analytics":"Audit"}
             </button>
           ))}
         </div>
@@ -223,126 +239,187 @@ export function PerformanceView({ profile, onBack }: { profile: any; onBack?: ()
         <AuditReport profileId={profile.id} />
       ) : (
         <>
-          {/* ── Period tabs ── */}
-          <div style={{
-            display: "inline-flex", alignItems: "center", gap: 2,
-            marginBottom: 20, background: "#F8FAFC",
-            border: "1px solid #E2E8F0", borderRadius: 10, padding: 4
-          }}>
-            {PERIODS.map((p) => (
-              <button
-                key={p.months}
-                onClick={() => setMonths(p.months as 1 | 3 | 6)}
-                style={{
-                  padding: "6px 16px", borderRadius: 7, border: "none", cursor: "pointer",
-                  fontSize: 13, fontWeight: 600, transition: "all 0.15s",
-                  background: months === p.months ? "#fff" : "transparent",
-                  color: months === p.months ? "#111827" : "#94A3B8",
-                  boxShadow: months === p.months ? "0 1px 4px rgba(0,0,0,0.08)" : "none",
-                }}
-              >
+          {/* ── Period selector ── */}
+          <div style={{ display:"inline-flex", alignItems:"center", gap:2, marginBottom:24, background:"#F8FAFC", border:"1px solid #E2E8F0", borderRadius:10, padding:4 }}>
+            {PERIODS.map(p => (
+              <button key={p.months} onClick={() => setMonths(p.months as 1|3|6)} style={{
+                padding:"6px 16px", borderRadius:7, border:"none", cursor:"pointer",
+                fontSize:13, fontWeight:600, transition:"all 0.15s",
+                background: months===p.months?"#fff":"transparent",
+                color: months===p.months?"#111827":"#94A3B8",
+                boxShadow: months===p.months?"0 1px 4px rgba(0,0,0,0.08)":"none",
+              }}>
                 {p.label}
               </button>
             ))}
           </div>
 
-          {/* ── Metric tabs — Google underline style ── */}
-          <div style={{
-            display: "flex", borderBottom: "1px solid #E2E8F0",
-            marginBottom: 28, overflowX: "auto"
-          }}>
-            {METRIC_TABS.map((tab) => (
-              <button
-                key={tab.key}
-                onClick={() => setMetric(tab.key)}
-                style={{
-                  padding: "10px 20px", border: "none", cursor: "pointer",
-                  background: "transparent", fontSize: 14, fontWeight: 500,
-                  color: activeMetric === tab.key ? "#2563EB" : "#64748B",
-                  borderBottom: activeMetric === tab.key ? "2px solid #2563EB" : "2px solid transparent",
-                  marginBottom: -1, transition: "all 0.15s", whiteSpace: "nowrap"
-                }}
-              >
-                {tab.label}
-              </button>
-            ))}
-          </div>
+          {/* ══════════ HOW PEOPLE DISCOVERED YOU ══════════ */}
+          <div style={{ marginBottom:28 }}>
+            <h2 style={{ fontSize:15, fontWeight:700, color:"#111827", margin:"0 0 14px", display:"flex", alignItems:"center", gap:6 }}>
+              How people discovered you <Info size={14} color="#CBD5E1" />
+            </h2>
 
-          {/* ── Big number ── */}
-          <div style={{ marginBottom: 32 }}>
-            {isLoading ? (
-              <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-                <Skeleton h={52} w={140} />
-                <Skeleton h={16} w={220} />
+            {/* Stat row */}
+            <div style={{ display:"flex", gap:14, marginBottom:14 }} className="perf-stat-row">
+              <StatBox value={totalViews}   label="People viewed your Business Profile" icon={Eye}    loading={isLoading} />
+              <StatBox value={totalSearches} label="Searches showed your Business Profile" icon={Search} loading={isLoading} />
+            </div>
+
+            {/* Discovery detail: platform breakdown + keywords */}
+            <div style={{ display:"flex", gap:14 }} className="perf-discovery">
+
+              {/* Platform breakdown */}
+              <div style={{ flex:1, background:"#fff", border:"1px solid #E2E8F0", borderRadius:14, padding:"20px 20px 16px" }}>
+                <p style={{ fontSize:13, fontWeight:700, color:"#111827", margin:"0 0 4px" }}>Platform and device breakdown</p>
+                <p style={{ fontSize:11, color:"#94A3B8", margin:"0 0 16px" }}>Platforms and devices used to find your profile</p>
+
+                {isLoading ? (
+                  <div style={{ display:"flex", flexDirection:"column", gap:10 }}>
+                    {[1,2,3].map(i => <Skeleton key={i} h={20} />)}
+                  </div>
+                ) : platforms.length === 0 ? (
+                  <p style={{ fontSize:12, color:"#94A3B8" }}>No platform data available</p>
+                ) : (
+                  <div style={{ display:"flex", gap:20, alignItems:"center" }}>
+                    {/* Donut chart */}
+                    <div style={{ flexShrink:0 }}>
+                      <PieChart width={100} height={100}>
+                        <Pie data={platforms} dataKey="value" cx={50} cy={50} innerRadius={28} outerRadius={46} strokeWidth={0}>
+                          {platforms.map((p,i) => <Cell key={i} fill={p.color} />)}
+                        </Pie>
+                      </PieChart>
+                    </div>
+                    {/* Legend */}
+                    <div style={{ flex:1, display:"flex", flexDirection:"column", gap:8 }}>
+                      {platforms.map((p, i) => {
+                        const pct = totalViews > 0 ? Math.round((p.value / totalViews) * 100) : 0;
+                        return (
+                          <div key={i} style={{ display:"flex", alignItems:"center", gap:8 }}>
+                            <div style={{ width:10, height:10, borderRadius:"50%", background:p.color, flexShrink:0 }} />
+                            <span style={{ fontSize:12, color:"#374151", flex:1 }}>{p.label}</span>
+                            <span style={{ fontSize:12, fontWeight:700, color:"#111827" }}>{p.value.toLocaleString()} · {pct}%</span>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
               </div>
-            ) : (
-              <>
-                <div style={{ fontSize: 48, fontWeight: 700, color: "#111827", letterSpacing: "-0.03em", lineHeight: 1.1 }}>
-                  {total.toLocaleString()}
-                </div>
-                <div style={{ display: "flex", alignItems: "center", gap: 6, marginTop: 8, fontSize: 14, fontWeight: 500, color: "#64748B" }}>
-                  {metricLabel}
-                  <Info size={14} color="#CBD5E1" />
-                  <span style={{ fontSize: 12, color: "#94A3B8", marginLeft: 4 }}>— {periodLabel}</span>
-                </div>
-              </>
-            )}
+
+              {/* Search keywords */}
+              <div style={{ flex:1, background:"#fff", border:"1px solid #E2E8F0", borderRadius:14, padding:"20px 20px 16px" }}>
+                <p style={{ fontSize:13, fontWeight:700, color:"#111827", margin:"0 0 4px" }}>Searches breakdown</p>
+                <p style={{ fontSize:11, color:"#94A3B8", margin:"0 0 16px" }}>Search terms that showed your Business Profile</p>
+
+                {kwLoading ? (
+                  <div style={{ display:"flex", flexDirection:"column", gap:8 }}>
+                    {[1,2,3,4,5].map(i => <Skeleton key={i} h={24} />)}
+                  </div>
+                ) : kwData?.error ? (
+                  <p style={{ fontSize:12, color:"#ef4444" }}>{kwData.error}</p>
+                ) : keywords.length === 0 ? (
+                  <p style={{ fontSize:12, color:"#94A3B8" }}>No keyword data available for this period</p>
+                ) : (
+                  <div style={{ display:"flex", flexDirection:"column", gap:2 }}>
+                    {keywords.slice(0, 8).map((kw, i) => (
+                      <div key={i} style={{ display:"flex", alignItems:"center", gap:10, padding:"7px 0", borderBottom: i < Math.min(keywords.length,8)-1 ? "1px solid #F1F5F9":"none" }}>
+                        <span style={{ fontSize:12, color:"#94A3B8", width:18, textAlign:"right", flexShrink:0 }}>{i+1}.</span>
+                        <span style={{ fontSize:13, color:"#111827", flex:1, fontWeight:500 }}>{kw.keyword}</span>
+                        <span style={{ fontSize:13, fontWeight:700, color:"#111827" }}>{kw.count.toLocaleString()}</span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
           </div>
 
-          {/* ── Chart ── */}
-          {isLoading ? (
-            <Skeleton h={300} />
-          ) : chartData.length === 0 ? (
-            <div style={{
-              height: 300, border: "1px solid #E2E8F0", borderRadius: 12,
-              display: "flex", alignItems: "center", justifyContent: "center",
-              color: "#94A3B8", fontSize: 13
-            }}>
-              No data available for this period
+          {/* ══════════ METRIC TABS + CHART ══════════ */}
+          <div style={{ background:"#fff", border:"1px solid #E2E8F0", borderRadius:16, overflow:"hidden" }}>
+            {/* Metric tabs */}
+            <div style={{ display:"flex", borderBottom:"1px solid #E2E8F0", overflowX:"auto", scrollbarWidth:"none" }} className="perf-metric-tabs">
+              {METRIC_TABS.map(tab => (
+                <button key={tab.key} onClick={() => setMetric(tab.key)} style={{
+                  padding:"12px 20px", border:"none", cursor:"pointer",
+                  background:"transparent", fontSize:13, fontWeight:500,
+                  color: activeMetric===tab.key?"#2563EB":"#64748B",
+                  borderBottom: activeMetric===tab.key?"2px solid #2563EB":"2px solid transparent",
+                  marginBottom:-1, transition:"all 0.15s", whiteSpace:"nowrap"
+                }}>
+                  {tab.label}
+                </button>
+              ))}
             </div>
-          ) : (
-            <div style={{ height: 300 }}>
-              <ResponsiveContainer width="100%" height="100%">
-                <LineChart
-                  data={chartData}
-                  margin={{ top: 40, right: 20, left: 0, bottom: 0 }}
-                >
-                  <CartesianGrid
-                    strokeDasharray="4 4"
-                    vertical={true}
-                    horizontal={true}
-                    stroke="#F1F5F9"
-                  />
-                  <XAxis
-                    dataKey="label"
-                    axisLine={false}
-                    tickLine={false}
-                    tick={{ fontSize: 12, fill: "#94A3B8", fontFamily: "Inter" }}
-                    interval={0}
-                  />
-                  <YAxis
-                    axisLine={false}
-                    tickLine={false}
-                    tick={{ fontSize: 11, fill: "#94A3B8", fontFamily: "Inter" }}
-                    width={36}
-                    tickFormatter={(v) => v >= 1000 ? `${(v / 1000).toFixed(0)}k` : v}
-                  />
-                  <Tooltip content={<CustomTooltip />} />
-                  <Line
-                    type="monotone"
-                    dataKey="value"
-                    stroke="#2563EB"
-                    strokeWidth={2.5}
-                    dot={{ r: 5, fill: "#fff", stroke: "#2563EB", strokeWidth: 2.5 }}
-                    activeDot={{ r: 7, fill: "#2563EB", stroke: "#fff", strokeWidth: 2.5 }}
-                  >
-                    {/* Value labels floating above each dot */}
-                    <LabelList dataKey="value" content={<CustomDotLabel />} />
-                  </Line>
-                </LineChart>
-              </ResponsiveContainer>
+
+            <div style={{ padding:"24px 20px" }}>
+              {/* Big number */}
+              <div style={{ marginBottom:20 }}>
+                {isLoading ? (
+                  <div style={{ display:"flex", flexDirection:"column", gap:10 }}>
+                    <Skeleton h={48} w={140} />
+                    <Skeleton h={16} w={220} />
+                  </div>
+                ) : (
+                  <>
+                    <div style={{ fontSize:44, fontWeight:700, color:"#111827", letterSpacing:"-0.03em", lineHeight:1.1 }}>{total.toLocaleString()}</div>
+                    <div style={{ display:"flex", alignItems:"center", gap:6, marginTop:8, fontSize:14, fontWeight:500, color:"#64748B" }}>
+                      {metricLabel} <Info size={14} color="#CBD5E1" />
+                      <span style={{ fontSize:12, color:"#94A3B8", marginLeft:4 }}>— {periodLabel}</span>
+                    </div>
+                  </>
+                )}
+              </div>
+
+              {/* Chart */}
+              {isLoading ? (
+                <Skeleton h={260} />
+              ) : chartData.length === 0 ? (
+                <div style={{ height:260, border:"1px solid #E2E8F0", borderRadius:12, display:"flex", alignItems:"center", justifyContent:"center", color:"#94A3B8", fontSize:13 }}>
+                  No data available for this period
+                </div>
+              ) : (
+                <div style={{ height:260 }}>
+                  <ResponsiveContainer width="100%" height="100%">
+                    <LineChart data={chartData} margin={{ top:40, right:20, left:0, bottom:0 }}>
+                      <CartesianGrid strokeDasharray="4 4" vertical={false} stroke="#F1F5F9" />
+                      <XAxis dataKey="label" axisLine={false} tickLine={false} tick={{ fontSize:12, fill:"#94A3B8", fontFamily:"Inter" }} interval={0} />
+                      <YAxis axisLine={false} tickLine={false} tick={{ fontSize:11, fill:"#94A3B8", fontFamily:"Inter" }} width={36} tickFormatter={v => v>=1000?`${(v/1000).toFixed(0)}k`:v} />
+                      <Tooltip content={<CustomTooltip />} />
+                      <Line type="monotone" dataKey="value" stroke="#2563EB" strokeWidth={2.5} dot={{ r:5, fill:"#fff", stroke:"#2563EB", strokeWidth:2.5 }} activeDot={{ r:7, fill:"#2563EB", stroke:"#fff", strokeWidth:2.5 }}>
+                        <LabelList dataKey="value" content={<CustomDotLabel />} />
+                      </Line>
+                    </LineChart>
+                  </ResponsiveContainer>
+                </div>
+              )}
             </div>
-          )}
+          </div>
+
+          {/* ── Other quick stats ── */}
+          <div style={{ display:"flex", gap:12, marginTop:16, flexWrap:"wrap" }}>
+            {[
+              { metric:"CALL_CLICKS",    label:"Calls",            icon:Phone,      color:"#10b981" },
+              { metric:"WEBSITE_CLICKS", label:"Website Clicks",   icon:Globe,      color:"#6366f1" },
+              { metric:"DIRECTION",      label:"Direction Requests",icon:Navigation, color:"#f59e0b" },
+            ].map(item => {
+              const val = sumMetric(rawData, item.metric);
+              const Icon = item.icon;
+              return (
+                <div key={item.metric} style={{ flex:1, minWidth:120, background:"#fff", border:"1px solid #E2E8F0", borderRadius:12, padding:"14px 16px", display:"flex", alignItems:"center", gap:10 }}>
+                  <div style={{ width:36, height:36, borderRadius:10, background:`${item.color}15`, display:"flex", alignItems:"center", justifyContent:"center", flexShrink:0 }}>
+                    <Icon size={16} color={item.color} />
+                  </div>
+                  <div>
+                    <p style={{ fontSize:20, fontWeight:700, color:"#111827", margin:0, lineHeight:1 }}>
+                      {isLoading ? "..." : val.toLocaleString()}
+                    </p>
+                    <p style={{ fontSize:11, color:"#94A3B8", margin:"3px 0 0", fontWeight:500 }}>{item.label}</p>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
         </>
       )}
     </div>
