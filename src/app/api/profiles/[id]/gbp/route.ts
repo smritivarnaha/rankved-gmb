@@ -21,7 +21,7 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
     const accessToken = accounts[0].access_token;
     const locationName = loc.gbpLocationId;
 
-    const res = await fetch(`${INFO_API_BASE}/${locationName}?readMask=title,profile,phoneNumbers,websiteUri,categories,regularHours,specialHours,serviceArea,attributes,morePhones,metadata,storefrontAddress,labels`, {
+    const res = await fetch(`${INFO_API_BASE}/${locationName}?readMask=title,profile,phoneNumbers,websiteUri,categories,regularHours,specialHours,serviceArea,attributes,metadata,storefrontAddress,labels`, {
       headers: { Authorization: `Bearer ${accessToken}` }
     });
 
