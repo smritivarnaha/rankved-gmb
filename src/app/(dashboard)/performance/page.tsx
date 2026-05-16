@@ -123,9 +123,9 @@ export default function PerformancePage() {
   // Handle single profile case: Auto-select it
   if (profiles.length === 1 && !selectedProfileId) {
     return (
-      <div className="h-[calc(100vh-140px)]">
-        <PerformanceView profile={profiles[0]} />
-      </div>
+          <div style={{ minHeight: "calc(100vh - 160px)" }}>
+          <PerformanceView profile={profiles[0]} />
+        </div>
     );
   }
 
@@ -134,10 +134,10 @@ export default function PerformancePage() {
     const profile = profiles.find((p: any) => p.id === selectedProfileId);
     if (profile) {
       return (
-        <div className="h-[calc(100vh-140px)]">
-          <PerformanceView 
-            profile={profile} 
-            onBack={() => setSelectedProfileId(null)} 
+          <div style={{ minHeight: "calc(100vh - 160px)" }}>
+          <PerformanceView
+            profile={profile}
+            onBack={() => setSelectedProfileId(null)}
           />
         </div>
       );
@@ -160,7 +160,7 @@ export default function PerformancePage() {
           <p className="text-sm text-slate-500 mt-2">Connect your Google account in Settings to see performance data.</p>
         </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(260px, 1fr))", gap: 16 }}>
           {profiles.map((p: any) => (
             <ProfileStatCard 
               key={p.id} 

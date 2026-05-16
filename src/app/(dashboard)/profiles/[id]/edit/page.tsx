@@ -240,9 +240,9 @@ export default function EditProfilePage() {
         </div>
       )}
 
-      <div style={{ display: "flex", gap: 32 }}>
+      <div style={{ display: "flex", gap: 24 }} className="edit-profile-layout">
         {/* Left Sidebar Nav */}
-        <div style={{ width: 220, flexShrink: 0, position: "sticky", top: 80, height: "fit-content" }}>
+        <div style={{ width: 220, flexShrink: 0, position: "sticky", top: 80, height: "fit-content" }} className="edit-profile-sidenav">
           <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
             {sections.map(s => (
               <button

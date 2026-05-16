@@ -670,17 +670,17 @@ tr:hover td { background: var(--bg-hover); }
 /* ── Mobile: ≤768px ── */
 @media (max-width: 768px) {
 
-  /* Body can now scroll on mobile (sidebar is fixed overlay, not flex sibling) */
+  /* Body scrolls on mobile — sidebar is a fixed overlay */
   html, body { overflow: auto; }
   .app-shell { overflow: visible; height: auto; }
   .app-main  { height: auto; overflow: visible; }
   .app-content {
     overflow-y: visible;
-    padding: 16px 16px 80px; /* 80px bottom for the bottom nav */
+    padding: 16px 16px 76px; /* extra bottom for bottom nav */
     min-height: calc(100vh - 56px);
   }
 
-  /* ── Sidebar: hide desktop sidebar, show as drawer ── */
+  /* ── Sidebar drawer ── */
   .sidebar-drawer {
     position: fixed !important;
     top: 0;
@@ -690,21 +690,13 @@ tr:hover td { background: var(--bg-hover); }
     transform: translateX(-100%);
     transition: transform 0.28s cubic-bezier(0.4, 0, 0.2, 1);
     box-shadow: 4px 0 24px rgba(0,0,0,0.12);
-    /* Override sticky positioning */
     display: flex !important;
   }
-  .sidebar-drawer-open {
-    transform: translateX(0) !important;
-  }
+  .sidebar-drawer-open { transform: translateX(0) !important; }
 
-  /* ── Hamburger: show on mobile ── */
-  .mobile-hamburger { display: flex !important; }
-
-  /* ── Sidebar close button: show on mobile ── */
+  /* ── Show mobile controls ── */
+  .mobile-hamburger    { display: flex !important; }
   .mobile-sidebar-close { display: flex !important; }
-
-  /* ── Bottom nav: show on mobile ── */
-  .mobile-bottom-nav { display: flex !important; }
 
   /* ── Topbar ── */
   .topbar { padding: 0 16px; }
@@ -757,11 +749,53 @@ tr:hover td { background: var(--bg-hover); }
 /* ── Small mobile: ≤480px ── */
 @media (max-width: 480px) {
   .stats-grid { grid-template-columns: 1fr; }
-  .app-content { padding: 12px 12px 80px; }
-  .page-title { font-size: 16px; }
+  .app-content { padding: 12px 12px 76px; }
+  .page-title { font-size: 15px; }
+  .btn { font-size: 12px; }
+  [style*="repeat(auto-fit, minmax"] { grid-template-columns: 1fr !important; }
 }
 
+/* ══════════════════ INNER-PAGE MOBILE FIXES ══════════════════ */
+@media (max-width: 768px) {
 
+  /* Edit Profile: two-col → stacked on mobile */
+  .edit-profile-layout {
+    flex-direction: column !important;
+    gap: 16px !important;
+  }
+  /* Edit Profile: sidebar nav → horizontal scrollable tabs */
+  .edit-profile-sidenav {
+    width: 100% !important;
+    position: relative !important;
+    top: auto !important;
+    height: auto !important;
+  }
+  .edit-profile-sidenav > div {
+    flex-direction: row !important;
+    overflow-x: auto !important;
+    padding: 0 0 8px 0 !important;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+  }
+  .edit-profile-sidenav > div::-webkit-scrollbar { display: none; }
+  .edit-profile-sidenav button {
+    white-space: nowrap !important;
+    flex-shrink: 0 !important;
+    padding: 8px 14px !important;
+    font-size: 12px !important;
+  }
+
+
+  /* Tables: horizontal scroll on mobile */
+  .table-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+  table { min-width: 480px; }
+
+  /* Prevent horizontal bleed */
+  .app-content-inner { overflow-x: hidden; max-width: 100%; }
+
+  /* Header buttons: wrap and stretch */
+  .page-header > div:last-child { flex-wrap: wrap; gap: 8px; }
+}
 
 /* ══════════════════════════════════════════════════════════
    UTILITY COMPATIBILITY LAYER
