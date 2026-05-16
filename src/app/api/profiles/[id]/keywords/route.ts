@@ -38,40 +38,67 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
 
   const now = new Date();
 
-  // Use calendar month boundaries to match Google's period (start on 1st of month X months ago)
+  // Calendar month boundaries to match Google's period
   const startMonthDate = new Date(now.getFullYear(), now.getMonth() - months, 1);
-  const endMonthDate   = new Date(now.getFullYear(), now.getMonth(), 1); // current month
+  const endMonthDate   = new Date(now.getFullYear(), now.getMonth(), 1);
 
-  const url = `https://businessprofileperformance.googleapis.com/v1/${resourceName}/searchkeywords/impressions/monthly?monthlyRange.startMonth.year=${startMonthDate.getFullYear()}&monthlyRange.startMonth.month=${startMonthDate.getMonth() + 1}&monthlyRange.endMonth.year=${endMonthDate.getFullYear()}&monthlyRange.endMonth.month=${endMonthDate.getMonth() + 1}&pageSize=50`;
+  const baseUrl =
+    `https://businessprofileperformance.googleapis.com/v1/${resourceName}/searchkeywords/impressions/monthly` +
+    `?monthlyRange.startMonth.year=${startMonthDate.getFullYear()}` +
+    `&monthlyRange.startMonth.month=${startMonthDate.getMonth() + 1}` +
+    `&monthlyRange.endMonth.year=${endMonthDate.getFullYear()}` +
+    `&monthlyRange.endMonth.month=${endMonthDate.getMonth() + 1}` +
+    `&pageSize=100`; // max per page
 
   try {
-    const response = await fetch(url, {
-      headers: { Authorization: `Bearer ${accessToken}` }
-    });
+    // ── Paginate until all keywords are fetched ──────────────────────
+    let allRaw: any[] = [];
+    let pageToken: string | undefined;
+    let pageCount = 0;
 
-    if (!response.ok) {
-      // It's possible for this to return a 404 HTML string if resource name is invalid, just like the other endpoint
-      const responseText = await response.text();
-      let errorData;
-      try {
-        errorData = JSON.parse(responseText);
-      } catch (e) {
-        throw new Error(responseText.slice(0, 100) + "..."); // Catch HTML errors
+    do {
+      const pageUrl = pageToken ? `${baseUrl}&pageToken=${pageToken}` : baseUrl;
+      const response = await fetch(pageUrl, {
+        headers: { Authorization: `Bearer ${accessToken}` }
+      });
+
+      if (!response.ok) {
+        const responseText = await response.text();
+        let errorData;
+        try { errorData = JSON.parse(responseText); }
+        catch { throw new Error(responseText.slice(0, 100) + "..."); }
+        console.error("Google Keywords API Error:", errorData);
+        return NextResponse.json(
+          { error: errorData.error?.message || "Google API Error" },
+          { status: response.status }
+        );
       }
-      
-      console.error("Google Keywords API Error:", errorData);
-      return NextResponse.json({ error: errorData.error?.message || "Google API Error" }, { status: response.status });
-    }
 
-    const data = await response.json();
-    
-    // The API returns searchKeywordsCounts which has { searchKeyword: string, insightsValue: { threshold: string, value: string } }
-    const keywords = (data.searchKeywordsCounts || []).map((k: any) => ({
-      keyword: k.searchKeyword,
-      count: parseInt(k.insightsValue?.value || "0")
-    })).sort((a: any, b: any) => b.count - a.count);
+      const data = await response.json();
+      allRaw = [...allRaw, ...(data.searchKeywordsCounts || [])];
+      pageToken = data.nextPageToken;
+      pageCount++;
 
-    return NextResponse.json({ data: keywords });
+      // Safety cap: max 20 pages (2000 keywords)
+      if (pageCount >= 20) break;
+    } while (pageToken);
+
+    // ── Map + handle privacy threshold ───────────────────────────────
+    // insightsValue.value = actual count (may be "0" if below privacy threshold)
+    // insightsValue.threshold = the threshold bucket (e.g. "15")
+    // When value === "0" or missing, Google shows it as "<{threshold}" in dashboard
+    const keywords = allRaw.map((k: any) => {
+      const rawValue     = parseInt(k.insightsValue?.value     || "0");
+      const rawThreshold = parseInt(k.insightsValue?.threshold || "0");
+      const isBelowThreshold = rawValue === 0 && rawThreshold > 0;
+      return {
+        keyword:          k.searchKeyword,
+        count:            isBelowThreshold ? rawThreshold : rawValue,
+        belowThreshold:   isBelowThreshold,  // true = display as "<N"
+      };
+    }).sort((a: any, b: any) => b.count - a.count);
+
+    return NextResponse.json({ data: keywords, total: keywords.length });
   } catch (err: any) {
     console.error("Keywords API Catch:", err);
     return NextResponse.json({ error: err.message }, { status: 500 });

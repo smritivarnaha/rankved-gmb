@@ -130,7 +130,7 @@ function DiscoveryPanel({ rawData, kwData, kwLoading, isLoading, periodLabel }: 
   rawData: any[]; kwData: any; kwLoading: boolean; isLoading: boolean; periodLabel: string;
 }) {
   const { totalViews, platforms } = useMemo(() => computePlatformBreakdown(rawData), [rawData]);
-  const keywords: { keyword: string; count: number }[] = kwData?.data || [];
+  const keywords: { keyword: string; count: number; belowThreshold?: boolean }[] = kwData?.data || [];
 
   // Use direct search impressions (desktop + mobile search) from perf API
   // This is the same underlying metric Google uses for 'Searches showed your Business Profile'
@@ -328,8 +328,11 @@ function DiscoveryPanel({ rawData, kwData, kwLoading, isLoading, periodLabel }: 
                       {kw.keyword}
                     </span>
                   </div>
-                  <span style={{ fontSize:13, fontWeight:700, color:"#111827", paddingLeft:16 }}>
-                    {kw.count.toLocaleString()}
+                  <span style={{ fontSize:13, fontWeight:700, paddingLeft:16,
+                    color: kw.belowThreshold ? "#94A3B8" : "#111827",
+                    fontStyle: kw.belowThreshold ? "italic" : "normal",
+                  }}>
+                    {kw.belowThreshold ? `<${kw.count}` : kw.count.toLocaleString()}
                   </span>
                 </div>
               ))
@@ -338,8 +341,9 @@ function DiscoveryPanel({ rawData, kwData, kwLoading, isLoading, periodLabel }: 
 
           {/* Footer with count */}
           {keywords.length > 0 && (
-            <div style={{ padding:"10px 22px", borderTop:"1px solid #F1F5F9", background:"#FAFAFA" }}>
+            <div style={{ padding:"10px 22px", borderTop:"1px solid #F1F5F9", background:"#FAFAFA", display:"flex", justifyContent:"space-between", alignItems:"center" }}>
               <span style={{ fontSize:11, color:"#94A3B8" }}>{keywords.length} search terms — scroll to see all</span>
+              <span style={{ fontSize:10, color:"#CBD5E1", fontStyle:"italic" }}>italic = below Google privacy threshold (&lt;15)</span>
             </div>
           )}
         </div>
