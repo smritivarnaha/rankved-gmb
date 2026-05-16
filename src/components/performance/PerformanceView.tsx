@@ -55,7 +55,6 @@ function computePlatformBreakdown(dataRaw: any[]) {
   const totalViews = mobileSearch + mapsSearch + desktopSearch + desktopMaps;
   return {
     totalViews,
-    totalSearches: mobileSearch + desktopSearch,
     platforms: [
       { label: "Google Search – mobile",  value: mobileSearch,  color: "#FBBC04" },
       { label: "Google Maps – mobile",    value: mapsSearch,    color: "#EA4335" },
@@ -132,8 +131,11 @@ function Skeleton({ h, w }: { h: number; w?: number|string }) {
 function DiscoveryPanel({ rawData, kwData, kwLoading, isLoading, periodLabel }: {
   rawData: any[]; kwData: any; kwLoading: boolean; isLoading: boolean; periodLabel: string;
 }) {
-  const { totalViews, totalSearches, platforms } = useMemo(() => computePlatformBreakdown(rawData), [rawData]);
+  const { totalViews, platforms } = useMemo(() => computePlatformBreakdown(rawData), [rawData]);
   const keywords: { keyword: string; count: number }[] = kwData?.data || [];
+  // Google's 'Searches showed your Business Profile' = sum of all keyword impressions
+  // NOT the performance API search impressions (which count every page render)
+  const totalSearches = useMemo(() => keywords.reduce((sum, kw) => sum + kw.count, 0), [keywords]);
 
   return (
     <div style={{ display:"flex", flexDirection:"column", gap:20 }}>
@@ -151,7 +153,7 @@ function DiscoveryPanel({ rawData, kwData, kwLoading, isLoading, periodLabel }: 
           )}
         </div>
         <div style={{ background:"#fff", border:"1px solid #E2E8F0", borderRadius:16, padding:"24px 24px 20px" }}>
-          {isLoading ? <><Skeleton h={52} w={130}/><div style={{marginTop:10}}><Skeleton h={16} w={180}/></div></> : (
+          {isLoading || kwLoading ? <><Skeleton h={52} w={130}/><div style={{marginTop:10}}><Skeleton h={16} w={180}/></div></> : (
             <>
               <div style={{ fontSize:48, fontWeight:800, color:"#111827", letterSpacing:"-0.04em", lineHeight:1 }}>{totalSearches.toLocaleString()}</div>
               <div style={{ display:"flex", alignItems:"center", gap:6, marginTop:10, fontSize:13, color:"#64748B", fontWeight:500 }}>
@@ -162,9 +164,9 @@ function DiscoveryPanel({ rawData, kwData, kwLoading, isLoading, periodLabel }: 
         </div>
       </div>
 
-      {/* ── Note on period ── */}
-      <p style={{ fontSize:11, color:"#94A3B8", margin:"0", fontStyle:"italic" }}>
-        Data shown for <strong>{periodLabel}</strong>. Google's default view is "last 28 days" which may differ.
+      {/* ── Period label ── */}
+      <p style={{ fontSize:11, color:"#94A3B8", margin:"0" }}>
+        Showing data for <strong>{periodLabel}</strong>
       </p>
 
       {/* ── Platform + Keywords: sticky layout ── */}
