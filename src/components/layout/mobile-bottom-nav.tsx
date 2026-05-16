@@ -3,20 +3,19 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
-  LayoutDashboard, MapPin, BarChart3, MessageSquare, Settings,
+  Home, Building2, TrendingUp, Star, SlidersHorizontal,
 } from "lucide-react";
 import { useState, useEffect } from "react";
 
 const NAV = [
-  { href: "/dashboard",   icon: LayoutDashboard, label: "Home" },
-  { href: "/profiles",    icon: MapPin,           label: "Profiles" },
-  { href: "/performance", icon: BarChart3,        label: "Perf." },
-  { href: "/reviews",     icon: MessageSquare,    label: "Reviews" },
-  { href: "/settings",    icon: Settings,         label: "Settings" },
+  { href: "/dashboard",   icon: Home,              label: "Home"      },
+  { href: "/profiles",    icon: Building2,         label: "Profiles"  },
+  { href: "/performance", icon: TrendingUp,        label: "Analytics" },
+  { href: "/reviews",     icon: Star,              label: "Reviews"   },
+  { href: "/settings",    icon: SlidersHorizontal, label: "Settings"  },
 ];
 
 const BRAND = "#2563eb";
-const BRAND_DARK = "#1d4ed8";
 
 export function MobileBottomNav() {
   const pathname = usePathname();
@@ -34,137 +33,106 @@ export function MobileBottomNav() {
   return (
     <>
       <style>{`
-        @keyframes bubblePop {
-          0%   { transform: scale(0.82) translateY(6px); opacity: 0.5; }
-          60%  { transform: scale(1.10) translateY(-3px); opacity: 1; }
-          100% { transform: scale(1)   translateY(-12px); opacity: 1; }
-        }
-        @keyframes bubbleIdle {
-          0%,100% { transform: translateY(-12px); }
-        }
-        .fnav-bubble {
-          animation: bubblePop 0.36s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
-        }
-        .fnav-bubble-static { transform: translateY(-12px); }
-        .fnav-link {
+        .fnav-tab {
           -webkit-tap-highlight-color: transparent;
           user-select: none;
+          transition: transform 120ms ease;
         }
-        .fnav-link:active .fnav-bubble,
-        .fnav-link:active .fnav-bubble-static {
-          transform: scale(0.92) translateY(-10px) !important;
+        .fnav-tab:active {
+          transform: scale(0.92);
         }
-        .fnav-link:active .fnav-inactive-icon {
-          transform: scale(0.88);
-        }
-        .fnav-inactive-icon {
-          transition: transform 160ms cubic-bezier(0.4, 0, 0.2, 1);
+        .fnav-pill-bg {
+          transition: background 200ms cubic-bezier(0.4, 0, 0.2, 1);
         }
       `}</style>
 
-      {/* Spacer so page content clears the floating nav */}
-      <div style={{ height: 86 }} aria-hidden />
+      {/* Page bottom spacer */}
+      <div style={{ height: 88 }} aria-hidden />
 
-      <nav style={{
-        position: "fixed",
-        bottom: 12,
-        left: 12,
-        right: 12,
-        zIndex: 300,
-        borderRadius: 28,
-        background: "#ffffff",
-        boxShadow: "0 8px 32px rgba(37,99,235,0.14), 0 2px 8px rgba(0,0,0,0.08)",
-        border: "1px solid rgba(37,99,235,0.08)",
-        paddingBottom: "env(safe-area-inset-bottom, 0px)",
-        overflow: "visible",
-      }}>
+      <nav
+        role="navigation"
+        aria-label="Main navigation"
+        style={{
+          position: "fixed",
+          bottom: 12,
+          left: 12,
+          right: 12,
+          zIndex: 300,
+          borderRadius: 24,
+          background: "#ffffff",
+          boxShadow:
+            "0 4px 6px rgba(0,0,0,0.04), 0 10px 30px rgba(37,99,235,0.12), 0 1px 0 rgba(0,0,0,0.04)",
+          border: "1px solid rgba(37,99,235,0.10)",
+          paddingBottom: "env(safe-area-inset-bottom, 0px)",
+          overflow: "hidden",
+        }}
+      >
         <div style={{
           display: "flex",
           height: 64,
-          alignItems: "flex-end",
-          padding: "0 4px 0 4px",
-          overflow: "visible",
+          alignItems: "center",
         }}>
           {NAV.map(item => {
-            const active = pathname === item.href || pathname.startsWith(item.href + "/");
+            const active =
+              pathname === item.href || pathname.startsWith(item.href + "/");
             const Icon = item.icon;
 
             return (
               <Link
                 key={item.href}
                 href={item.href}
-                className="fnav-link"
+                className="fnav-tab"
+                aria-label={item.label}
+                aria-current={active ? "page" : undefined}
                 style={{
                   flex: 1,
                   display: "flex",
                   flexDirection: "column",
                   alignItems: "center",
-                  justifyContent: "flex-end",
-                  paddingBottom: 10,
+                  justifyContent: "center",
+                  gap: 5,
                   textDecoration: "none",
-                  position: "relative",
-                  overflow: "visible",
-                  minHeight: 64,
+                  padding: "0 4px",
+                  height: "100%",
                 }}
               >
-                {active ? (
-                  /* ── Active: floating filled circle ── */
-                  <>
-                    <div
-                      className="fnav-bubble-static"
-                      style={{
-                        width: 50,
-                        height: 50,
-                        borderRadius: "50%",
-                        background: `linear-gradient(145deg, ${BRAND}, ${BRAND_DARK})`,
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: "center",
-                        boxShadow: `0 6px 20px rgba(37,99,235,0.40), 0 2px 6px rgba(37,99,235,0.25)`,
-                        marginBottom: 4,
-                        flexShrink: 0,
-                        transition: "box-shadow 200ms ease",
-                      }}
-                    >
-                      <Icon size={22} color="#ffffff" strokeWidth={2.2} />
-                    </div>
-                    <span style={{
-                      fontSize: 9.5,
-                      fontWeight: 700,
-                      color: BRAND,
-                      letterSpacing: "0.02em",
-                      lineHeight: 1,
-                    }}>
-                      {item.label}
-                    </span>
-                  </>
-                ) : (
-                  /* ── Inactive: plain icon + label ── */
-                  <>
-                    <div
-                      className="fnav-inactive-icon"
-                      style={{
-                        width: 36,
-                        height: 36,
-                        borderRadius: 12,
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: "center",
-                        marginBottom: 2,
-                      }}
-                    >
-                      <Icon size={20} color="#94a3b8" strokeWidth={1.6} />
-                    </div>
-                    <span style={{
-                      fontSize: 9.5,
-                      fontWeight: 500,
-                      color: "#94a3b8",
-                      lineHeight: 1,
-                    }}>
-                      {item.label}
-                    </span>
-                  </>
-                )}
+                {/* Icon container */}
+                <div
+                  className="fnav-pill-bg"
+                  style={{
+                    width: 44,
+                    height: 32,
+                    borderRadius: 12,
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    background: active ? `rgba(37,99,235,0.12)` : "transparent",
+                  }}
+                >
+                  <Icon
+                    size={21}
+                    color={active ? BRAND : "#475569"}
+                    strokeWidth={active ? 2.4 : 1.8}
+                    fill={active && item.href === "/reviews"
+                      ? "rgba(37,99,235,0.25)"
+                      : "none"
+                    }
+                  />
+                </div>
+
+                {/* Label */}
+                <span
+                  style={{
+                    fontSize: 10.5,
+                    fontWeight: active ? 700 : 500,
+                    color: active ? BRAND : "#475569",
+                    lineHeight: 1,
+                    fontFamily: "Inter, -apple-system, sans-serif",
+                    letterSpacing: active ? "0.01em" : "0",
+                  }}
+                >
+                  {item.label}
+                </span>
               </Link>
             );
           })}
