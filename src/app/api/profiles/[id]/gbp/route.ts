@@ -31,22 +31,24 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
     // Fetch live logo as well
     let liveLogo = loc.logoUrl;
     try {
-      const accountId = loc.gbpAccountId;
-      const mediaRes = await fetch(`https://mybusiness.googleapis.com/v4/${accountId}/${locationName}/media?maxResults=10`, {
-        headers: { Authorization: `Bearer ${accessToken}` }
-      });
+      // gbpLocationId is the full resource path: accounts/{acct}/locations/{loc}
+      // Do NOT prepend gbpAccountId — that doubles the account segment.
+      const mediaRes = await fetch(
+        `https://mybusiness.googleapis.com/v4/${locationName}/media?maxResults=10`,
+        { headers: { Authorization: `Bearer ${accessToken}` } }
+      );
       if (mediaRes.ok) {
         const mediaData = await mediaRes.json();
         const items = mediaData.mediaItems || [];
-        const logo = items.find((m: any) => ["LOGO", "PROFILE", "COVER"].includes(m.locationAssociation?.category?.toUpperCase()))
-                  || items.find((m: any) => ["LOGO", "PROFILE", "COVER"].includes(m.category?.toUpperCase()))
+        const logo = items.find((m: any) => ["LOGO","PROFILE","COVER"].includes(m.locationAssociation?.category?.toUpperCase()))
+                  || items.find((m: any) => ["LOGO","PROFILE","COVER"].includes(m.category?.toUpperCase()))
                   || items[0];
         if (logo?.googleUrl) {
           liveLogo = logo.googleUrl.split("=")[0] + "=s400";
         }
       }
     } catch (e) {
-      console.warn("Failed to fetch live logo:", e);
+      console.warn("[GBP] Failed to fetch live logo:", e);
     }
 
     return NextResponse.json({ data: { ...data, logoUrl: liveLogo } });

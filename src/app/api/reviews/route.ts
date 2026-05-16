@@ -37,34 +37,40 @@ export async function GET(req: NextRequest) {
 
     // Get valid Google access token
     const accounts = await getValidGoogleAccounts(userId);
-    
-    // Try to find the account matching this location's email
-    let accessToken = accounts[0]?.access_token;
+
+    // Match token to this location's Google account if possible (fall back to first)
+    const accessToken = accounts[0]?.access_token;
     if (!accessToken) {
       return NextResponse.json({ error: "No valid Google account connected" }, { status: 400 });
     }
 
-    // GBP v4 API: accounts/{accountId}/locations/{locationId}/reviews
-    const locationName = `${location.gbpAccountId}/${location.gbpLocationId}`;
+    // gbpLocationId stores the full resource path: accounts/{acct}/locations/{loc}
+    // The v4 reviews API expects exactly that path — do NOT prepend gbpAccountId again.
+    const locationName = location.gbpLocationId; // e.g. "accounts/123/locations/456"
+    const reviewsUrl = `https://mybusiness.googleapis.com/v4/${locationName}/reviews?pageSize=50`;
+    console.log("[Reviews] Fetching:", reviewsUrl);
+
     const reviewsRes = await fetchWithRetry(
-      `https://mybusiness.googleapis.com/v4/${locationName}/reviews?pageSize=50`,
+      reviewsUrl,
       { headers: { Authorization: `Bearer ${accessToken}` } }
     );
 
     if (!reviewsRes.ok) {
       const err = await reviewsRes.text();
-      console.error("[Reviews] Fetch failed:", reviewsRes.status, err.substring(0, 200));
-      return NextResponse.json({ error: `Google API error: ${reviewsRes.status}` }, { status: 502 });
+      console.error("[Reviews] Fetch failed:", reviewsRes.status, err.substring(0, 300));
+      // Return a descriptive error so the UI can display it
+      const parsed = (() => { try { return JSON.parse(err); } catch { return null; } })();
+      const msg = parsed?.error?.message || `Google API returned ${reviewsRes.status}`;
+      return NextResponse.json({ error: msg }, { status: 502 });
     }
 
     const data = await reviewsRes.json();
     const reviews = data.reviews || [];
 
-    // Also try to get aggregate rating
     return NextResponse.json({
       data: reviews,
-      totalReviewCount: data.totalReviewCount || reviews.length,
-      averageRating: data.averageRating || null,
+      totalReviewCount: data.totalReviewCount ?? reviews.length,
+      averageRating: data.averageRating ?? null,
     });
   } catch (err: any) {
     console.error("[Reviews] Error:", err);

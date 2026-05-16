@@ -1,109 +1,119 @@
 "use client";
 
 import { useState, useMemo } from "react";
-import { Star, ThumbsUp, ThumbsDown, MessageSquare, Search, RefreshCw, ChevronDown, AlertCircle, CheckCircle2, X, ExternalLink, Building2 } from "lucide-react";
+import { Star, MessageSquare, Search, RefreshCw, ChevronDown, AlertCircle, CheckCircle2, X, ExternalLink, Building2, TrendingUp, Clock, Loader2, ThumbsUp, Sparkles } from "lucide-react";
 import useSWR from "swr";
-import { Skeleton } from "@/components/ui/Skeleton";
 
 const fetcher = (url: string) => fetch(url).then(r => r.json());
 
 type SentimentFilter = "all" | "positive" | "negative" | "neutral";
 
-function StarRating({ rating }: { rating: number }) {
+function StarRating({ rating, size = 13 }: { rating: number; size?: number }) {
   return (
     <div style={{ display: "flex", gap: 2 }}>
-      {[1, 2, 3, 4, 5].map(i => (
-        <Star
-          key={i}
-          size={13}
-          fill={i <= rating ? "#FBBF24" : "none"}
-          color={i <= rating ? "#FBBF24" : "#D1D5DB"}
-          strokeWidth={1.5}
-        />
+      {[1,2,3,4,5].map(i => (
+        <Star key={i} size={size} fill={i <= rating ? "#F59E0B" : "none"} color={i <= rating ? "#F59E0B" : "#D1D5DB"} strokeWidth={1.5} />
       ))}
     </div>
   );
 }
 
-function ReviewCard({ review, onReply }: { review: any; onReply: (review: any) => void }) {
-  const rating = review.starRating === "FIVE" ? 5 : review.starRating === "FOUR" ? 4 : review.starRating === "THREE" ? 3 : review.starRating === "TWO" ? 2 : 1;
-  const date = review.createTime ? new Date(review.createTime).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" }) : "";
+function Avatar({ name, photoUrl, size = 40 }: { name: string; photoUrl?: string; size?: number }) {
+  const initials = (name || "?").charAt(0).toUpperCase();
+  const colors = ["#3B82F6","#8B5CF6","#10B981","#F59E0B","#EF4444","#EC4899"];
+  const color = colors[initials.charCodeAt(0) % colors.length];
+  if (photoUrl) return <img src={photoUrl} alt={name} style={{ width: size, height: size, borderRadius: "50%", objectFit: "cover", border: "2px solid var(--border-subtle)", flexShrink: 0 }} />;
+  return (
+    <div style={{ width: size, height: size, borderRadius: "50%", background: color + "20", border: `2px solid ${color}30`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: size * 0.38, fontWeight: 700, color, flexShrink: 0 }}>
+      {initials}
+    </div>
+  );
+}
+
+function getRating(r: any) {
+  const map: Record<string, number> = { FIVE: 5, FOUR: 4, THREE: 3, TWO: 2, ONE: 1 };
+  return map[r.starRating] ?? 1;
+}
+
+function getSentiment(rating: number) {
+  if (rating >= 4) return "positive";
+  if (rating === 3) return "neutral";
+  return "negative";
+}
+
+const SENTIMENT_STYLES: Record<string, { color: string; bg: string; label: string }> = {
+  positive: { color: "var(--success-text)", bg: "var(--success-subtle)", label: "Positive" },
+  neutral:  { color: "var(--warning-text)", bg: "var(--warning-subtle)", label: "Neutral" },
+  negative: { color: "var(--danger-text)",  bg: "var(--danger-subtle)",  label: "Negative" },
+};
+
+function ReviewCard({ review, onReply }: { review: any; onReply: (r: any) => void }) {
+  const [expanded, setExpanded] = useState(false);
+  const rating = getRating(review);
+  const sentiment = getSentiment(rating);
+  const { color, bg, label } = SENTIMENT_STYLES[sentiment];
   const hasReply = !!review.reviewReply?.comment;
-  const sentiment = rating >= 4 ? "positive" : rating === 3 ? "neutral" : "negative";
-  const sentimentColor = sentiment === "positive" ? "#16a34a" : sentiment === "neutral" ? "#ca8a04" : "#dc2626";
-  const sentimentBg = sentiment === "positive" ? "#f0fdf4" : sentiment === "neutral" ? "#fefce8" : "#fef2f2";
+  const date = review.createTime ? new Date(review.createTime).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" }) : "";
+  const isLong = (review.comment?.length ?? 0) > 180;
 
   return (
-    <div style={{
-      background: "#fff",
-      border: "1px solid #f1f5f9",
-      borderRadius: 14,
-      padding: 20,
-      boxShadow: "0 1px 4px rgba(0,0,0,0.05)",
-      display: "flex",
-      flexDirection: "column",
-      gap: 14,
-      transition: "box-shadow 0.2s",
-    }}
-      onMouseEnter={e => (e.currentTarget.style.boxShadow = "0 4px 16px rgba(0,0,0,0.09)")}
-      onMouseLeave={e => (e.currentTarget.style.boxShadow = "0 1px 4px rgba(0,0,0,0.05)")}
-    >
+    <div className="ds-card ds-card-hover ds-anim-fade" style={{ display: "flex", flexDirection: "column", gap: 16, padding: 20, position: "relative", overflow: "hidden" }}>
+      {/* Sentiment accent line */}
+      <div style={{ position: "absolute", top: 0, left: 0, right: 0, height: 3, background: sentiment === "positive" ? "var(--success)" : sentiment === "neutral" ? "var(--warning)" : "var(--danger)", borderRadius: "10px 10px 0 0" }} />
+
       {/* Header */}
-      <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 12 }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-          {review.reviewer?.profilePhotoUrl ? (
-            <img src={review.reviewer.profilePhotoUrl} alt="" style={{ width: 40, height: 40, borderRadius: "50%", objectFit: "cover", border: "2px solid #f1f5f9" }} />
-          ) : (
-            <div style={{ width: 40, height: 40, borderRadius: "50%", background: "#eff6ff", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 16, fontWeight: 700, color: "#2563eb" }}>
-              {(review.reviewer?.displayName || "?").charAt(0).toUpperCase()}
-            </div>
-          )}
-          <div>
-            <p style={{ margin: 0, fontWeight: 700, fontSize: 14, color: "#111" }}>{review.reviewer?.displayName || "Anonymous"}</p>
+      <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 12, marginTop: 4 }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 12, minWidth: 0 }}>
+          <Avatar name={review.reviewer?.displayName || "?"} photoUrl={review.reviewer?.profilePhotoUrl} />
+          <div style={{ minWidth: 0 }}>
+            <p style={{ margin: 0, fontWeight: 600, fontSize: 14, color: "var(--text-primary)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+              {review.reviewer?.displayName || "Anonymous"}
+            </p>
             <div style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 3 }}>
               <StarRating rating={rating} />
-              <span style={{ fontSize: 11, color: "#94a3b8" }}>{date}</span>
+              <span style={{ fontSize: 11, color: "var(--text-tertiary)" }}>{date}</span>
             </div>
           </div>
         </div>
-        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-          <span style={{ fontSize: 11, fontWeight: 600, color: sentimentColor, background: sentimentBg, padding: "3px 8px", borderRadius: 6 }}>
-            {sentiment === "positive" ? "Positive" : sentiment === "neutral" ? "Neutral" : "Negative"}
-          </span>
-          {hasReply && (
-            <span style={{ fontSize: 11, fontWeight: 600, color: "#2563eb", background: "#eff6ff", padding: "3px 8px", borderRadius: 6 }}>
-              Replied
-            </span>
-          )}
+        <div style={{ display: "flex", alignItems: "center", gap: 6, flexShrink: 0 }}>
+          <span style={{ fontSize: 11, fontWeight: 600, color, background: bg, padding: "3px 8px", borderRadius: "var(--radius-full)", whiteSpace: "nowrap" }}>{label}</span>
+          {hasReply && <span style={{ fontSize: 11, fontWeight: 600, color: "var(--info-text)", background: "var(--info-subtle)", padding: "3px 8px", borderRadius: "var(--radius-full)" }}>Replied</span>}
         </div>
       </div>
 
       {/* Review Text */}
       {review.comment && (
-        <p style={{ margin: 0, fontSize: 13, color: "#374151", lineHeight: 1.6, display: "-webkit-box", WebkitLineClamp: 4, WebkitBoxOrient: "vertical", overflow: "hidden" }}>
-          "{review.comment}"
-        </p>
+        <div>
+          <p style={{ margin: 0, fontSize: 13, color: "var(--text-secondary)", lineHeight: 1.65, display: expanded ? "block" : "-webkit-box", WebkitLineClamp: expanded ? undefined : 3, WebkitBoxOrient: "vertical", overflow: expanded ? "visible" : "hidden" }}>
+            "{review.comment}"
+          </p>
+          {isLong && (
+            <button onClick={() => setExpanded(!expanded)} style={{ background: "none", border: "none", color: "var(--brand)", fontSize: 12, fontWeight: 600, cursor: "pointer", marginTop: 4, padding: 0 }}>
+              {expanded ? "Show less" : "Read more"}
+            </button>
+          )}
+        </div>
+      )}
+      {!review.comment && (
+        <p style={{ margin: 0, fontSize: 13, color: "var(--text-muted)", fontStyle: "italic" }}>No written review — rating only.</p>
       )}
 
       {/* Existing Reply */}
       {hasReply && (
-        <div style={{ background: "#f8fafc", border: "1px solid #e2e8f0", borderRadius: 10, padding: "12px 14px" }}>
-          <p style={{ margin: "0 0 4px", fontSize: 11, fontWeight: 700, color: "#2563eb", textTransform: "uppercase", letterSpacing: "0.04em" }}>Your Reply</p>
-          <p style={{ margin: 0, fontSize: 12, color: "#64748b", lineHeight: 1.5 }}>{review.reviewReply.comment}</p>
+        <div style={{ background: "var(--bg-subtle)", border: "1px solid var(--border-subtle)", borderRadius: "var(--radius-btn)", padding: "12px 14px" }}>
+          <p style={{ margin: "0 0 4px", fontSize: 11, fontWeight: 700, color: "var(--brand)", textTransform: "uppercase", letterSpacing: "0.06em" }}>Your Reply</p>
+          <p style={{ margin: 0, fontSize: 12, color: "var(--text-secondary)", lineHeight: 1.55 }}>{review.reviewReply.comment}</p>
         </div>
       )}
 
       {/* Actions */}
-      <div style={{ display: "flex", gap: 8, marginTop: 2 }}>
-        <button
-          onClick={() => onReply(review)}
-          style={{ flex: 1, height: 34, display: "flex", alignItems: "center", justifyContent: "center", gap: 6, background: hasReply ? "#fff" : "#2563eb", border: `1px solid ${hasReply ? "#e2e8f0" : "#2563eb"}`, borderRadius: 8, color: hasReply ? "#64748b" : "#fff", fontSize: 12, fontWeight: 600, cursor: "pointer" }}
-        >
+      <div style={{ display: "flex", gap: 8, marginTop: "auto" }}>
+        <button onClick={() => onReply(review)} className={`ds-btn ${hasReply ? "ds-btn-secondary" : "ds-btn-primary"}`} style={{ flex: 1, height: 34, fontSize: 12 }}>
           <MessageSquare size={13} />
-          {hasReply ? "Edit Reply" : "Reply"}
+          {hasReply ? "Edit Reply" : "Reply Now"}
         </button>
         {review.reviewUrl && (
-          <a href={review.reviewUrl} target="_blank" rel="noopener noreferrer" style={{ width: 34, height: 34, display: "flex", alignItems: "center", justifyContent: "center", background: "#fff", border: "1px solid #e2e8f0", borderRadius: 8, color: "#64748b", textDecoration: "none" }}>
+          <a href={review.reviewUrl} target="_blank" rel="noopener noreferrer" className="ds-btn ds-btn-secondary" style={{ width: 34, height: 34, padding: 0, flexShrink: 0 }}>
             <ExternalLink size={13} />
           </a>
         )}
@@ -116,81 +126,85 @@ function ReplyModal({ review, profileId, onClose, onSuccess }: { review: any; pr
   const [text, setText] = useState(review.reviewReply?.comment || "");
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
+  const rating = getRating(review);
 
   async function handleSave() {
     if (!text.trim()) return;
-    setSaving(true);
-    setError("");
+    setSaving(true); setError("");
     try {
       const res = await fetch("/api/reviews/reply", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ profileId, reviewName: review.name, comment: text }),
       });
-      if (res.ok) {
-        onSuccess();
-        onClose();
-      } else {
-        const d = await res.json();
-        setError(d.error || "Failed to save reply.");
-      }
-    } catch {
-      setError("Network error.");
-    }
+      if (res.ok) { onSuccess(); onClose(); }
+      else { const d = await res.json(); setError(d.error || "Failed to save reply."); }
+    } catch { setError("Network error."); }
     setSaving(false);
   }
 
   return (
-    <div style={{ position: "fixed", inset: 0, zIndex: 9999, background: "rgba(15,23,42,0.6)", backdropFilter: "blur(6px)", display: "flex", alignItems: "center", justifyContent: "center", padding: 24 }}
-      onClick={e => { if (e.target === e.currentTarget) onClose(); }}>
-      <div style={{ background: "#fff", borderRadius: 20, maxWidth: 540, width: "100%", boxShadow: "0 32px 80px rgba(0,0,0,0.2)", overflow: "hidden" }}>
-        <div style={{ padding: "20px 24px", borderBottom: "1px solid #f1f5f9", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-          <div>
-            <h2 style={{ margin: 0, fontSize: 16, fontWeight: 700, color: "#111" }}>Reply to Review</h2>
-            <p style={{ margin: "2px 0 0", fontSize: 12, color: "#94a3b8" }}>by {review.reviewer?.displayName || "Anonymous"}</p>
+    <div className="modal-overlay" onClick={e => { if (e.target === e.currentTarget) onClose(); }}>
+      <div className="modal-content ds-anim-scale" style={{ maxWidth: 560 }}>
+        <div className="modal-header">
+          <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+            <Avatar name={review.reviewer?.displayName || "?"} photoUrl={review.reviewer?.profilePhotoUrl} size={36} />
+            <div>
+              <h2 style={{ margin: 0, fontSize: 15, fontWeight: 700, color: "var(--text-primary)" }}>Reply to Review</h2>
+              <div style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 2 }}>
+                <StarRating rating={rating} />
+                <span style={{ fontSize: 12, color: "var(--text-tertiary)" }}>by {review.reviewer?.displayName || "Anonymous"}</span>
+              </div>
+            </div>
           </div>
-          <button onClick={onClose} style={{ background: "none", border: "none", cursor: "pointer", color: "#94a3b8", display: "flex" }}>
-            <X size={18} />
-          </button>
+          <button onClick={onClose} className="ds-btn ds-btn-ghost" style={{ width: 32, height: 32, padding: 0 }}><X size={16} /></button>
         </div>
-        <div style={{ padding: 24 }}>
+        <div className="modal-body" style={{ gap: 16, display: "flex", flexDirection: "column" }}>
           {review.comment && (
-            <div style={{ background: "#f8fafc", borderRadius: 10, padding: 14, marginBottom: 16 }}>
-              <p style={{ margin: 0, fontSize: 12, color: "#64748b", fontStyle: "italic" }}>"{review.comment}"</p>
+            <div style={{ background: "var(--bg-subtle)", borderRadius: "var(--radius-btn)", padding: "12px 14px", borderLeft: "3px solid var(--border-default)" }}>
+              <p style={{ margin: 0, fontSize: 12, color: "var(--text-secondary)", lineHeight: 1.6, fontStyle: "italic" }}>"{review.comment}"</p>
             </div>
           )}
-          <textarea
-            value={text}
-            onChange={e => setText(e.target.value)}
-            placeholder="Write a professional reply..."
-            rows={5}
-            style={{ width: "100%", padding: 14, border: "1px solid #e2e8f0", borderRadius: 10, fontSize: 13, resize: "vertical", outline: "none", fontFamily: "inherit", color: "#111", lineHeight: 1.6, boxSizing: "border-box" }}
-          />
-          {error && <p style={{ color: "#dc2626", fontSize: 12, margin: "8px 0 0" }}>{error}</p>}
-          <div style={{ display: "flex", gap: 10, marginTop: 16 }}>
-            <button onClick={onClose} style={{ flex: 1, height: 40, background: "#fff", border: "1px solid #e2e8f0", borderRadius: 10, fontSize: 13, fontWeight: 600, color: "#64748b", cursor: "pointer" }}>Cancel</button>
-            <button onClick={handleSave} disabled={saving || !text.trim()} style={{ flex: 2, height: 40, background: "#2563eb", border: "none", borderRadius: 10, fontSize: 13, fontWeight: 700, color: "#fff", cursor: "pointer", opacity: saving || !text.trim() ? 0.6 : 1 }}>
-              {saving ? "Saving..." : "Post Reply"}
-            </button>
+          <div>
+            <label style={{ display: "block", fontSize: 12, fontWeight: 600, color: "var(--text-secondary)", marginBottom: 6 }}>Your Response</label>
+            <textarea
+              value={text}
+              onChange={e => setText(e.target.value)}
+              placeholder="Write a professional, helpful response..."
+              rows={5}
+              style={{ width: "100%", padding: "12px 14px", border: "1px solid var(--border-default)", borderRadius: "var(--radius-btn)", fontSize: 13, resize: "vertical", outline: "none", fontFamily: "var(--font-sans)", color: "var(--text-primary)", lineHeight: 1.6, background: "var(--bg-input)", boxSizing: "border-box", transition: "border-color 150ms ease" }}
+              onFocus={e => e.target.style.borderColor = "var(--brand)"}
+              onBlur={e => e.target.style.borderColor = "var(--border-default)"}
+            />
+            <div style={{ display: "flex", justifyContent: "space-between", marginTop: 4 }}>
+              {error ? <p style={{ color: "var(--danger)", fontSize: 12, margin: 0 }}>{error}</p> : <span />}
+              <span style={{ fontSize: 11, color: "var(--text-muted)" }}>{text.length}/1500</span>
+            </div>
           </div>
+        </div>
+        <div className="modal-footer">
+          <button onClick={onClose} className="ds-btn ds-btn-secondary">Cancel</button>
+          <button onClick={handleSave} disabled={saving || !text.trim()} className="ds-btn ds-btn-primary" style={{ minWidth: 120 }}>
+            {saving ? <><Loader2 size={14} className="anim-spin" /> Posting...</> : <><CheckCircle2 size={14} /> Post Reply</>}
+          </button>
         </div>
       </div>
     </div>
   );
 }
 
-function SkeletonReviewCard() {
+function SkeletonCard() {
   return (
-    <div style={{ background: "#fff", border: "1px solid #f1f5f9", borderRadius: 14, padding: 20, display: "flex", flexDirection: "column", gap: 14 }}>
-      <div style={{ display: "flex", gap: 12 }}>
-        <Skeleton style={{ width: 40, height: 40, borderRadius: "50%", flexShrink: 0 }} />
-        <div style={{ flex: 1, display: "flex", flexDirection: "column", gap: 8 }}>
-          <Skeleton style={{ width: "40%", height: 14 }} />
-          <Skeleton style={{ width: "25%", height: 12 }} />
+    <div style={{ background: "#fff", border: "1px solid var(--border-subtle)", borderRadius: 10, padding: 20, display: "flex", flexDirection: "column", gap: 14 }}>
+      <div style={{ display: "flex", gap: 12, alignItems: "center" }}>
+        <div className="skeleton" style={{ width: 40, height: 40, borderRadius: "50%", flexShrink: 0 }} />
+        <div style={{ flex: 1, display: "flex", flexDirection: "column", gap: 6 }}>
+          <div className="skeleton" style={{ width: "40%", height: 13, borderRadius: 4 }} />
+          <div className="skeleton" style={{ width: "25%", height: 11, borderRadius: 4 }} />
         </div>
       </div>
-      <Skeleton style={{ width: "100%", height: 50, borderRadius: 8 }} />
-      <Skeleton style={{ width: "35%", height: 32, borderRadius: 8 }} />
+      <div className="skeleton" style={{ width: "100%", height: 52, borderRadius: 6 }} />
+      <div className="skeleton" style={{ width: "50%", height: 32, borderRadius: 6 }} />
     </div>
   );
 }
@@ -204,138 +218,190 @@ export default function ReviewsPage() {
   const [search, setSearch] = useState("");
   const [replyReview, setReplyReview] = useState<any>(null);
   const [message, setMessage] = useState<{ type: "success" | "error"; text: string } | null>(null);
+  const [dropdownOpen, setDropdownOpen] = useState(false);
 
   const activeProfile = profiles.find((p: any) => p.id === selectedProfileId) || profiles[0];
 
-  const { data: reviewsData, isLoading: reviewsLoading, mutate } = useSWR(
+  const { data: reviewsData, isLoading: reviewsLoading, mutate, error: reviewsError } = useSWR(
     activeProfile ? `/api/reviews?profileId=${activeProfile.id}` : null,
     fetcher,
     { revalidateOnFocus: false }
   );
 
   const allReviews: any[] = reviewsData?.data || [];
+  const apiError = reviewsData?.error || (reviewsError ? "Failed to load reviews" : null);
 
   const filteredReviews = useMemo(() => {
-    let result = allReviews;
-    if (sentiment !== "all") {
-      result = result.filter(r => {
-        const rating = r.starRating === "FIVE" ? 5 : r.starRating === "FOUR" ? 4 : r.starRating === "THREE" ? 3 : r.starRating === "TWO" ? 2 : 1;
-        if (sentiment === "positive") return rating >= 4;
-        if (sentiment === "neutral") return rating === 3;
-        return rating <= 2;
-      });
-    }
+    let r = allReviews;
+    if (sentiment !== "all") r = r.filter(rv => getSentiment(getRating(rv)) === sentiment);
     if (search.trim()) {
       const q = search.toLowerCase();
-      result = result.filter(r =>
-        r.comment?.toLowerCase().includes(q) ||
-        r.reviewer?.displayName?.toLowerCase().includes(q)
-      );
+      r = r.filter(rv => rv.comment?.toLowerCase().includes(q) || rv.reviewer?.displayName?.toLowerCase().includes(q));
     }
-    return result;
+    return r;
   }, [allReviews, sentiment, search]);
 
   const avgRating = allReviews.length
-    ? (allReviews.reduce((sum, r) => {
-        const n = r.starRating === "FIVE" ? 5 : r.starRating === "FOUR" ? 4 : r.starRating === "THREE" ? 3 : r.starRating === "TWO" ? 2 : 1;
-        return sum + n;
-      }, 0) / allReviews.length).toFixed(1)
-    : "—";
-
+    ? (allReviews.reduce((s, r) => s + getRating(r), 0) / allReviews.length).toFixed(1) : "—";
   const replied = allReviews.filter(r => r.reviewReply?.comment).length;
-  const notReplied = allReviews.length - replied;
+  const pending = allReviews.length - replied;
+  const replyRate = allReviews.length ? Math.round((replied / allReviews.length) * 100) : 0;
+
+  const FILTERS: { key: SentimentFilter; label: string; emoji: string }[] = [
+    { key: "all", label: "All", emoji: "✦" },
+    { key: "positive", label: "Positive", emoji: "⭐" },
+    { key: "neutral", label: "Neutral", emoji: "😐" },
+    { key: "negative", label: "Negative", emoji: "👎" },
+  ];
+
+  const STATS = [
+    { label: "Avg Rating", value: avgRating, sub: "out of 5.0", icon: Star, iconColor: "#F59E0B", iconBg: "#FFFBEB" },
+    { label: "Total Reviews", value: allReviews.length, sub: "Google reviews", icon: MessageSquare, iconColor: "var(--brand)", iconBg: "var(--brand-subtle)" },
+    { label: "Replied", value: replied, sub: `${replyRate}% reply rate`, icon: ThumbsUp, iconColor: "var(--success)", iconBg: "var(--success-subtle)" },
+    { label: "Awaiting Reply", value: pending, sub: pending > 0 ? "needs attention" : "all caught up!", icon: Clock, iconColor: pending > 0 ? "var(--danger)" : "var(--success)", iconBg: pending > 0 ? "var(--danger-subtle)" : "var(--success-subtle)" },
+  ];
 
   return (
     <div>
-      {/* Header */}
+      {/* Page Header */}
       <div className="page-header">
         <div>
-          <h1 className="page-title">Reviews</h1>
-          <p className="page-subtitle">Manage and respond to Google Business Profile reviews</p>
+          <h1 className="page-title" style={{ fontSize: 20, fontWeight: 700 }}>Reviews</h1>
+          <p className="page-subtitle">Monitor and respond to Google Business Profile reviews</p>
         </div>
-        <button onClick={() => mutate()} style={{ display: "flex", alignItems: "center", gap: 6, height: 36, padding: "0 14px", background: "#fff", border: "1px solid #e2e8f0", borderRadius: 8, fontSize: 13, fontWeight: 600, color: "#64748b", cursor: "pointer" }}>
-          <RefreshCw size={14} /> Refresh
-        </button>
+        <div style={{ display: "flex", gap: 8 }}>
+          {activeProfile?.metadata?.mapsUri && (
+            <a href={activeProfile.metadata?.mapsUri} target="_blank" rel="noopener noreferrer" className="ds-btn ds-btn-secondary" style={{ fontSize: 12, gap: 6 }}>
+              <ExternalLink size={13} /> View on Maps
+            </a>
+          )}
+          <button onClick={() => mutate()} className="ds-btn ds-btn-secondary" style={{ gap: 6 }}>
+            <RefreshCw size={13} className={reviewsLoading ? "anim-spin" : ""} />
+            Refresh
+          </button>
+        </div>
       </div>
 
-      {/* Alert */}
+      {/* Toast */}
       {message && (
-        <div style={{ padding: "10px 16px", borderRadius: 8, marginBottom: 18, fontSize: 13, display: "flex", alignItems: "center", gap: 8, background: message.type === "success" ? "#f0fdf4" : "#fef2f2", border: `1px solid ${message.type === "success" ? "#bbf7d0" : "#fecaca"}`, color: message.type === "success" ? "#15803d" : "#dc2626" }}>
-          {message.type === "success" ? <CheckCircle2 size={15} /> : <AlertCircle size={15} />}
-          {message.text}
-          <button onClick={() => setMessage(null)} style={{ marginLeft: "auto", background: "none", border: "none", cursor: "pointer", color: "inherit" }}><X size={13} /></button>
+        <div style={{ padding: "10px 16px", borderRadius: "var(--radius-btn)", marginBottom: 20, fontSize: 13, display: "flex", alignItems: "center", gap: 8, background: message.type === "success" ? "var(--success-subtle)" : "var(--danger-subtle)", border: `1px solid ${message.type === "success" ? "var(--success-muted)" : "var(--danger-muted)"}`, color: message.type === "success" ? "var(--success-text)" : "var(--danger-text)" }} className="ds-anim-fade">
+          {message.type === "success" ? <CheckCircle2 size={14} /> : <AlertCircle size={14} />}
+          <span>{message.text}</span>
+          <button onClick={() => setMessage(null)} style={{ marginLeft: "auto", background: "none", border: "none", cursor: "pointer", color: "inherit", display: "flex" }}><X size={13} /></button>
         </div>
       )}
 
       {/* Profile Selector */}
-      {profilesLoading ? (
-        <Skeleton style={{ width: "100%", height: 52, borderRadius: 10, marginBottom: 24 }} />
-      ) : (
-        <div style={{ marginBottom: 24, display: "flex", alignItems: "center", gap: 10 }}>
-          <Building2 size={16} color="#64748b" style={{ flexShrink: 0 }} />
-          <div style={{ position: "relative", flex: 1, maxWidth: 400 }}>
+      <div style={{ marginBottom: 24 }}>
+        {profilesLoading ? (
+          <div className="skeleton" style={{ height: 44, borderRadius: "var(--radius-btn)", maxWidth: 440 }} />
+        ) : (
+          <div style={{ position: "relative", maxWidth: 440 }}>
+            <Building2 size={15} style={{ position: "absolute", left: 12, top: "50%", transform: "translateY(-50%)", color: "var(--text-muted)", pointerEvents: "none", zIndex: 1 }} />
             <select
               value={selectedProfileId || activeProfile?.id || ""}
               onChange={e => setSelectedProfileId(e.target.value)}
-              style={{ width: "100%", height: 44, padding: "0 36px 0 14px", background: "#fff", border: "1px solid #e2e8f0", borderRadius: 10, fontSize: 13, fontWeight: 600, color: "#111", cursor: "pointer", appearance: "none", outline: "none" }}
+              style={{ width: "100%", height: 44, paddingLeft: 36, paddingRight: 36, border: "1px solid var(--border-default)", borderRadius: "var(--radius-btn)", fontSize: 13, fontWeight: 600, color: "var(--text-primary)", cursor: "pointer", background: "#fff", appearance: "none" }}
             >
-              {profiles.map((p: any) => (
-                <option key={p.id} value={p.id}>{p.name}</option>
-              ))}
+              {profiles.map((p: any) => <option key={p.id} value={p.id}>{p.name}</option>)}
             </select>
-            <ChevronDown size={14} style={{ position: "absolute", right: 12, top: "50%", transform: "translateY(-50%)", color: "#94a3b8", pointerEvents: "none" }} />
+            <ChevronDown size={14} style={{ position: "absolute", right: 12, top: "50%", transform: "translateY(-50%)", color: "var(--text-muted)", pointerEvents: "none" }} />
           </div>
-        </div>
-      )}
+        )}
+      </div>
 
       {/* Stats Strip */}
       {!reviewsLoading && allReviews.length > 0 && (
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 12, marginBottom: 24 }}>
-          {[
-            { label: "Avg Rating", value: avgRating, color: "#FBBF24", bg: "#FFFBEB" },
-            { label: "Total Reviews", value: allReviews.length, color: "#2563eb", bg: "#eff6ff" },
-            { label: "Replied", value: replied, color: "#16a34a", bg: "#f0fdf4" },
-            { label: "Awaiting Reply", value: notReplied, color: "#dc2626", bg: "#fef2f2" },
-          ].map(s => (
-            <div key={s.label} style={{ background: "#fff", border: "1px solid #f1f5f9", borderRadius: 12, padding: "16px 20px", boxShadow: "0 1px 4px rgba(0,0,0,0.04)" }}>
-              <p style={{ margin: "0 0 4px", fontSize: 11, fontWeight: 600, color: "#94a3b8", textTransform: "uppercase", letterSpacing: "0.04em" }}>{s.label}</p>
-              <p style={{ margin: 0, fontSize: 26, fontWeight: 800, color: "#111", lineHeight: 1 }}>{s.value}</p>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 12, marginBottom: 24 }} className="ds-anim-fade">
+          {STATS.map(s => (
+            <div key={s.label} className="ds-card" style={{ padding: "16px 20px", display: "flex", alignItems: "center", gap: 14 }}>
+              <div style={{ width: 40, height: 40, borderRadius: "var(--radius-btn)", background: s.iconBg, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                <s.icon size={18} color={s.iconColor} />
+              </div>
+              <div style={{ minWidth: 0 }}>
+                <p style={{ margin: 0, fontSize: 11, fontWeight: 600, color: "var(--text-tertiary)", textTransform: "uppercase", letterSpacing: "0.06em" }}>{s.label}</p>
+                <p style={{ margin: "2px 0 0", fontSize: 24, fontWeight: 700, color: "var(--text-primary)", lineHeight: 1, fontVariantNumeric: "tabular-nums" }}>{s.value}</p>
+                <p style={{ margin: "3px 0 0", fontSize: 11, color: "var(--text-muted)" }}>{s.sub}</p>
+              </div>
             </div>
           ))}
         </div>
       )}
 
-      {/* Filters */}
-      <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 20, flexWrap: "wrap" }}>
-        <div style={{ position: "relative", flex: 1, minWidth: 200 }}>
-          <Search size={14} style={{ position: "absolute", left: 12, top: "50%", transform: "translateY(-50%)", color: "#94a3b8" }} />
-          <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search reviews..." style={{ width: "100%", height: 38, paddingLeft: 36, paddingRight: 12, border: "1px solid #e2e8f0", borderRadius: 8, fontSize: 13, outline: "none", color: "#111", background: "#fff", boxSizing: "border-box" }} />
+      {/* API Error */}
+      {apiError && (
+        <div style={{ padding: "14px 16px", borderRadius: "var(--radius-btn)", marginBottom: 20, display: "flex", alignItems: "flex-start", gap: 12, background: "var(--danger-subtle)", border: "1px solid var(--danger-muted)", color: "var(--danger-text)" }} className="ds-anim-fade">
+          <AlertCircle size={16} style={{ flexShrink: 0, marginTop: 1 }} />
+          <div>
+            <p style={{ margin: 0, fontWeight: 600, fontSize: 13 }}>Could not load reviews</p>
+            <p style={{ margin: "3px 0 0", fontSize: 12 }}>{apiError}</p>
+          </div>
         </div>
-        {(["all", "positive", "neutral", "negative"] as SentimentFilter[]).map(f => (
-          <button
-            key={f}
-            onClick={() => setSentiment(f)}
-            style={{ height: 38, padding: "0 14px", borderRadius: 8, border: "1px solid", fontSize: 12, fontWeight: 600, cursor: "pointer", borderColor: sentiment === f ? "#2563eb" : "#e2e8f0", background: sentiment === f ? "#eff6ff" : "#fff", color: sentiment === f ? "#2563eb" : "#64748b", textTransform: "capitalize" }}
-          >
-            {f === "all" ? "All" : f === "positive" ? "⭐ Positive" : f === "neutral" ? "😐 Neutral" : "👎 Negative"}
-          </button>
-        ))}
+      )}
+
+      {/* Search + Filters */}
+      <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 20, flexWrap: "wrap" }}>
+        <div style={{ position: "relative", flex: 1, minWidth: 220 }}>
+          <Search size={14} style={{ position: "absolute", left: 12, top: "50%", transform: "translateY(-50%)", color: "var(--text-muted)" }} />
+          <input
+            value={search}
+            onChange={e => setSearch(e.target.value)}
+            placeholder="Search by reviewer or content..."
+            className="ds-input"
+            style={{ height: 38, paddingLeft: 36, paddingRight: search ? 36 : 12 }}
+          />
+          {search && (
+            <button onClick={() => setSearch("")} style={{ position: "absolute", right: 10, top: "50%", transform: "translateY(-50%)", background: "none", border: "none", cursor: "pointer", color: "var(--text-muted)", display: "flex" }}>
+              <X size={14} />
+            </button>
+          )}
+        </div>
+        <div style={{ display: "flex", gap: 6 }}>
+          {FILTERS.map(f => (
+            <button
+              key={f.key}
+              onClick={() => setSentiment(f.key)}
+              style={{
+                height: 38, padding: "0 14px", borderRadius: "var(--radius-btn)", border: "1px solid",
+                fontSize: 12, fontWeight: 600, cursor: "pointer", whiteSpace: "nowrap",
+                borderColor: sentiment === f.key ? "var(--brand-muted)" : "var(--border-default)",
+                background: sentiment === f.key ? "var(--brand-subtle)" : "#fff",
+                color: sentiment === f.key ? "var(--brand)" : "var(--text-secondary)",
+                transition: "all 150ms ease",
+              }}
+            >
+              {f.emoji} {f.label}
+            </button>
+          ))}
+        </div>
+        {filteredReviews.length > 0 && (
+          <span style={{ fontSize: 12, color: "var(--text-muted)", whiteSpace: "nowrap" }}>
+            {filteredReviews.length} {filteredReviews.length === 1 ? "review" : "reviews"}
+          </span>
+        )}
       </div>
 
       {/* Reviews Grid */}
       {reviewsLoading ? (
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(320px, 1fr))", gap: 16 }}>
-          {[...Array(6)].map((_, i) => <SkeletonReviewCard key={i} />)}
+          {[...Array(6)].map((_, i) => <SkeletonCard key={i} />)}
         </div>
-      ) : filteredReviews.length === 0 ? (
-        <div style={{ background: "#fff", border: "1px solid #f1f5f9", borderRadius: 16, padding: "60px 24px", textAlign: "center" }}>
-          <Star size={40} style={{ color: "#e2e8f0", marginBottom: 12 }} />
-          <h3 style={{ margin: "0 0 8px", fontSize: 16, fontWeight: 700, color: "#374151" }}>
-            {allReviews.length === 0 ? "No reviews yet" : "No reviews match your filter"}
+      ) : filteredReviews.length === 0 && !apiError ? (
+        <div style={{ background: "#fff", border: "1px solid var(--border-subtle)", borderRadius: "var(--radius-card)", padding: "72px 24px", textAlign: "center" }}>
+          <div style={{ width: 56, height: 56, borderRadius: "var(--radius-card)", background: "var(--bg-subtle)", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 16px" }}>
+            <Sparkles size={24} color="var(--text-muted)" />
+          </div>
+          <h3 style={{ margin: "0 0 8px", fontSize: 16, fontWeight: 700, color: "var(--text-primary)" }}>
+            {allReviews.length === 0 ? "No reviews yet" : "No matching reviews"}
           </h3>
-          <p style={{ margin: 0, fontSize: 13, color: "#94a3b8" }}>
-            {allReviews.length === 0 ? "Reviews will appear here once customers leave them on Google." : "Try adjusting your search or filter."}
+          <p style={{ margin: 0, fontSize: 13, color: "var(--text-tertiary)" }}>
+            {allReviews.length === 0 ? "Reviews from Google will appear here automatically." : "Try adjusting your search or filter."}
           </p>
+          {allReviews.length > 0 && (
+            <button onClick={() => { setSearch(""); setSentiment("all"); }} className="ds-btn ds-btn-secondary" style={{ margin: "16px auto 0" }}>
+              Clear filters
+            </button>
+          )}
         </div>
       ) : (
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(320px, 1fr))", gap: 16 }}>
@@ -345,7 +411,6 @@ export default function ReviewsPage() {
         </div>
       )}
 
-      {/* Reply Modal */}
       {replyReview && (
         <ReplyModal
           review={replyReview}

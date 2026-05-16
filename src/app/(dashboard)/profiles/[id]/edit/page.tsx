@@ -38,47 +38,71 @@ export default function EditProfilePage() {
   });
 
   const [logoFile, setLogoFile] = useState<File | null>(null);
-  const [catSearch, setCatSearch] = useState("");
-  const [catResults, setCatResults] = useState<any[]>([]);
-  const [searchingCats, setSearchingCats] = useState(false);
+  const [catSearchPrimary, setCatSearchPrimary] = useState("");
+  const [catSearchAdditional, setCatSearchAdditional] = useState("");
+  const [catResultsPrimary, setCatResultsPrimary] = useState<any[]>([]);
+  const [catResultsAdditional, setCatResultsAdditional] = useState<any[]>([]);
+  const [searchingCatsPrimary, setSearchingCatsPrimary] = useState(false);
+  const [searchingCatsAdditional, setSearchingCatsAdditional] = useState(false);
   const [activeTab, setActiveTab] = useState("about");
+  const [apiError, setApiError] = useState<string | null>(null);
 
   useEffect(() => {
     if (profileData?.data) {
       const gbp = profileData.data;
+      if (gbp.error) { setApiError(gbp.error); return; }
+      setApiError(null);
       setFormData({
         title: gbp.title || "",
         description: gbp.profile?.description || "",
         phone: gbp.phoneNumbers?.primaryPhone || "",
         website: gbp.websiteUri || "",
         logoUrl: gbp.logoUrl || "",
-        categories: gbp.categories || { primaryCategory: { displayName: "" }, additionalCategories: [] },
+        categories: gbp.categories || { primaryCategory: { displayName: "", name: "" }, additionalCategories: [] },
         regularHours: gbp.regularHours || { periods: [] },
         storefrontAddress: gbp.storefrontAddress || {},
         serviceArea: gbp.serviceArea || { businessRegionCodes: [] },
         labels: gbp.labels || [],
         metadata: gbp.metadata || {},
+        attributes: gbp.attributes || [],
+        specialHours: gbp.specialHours || {},
+        morePhones: gbp.phoneNumbers?.additionalPhones || [],
       });
     }
+    if (profileData?.error) setApiError(profileData.error);
   }, [profileData]);
 
-  // Category Search
+  // Category search — primary
   useEffect(() => {
     const timer = setTimeout(async () => {
-      if (catSearch.length > 2) {
-        setSearchingCats(true);
+      if (catSearchPrimary.length > 2) {
+        setSearchingCatsPrimary(true);
         try {
-          const res = await fetch(`/api/categories?searchTerm=${encodeURIComponent(catSearch)}`);
+          const res = await fetch(`/api/categories?searchTerm=${encodeURIComponent(catSearchPrimary)}`);
           const d = await res.json();
-          setCatResults(d.data || []);
-        } catch (e) {}
-        setSearchingCats(false);
-      } else {
-        setCatResults([]);
-      }
-    }, 500);
+          setCatResultsPrimary(d.data || []);
+        } catch {}
+        setSearchingCatsPrimary(false);
+      } else setCatResultsPrimary([]);
+    }, 400);
     return () => clearTimeout(timer);
-  }, [catSearch]);
+  }, [catSearchPrimary]);
+
+  // Category search — additional
+  useEffect(() => {
+    const timer = setTimeout(async () => {
+      if (catSearchAdditional.length > 2) {
+        setSearchingCatsAdditional(true);
+        try {
+          const res = await fetch(`/api/categories?searchTerm=${encodeURIComponent(catSearchAdditional)}`);
+          const d = await res.json();
+          setCatResultsAdditional(d.data || []);
+        } catch {}
+        setSearchingCatsAdditional(false);
+      } else setCatResultsAdditional([]);
+    }, 400);
+    return () => clearTimeout(timer);
+  }, [catSearchAdditional]);
 
   const handleSave = async () => {
     setSaving(true);
@@ -119,8 +143,18 @@ export default function EditProfilePage() {
 
   if (isLoading) {
     return (
-      <div style={{ display: "flex", justifyContent: "center", padding: "100px 0" }}>
-        <Loader2 className="animate-spin" style={{ width: 24, height: 24, color: "#9ca3af" }} />
+      <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: "80px 0", gap: 12 }}>
+        <Loader2 className="anim-spin" style={{ width: 28, height: 28, color: "var(--brand)" }} />
+        <p style={{ fontSize: 13, color: "var(--text-tertiary)", margin: 0 }}>Loading profile data from Google...</p>
+      </div>
+    );
+  }
+  if (apiError) {
+    return (
+      <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: "80px 0", gap: 12 }}>
+        <AlertCircle size={32} color="var(--danger)" />
+        <p style={{ fontSize: 15, fontWeight: 700, color: "var(--text-primary)", margin: 0 }}>Failed to load profile</p>
+        <p style={{ fontSize: 13, color: "var(--text-tertiary)", margin: 0, maxWidth: 400, textAlign: "center" }}>{apiError}</p>
       </div>
     );
   }
@@ -250,80 +284,76 @@ export default function EditProfilePage() {
                   />
                 </div>
 
-                {/* Categories */}
+                {/* Primary Category */}
                 <div>
-                  <label style={{ fontSize: 13, fontWeight: 600, color: "#374151", marginBottom: 8, display: "block" }}>Primary Category</label>
+                  <label style={{ fontSize: 13, fontWeight: 600, color: "var(--text-primary)", marginBottom: 8, display: "block" }}>Primary Category</label>
                   <div style={{ position: "relative" }}>
-                    <div style={{ display: "flex", gap: 8, alignItems: "center", padding: "8px 12px", border: "1px solid #e2e8f0", borderRadius: 8, background: "#f8fafc" }}>
-                      <Tag size={14} color="#64748b" />
-                      <span style={{ fontSize: 14, color: "#111" }}>{formData.categories.primaryCategory?.displayName || "None"}</span>
-                      <button onClick={() => setCatSearch("")} style={{ marginLeft: "auto", background: "none", border: "none", cursor: "pointer", color: "#2563eb", fontSize: 12, fontWeight: 600 }}>Change</button>
-                    </div>
-                    
-                    <div style={{ marginTop: 8 }}>
-                      <div style={{ position: "relative" }}>
-                        <Search size={14} style={{ position: "absolute", left: 12, top: "50%", transform: "translateY(-50%)", color: "#9ca3af" }} />
-                        <input 
-                          type="text" 
-                          placeholder="Search categories..." 
-                          value={catSearch}
-                          onChange={e => setCatSearch(e.target.value)}
-                          style={{ width: "100%", padding: "8px 12px 8px 36px", border: "1px solid #e2e8f0", borderRadius: 8, fontSize: 13 }}
-                        />
-                        {searchingCats && <Loader2 size={14} className="animate-spin" style={{ position: "absolute", right: 12, top: "50%", transform: "translateY(-50%)", color: "#9ca3af" }} />}
+                    {formData.categories.primaryCategory?.displayName && (
+                      <div style={{ display: "flex", gap: 8, alignItems: "center", padding: "8px 12px", border: "1px solid var(--border-default)", borderRadius: "var(--radius-btn)", background: "var(--bg-subtle)", marginBottom: 8 }}>
+                        <Tag size={14} color="var(--brand)" />
+                        <span style={{ fontSize: 13, color: "var(--text-primary)", fontWeight: 500 }}>{formData.categories.primaryCategory.displayName}</span>
+                        <span style={{ marginLeft: "auto", fontSize: 11, color: "var(--text-muted)" }}>current</span>
                       </div>
-                      
-                      {catResults.length > 0 && (
-                        <div style={{ position: "absolute", top: "100%", left: 0, right: 0, zIndex: 20, background: "#fff", border: "1px solid #eaeaea", borderRadius: 8, boxShadow: "0 10px 15px -3px rgba(0,0,0,0.1)", marginTop: 4, maxHeight: 200, overflowY: "auto" }}>
-                          {catResults.map(c => (
-                            <button
-                              key={c.name}
-                              onClick={() => {
-                                setFormData({ ...formData, categories: { ...formData.categories, primaryCategory: c } });
-                                setCatSearch("");
-                                setCatResults([]);
-                              }}
-                              style={{ width: "100%", padding: "10px 12px", border: "none", background: "none", textAlign: "left", fontSize: 13, cursor: "pointer", borderBottom: "1px solid #f1f5f9" }}
-                              onMouseEnter={e => e.currentTarget.style.background = "#f8fafc"}
-                              onMouseLeave={e => e.currentTarget.style.background = "none"}
-                            >
-                              {c.displayName}
-                            </button>
-                          ))}
-                        </div>
-                      )}
+                    )}
+                    <div style={{ position: "relative" }}>
+                      <Search size={13} style={{ position: "absolute", left: 11, top: "50%", transform: "translateY(-50%)", color: "var(--text-muted)" }} />
+                      <input
+                        type="text"
+                        placeholder="Search to change primary category..."
+                        value={catSearchPrimary}
+                        onChange={e => setCatSearchPrimary(e.target.value)}
+                        className="ds-input"
+                        style={{ paddingLeft: 32, height: 38 }}
+                      />
+                      {searchingCatsPrimary && <Loader2 size={13} className="anim-spin" style={{ position: "absolute", right: 11, top: "50%", transform: "translateY(-50%)", color: "var(--text-muted)" }} />}
                     </div>
+                    {catResultsPrimary.length > 0 && (
+                      <div style={{ position: "absolute", top: "calc(100% + 4px)", left: 0, right: 0, zIndex: 30, background: "#fff", border: "1px solid var(--border-default)", borderRadius: "var(--radius-card)", boxShadow: "var(--shadow-md)", maxHeight: 220, overflowY: "auto" }}>
+                        {catResultsPrimary.map(c => (
+                          <button key={c.name} onClick={() => { setFormData({ ...formData, categories: { ...formData.categories, primaryCategory: c } }); setCatSearchPrimary(""); setCatResultsPrimary([]); }}
+                            style={{ width: "100%", padding: "10px 14px", border: "none", background: "none", textAlign: "left", fontSize: 13, cursor: "pointer", borderBottom: "1px solid var(--border-subtle)", color: "var(--text-primary)" }}
+                            onMouseEnter={e => e.currentTarget.style.background = "var(--bg-hover)"}
+                            onMouseLeave={e => e.currentTarget.style.background = "none"}
+                          >{c.displayName}</button>
+                        ))}
+                      </div>
+                    )}
                   </div>
                 </div>
 
                 {/* Additional Categories */}
                 <div>
-                  <label style={{ fontSize: 13, fontWeight: 600, color: "#374151", marginBottom: 8, display: "block" }}>Additional Categories</label>
-                  <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginBottom: 12 }}>
+                  <label style={{ fontSize: 13, fontWeight: 600, color: "var(--text-primary)", marginBottom: 8, display: "block" }}>Additional Categories</label>
+                  <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginBottom: 10 }}>
                     {formData.categories.additionalCategories?.map((c: any, idx: number) => (
-                      <div key={idx} style={{ background: "#f1f5f9", color: "#475569", padding: "4px 10px", borderRadius: 6, fontSize: 12, fontWeight: 600, display: "flex", alignItems: "center", gap: 6 }}>
+                      <div key={idx} style={{ background: "var(--brand-subtle)", color: "var(--brand)", padding: "4px 10px", borderRadius: "var(--radius-full)", fontSize: 12, fontWeight: 600, display: "flex", alignItems: "center", gap: 6, border: "1px solid var(--brand-muted)" }}>
                         {c.displayName}
-                        <X size={12} onClick={() => {
-                          const newCats = formData.categories.additionalCategories.filter((_: any, i: number) => i !== idx);
-                          setFormData({ ...formData, categories: { ...formData.categories, additionalCategories: newCats } });
-                        }} style={{ cursor: "pointer" }} />
+                        <X size={11} onClick={() => { const n = formData.categories.additionalCategories.filter((_: any, i: number) => i !== idx); setFormData({ ...formData, categories: { ...formData.categories, additionalCategories: n } }); }} style={{ cursor: "pointer" }} />
                       </div>
                     ))}
                   </div>
-                  
                   <div style={{ position: "relative" }}>
-                    <div style={{ position: "relative" }}>
-                      <Plus size={14} style={{ position: "absolute", left: 12, top: "50%", transform: "translateY(-50%)", color: "#9ca3af" }} />
-                      <input 
-                        type="text" 
-                        placeholder="Add additional category..." 
-                        value={catSearch && activeTab === "about" ? catSearch : ""} 
-                        onChange={e => setCatSearch(e.target.value)}
-                        onFocus={() => setCatResults([])}
-                        style={{ width: "100%", padding: "8px 12px 8px 36px", border: "1px solid #e2e8f0", borderRadius: 8, fontSize: 13 }}
-                      />
-                    </div>
-                    {/* Reuse catResults dropdown here too if needed, but I'll keep it simple for now or just use a flag to know if we are adding primary or additional */}
+                    <Plus size={13} style={{ position: "absolute", left: 11, top: "50%", transform: "translateY(-50%)", color: "var(--text-muted)" }} />
+                    <input
+                      type="text"
+                      placeholder="Search to add category..."
+                      value={catSearchAdditional}
+                      onChange={e => setCatSearchAdditional(e.target.value)}
+                      className="ds-input"
+                      style={{ paddingLeft: 32, height: 38 }}
+                    />
+                    {searchingCatsAdditional && <Loader2 size={13} className="anim-spin" style={{ position: "absolute", right: 11, top: "50%", transform: "translateY(-50%)", color: "var(--text-muted)" }} />}
+                    {catResultsAdditional.length > 0 && (
+                      <div style={{ position: "absolute", top: "calc(100% + 4px)", left: 0, right: 0, zIndex: 30, background: "#fff", border: "1px solid var(--border-default)", borderRadius: "var(--radius-card)", boxShadow: "var(--shadow-md)", maxHeight: 220, overflowY: "auto" }}>
+                        {catResultsAdditional.map(c => (
+                          <button key={c.name} onClick={() => { const existing = formData.categories.additionalCategories || []; if (!existing.find((e: any) => e.name === c.name)) { setFormData({ ...formData, categories: { ...formData.categories, additionalCategories: [...existing, c] } }); } setCatSearchAdditional(""); setCatResultsAdditional([]); }}
+                            style={{ width: "100%", padding: "10px 14px", border: "none", background: "none", textAlign: "left", fontSize: 13, cursor: "pointer", borderBottom: "1px solid var(--border-subtle)", color: "var(--text-primary)" }}
+                            onMouseEnter={e => e.currentTarget.style.background = "var(--bg-hover)"}
+                            onMouseLeave={e => e.currentTarget.style.background = "none"}
+                          >{c.displayName}</button>
+                        ))}
+                      </div>
+                    )}
                   </div>
                 </div>
 
