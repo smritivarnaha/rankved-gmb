@@ -11,6 +11,8 @@ import {
   Lock, Star, ArrowRight, LogOut, Database, Globe, Edit3, MessageSquare
 } from "lucide-react";
 import { useGlobalSettings } from "@/hooks/useGlobalSettings";
+import { useMobileLayout } from "@/components/layout/mobile-layout";
+import { X } from "lucide-react";
 
   const navCategories = [
     {
@@ -60,22 +62,26 @@ export function Sidebar() {
   const sidebarLogoSize = settings?.sidebarLogoSize || 24;
   const sidebarTextSize = settings?.sidebarTextSize || 14;
 
+  const { mobileOpen, closeMobile } = useMobileLayout();
   const user = (session as any)?.user;
   const role = user?.role;
   const isSuperAdmin = role === "SUPER_ADMIN" || user?.email?.toLowerCase() === "rankved.business@gmail.com";
 
   return (
-    <aside style={{ width: 260, borderRight: "1px solid #eaeaea", background: "#fcfcfc", display: "flex", flexDirection: "column", height: "100vh", padding: "16px 12px", position: "sticky", top: 0, flexShrink: 0 }}>
+    <>
+      {/* Mobile Overlay */}
+      {mobileOpen && (
+        <div
+          onClick={closeMobile}
+          style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.4)", zIndex: 198, backdropFilter: "blur(2px)" }}
+          className="mobile-overlay"
+        />
+      )}
+      <aside className={mobileOpen ? "sidebar-drawer sidebar-drawer-open" : "sidebar-drawer"} style={{ width: 260, borderRight: "1px solid #eaeaea", background: "#fcfcfc", display: "flex", flexDirection: "column", height: "100vh", padding: "16px 12px", position: "sticky", top: 0, flexShrink: 0 }}>
       {/* ─── Organization Selector ─── */}
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "8px 12px", cursor: "pointer", borderRadius: 6, marginBottom: 16 }}>
         <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-          <div style={{ 
-            width: sidebarLogoSize, 
-            height: sidebarLogoSize, 
-            background: "transparent", 
-            borderRadius: sidebarLogoShape === "circle" ? "50%" : sidebarLogoShape === "rounded" ? "8px" : "0", 
-            display: "flex", alignItems: "center", justifyContent: "center", overflow: "hidden" 
-          }}>
+          <div style={{ width: sidebarLogoSize, height: sidebarLogoSize, background: "transparent", borderRadius: sidebarLogoShape === "circle" ? "50%" : sidebarLogoShape === "rounded" ? "8px" : "0", display: "flex", alignItems: "center", justifyContent: "center", overflow: "hidden" }}>
             <img src={sidebarLogoUrl} alt={sidebarText} style={{ width: "100%", height: "100%", objectFit: "contain" }} />
           </div>
           <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
@@ -83,7 +89,13 @@ export function Sidebar() {
             <span style={{ fontSize: 11, fontWeight: 500, color: "#2563EB", background: "#EFF6FF", padding: "2px 6px", borderRadius: 100 }}>GMB</span>
           </div>
         </div>
-        <ChevronsUpDown size={14} color="#888" />
+        <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
+          <ChevronsUpDown size={14} color="#888" />
+          {/* Close button — mobile only */}
+          <button onClick={closeMobile} className="mobile-sidebar-close" style={{ display: "none", background: "none", border: "none", cursor: "pointer", padding: 4, borderRadius: 6, color: "#666" }}>
+            <X size={18} />
+          </button>
+        </div>
       </div>
 
       {/* ─── Search Bar ─── */}
@@ -188,5 +200,6 @@ export function Sidebar() {
         </button>
       </div>
     </aside>
+    </>
   );
 }

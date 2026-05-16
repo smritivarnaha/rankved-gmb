@@ -2,15 +2,17 @@
 
 import Image from "next/image";
 import { useSession, signOut } from "next-auth/react";
-import { LogOut, ChevronDown, ChevronsUpDown } from "lucide-react";
+import { LogOut, ChevronDown, ChevronsUpDown, Menu } from "lucide-react";
 import { useState, useRef, useEffect } from "react";
 import { usePathname } from "next/navigation";
+import { useMobileLayout } from "@/components/layout/mobile-layout";
 
 export function Topbar() {
   const { data: session } = useSession();
   const [showMenu, setShowMenu] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
   const pathname = usePathname();
+  const { openMobile } = useMobileLayout();
 
   useEffect(() => {
     const handler = (e: MouseEvent) => {
@@ -38,13 +40,24 @@ export function Topbar() {
     <header style={{ display: "flex", flexDirection: "column", borderBottom: "1px solid #eaeaea", background: "#fff", fontFamily: "Inter, sans-serif" }}>
       {/* ─── Top Row ─── */}
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "0 24px", height: 56 }}>
-        {/* Left: Project Selector */}
-        <div style={{ display: "flex", alignItems: "center", gap: 12, cursor: "pointer", padding: "6px 8px", borderRadius: 6, marginLeft: -8 }} onMouseEnter={(e) => e.currentTarget.style.background = "#fafafa"} onMouseLeave={(e) => e.currentTarget.style.background = "transparent"}>
-          <div style={{ width: 24, height: 24, background: "#111", borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center" }}>
-            <span style={{ color: "#fff", fontSize: 13, fontWeight: 600 }}>N</span>
+        {/* Left: Hamburger (mobile) + Project Selector */}
+        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+          {/* Hamburger — mobile only */}
+          <button
+            onClick={openMobile}
+            className="mobile-hamburger"
+            style={{ display: "none", padding: 6, background: "none", border: "none", cursor: "pointer", borderRadius: 6, color: "#374151" }}
+            aria-label="Open menu"
+          >
+            <Menu size={20} />
+          </button>
+          <div style={{ display: "flex", alignItems: "center", gap: 12, cursor: "pointer", padding: "6px 8px", borderRadius: 6, marginLeft: -8 }} onMouseEnter={(e) => e.currentTarget.style.background = "#fafafa"} onMouseLeave={(e) => e.currentTarget.style.background = "transparent"}>
+            <div style={{ width: 24, height: 24, background: "#111", borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center" }}>
+              <span style={{ color: "#fff", fontSize: 13, fontWeight: 600 }}>N</span>
+            </div>
+            <span style={{ fontSize: 14, fontWeight: 500, color: "#111" }}>{pageTitle}</span>
+            <ChevronsUpDown size={14} color="#888" />
           </div>
-          <span style={{ fontSize: 14, fontWeight: 500, color: "#111" }}>{pageTitle}</span>
-          <ChevronsUpDown size={14} color="#888" />
         </div>
 
         {/* Right: Avatar */}
