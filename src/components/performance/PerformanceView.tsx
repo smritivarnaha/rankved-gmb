@@ -131,9 +131,15 @@ function DiscoveryPanel({ rawData, kwData, kwLoading, isLoading, periodLabel }: 
 }) {
   const { totalViews, platforms } = useMemo(() => computePlatformBreakdown(rawData), [rawData]);
   const keywords: { keyword: string; count: number }[] = kwData?.data || [];
-  const totalSearches = useMemo(() => keywords.reduce((sum, kw) => sum + kw.count, 0), [keywords]);
 
-  // Separated mobile and desktop platforms
+  // Use direct search impressions (desktop + mobile search) from perf API
+  // This is the same underlying metric Google uses for 'Searches showed your Business Profile'
+  // Keyword sum is NOT used here because insightsValue.value uses privacy threshold rounding
+  const totalSearchImpressions = useMemo(
+    () => sumMetric(rawData, "IMPRESSIONS_DESKTOP_SEARCH") + sumMetric(rawData, "IMPRESSIONS_MOBILE_SEARCH"),
+    [rawData]
+  );
+
   const mobile  = platforms.filter(p => p.label.includes("mobile"));
   const desktop = platforms.filter(p => p.label.includes("desktop"));
 
@@ -151,16 +157,18 @@ function DiscoveryPanel({ rawData, kwData, kwLoading, isLoading, periodLabel }: 
           )}
         </div>
         <div style={{ background:"#fff", border:"1px solid #E2E8F0", borderRadius:14, padding:"20px 22px", boxShadow:"0 2px 8px rgba(0,0,0,0.04)" }}>
-          {isLoading || kwLoading ? <><Skeleton h={44} w={120}/><div style={{marginTop:8}}><Skeleton h={14} w={160}/></div></> : (
+          {isLoading ? <><Skeleton h={44} w={120}/><div style={{marginTop:8}}><Skeleton h={14} w={160}/></div></> : (
             <>
-              <div style={{ fontSize:42, fontWeight:800, color:"#111827", letterSpacing:"-0.04em", lineHeight:1 }}>{totalSearches.toLocaleString()}</div>
+              <div style={{ fontSize:42, fontWeight:800, color:"#111827", letterSpacing:"-0.04em", lineHeight:1 }}>{totalSearchImpressions.toLocaleString()}</div>
               <div style={{ display:"flex", alignItems:"center", gap:5, marginTop:8, fontSize:12, color:"#64748B" }}><Search size={13}/> Searches showed your Business Profile</div>
             </>
           )}
         </div>
       </div>
 
-      <p style={{ fontSize:11, color:"#94A3B8", margin:0 }}>Showing data for <strong>{periodLabel}</strong></p>
+      <p style={{ fontSize:11, color:"#94A3B8", margin:0 }}>
+        Showing data for <strong>{periodLabel}</strong> · Data via Google Business Profile API (may vary ±2–5% from dashboard due to processing lag)
+      </p>
 
       {/* Platform + Keywords */}
       <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:14, alignItems:"start" }} className="disc-detail-grid">
