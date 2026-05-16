@@ -17,18 +17,16 @@ const PERIODS = [
   { label: "6 Months",   months: 6 },
 ] as const;
 
-/* "discovery" and "audit" are special tabs */
 const METRIC_TABS = [
   { key: "overview",   label: "Overview"   },
   { key: "calls",      label: "Calls"      },
   { key: "website",    label: "Website"    },
   { key: "directions", label: "Directions" },
   { key: "messages",   label: "Messages"   },
-  { key: "discovery",  label: "Discovery"  },
-  { key: "audit",      label: "Audit"      },
 ] as const;
 
 type MetricKey = typeof METRIC_TABS[number]["key"];
+type ViewMode = "analytics" | "discovery" | "audit";
 
 /* ── Sum helper ── */
 function sumMetric(dataRaw: any[], keyword: string): number {
@@ -127,84 +125,98 @@ function Skeleton({ h, w }: { h: number; w?: number|string }) {
   return <div style={{ height:h, width:w??"100%", background:"linear-gradient(90deg,#F1F5F9 25%,#E2E8F0 50%,#F1F5F9 75%)", backgroundSize:"200% 100%", borderRadius:8, animation:"shimmer 1.4s infinite linear" }} />;
 }
 
-/* ── Discovery Tab Panel ── */
+/* ── Search Breakdown Panel ── */
 function DiscoveryPanel({ rawData, kwData, kwLoading, isLoading, periodLabel }: {
   rawData: any[]; kwData: any; kwLoading: boolean; isLoading: boolean; periodLabel: string;
 }) {
   const { totalViews, platforms } = useMemo(() => computePlatformBreakdown(rawData), [rawData]);
   const keywords: { keyword: string; count: number }[] = kwData?.data || [];
-  // Google's 'Searches showed your Business Profile' = sum of all keyword impressions
-  // NOT the performance API search impressions (which count every page render)
   const totalSearches = useMemo(() => keywords.reduce((sum, kw) => sum + kw.count, 0), [keywords]);
 
-  return (
-    <div style={{ display:"flex", flexDirection:"column", gap:20 }}>
+  // Separated mobile and desktop platforms
+  const mobile  = platforms.filter(p => p.label.includes("mobile"));
+  const desktop = platforms.filter(p => p.label.includes("desktop"));
 
-      {/* ── Stat cards ── */}
+  return (
+    <div style={{ display:"flex", flexDirection:"column", gap:16 }}>
+
+      {/* Stat cards */}
       <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:14 }} className="disc-stat-grid">
-        <div style={{ background:"#fff", border:"1px solid #E2E8F0", borderRadius:16, padding:"24px 24px 20px" }}>
-          {isLoading ? <><Skeleton h={52} w={130}/><div style={{marginTop:10}}><Skeleton h={16} w={180}/></div></> : (
+        <div style={{ background:"#fff", border:"1px solid #E2E8F0", borderRadius:14, padding:"20px 22px", boxShadow:"0 2px 8px rgba(0,0,0,0.04)" }}>
+          {isLoading ? <><Skeleton h={44} w={120}/><div style={{marginTop:8}}><Skeleton h={14} w={160}/></div></> : (
             <>
-              <div style={{ fontSize:48, fontWeight:800, color:"#111827", letterSpacing:"-0.04em", lineHeight:1 }}>{totalViews.toLocaleString()}</div>
-              <div style={{ display:"flex", alignItems:"center", gap:6, marginTop:10, fontSize:13, color:"#64748B", fontWeight:500 }}>
-                <Eye size={15}/> People viewed your Business Profile
-              </div>
+              <div style={{ fontSize:42, fontWeight:800, color:"#111827", letterSpacing:"-0.04em", lineHeight:1 }}>{totalViews.toLocaleString()}</div>
+              <div style={{ display:"flex", alignItems:"center", gap:5, marginTop:8, fontSize:12, color:"#64748B" }}><Eye size={13}/> People viewed your Business Profile</div>
             </>
           )}
         </div>
-        <div style={{ background:"#fff", border:"1px solid #E2E8F0", borderRadius:16, padding:"24px 24px 20px" }}>
-          {isLoading || kwLoading ? <><Skeleton h={52} w={130}/><div style={{marginTop:10}}><Skeleton h={16} w={180}/></div></> : (
+        <div style={{ background:"#fff", border:"1px solid #E2E8F0", borderRadius:14, padding:"20px 22px", boxShadow:"0 2px 8px rgba(0,0,0,0.04)" }}>
+          {isLoading || kwLoading ? <><Skeleton h={44} w={120}/><div style={{marginTop:8}}><Skeleton h={14} w={160}/></div></> : (
             <>
-              <div style={{ fontSize:48, fontWeight:800, color:"#111827", letterSpacing:"-0.04em", lineHeight:1 }}>{totalSearches.toLocaleString()}</div>
-              <div style={{ display:"flex", alignItems:"center", gap:6, marginTop:10, fontSize:13, color:"#64748B", fontWeight:500 }}>
-                <Search size={15}/> Searches showed your Business Profile
-              </div>
+              <div style={{ fontSize:42, fontWeight:800, color:"#111827", letterSpacing:"-0.04em", lineHeight:1 }}>{totalSearches.toLocaleString()}</div>
+              <div style={{ display:"flex", alignItems:"center", gap:5, marginTop:8, fontSize:12, color:"#64748B" }}><Search size={13}/> Searches showed your Business Profile</div>
             </>
           )}
         </div>
       </div>
 
-      {/* ── Period label ── */}
-      <p style={{ fontSize:11, color:"#94A3B8", margin:"0" }}>
-        Showing data for <strong>{periodLabel}</strong>
-      </p>
+      <p style={{ fontSize:11, color:"#94A3B8", margin:0 }}>Showing data for <strong>{periodLabel}</strong></p>
 
-      {/* ── Platform + Keywords: sticky layout ── */}
+      {/* Platform + Keywords */}
       <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:14, alignItems:"start" }} className="disc-detail-grid">
 
-        {/* LEFT: Platform breakdown — sticky */}
-        <div style={{ position:"sticky", top:80 }}>
-          <div style={{ background:"#fff", border:"1px solid #E2E8F0", borderRadius:16, padding:"20px 22px" }}>
-            <p style={{ fontSize:14, fontWeight:700, color:"#111827", margin:"0 0 3px" }}>Platform and device breakdown</p>
-            <p style={{ fontSize:12, color:"#94A3B8", margin:"0 0 20px" }}>Platforms and devices used to find your profile</p>
+        {/* LEFT sticky */}
+        <div style={{ position:"sticky", top:72 }}>
+          <div style={{ background:"#fff", border:"1px solid #E2E8F0", borderRadius:14, padding:"20px 20px", boxShadow:"0 2px 8px rgba(0,0,0,0.04)" }}>
+            <p style={{ fontSize:13, fontWeight:700, color:"#111827", margin:"0 0 2px" }}>Platform and device breakdown</p>
+            <p style={{ fontSize:11, color:"#94A3B8", margin:"0 0 16px" }}>Platforms and devices used to find your profile</p>
 
             {isLoading ? (
-              <div style={{ display:"flex", flexDirection:"column", gap:10 }}>{[1,2,3].map(i => <Skeleton key={i} h={22}/>)}</div>
+              <div style={{ display:"flex", flexDirection:"column", gap:8 }}>{[1,2,3,4].map(i => <Skeleton key={i} h={20}/>)}</div>
             ) : platforms.length === 0 ? (
-              <p style={{ fontSize:13, color:"#94A3B8" }}>No data available</p>
+              <p style={{ fontSize:12, color:"#94A3B8" }}>No data available</p>
             ) : (
-              <div style={{ display:"flex", gap:16, alignItems:"center" }}>
-                <div style={{ flexShrink:0 }}>
-                  <PieChart width={110} height={110}>
-                    <Pie data={platforms} dataKey="value" cx={55} cy={55} innerRadius={30} outerRadius={50} strokeWidth={0}>
-                      {platforms.map((p,i) => <Cell key={i} fill={p.color}/>)}
-                    </Pie>
-                  </PieChart>
-                </div>
-                <div style={{ flex:1, display:"flex", flexDirection:"column", gap:10 }}>
-                  {platforms.map((p,i) => {
-                    const pct = totalViews > 0 ? Math.round((p.value/totalViews)*100) : 0;
-                    return (
-                      <div key={i} style={{ display:"flex", alignItems:"center", gap:8 }}>
-                        <div style={{ width:10, height:10, borderRadius:"50%", background:p.color, flexShrink:0 }}/>
-                        <span style={{ fontSize:12, color:"#374151", flex:1 }}>{p.label}</span>
-                        <span style={{ fontSize:12, fontWeight:700, color:"#111827", whiteSpace:"nowrap" }}>
-                          {p.value.toLocaleString()} · {pct}%
-                        </span>
-                      </div>
-                    );
-                  })}
-                </div>
+              <div style={{ display:"flex", flexDirection:"column", alignItems:"center", gap:16 }}>
+                {/* Centered donut */}
+                <PieChart width={130} height={130}>
+                  <Pie data={platforms} dataKey="value" cx={65} cy={65} innerRadius={34} outerRadius={56} strokeWidth={2} stroke="#fff">
+                    {platforms.map((p,i) => <Cell key={i} fill={p.color}/>)}
+                  </Pie>
+                </PieChart>
+                {/* Mobile section */}
+                {mobile.length > 0 && (
+                  <div style={{ width:"100%" }}>
+                    <p style={{ fontSize:10, fontWeight:700, color:"#94A3B8", textTransform:"uppercase", letterSpacing:"0.06em", margin:"0 0 8px" }}>Mobile</p>
+                    {mobile.map((p,i) => {
+                      const pct = totalViews > 0 ? Math.round((p.value/totalViews)*100) : 0;
+                      const shortLabel = p.label.includes("Search") ? "Google Search" : "Google Maps";
+                      return (
+                        <div key={i} style={{ display:"flex", alignItems:"center", gap:8, marginBottom:6 }}>
+                          <div style={{ width:9, height:9, borderRadius:"50%", background:p.color, flexShrink:0 }}/>
+                          <span style={{ fontSize:12, color:"#374151", flex:1 }}>{shortLabel}</span>
+                          <span style={{ fontSize:12, fontWeight:700, color:"#111827" }}>{p.value.toLocaleString()} · {pct}%</span>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+                {/* Desktop section */}
+                {desktop.length > 0 && (
+                  <div style={{ width:"100%" }}>
+                    <p style={{ fontSize:10, fontWeight:700, color:"#94A3B8", textTransform:"uppercase", letterSpacing:"0.06em", margin:"0 0 8px" }}>Desktop</p>
+                    {desktop.map((p,i) => {
+                      const pct = totalViews > 0 ? Math.round((p.value/totalViews)*100) : 0;
+                      const shortLabel = p.label.includes("Search") ? "Google Search" : "Google Maps";
+                      return (
+                        <div key={i} style={{ display:"flex", alignItems:"center", gap:8, marginBottom:6 }}>
+                          <div style={{ width:9, height:9, borderRadius:"50%", background:p.color, flexShrink:0 }}/>
+                          <span style={{ fontSize:12, color:"#374151", flex:1 }}>{shortLabel}</span>
+                          <span style={{ fontSize:12, fontWeight:700, color:"#111827" }}>{p.value.toLocaleString()} · {pct}%</span>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
               </div>
             )}
           </div>
@@ -280,6 +292,7 @@ function DiscoveryPanel({ rawData, kwData, kwLoading, isLoading, periodLabel }: 
 export function PerformanceView({ profile, onBack }: { profile: any; onBack?: () => void }) {
   const [months, setMonths]       = useState<1|3|6>(6);
   const [activeMetric, setMetric] = useState<MetricKey>("overview");
+  const [viewMode, setViewMode]   = useState<ViewMode>("analytics");
 
   const { data: perfData, isLoading } = useSWR(
     profile ? `/api/profiles/${profile.id}/performance?months=${months}` : null,
@@ -303,7 +316,7 @@ export function PerformanceView({ profile, onBack }: { profile: any; onBack?: ()
 
   if (!profile) return null;
 
-  const isSpecialTab = activeMetric === "discovery" || activeMetric === "audit";
+  const isAnalytics = viewMode === "analytics";
 
   return (
     <div style={{ fontFamily:"Inter,-apple-system,sans-serif", maxWidth:960 }}>
@@ -331,8 +344,9 @@ export function PerformanceView({ profile, onBack }: { profile: any; onBack?: ()
         </div>
       </div>
 
-      {/* ── Period ── */}
-      <div style={{ marginBottom:20 }}>
+      {/* ── Period row + view mode tabs ── */}
+      <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", marginBottom:20, gap:12, flexWrap:"wrap" }}>
+        {/* Period pills */}
         <div style={{ display:"inline-flex", alignItems:"center", gap:2, background:"#F8FAFC", border:"1px solid #E2E8F0", borderRadius:10, padding:4 }}>
           {PERIODS.map(p => (
             <button key={p.months} onClick={() => setMonths(p.months as 1|3|6)} style={{
@@ -346,49 +360,60 @@ export function PerformanceView({ profile, onBack }: { profile: any; onBack?: ()
             </button>
           ))}
         </div>
+        {/* Search Breakdown + Audit tabs — right side */}
+        <div style={{ display:"flex", gap:8 }}>
+          {(["discovery","audit"] as const).map(mode => {
+            const label = mode === "discovery" ? "Search Breakdown" : "Audit";
+            const active = viewMode === mode;
+            const color = mode === "discovery" ? "#7c3aed" : "#0891b2";
+            return (
+              <button key={mode}
+                onClick={() => setViewMode(active ? "analytics" : mode)}
+                style={{
+                  padding:"6px 14px", borderRadius:8, border:`1px solid ${active ? color : "#E2E8F0"}`,
+                  background: active ? `${color}10` : "#fff",
+                  color: active ? color : "#64748B",
+                  fontSize:12, fontWeight:600, cursor:"pointer", transition:"all 0.15s",
+                }}>
+                {label}
+              </button>
+            );
+          })}
+        </div>
       </div>
 
-      {/* ── All Tabs in one row ── */}
+      {/* ── Discovery/Audit panels ── */}
+      {viewMode === "discovery" && (
+        <div style={{ marginBottom:20 }}>
+          <DiscoveryPanel rawData={rawData} kwData={kwData} kwLoading={kwLoading} isLoading={isLoading} periodLabel={periodLabel}/>
+        </div>
+      )}
+      {viewMode === "audit" && (
+        <div style={{ background:"#fff", border:"1px solid #E2E8F0", borderRadius:16, padding:20, marginBottom:20 }}>
+          <AuditReport profileId={profile.id}/>
+        </div>
+      )}
+
+      {/* ── Analytics chart tabs (always visible) ── */}
       <div style={{ background:"#fff", border:"1px solid #E2E8F0", borderRadius:16, overflow:"hidden", marginBottom:20 }}>
         <div style={{ display:"flex", borderBottom:"1px solid #E2E8F0" }} className="perf-metric-tabs">
           {METRIC_TABS.map(tab => {
-            const isDiscovery = tab.key === "discovery";
-            const isAudit = tab.key === "audit";
-            const activeColor = isDiscovery ? "#7c3aed" : isAudit ? "#0891b2" : "#2563EB";
             const active = activeMetric === tab.key;
             return (
-              <button key={tab.key} onClick={() => setMetric(tab.key)} style={{
+              <button key={tab.key} onClick={() => { setMetric(tab.key); setViewMode("analytics"); }} style={{
                 padding:"12px 18px", border:"none", cursor:"pointer",
                 fontSize:13, fontWeight:active ? 600 : 500, whiteSpace:"nowrap",
-                color: active ? activeColor : "#64748B",
-                borderBottom: active ? `2px solid ${activeColor}` : "2px solid transparent",
-                marginBottom:-1, transition:"all 0.15s",
-                background: active && isDiscovery ? "rgba(124,58,237,0.04)"
-                  : active && isAudit ? "rgba(8,145,178,0.04)" : "transparent",
-              } as any}>
-                {isDiscovery
-                  ? <><TrendingUp size={12} style={{marginRight:4,verticalAlign:"middle"}}/>{tab.label}</>
-                  : tab.label
-                }
+                color: active ? "#2563EB" : "#64748B",
+                borderBottom: active ? "2px solid #2563EB" : "2px solid transparent",
+                marginBottom:-1, transition:"all 0.15s", background:"transparent",
+              }}>
+                {tab.label}
               </button>
             );
           })}
         </div>
 
-        {/* ── Tab content ── */}
-        {activeMetric === "discovery" && (
-          <div style={{ padding:"24px 20px" }}>
-            <DiscoveryPanel rawData={rawData} kwData={kwData} kwLoading={kwLoading} isLoading={isLoading} periodLabel={periodLabel}/>
-          </div>
-        )}
-
-        {activeMetric === "audit" && (
-          <div style={{ padding:"20px" }}>
-            <AuditReport profileId={profile.id}/>
-          </div>
-        )}
-
-        {!isSpecialTab && (
+        {isAnalytics && (
           <div style={{ padding:"24px 20px" }}>
             {/* Big number */}
             <div style={{ marginBottom:20 }}>
@@ -419,13 +444,12 @@ export function PerformanceView({ profile, onBack }: { profile: any; onBack?: ()
                         <stop offset="95%" stopColor="#2563EB" stopOpacity={0}/>
                       </linearGradient>
                     </defs>
-                    {/* Horizontal light lines + dashed vertical separators (GBP style) */}
                     <CartesianGrid
-                      strokeDasharray="5 5"
+                      strokeDasharray="6 4"
                       vertical={true}
-                      horizontal={true}
-                      stroke="#E2E8F0"
-                      verticalFill={undefined}
+                      horizontal={false}
+                      stroke="#94A3B8"
+                      strokeOpacity={0.35}
                     />
                     <XAxis dataKey="label" axisLine={false} tickLine={false} tick={{ fontSize:12, fill:"#94A3B8", fontFamily:"Inter" }} interval={0}/>
                     <YAxis axisLine={false} tickLine={false} tick={{ fontSize:11, fill:"#94A3B8", fontFamily:"Inter" }} width={36} tickFormatter={v=>v>=1000?`${(v/1000).toFixed(0)}k`:v}/>
@@ -448,9 +472,10 @@ export function PerformanceView({ profile, onBack }: { profile: any; onBack?: ()
           </div>
         )}
       </div>
+      {/* spacer if discovery open and chart closed */}
 
-      {/* ── Quick stats (only on metric tabs) ── */}
-      {!isSpecialTab && (
+      {/* ── Quick stats ── */}
+      {isAnalytics && (
         <div style={{ display:"flex", gap:12, flexWrap:"wrap" }}>
           {[
             { metric:"CALL_CLICKS",    label:"Calls",            icon:Phone,      color:"#10b981" },
