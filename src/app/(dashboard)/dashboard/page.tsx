@@ -82,8 +82,21 @@ export default async function DashboardPage() {
 
   return (
     <div style={{ fontFamily: "Inter, sans-serif", maxWidth: 1100, margin: "0 auto", paddingBottom: 60 }}>
+      <style>{`
+        @media (max-width: 768px) {
+          .dash-stat-grid { grid-template-columns: repeat(2, 1fr) !important; gap: 12px !important; }
+          .dash-main-grid { grid-template-columns: 1fr !important; }
+          .dash-banner { flex-direction: column !important; align-items: flex-start !important; gap: 10px !important; }
+          .dash-banner-btn { width: 100% !important; justify-content: center !important; }
+          .dash-header h1 { font-size: 20px !important; }
+        }
+        @media (max-width: 480px) {
+          .dash-stat-grid { grid-template-columns: repeat(2, 1fr) !important; gap: 8px !important; }
+          .dash-stat-val { font-size: 24px !important; }
+        }
+      `}</style>
       {/* Header */}
-      <div style={{ marginBottom: 32 }}>
+      <div style={{ marginBottom: 32 }} className="dash-header">
         <h1 style={{ fontSize: 24, fontWeight: 700, color: "#111827", margin: "0 0 4px", letterSpacing: "-0.01em" }}>Welcome back, {name} 👋</h1>
         <p style={{ fontSize: 14, color: "#64748B", margin: 0 }}>Your Google Business Profile command centre.</p>
       </div>
@@ -95,7 +108,7 @@ export default async function DashboardPage() {
           background: "#fff", border: "1px solid #e0e7ff", borderLeft: "4px solid #2563eb",
           borderRadius: 8, display: "flex", alignItems: "center", gap: 16,
           boxShadow: "0 1px 2px rgba(0,0,0,0.02)"
-        }}>
+        }} className="dash-banner">
           <div style={{ width: 40, height: 40, borderRadius: 10, background: "#eff6ff", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
             <MapPin style={{ width: 20, height: 20, color: "#2563eb" }} />
           </div>
@@ -103,7 +116,7 @@ export default async function DashboardPage() {
             <p style={{ fontSize: 14, fontWeight: 600, color: "#1e3a8a", margin: "0 0 4px" }}>Connect your Google Business Profile</p>
             <p style={{ fontSize: 13, color: "#475569", margin: 0 }}>Link your Google Account to sync managed locations and start publishing.</p>
           </div>
-          <Link href="/settings" style={btnPrimary}>
+          <Link href="/settings" style={{...btnPrimary, flexShrink: 0}} className="dash-banner-btn">
             Connect Google <ArrowRight size={14} />
           </Link>
         </div>
@@ -116,7 +129,7 @@ export default async function DashboardPage() {
           background: "#fff", border: "1px solid #fef08a", borderLeft: "4px solid #f59e0b",
           borderRadius: 8, display: "flex", alignItems: "center", gap: 16,
           boxShadow: "0 1px 2px rgba(0,0,0,0.02)"
-        }}>
+        }} className="dash-banner">
           <div style={{ width: 40, height: 40, borderRadius: 10, background: "#fef3c7", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
             <AlertTriangle style={{ width: 20, height: 20, color: "#d97706" }} />
           </div>
@@ -126,14 +139,14 @@ export default async function DashboardPage() {
             </p>
             <p style={{ fontSize: 13, color: "#b45309", margin: 0 }}>Review posts drafted by your team members before publishing.</p>
           </div>
-          <Link href="/calendar" style={{ ...btnPrimary, background: "#fff", color: "#d97706", border: "1px solid #fcd34d" }}>
+          <Link href="/calendar" style={{ ...btnPrimary, background: "#fff", color: "#d97706", border: "1px solid #fcd34d", flexShrink: 0 }} className="dash-banner-btn">
             Review Posts <ArrowRight size={14} />
           </Link>
         </div>
       )}
 
       {/* Stat Cards */}
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(200px, 1fr))", gap: 20, marginBottom: 32 }}>
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(200px, 1fr))", gap: 20, marginBottom: 32 }} className="dash-stat-grid">
         {statCards.map((c) => (
           <Link key={c.label} href={c.href} style={{
             ...cardStyle, display: "flex", flexDirection: "column", gap: 12, textDecoration: "none",
@@ -144,14 +157,14 @@ export default async function DashboardPage() {
               <span style={{ fontSize: 12, fontWeight: 600, color: "#64748B", textTransform: "uppercase", letterSpacing: "0.05em" }}>{c.label}</span>
             </div>
             <div>
-              <p style={{ fontSize: 32, fontWeight: 700, color: "#111827", lineHeight: 1, margin: "0 0 4px", letterSpacing: "-0.02em" }}>{c.value.toLocaleString()}</p>
+              <p style={{ fontSize: 32, fontWeight: 700, color: "#111827", lineHeight: 1, margin: "0 0 4px", letterSpacing: "-0.02em" }} className="dash-stat-val">{c.value.toLocaleString()}</p>
               <p style={{ fontSize: 12, color: "#94A3B8", margin: 0 }}>{c.sub}</p>
             </div>
           </Link>
         ))}
       </div>
 
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 300px", gap: 24 }}>
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 300px", gap: 24 }} className="dash-main-grid">
         {/* Team Members (admins only) */}
         {isAdmin ? (
           <div style={{ ...cardStyle, padding: 0, overflow: "hidden", alignSelf: "flex-start" }}>

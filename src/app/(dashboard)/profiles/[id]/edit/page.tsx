@@ -180,16 +180,29 @@ export default function EditProfilePage() {
   ];
 
   return (
-    <div style={{ minHeight: "100vh", background: "#f8fafc", margin: "-32px -40px", padding: "40px" }}>
+    <div style={{ minHeight: "100vh", background: "#f8fafc", margin: "-32px -40px", padding: "40px" }} className="edit-page-outer">
+      <style>{`
+        @media (max-width: 768px) {
+          .edit-page-outer { margin: -16px -16px !important; padding: 16px !important; }
+          .edit-page-header { flex-wrap: wrap !important; gap: 10px !important; padding: 12px 0 !important; }
+          .edit-page-header-title h1 { font-size: 15px !important; }
+          .edit-page-header-actions { width: 100% !important; }
+          .edit-page-header-actions a, .edit-page-header-actions button { flex: 1; justify-content: center !important; }
+          .edit-profile-layout { flex-direction: column !important; gap: 16px !important; }
+          .edit-profile-sidenav { width: 100% !important; position: relative !important; top: auto !important; }
+          .edit-profile-sidenav > div { flex-direction: row !important; overflow-x: auto !important; padding-bottom: 4px !important; scrollbar-width: none; }
+          .edit-profile-sidenav > div::-webkit-scrollbar { display: none; }
+          .edit-profile-sidenav button { white-space: nowrap !important; flex-shrink: 0 !important; padding: 7px 12px !important; font-size: 11px !important; }
+        }
+      `}</style>
       <div style={{ maxWidth: 1000, margin: "0 auto" }}>
-      {/* Sticky Header */}
-      <div style={{ 
-        position: "sticky", top: 0, zIndex: 10, background: "rgba(255,255,255,0.9)", 
-        backdropFilter: "blur(8px)", borderBottom: "1px solid #eaeaea", 
-        padding: "16px 0", marginBottom: 24, display: "flex", alignItems: "center", justifyContent: "space-between" 
-      }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-          <Link href="/profiles" style={{ padding: 8, background: "#fff", border: "1px solid #e5e7eb", borderRadius: 8, color: "#4b5563" }}>
+      <div style={
+        { position: "sticky", top: 0, zIndex: 10, background: "rgba(255,255,255,0.9)",
+        backdropFilter: "blur(8px)", borderBottom: "1px solid #eaeaea",
+        padding: "16px 0", marginBottom: 24, display: "flex", alignItems: "center", justifyContent: "space-between" }
+      } className="edit-page-header">
+        <div style={{ display: "flex", alignItems: "center", gap: 12 }} className="edit-page-header-title">
+          <Link href="/profiles" style={{ padding: 8, background: "#fff", border: "1px solid #e5e7eb", borderRadius: 8, color: "#4b5563", flexShrink: 0 }}>
             <ArrowLeft size={16} />
           </Link>
           <div>
@@ -197,7 +210,7 @@ export default function EditProfilePage() {
             <p style={{ fontSize: 12, color: "#666", margin: 0 }}>Google Business Profile Editor</p>
           </div>
         </div>
-        <div style={{ display: "flex", gap: 12 }}>
+        <div style={{ display: "flex", gap: 12 }} className="edit-page-header-actions">
           {formData.metadata?.mapsUri && (
             <a href={formData.metadata.mapsUri} target="_blank" rel="noreferrer" className="btn btn-ghost" style={{ fontSize: 13, display: "flex", alignItems: "center", gap: 6 }}>
               <ExternalLink size={14} /> View on Maps

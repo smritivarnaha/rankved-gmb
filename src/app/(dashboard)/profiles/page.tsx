@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { Loader2, X, AlertCircle, CheckCircle2, RefreshCw, Plus, Eye, Trash2, Wand2, Brain, FileDown, Upload, BarChart3, Edit2, Save, Users, FileText, CalendarDays, ArrowRight } from "lucide-react";
 import useSWR from "swr";
@@ -95,6 +95,14 @@ function ProfileCard({
 }) {
   const { data: postsData } = useSWR(`/api/posts?profileId=${profile.id}`, fetcher, { revalidateOnFocus: false });
   const posts: any[] = postsData?.data || [];
+  const [isMobile, setIsMobile] = useState(false);
+
+  useEffect(() => {
+    const check = () => setIsMobile(window.innerWidth <= 768);
+    check();
+    window.addEventListener("resize", check);
+    return () => window.removeEventListener("resize", check);
+  }, []);
 
   const now = new Date();
   const published = posts.filter((p: any) => {
@@ -195,20 +203,36 @@ function ProfileCard({
         </div>
       </div>
 
-      {/* Action — Edit Profile only */}
-      <div style={{ padding: "12px 14px 14px" }}>
-        <Link
-          href={`/profiles/${profile.id}/edit`}
-          style={{
-            display: "flex", alignItems: "center", justifyContent: "center",
-            gap: 8, height: 36, background: "#2563eb", border: "none",
-            borderRadius: 8, color: "#fff", fontSize: 12, fontWeight: 700,
-            textDecoration: "none", transition: "background 150ms ease",
-          }}
-          onMouseEnter={e => e.currentTarget.style.background = "#1d4ed8"}
-          onMouseLeave={e => e.currentTarget.style.background = "#2563eb"}
+      {/* Action Buttons — original 3-action row restored */}
+      <div style={{ padding: "12px 14px 6px" }}>
+        <Link href={`/profiles/${profile.id}`} style={{
+          display: "flex", alignItems: "center", justifyContent: "space-between",
+          padding: "10px 14px", background: "#fff", border: `1px solid ${theme.border}30`,
+          borderRadius: 10, textDecoration: "none", transition: "all 0.2s",
+        }}
+          onMouseEnter={(e) => { e.currentTarget.style.background = theme.bgLight; e.currentTarget.style.borderColor = theme.border; }}
+          onMouseLeave={(e) => { e.currentTarget.style.background = "#fff"; e.currentTarget.style.borderColor = `${theme.border}30`; }}
         >
-          <Edit2 size={13} /> Edit Profile
+          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+            <Eye size={14} color={theme.icon} />
+            <span style={{ fontSize: 12, fontWeight: 700, color: theme.text }}>View Posts</span>
+          </div>
+          <ArrowRight size={14} color={theme.icon} />
+        </Link>
+      </div>
+
+      <div style={{ display: "flex", gap: 8, padding: "6px 14px 14px" }}>
+        <button onClick={() => onBulkImport(profile.id)}
+          style={{ flex: 1, height: 32, display: "flex", alignItems: "center", justifyContent: "center", gap: 6, background: "#f8fafc", border: "1px solid #e2e8f0", borderRadius: 8, color: "#64748b", fontSize: 11, fontWeight: 600, cursor: "pointer" }}>
+          <Upload size={12} /> Bulk
+        </button>
+        <Link href={`/profiles/${profile.id}/edit`}
+          style={{ flex: 1, height: 32, display: "flex", alignItems: "center", justifyContent: "center", gap: 6, background: "#fff", border: "1px solid #2563eb", borderRadius: 8, color: "#2563eb", fontSize: 11, fontWeight: 600, textDecoration: "none" }}>
+          <Edit2 size={12} /> Edit GBP
+        </Link>
+        <Link href={`/posts/new?profile=${profile.id}&from=profile`}
+          style={{ flex: 1, height: 32, display: "flex", alignItems: "center", justifyContent: "center", gap: 6, background: "#2563eb", border: "none", borderRadius: 8, color: "#fff", fontSize: 11, fontWeight: 600, textDecoration: "none" }}>
+          <Plus size={12} /> Post
         </Link>
       </div>
     </div>
