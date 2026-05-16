@@ -44,10 +44,10 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ error: "No valid Google account connected" }, { status: 400 });
     }
 
-    // gbpLocationId stores the full resource path: accounts/{acct}/locations/{loc}
-    // The v4 reviews API expects exactly that path — do NOT prepend gbpAccountId again.
-    const locationName = location.gbpLocationId; // e.g. "accounts/123/locations/456"
-    const reviewsUrl = `https://mybusiness.googleapis.com/v4/${locationName}/reviews?pageSize=50`;
+    // v4 reviews API needs full path: accounts/{acct}/locations/{loc}
+    // gbpAccountId = "accounts/xxx", gbpLocationId = "locations/yyy"
+    const locationPath = `${location.gbpAccountId}/${location.gbpLocationId}`;
+    const reviewsUrl = `https://mybusiness.googleapis.com/v4/${locationPath}/reviews?pageSize=50`;
     console.log("[Reviews] Fetching:", reviewsUrl);
 
     const reviewsRes = await fetchWithRetry(

@@ -31,10 +31,10 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
     // Fetch live logo as well
     let liveLogo = loc.logoUrl;
     try {
-      // gbpLocationId is the full resource path: accounts/{acct}/locations/{loc}
-      // Do NOT prepend gbpAccountId — that doubles the account segment.
+      // v4 media API needs full path: accounts/{acct}/locations/{loc}
+      const mediaPath = `${loc.gbpAccountId}/${loc.gbpLocationId}`;
       const mediaRes = await fetch(
-        `https://mybusiness.googleapis.com/v4/${locationName}/media?maxResults=10`,
+        `https://mybusiness.googleapis.com/v4/${mediaPath}/media?maxResults=10`,
         { headers: { Authorization: `Bearer ${accessToken}` } }
       );
       if (mediaRes.ok) {
