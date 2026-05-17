@@ -167,20 +167,34 @@ export default function SettingsPage() {
     <div style={{ ...sectionGap, maxWidth: 900 }}>
       <style>{`
         /* ── Settings page mobile fixes ── */
+        .s-card-header { display: flex; align-items: center; justify-content: space-between; gap: 16px; }
         @media (max-width: 768px) {
+          .page-title { font-size: 22px !important; }
           .stabs { overflow-x: auto; -webkit-overflow-scrolling: touch; scrollbar-width: none; flex-wrap: nowrap !important; padding-bottom: 1px; }
           .stabs::-webkit-scrollbar { display: none; }
-          .stabs button { white-space: nowrap; flex-shrink: 0; padding: 8px 14px !important; font-size: 13px !important; }
-          .snotif-grid { grid-template-columns: 1fr !important; }
-          .sbrand-3col { grid-template-columns: 1fr 1fr !important; }
-          .sbrand-top { flex-direction: column !important; align-items: stretch !important; }
-          .sbrand-logo { width: 100% !important; height: 100px !important; }
-          .sprofiles-grid { grid-template-columns: 1fr !important; }
-          .sactions { flex-wrap: wrap !important; gap: 8px !important; }
-          .sactions button, .sactions a { flex: 1; min-width: 120px; justify-content: center; }
-        }
-        @media (max-width: 480px) {
-          .sbrand-3col { grid-template-columns: 1fr !important; }
+          .stabs button { white-space: nowrap; flex-shrink: 0; padding: 12px 14px !important; font-size: 14px !important; }
+          
+          .card-body { padding: 16px !important; }
+          .s-card-header { flex-direction: column !important; align-items: flex-start !important; gap: 12px !important; }
+          .s-card-header button { width: 100% !important; justify-content: center; }
+
+          .snotif-grid { grid-template-columns: 1fr !important; gap: 16px !important; }
+          .snotif-actions { flex-direction: column !important; align-items: stretch !important; gap: 10px !important; }
+          .snotif-actions button { width: 100% !important; justify-content: center; }
+          
+          .stpl-header { flex-direction: column !important; align-items: flex-start !important; gap: 12px !important; }
+          .stpl-header-btns { width: 100% !important; display: grid !important; grid-template-columns: 1fr 1fr 1fr !important; gap: 6px !important; }
+          .stpl-header-btns button { padding: 8px 4px !important; font-size: 11px !important; width: 100%; text-align: center; }
+
+          .sactions { flex-direction: column !important; align-items: stretch !important; gap: 10px !important; }
+          .sactions > div.spacer { display: none !important; }
+          .sactions button, .sactions a { width: 100% !important; flex: none !important; justify-content: center; }
+
+          .sprofiles-grid { grid-template-columns: 1fr !important; gap: 12px !important; }
+          
+          .sbrand-3col { grid-template-columns: 1fr !important; gap: 16px !important; }
+          .sbrand-top { flex-direction: column !important; align-items: stretch !important; gap: 16px !important; }
+          .sbrand-logo { width: 100% !important; height: auto !important; aspect-ratio: 1 !important; max-height: 160px !important; }
         }
       `}</style>
       <div>
@@ -228,7 +242,7 @@ export default function SettingsPage() {
       {/* Google Integration */}
       {canConnectGoogle && activeTab === "accounts" && (
         <div className="card shadow-sm">
-          <div className="card-header"><h2 className="card-title" style={{ fontSize: 14 }}>Google Business Accounts</h2></div>
+          <div className="card-header s-card-header"><h2 className="card-title" style={{ fontSize: 14 }}>Google Business Accounts</h2></div>
           <div className="card-body">
             {loadingAccounts ? (
               <div style={{ display: "flex", justifyContent: "center", padding: "10px 0" }}>
@@ -264,7 +278,7 @@ export default function SettingsPage() {
                     {fetching ? <Loader2 className="anim-spin" style={{ width: 14, height: 14 }} /> : <RefreshCw style={{ width: 14, height: 14 }} />}
                     Fetch Profiles
                   </button>
-                  <div style={{ flex: 1 }}></div>
+                  <div style={{ flex: 1 }} className="spacer"></div>
                   <button onClick={handleReset} disabled={resetting || fetching} className="btn" style={{ fontSize: 12, padding: "8px 14px", background: "var(--bg-elevated)", border: "1px solid var(--border)" }}>
                     {resetting ? <Loader2 className="anim-spin" style={{ width: 14, height: 14 }} /> : <RefreshCw style={{ width: 14, height: 14 }} />}
                     Reset Profiles
@@ -291,7 +305,7 @@ export default function SettingsPage() {
       {/* Email Notifications */}
       {canConnectGoogle && activeTab === "notifications" && (
         <div className="card shadow-sm">
-          <div className="card-header">
+          <div className="card-header s-card-header">
             <h2 className="card-title" style={{ fontSize: 14 }}>Email Notifications</h2>
           </div>
           <div className="card-body">
@@ -330,9 +344,9 @@ export default function SettingsPage() {
 
               {/* Template Editor */}
               <div style={{ border: "1px solid var(--border-light)", borderRadius: 10, overflow: "hidden" }}>
-                <div style={{ background: "var(--bg-elevated)", padding: "8px 12px", borderBottom: "1px solid var(--border-light)", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                  <span style={{ fontSize: 12, fontWeight: 600 }}>Custom Templates (HTML Supported)</span>
-                  <div style={{ display: "flex", gap: 8 }}>
+                <div style={{ background: "var(--bg-elevated)", padding: "12px 14px", borderBottom: "1px solid var(--border-light)", display: "flex", justifyContent: "space-between", alignItems: "center" }} className="stpl-header">
+                  <span style={{ fontSize: 13, fontWeight: 600 }}>Custom Templates (HTML Supported)</span>
+                  <div style={{ display: "flex", gap: 8 }} className="stpl-header-btns">
                     {["SUCCESS", "FAILURE", "SCHEDULED"].map(t => (
                       <button 
                         key={t}
@@ -385,7 +399,7 @@ export default function SettingsPage() {
                 </div>
               </div>
 
-              <div style={{ display: "flex", gap: 12, alignItems: "center", borderTop: "1px solid var(--border-light)", paddingTop: 16 }}>
+              <div style={{ display: "flex", gap: 12, alignItems: "center", borderTop: "1px solid var(--border-light)", paddingTop: 16 }} className="snotif-actions">
                 <button 
                   onClick={handleSaveSettings}
                   disabled={savingSettings}
@@ -424,7 +438,7 @@ export default function SettingsPage() {
       {/* Profiles List */}
       {canConnectGoogle && activeTab === "profiles" && (
         <div className="card shadow-sm">
-          <div className="card-header">
+          <div className="card-header s-card-header">
             <div>
               <h2 className="card-title" style={{ fontSize: 14 }}>Profiles</h2>
               <p style={{ fontSize: 11, color: "var(--text-muted)", marginTop: 2 }}>
@@ -474,7 +488,7 @@ export default function SettingsPage() {
       {/* Branding List */}
       {isSuperAdmin && activeTab === "branding" && (
         <div className="card shadow-sm">
-          <div className="card-header">
+          <div className="card-header s-card-header">
             <h2 className="card-title" style={{ fontSize: 14 }}>Sidebar Branding</h2>
           </div>
           <div className="card-body">
