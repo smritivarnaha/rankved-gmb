@@ -392,6 +392,8 @@ export function PerformanceView({ profile, onBack }: { profile: any; onBack?: ()
           .disc-detail-grid > div:first-child { position: relative !important; top: auto !important; }
           .perf-metric-tabs { overflow-x: auto; scrollbar-width: none; }
           .perf-metric-tabs::-webkit-scrollbar { display: none; }
+          .perf-controls-row { flex-direction: column !important; align-items: stretch !important; }
+          .perf-quick-stats { flex-direction: column !important; }
         }
       `}</style>
 
@@ -409,7 +411,7 @@ export function PerformanceView({ profile, onBack }: { profile: any; onBack?: ()
       </div>
 
       {/* ── Period row + view mode tabs ── */}
-      <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", marginBottom:20, gap:12, flexWrap:"wrap" }}>
+      <div className="perf-controls-row" style={{ display:"flex", alignItems:"center", justifyContent:"space-between", marginBottom:20, gap:12, flexWrap:"wrap" }}>
         {/* Period pills — hidden on Audit tab */}
         {viewMode !== "audit" && (
           <div style={{ display:"inline-flex", alignItems:"center", gap:2, background:"#F8FAFC", border:"1px solid #E2E8F0", borderRadius:10, padding:4 }}>
@@ -542,7 +544,7 @@ export function PerformanceView({ profile, onBack }: { profile: any; onBack?: ()
 
       {/* ── Quick stats ── */}
       {isAnalytics && (
-        <div style={{ display:"flex", gap:12, flexWrap:"wrap" }}>
+        <div className="perf-quick-stats" style={{ display:"flex", gap:12, flexWrap:"wrap" }}>
           {[
             { metric:"CALL_CLICKS",    label:"Calls",            icon:Phone,      color:"#10b981" },
             { metric:"WEBSITE_CLICKS", label:"Website Clicks",   icon:Globe,      color:"#6366f1" },

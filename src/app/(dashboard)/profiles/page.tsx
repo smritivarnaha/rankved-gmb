@@ -226,10 +226,6 @@ function ProfileCard({
           style={{ flex: 1, height: 32, display: "flex", alignItems: "center", justifyContent: "center", gap: 6, background: "#f8fafc", border: "1px solid #e2e8f0", borderRadius: 8, color: "#64748b", fontSize: 11, fontWeight: 600, cursor: "pointer" }}>
           <Upload size={12} /> Bulk
         </button>
-        <Link href={`/profiles/${profile.id}/edit`}
-          style={{ flex: 1, height: 32, display: "flex", alignItems: "center", justifyContent: "center", gap: 6, background: "#fff", border: "1px solid #2563eb", borderRadius: 8, color: "#2563eb", fontSize: 11, fontWeight: 600, textDecoration: "none" }}>
-          <Edit2 size={12} /> Edit GBP
-        </Link>
         <Link href={`/posts/new?profile=${profile.id}&from=profile`}
           style={{ flex: 1, height: 32, display: "flex", alignItems: "center", justifyContent: "center", gap: 6, background: "#2563eb", border: "none", borderRadius: 8, color: "#fff", fontSize: 11, fontWeight: 600, textDecoration: "none" }}>
           <Plus size={12} /> Post
