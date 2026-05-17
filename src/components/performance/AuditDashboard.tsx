@@ -171,7 +171,7 @@ function GaugeBlock({ label, value, max, color, suffix = "" }: any) {
       <div className="h-2 w-full bg-slate-100 rounded-full overflow-hidden">
          <div 
            className={`h-full ${color} rounded-full transition-all duration-1000`} 
-           style={{ width: \`\${percentage}%\` }}
+           style={{ width: `${percentage}%` }}
          />
       </div>
     </div>
