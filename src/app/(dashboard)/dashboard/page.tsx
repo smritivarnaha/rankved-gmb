@@ -101,6 +101,11 @@ export default async function DashboardPage() {
         @media (max-width: 480px) {
           .dash-stat-grid { grid-template-columns: repeat(2, 1fr) !important; gap: 8px !important; }
           .dash-stat-val { font-size: 24px !important; }
+          .dash-list-item { flex-direction: column !important; align-items: flex-start !important; gap: 10px !important; }
+          .dash-list-item .dash-list-right { text-align: left !important; display: flex; align-items: center; gap: 8px; }
+          .dash-list-item .dash-list-right p { margin: 0 !important; }
+          .dash-team-item { grid-template-columns: 1fr !important; gap: 12px !important; }
+          .dash-team-stats { justify-content: flex-start !important; gap: 16px !important; }
         }
       `}</style>
       {/* Header */}
@@ -200,49 +205,40 @@ export default async function DashboardPage() {
                 <p style={{ fontSize: 13, color: "#64748B", margin: 0 }}>Posts you schedule will appear here.</p>
               </div>
             ) : (
-              <div style={{ overflowX: "auto", WebkitOverflowScrolling: "touch" }}>
-                <table style={{ minWidth: 500, width: "100%", borderCollapse: "collapse", textAlign: "left", tableLayout: "fixed" }}>
-                  <thead>
-                    <tr style={{ borderBottom: "1px solid #eaeaea", background: "#f8f9fa" }}>
-                      <th style={{ width: "45%", fontSize: 11, fontWeight: 600, color: "#64748B", padding: "12px 20px", textTransform: "uppercase", letterSpacing: "0.05em" }}>POST TITLE</th>
-                      <th style={{ width: "35%", fontSize: 11, fontWeight: 600, color: "#64748B", padding: "12px 20px", textTransform: "uppercase", letterSpacing: "0.05em" }}>LOCATION</th>
-                      <th style={{ width: "20%", fontSize: 11, fontWeight: 600, color: "#64748B", padding: "12px 20px", textTransform: "uppercase", letterSpacing: "0.05em", textAlign: "right" }}>DATE & TIME</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {upcomingPosts.map((post: any, idx: number) => {
-                      const title = post.summary || "No content";
-                      const shortTitle = title.length > 60 ? title.substring(0, 60) + "..." : title;
-                      return (
-                        <tr key={post.id} style={{ borderBottom: "1px solid #f8f9fa", transition: "background 0.15s" }} className="hover-bg-muted">
-                          <td style={{ padding: "16px 20px", overflow: "hidden" }}>
-                            <Link href={`/posts/${post.id}`} style={{ textDecoration: "none", display: "block" }}>
-                              <p style={{ fontSize: 13, fontWeight: 500, color: "#111827", margin: 0, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }} title={title}>
-                                {shortTitle}
-                              </p>
-                            </Link>
-                          </td>
-                          <td style={{ padding: "16px 20px", overflow: "hidden" }}>
-                            <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                              <MapPin size={12} color="#94A3B8" style={{ flexShrink: 0 }} />
-                              <span style={{ fontSize: 12, color: "#64748B", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }} title={post.location?.name || "Unknown Location"}>
-                                {post.location?.name || "Unknown Location"}
-                              </span>
-                            </div>
-                          </td>
-                          <td style={{ padding: "16px 20px", textAlign: "right" }}>
-                            <p style={{ fontSize: 13, fontWeight: 600, color: "#111827", margin: "0 0 2px", whiteSpace: "nowrap" }}>
-                              {post.scheduledAt ? new Date(post.scheduledAt).toLocaleDateString("en-US", { month: "short", day: "numeric", timeZone: "Asia/Kolkata" }) : "N/A"}
-                            </p>
-                            <p style={{ fontSize: 11, color: "#94A3B8", margin: 0, whiteSpace: "nowrap" }}>
-                              {post.scheduledAt ? new Date(post.scheduledAt).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit", hour12: true, timeZone: "Asia/Kolkata" }) : ""}
-                            </p>
-                          </td>
-                        </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
+              <div>
+                {upcomingPosts.map((post: any, idx: number) => {
+                  const title = post.summary || "No content";
+                  const shortTitle = title.length > 70 ? title.substring(0, 70) + "..." : title;
+                  return (
+                    <Link key={post.id} href={`/posts/${post.id}`} style={{ textDecoration: "none", display: "block" }}>
+                      <div style={{
+                        display: "flex", alignItems: "center", justifyContent: "space-between", gap: 16,
+                        padding: "16px 20px", borderBottom: idx === upcomingPosts.length - 1 ? "none" : "1px solid #f8f9fa",
+                        transition: "background 0.15s"
+                      }} className="hover-bg-muted dash-list-item">
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                          <p style={{ fontSize: 13, fontWeight: 600, color: "#111827", margin: "0 0 6px", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }} title={title}>
+                            {shortTitle}
+                          </p>
+                          <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                            <MapPin size={12} color="#94A3B8" style={{ flexShrink: 0 }} />
+                            <span style={{ fontSize: 12, color: "#64748B", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }} title={post.location?.name || "Unknown Location"}>
+                              {post.location?.name || "Unknown Location"}
+                            </span>
+                          </div>
+                        </div>
+                        <div style={{ textAlign: "right", flexShrink: 0 }} className="dash-list-right">
+                          <p style={{ fontSize: 13, fontWeight: 700, color: "#111827", margin: "0 0 2px" }}>
+                            {post.scheduledAt ? new Date(post.scheduledAt).toLocaleDateString("en-US", { month: "short", day: "numeric", timeZone: "Asia/Kolkata" }) : "N/A"}
+                          </p>
+                          <p style={{ fontSize: 11, color: "#94A3B8", margin: 0 }}>
+                            {post.scheduledAt ? new Date(post.scheduledAt).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit", hour12: true, timeZone: "Asia/Kolkata" }) : ""}
+                          </p>
+                        </div>
+                      </div>
+                    </Link>
+                  );
+                })}
               </div>
             )}
           </div>
@@ -270,50 +266,46 @@ export default async function DashboardPage() {
                   <p style={{ fontSize: 13, color: "#64748B", margin: 0 }}>Add members from the Users section to delegate posting.</p>
                 </div>
               ) : (
-                <div style={{ overflowX: "auto", WebkitOverflowScrolling: "touch" }}>
-                  <table style={{ minWidth: 600, width: "100%", borderCollapse: "collapse", textAlign: "left" }}>
-                    <thead>
-                      <tr style={{ borderBottom: "1px solid #eaeaea", background: "#f8f9fa" }}>
-                        <th style={{ fontSize: 11, fontWeight: 600, color: "#64748B", padding: "12px 20px", textTransform: "uppercase", letterSpacing: "0.05em" }}>MEMBER</th>
-                        <th style={{ fontSize: 11, fontWeight: 600, color: "#64748B", padding: "12px 20px", textTransform: "uppercase", letterSpacing: "0.05em", textAlign: "center" }}>PUBLISHED</th>
-                        <th style={{ fontSize: 11, fontWeight: 600, color: "#64748B", padding: "12px 20px", textTransform: "uppercase", letterSpacing: "0.05em", textAlign: "center" }}>SCHEDULED</th>
-                        <th style={{ fontSize: 11, fontWeight: 600, color: "#64748B", padding: "12px 20px", textTransform: "uppercase", letterSpacing: "0.05em" }}>STATUS</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {teamMembers.map((m: any) => (
-                        <tr key={m.id} style={{ borderBottom: "1px solid #f8f9fa" }}>
-                          <td style={{ padding: "16px 20px" }}>
-                            <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-                              <div style={{ width: 32, height: 32, borderRadius: "50%", background: "#EFF6FF", color: "#2563EB", display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 600, fontSize: 13, flexShrink: 0 }}>
-                                {m.initials}
-                              </div>
-                              <div style={{ minWidth: 0 }}>
-                                <p style={{ fontSize: 14, fontWeight: 500, color: "#111827", margin: 0, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{m.name || "Unnamed"}</p>
-                                <p style={{ fontSize: 12, color: "#94A3B8", margin: 0, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{m.email}</p>
-                              </div>
-                            </div>
-                          </td>
-                          <td style={{ padding: "16px 20px", textAlign: "center" }}>
-                            <span style={{ fontSize: 14, fontWeight: 600, color: "#111827" }}>{m.published}</span>
-                          </td>
-                          <td style={{ padding: "16px 20px", textAlign: "center" }}>
-                            <span style={{ fontSize: 14, fontWeight: 600, color: "#111827" }}>{m.scheduled}</span>
-                          </td>
-                          <td style={{ padding: "16px 20px" }}>
-                            <span style={{
-                              fontSize: 10, fontWeight: 600, padding: "4px 8px", borderRadius: 4,
-                              background: m.isApproved ? "#ECFDF5" : "#FEF2F2",
-                              color: m.isApproved ? "#059669" : "#DC2626",
-                              textTransform: "uppercase", letterSpacing: "0.05em"
-                            }}>
-                              {m.isApproved ? "Active" : "Pending"}
-                            </span>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
+                <div>
+                  {teamMembers.map((m: any, idx: number) => (
+                    <div key={m.id} style={{
+                      display: "grid", gridTemplateColumns: "1fr auto auto",
+                      alignItems: "center", gap: 24, padding: "16px 20px",
+                      borderBottom: idx === teamMembers.length - 1 ? "none" : "1px solid #f8f9fa",
+                    }} className="dash-team-item">
+                      <div style={{ display: "flex", alignItems: "center", gap: 12, minWidth: 0 }}>
+                        <div style={{ width: 36, height: 36, borderRadius: "50%", background: "#EFF6FF", color: "#2563EB", display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 700, fontSize: 14, flexShrink: 0 }}>
+                          {m.initials}
+                        </div>
+                        <div style={{ minWidth: 0 }}>
+                          <p style={{ fontSize: 14, fontWeight: 600, color: "#111827", margin: "0 0 2px", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{m.name || "Unnamed"}</p>
+                          <p style={{ fontSize: 12, color: "#64748B", margin: 0, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{m.email}</p>
+                        </div>
+                      </div>
+                      
+                      <div style={{ display: "flex", alignItems: "center", gap: 24 }} className="dash-team-stats">
+                        <div style={{ textAlign: "center" }}>
+                          <p style={{ fontSize: 10, fontWeight: 600, color: "#94A3B8", textTransform: "uppercase", letterSpacing: "0.05em", margin: "0 0 4px" }}>Published</p>
+                          <span style={{ fontSize: 15, fontWeight: 700, color: "#111827" }}>{m.published}</span>
+                        </div>
+                        <div style={{ textAlign: "center" }}>
+                          <p style={{ fontSize: 10, fontWeight: 600, color: "#94A3B8", textTransform: "uppercase", letterSpacing: "0.05em", margin: "0 0 4px" }}>Scheduled</p>
+                          <span style={{ fontSize: 15, fontWeight: 700, color: "#111827" }}>{m.scheduled}</span>
+                        </div>
+                      </div>
+
+                      <div style={{ display: "flex", justifyContent: "flex-end" }}>
+                        <span style={{
+                          fontSize: 10, fontWeight: 700, padding: "4px 8px", borderRadius: 4,
+                          background: m.isApproved ? "#ECFDF5" : "#FEF2F2",
+                          color: m.isApproved ? "#059669" : "#DC2626",
+                          textTransform: "uppercase", letterSpacing: "0.05em"
+                        }}>
+                          {m.isApproved ? "Active" : "Pending"}
+                        </span>
+                      </div>
+                    </div>
+                  ))}
                 </div>
               )}
             </div>
