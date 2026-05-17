@@ -83,10 +83,7 @@ export function AuditReport({ profileId, publicData }: { profileId: string, publ
 
       <AuditDashboard auditData={audit} isPublic={isPublic} />
 
-      <div className="text-center pt-8">
-        <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mb-4">Powered by Rankved</p>
-        <img src="/rankved-logo.png" alt="Rankved" className="h-6 mx-auto opacity-30 grayscale" />
-      </div>
+
 
       <style jsx global>{`
         @media print {

@@ -218,6 +218,9 @@ export function AuditDashboard({ auditData, isPublic = false }: { auditData: any
           </div>
         </div>
       </div>
+
+      {/* ── Action Steps ─────────────────────────────────────────────── */}
+      <ActionSteps auditData={auditData} checklist={checklist} />
     </div>
   );
 }
@@ -236,3 +239,133 @@ function GaugeRow({ label, value, max, color, suffix = "" }: any) {
     </div>
   );
 }
+
+// ─── Action Steps ─────────────────────────────────────────────────────────────
+const GBP_URL = "https://business.google.com";
+
+function ActionSteps({ auditData, checklist }: { auditData: any, checklist: any }) {
+  // Build priority actions from real data
+  const actions: { priority: "high" | "medium" | "low"; title: string; desc: string; impact: string; cta: string; href: string }[] = [];
+
+  // Missing profile fields → high priority
+  if (!checklist.description) actions.push({
+    priority: "high", title: "Add a Business Description",
+    desc: "A description tells customers what you do and helps Google match your profile to local searches.",
+    impact: "+15% Search Visibility", cta: "Edit on Google", href: GBP_URL
+  });
+  if (!checklist.website) actions.push({
+    priority: "high", title: "Add Your Website URL",
+    desc: "Profiles with a website link receive 20–35% more website click-throughs from search.",
+    impact: "+20% Website Clicks", cta: "Edit on Google", href: GBP_URL
+  });
+  if (!checklist.hours) actions.push({
+    priority: "high", title: "Configure Business Hours",
+    desc: "Missing hours cause Google to show \"Hours not listed\" which reduces customer trust significantly.",
+    impact: "+12% Profile Views", cta: "Edit on Google", href: GBP_URL
+  });
+  if (!checklist.phone) actions.push({
+    priority: "high", title: "Add a Primary Phone Number",
+    desc: "A phone number enables the Call button in Google Maps, driving direct contact from searchers.",
+    impact: "+18% Call Clicks", cta: "Edit on Google", href: GBP_URL
+  });
+
+  // Low reply rate → medium priority
+  if (auditData.replyRate < 80) actions.push({
+    priority: "medium", title: "Reply to More Customer Reviews",
+    desc: `You've replied to ${auditData.replyRate}% of reviews. Replying to all reviews signals active management to Google and builds trust.`,
+    impact: "+8% Ranking Signal", cta: "Open Reviews", href: `${GBP_URL}/reviews`
+  });
+
+  // Low review velocity → medium
+  if (auditData.reviewsPerWeek < 1) actions.push({
+    priority: "medium", title: "Increase Your Review Velocity",
+    desc: "You're getting fewer than 1 review/week. Ask recent customers to leave a Google review via a direct link.",
+    impact: "+12% Visibility", cta: "Get Review Link", href: GBP_URL
+  });
+
+  // Photos tip — always a good suggestion
+  actions.push({
+    priority: "low", title: "Upload High-Resolution Photos",
+    desc: "Profiles with 10+ photos receive 35% more clicks. Upload interior, exterior, product, and team photos.",
+    impact: "+35% Photo Views", cta: "Add Photos", href: GBP_URL
+  });
+
+  // Q&A suggestion
+  actions.push({
+    priority: "low", title: "Add FAQs to the Q&A Section",
+    desc: "Pre-populate common questions & answers in your GBP Q&A to appear directly in Search and Maps.",
+    impact: "+10% Engagement", cta: "Manage Q&A", href: GBP_URL
+  });
+
+  const priorityColors: Record<string, { bg: string; text: string; label: string }> = {
+    high:   { bg: "#fef2f2", text: "#dc2626", label: "High Priority" },
+    medium: { bg: "#fffbeb", text: "#d97706", label: "Medium" },
+    low:    { bg: "#f0fdf4", text: "#16a34a", label: "Quick Win" },
+  };
+
+  return (
+    <div style={{ background: "#fff", border: "1px solid #eaeaea", borderRadius: 12, overflow: "hidden", boxShadow: "0 1px 4px rgba(0,0,0,0.04)" }}>
+      {/* Header */}
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "14px 18px", borderBottom: "1px solid #f1f5f9" }}>
+        <div>
+          <div style={{ fontSize: 13, fontWeight: 700, color: "#0f172a" }}>Recommended Action Steps</div>
+          <div style={{ fontSize: 11, color: "#94a3b8", marginTop: 1 }}>{actions.length} optimizations to improve your local presence</div>
+        </div>
+        <div style={{ fontSize: 11, fontWeight: 700, color: "#6366f1", background: "#eef2ff", padding: "3px 10px", borderRadius: 20 }}>
+          {actions.filter(a => a.priority === "high").length} urgent
+        </div>
+      </div>
+
+      {/* Action rows */}
+      <div>
+        {actions.map((action, i) => {
+          const pc = priorityColors[action.priority];
+          return (
+            <div key={i} className="audit-check-row" style={{
+              display: "grid", gridTemplateColumns: "1fr auto",
+              alignItems: "center", gap: 16,
+              padding: "12px 18px",
+              borderBottom: i < actions.length - 1 ? "1px solid #f8fafc" : "none",
+              background: "#fff"
+            }}>
+              <div style={{ display: "flex", alignItems: "flex-start", gap: 12, minWidth: 0 }}>
+                {/* Priority dot */}
+                <div style={{ width: 8, height: 8, borderRadius: "50%", background: pc.text, flexShrink: 0, marginTop: 6 }} />
+                <div style={{ minWidth: 0 }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap", marginBottom: 2 }}>
+                    <span style={{ fontSize: 13, fontWeight: 600, color: "#0f172a" }}>{action.title}</span>
+                    <span style={{ fontSize: 10, fontWeight: 700, letterSpacing: "0.04em", textTransform: "uppercase", padding: "1px 7px", borderRadius: 99, background: pc.bg, color: pc.text }}>
+                      {pc.label}
+                    </span>
+                    <span style={{ fontSize: 10, fontWeight: 600, color: "#10b981", background: "#ecfdf5", padding: "1px 7px", borderRadius: 99 }}>
+                      {action.impact}
+                    </span>
+                  </div>
+                  <div style={{ fontSize: 12, color: "#64748b", lineHeight: 1.5 }}>{action.desc}</div>
+                </div>
+              </div>
+              <a
+                href={action.href}
+                target="_blank"
+                rel="noopener noreferrer"
+                style={{
+                  flexShrink: 0, padding: "6px 14px", borderRadius: 8,
+                  border: "1px solid #e2e8f0", background: "#fff",
+                  fontSize: 12, fontWeight: 600, color: "#374151",
+                  cursor: "pointer", textDecoration: "none", whiteSpace: "nowrap",
+                  display: "inline-flex", alignItems: "center", gap: 5,
+                  transition: "all 0.15s",
+                }}
+                onMouseEnter={e => { (e.currentTarget as HTMLElement).style.borderColor = "#6366f1"; (e.currentTarget as HTMLElement).style.color = "#6366f1"; }}
+                onMouseLeave={e => { (e.currentTarget as HTMLElement).style.borderColor = "#e2e8f0"; (e.currentTarget as HTMLElement).style.color = "#374151"; }}
+              >
+                {action.cta} <ArrowUpRight style={{ width: 12, height: 12 }} />
+              </a>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
