@@ -1,178 +1,233 @@
 "use client";
 
 import { 
-  CheckCircle2, AlertTriangle, Search, 
-  TrendingUp, MessageSquare, ShieldCheck, 
-  ChevronRight, Sparkles, LayoutDashboard, ArrowUpRight,
-  XCircle, AlertCircle
+  CheckCircle2, Search, TrendingUp, MessageSquare, ShieldCheck, 
+  AlertCircle, Star, Eye, LayoutDashboard, ArrowUpRight, Sparkles
 } from "lucide-react";
+
+// ─── Score config ─────────────────────────────────────────────────────────────
+function getScoreColor(score: number): string {
+  if (score >= 80) return "#10b981";
+  if (score >= 50) return "#f59e0b";
+  return "#ef4444";
+}
+
+function getScoreLabel(score: number): string {
+  if (score >= 80) return "Excellent";
+  if (score >= 50) return "Needs Work";
+  return "Critical";
+}
 
 export function AuditDashboard({ auditData, isPublic = false }: { auditData: any, isPublic?: boolean }) {
   if (!auditData) return null;
-
   const checklist = auditData.checklist || {};
 
+  const metrics = [
+    { label: "Profile Quality", value: auditData.completionScore, suffix: "%", icon: ShieldCheck, sub: "Completion Score" },
+    { label: "Visibility Score", value: auditData.visibilityScore, suffix: "%", icon: Eye, sub: "Search Index" },
+    { label: "Reply Rate", value: auditData.replyRate, suffix: "%", icon: MessageSquare, sub: "Review Responses" },
+    { label: "Review Velocity", value: auditData.reviewsPerWeek, suffix: "", icon: TrendingUp, sub: "Per Week" },
+  ];
+
+  const checkItems = [
+    { key: "businessName", label: "Business Name" },
+    { key: "address", label: "Address & Location" },
+    { key: "phone", label: "Primary Phone Number" },
+    { key: "website", label: "Website URL" },
+    { key: "hours", label: "Business Hours" },
+    { key: "description", label: "Business Description" },
+    { key: "category", label: "Primary Category" },
+    { key: "__verified", label: "Verified Business Status", forceTrue: true },
+  ];
+
+  const passed = checkItems.filter(i => i.forceTrue || checklist[i.key]).length;
+  const total  = checkItems.length;
+
   return (
-    <div className="anim-fade-up space-y-8">
-      {/* Stat Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        <ScoreCard 
-          label="Profile Quality" 
-          value={auditData.completionScore} 
-          subtext="Completion"
-          icon={ShieldCheck}
-          suffix="%"
-        />
-        <ScoreCard 
-          label="Visibility Score" 
-          value={auditData.visibilityScore} 
-          subtext="Search Index"
-          icon={Search}
-          suffix="%"
-        />
-        <ScoreCard 
-          label="Reply Rate" 
-          value={auditData.replyRate} 
-          subtext="Response Rate"
-          icon={MessageSquare}
-          suffix="%"
-        />
-        <ScoreCard 
-          label="Weekly Velocity" 
-          value={auditData.reviewsPerWeek} 
-          subtext="Reviews / Week"
-          icon={TrendingUp}
-          suffix=""
-        />
+    <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
+      <style>{`
+        @keyframes barGrow { from { width: 0 } }
+        .audit-bar { animation: barGrow 0.9s ease-out forwards; }
+        .audit-check-row:hover { background: #f8fafc !important; }
+        .audit-metric-card:hover { box-shadow: 0 4px 16px rgba(0,0,0,0.08) !important; transform: translateY(-1px); }
+        .audit-metric-card { transition: box-shadow 0.2s, transform 0.2s; }
+        @media (max-width: 700px) {
+          .audit-metric-row { grid-template-columns: 1fr 1fr !important; }
+          .audit-body-grid { flex-direction: column !important; }
+        }
+      `}</style>
+
+      {/* ── 4 Metric Cards ──────────────────────────────────────────────── */}
+      <div className="audit-metric-row" style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr 1fr", gap: 12 }}>
+        {metrics.map(m => {
+          const color = getScoreColor(typeof m.value === "number" ? m.value : 0);
+          const label = typeof m.value === "number" && m.suffix === "%" ? getScoreLabel(m.value) : "";
+          return (
+            <div key={m.label} className="audit-metric-card" style={{
+              background: "#fff", border: "1px solid #eaeaea", borderRadius: 12,
+              padding: "16px 18px", boxShadow: "0 1px 4px rgba(0,0,0,0.04)"
+            }}>
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 12 }}>
+                <div style={{ width: 32, height: 32, borderRadius: 8, background: "#f1f5f9", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                  <m.icon style={{ width: 15, height: 15, color: "#64748b" }} />
+                </div>
+                {label && (
+                  <span style={{
+                    fontSize: 10, fontWeight: 700, letterSpacing: "0.05em",
+                    padding: "2px 8px", borderRadius: 20, textTransform: "uppercase",
+                    background: color + "18", color
+                  }}>{label}</span>
+                )}
+              </div>
+              <div style={{ fontSize: 28, fontWeight: 900, color: "#0f172a", lineHeight: 1, marginBottom: 4 }}>
+                {m.value}{m.suffix}
+              </div>
+              <div style={{ fontSize: 11, fontWeight: 600, color: "#94a3b8", textTransform: "uppercase", letterSpacing: "0.07em" }}>{m.label}</div>
+              <div style={{ fontSize: 10, color: "#cbd5e1", marginTop: 2 }}>{m.sub}</div>
+              {m.suffix === "%" && typeof m.value === "number" && (
+                <div style={{ marginTop: 10, height: 3, background: "#f1f5f9", borderRadius: 10, overflow: "hidden" }}>
+                  <div className="audit-bar" style={{ height: "100%", width: `${m.value}%`, background: color, borderRadius: 10 }} />
+                </div>
+              )}
+            </div>
+          );
+        })}
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
-        {/* Checklist Section */}
-        <div className="col-span-1 lg:col-span-7 space-y-6">
-          <div className="bg-white border border-slate-200 rounded-2xl p-6 lg:p-8 shadow-sm">
-            <div className="flex items-center justify-between mb-8">
-               <div>
-                  <h3 className="text-xl font-black text-slate-900 tracking-tight mb-1">Audit Checklist</h3>
-                  <p className="text-slate-500 text-sm font-medium">Required optimizations for 100% visibility.</p>
-               </div>
-               <div className="w-12 h-12 bg-emerald-50 rounded-xl flex items-center justify-center text-emerald-600 border border-emerald-100">
-                  <CheckCircle2 className="w-6 h-6" />
-               </div>
+      {/* ── Body: Checklist + Sidebar ────────────────────────────────────── */}
+      <div className="audit-body-grid" style={{ display: "flex", gap: 12, alignItems: "flex-start" }}>
+        
+        {/* Left: Checklist */}
+        <div style={{ flex: "0 0 60%", display: "flex", flexDirection: "column", gap: 12 }}>
+          <div style={{ background: "#fff", border: "1px solid #eaeaea", borderRadius: 12, overflow: "hidden", boxShadow: "0 1px 4px rgba(0,0,0,0.04)" }}>
+            {/* Header */}
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "14px 18px", borderBottom: "1px solid #f1f5f9" }}>
+              <div>
+                <div style={{ fontSize: 13, fontWeight: 700, color: "#0f172a" }}>Audit Checklist</div>
+                <div style={{ fontSize: 11, color: "#94a3b8", marginTop: 1 }}>{passed} of {total} optimizations complete</div>
+              </div>
+              <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                <div style={{
+                  fontSize: 11, fontWeight: 700, color: getScoreColor(Math.round(passed / total * 100)),
+                  background: getScoreColor(Math.round(passed / total * 100)) + "18",
+                  padding: "3px 10px", borderRadius: 20
+                }}>{Math.round(passed / total * 100)}%</div>
+                <div style={{ width: 28, height: 28, borderRadius: 8, background: "#f1f5f9", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                  <ShieldCheck style={{ width: 14, height: 14, color: "#64748b" }} />
+                </div>
+              </div>
             </div>
 
-            <div className="space-y-3">
-              <CheckItem label="Verified Business Status" isComplete={true} />
-              <CheckItem label="Business Name" isComplete={checklist.businessName ?? false} />
-              <CheckItem label="Address & Location" isComplete={checklist.address ?? false} />
-              <CheckItem label="Primary Phone Number" isComplete={checklist.phone ?? false} />
-              <CheckItem label="Website Link" isComplete={checklist.website ?? false} />
-              <CheckItem label="Business Hours Configuration" isComplete={checklist.hours ?? false} />
-              <CheckItem label="Detailed Business Description" isComplete={checklist.description ?? false} />
-              <CheckItem label="Primary Category Selection" isComplete={checklist.category ?? false} />
+            {/* Rows */}
+            <div>
+              {checkItems.map(item => {
+                const ok = item.forceTrue || !!checklist[item.key];
+                return (
+                  <div key={item.key} className="audit-check-row" style={{
+                    display: "flex", alignItems: "center", justifyContent: "space-between",
+                    padding: "10px 18px", borderBottom: "1px solid #f8fafc", background: "#fff"
+                  }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                      {ok
+                        ? <CheckCircle2 style={{ width: 16, height: 16, color: "#10b981", flexShrink: 0 }} />
+                        : <AlertCircle style={{ width: 16, height: 16, color: "#ef4444", flexShrink: 0 }} />
+                      }
+                      <span style={{ fontSize: 13, fontWeight: 500, color: ok ? "#0f172a" : "#64748b" }}>{item.label}</span>
+                    </div>
+                    <span style={{
+                      fontSize: 10, fontWeight: 700, letterSpacing: "0.05em", textTransform: "uppercase",
+                      padding: "2px 8px", borderRadius: 20,
+                      background: ok ? "#ecfdf5" : "#fef2f2",
+                      color: ok ? "#059669" : "#dc2626"
+                    }}>{ok ? "Optimized" : "Missing"}</span>
+                  </div>
+                );
+              })}
             </div>
           </div>
 
-          <div className="bg-slate-900 rounded-2xl p-8 relative overflow-hidden shadow-xl">
-            <div className="absolute top-0 right-0 p-8 opacity-10">
-              <Sparkles className="w-32 h-32 text-indigo-400" />
+          {/* Strategic Insight strip */}
+          <div style={{
+            background: "#0f172a", borderRadius: 12, padding: "18px 20px",
+            display: "flex", alignItems: "center", justifyContent: "space-between", gap: 16
+          }}>
+            <div>
+              <div style={{ fontSize: 10, fontWeight: 700, color: "#6366f1", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 4 }}>Strategic Insight</div>
+              <div style={{ fontSize: 14, fontWeight: 800, color: "#fff", lineHeight: 1.4 }}>
+                Fill {total - passed} missing {total - passed === 1 ? "field" : "fields"} to boost your visibility score.
+              </div>
             </div>
-            <div className="relative z-10">
-              <p className="text-[10px] font-bold text-indigo-400 uppercase tracking-widest mb-4">Strategic Insight</p>
-              <h3 className="text-2xl font-black text-white mb-4 leading-tight">Increase visibility by <span className="text-indigo-400">42%</span>.</h3>
-              <p className="text-slate-400 text-sm mb-8 max-w-md font-medium leading-relaxed">
-                By optimizing missing attributes and maintaining a high reply rate, your profile will prioritize higher in local search results.
-              </p>
-              <button className="h-12 px-8 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl font-bold text-sm tracking-wide transition-colors shadow-lg shadow-indigo-600/30">
-                Generate Growth Plan
-              </button>
-            </div>
+            <button style={{
+              flexShrink: 0, height: 36, padding: "0 16px",
+              background: "#6366f1", color: "#fff", border: "none", borderRadius: 8,
+              fontSize: 12, fontWeight: 700, cursor: "pointer", whiteSpace: "nowrap"
+            }}>
+              Growth Plan
+            </button>
           </div>
         </div>
 
-        {/* Health Sidebar */}
-        <div className="col-span-1 lg:col-span-5 space-y-6">
-           <div className="bg-white border border-slate-200 rounded-2xl p-6 lg:p-8 shadow-sm">
-              <h3 className="text-xl font-black text-slate-900 tracking-tight mb-8">Reputation Health</h3>
-              
-              <div className="space-y-8">
-                <GaugeBlock label="Average Rating" value={auditData.averageRating} max={5} color="bg-amber-400" />
-                <GaugeBlock label="Review Volume" value={auditData.totalReviews} max={1000} color="bg-blue-500" />
-                <GaugeBlock label="Reply Rate" value={auditData.replyRate} max={100} color="bg-emerald-500" suffix="%" />
-              </div>
-           </div>
+        {/* Right: Reputation Health + Download */}
+        <div style={{ flex: 1, display: "flex", flexDirection: "column", gap: 12 }}>
+          <div style={{ background: "#fff", border: "1px solid #eaeaea", borderRadius: 12, padding: "14px 18px", boxShadow: "0 1px 4px rgba(0,0,0,0.04)" }}>
+            <div style={{ fontSize: 13, fontWeight: 700, color: "#0f172a", marginBottom: 14 }}>Reputation Health</div>
+            <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+              <GaugeRow label="Avg Rating" value={auditData.averageRating} max={5} color="#f59e0b" suffix=" ★" />
+              <GaugeRow label="Total Reviews" value={auditData.totalReviews} max={Math.max(100, auditData.totalReviews)} color="#3b82f6" />
+              <GaugeRow label="Reply Rate" value={auditData.replyRate} max={100} color="#10b981" suffix="%" />
+              <GaugeRow label="Weekly Velocity" value={auditData.reviewsPerWeek} max={Math.max(5, auditData.reviewsPerWeek)} color="#8b5cf6" />
+            </div>
+          </div>
 
-           <div className="bg-indigo-600 rounded-2xl p-6 flex items-center justify-between shadow-xl shadow-indigo-600/20 group cursor-pointer hover:bg-indigo-700 transition-colors">
-              <div className="flex items-center gap-5">
-                 <div className="w-12 h-12 bg-white/10 rounded-xl flex items-center justify-center text-white border border-white/20">
-                    <LayoutDashboard className="w-6 h-6" />
-                 </div>
-                 <div>
-                    <p className="font-bold text-white text-base tracking-tight mb-1">Download Report</p>
-                    <p className="text-indigo-200 text-[10px] font-bold uppercase tracking-widest">Share with client</p>
-                 </div>
+          {/* Ratings badge */}
+          <div style={{
+            background: "#fff", border: "1px solid #eaeaea", borderRadius: 12,
+            padding: "14px 18px", boxShadow: "0 1px 4px rgba(0,0,0,0.04)"
+          }}>
+            <div style={{ fontSize: 11, color: "#94a3b8", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.07em", marginBottom: 8 }}>Overall Rating</div>
+            <div style={{ display: "flex", alignItems: "baseline", gap: 8 }}>
+              <div style={{ fontSize: 36, fontWeight: 900, color: "#0f172a", lineHeight: 1 }}>{auditData.averageRating}</div>
+              <div>
+                <div style={{ display: "flex", gap: 2, marginBottom: 2 }}>
+                  {[1,2,3,4,5].map(i => (
+                    <Star key={i} style={{ width: 12, height: 12, color: i <= Math.round(auditData.averageRating) ? "#f59e0b" : "#e2e8f0", fill: i <= Math.round(auditData.averageRating) ? "#f59e0b" : "#e2e8f0" }} />
+                  ))}
+                </div>
+                <div style={{ fontSize: 11, color: "#94a3b8" }}>{auditData.totalReviews} reviews</div>
               </div>
-              <button className="w-10 h-10 bg-white/10 text-white rounded-xl flex items-center justify-center group-hover:bg-white/20 group-hover:scale-105 transition-all">
-                 <ArrowUpRight className="w-5 h-5" />
-              </button>
-           </div>
+            </div>
+          </div>
+
+          {/* Download CTA */}
+          <div style={{
+            background: "#6366f1", borderRadius: 12, padding: "14px 18px",
+            display: "flex", alignItems: "center", justifyContent: "space-between", cursor: "pointer"
+          }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+              <LayoutDashboard style={{ width: 18, height: 18, color: "#fff" }} />
+              <div>
+                <div style={{ fontSize: 13, fontWeight: 700, color: "#fff" }}>Download Report</div>
+                <div style={{ fontSize: 10, color: "rgba(255,255,255,0.6)", textTransform: "uppercase", letterSpacing: "0.06em" }}>Share with client</div>
+              </div>
+            </div>
+            <ArrowUpRight style={{ width: 18, height: 18, color: "#fff" }} />
+          </div>
         </div>
       </div>
     </div>
   );
 }
 
-function ScoreCard({ label, value, subtext, icon: Icon, suffix = "" }: any) {
+function GaugeRow({ label, value, max, color, suffix = "" }: any) {
+  const pct = Math.min((value / max) * 100, 100);
   return (
-    <div className="bg-white border border-slate-200 rounded-2xl p-6 shadow-sm hover:shadow-md transition-all relative overflow-hidden group">
-      <div className="absolute -right-6 -top-6 w-24 h-24 bg-slate-50 rounded-full opacity-50 group-hover:scale-150 group-hover:bg-indigo-50/50 transition-transform duration-700"></div>
-      <div className="relative z-10">
-        <div className="w-12 h-12 rounded-xl bg-indigo-50 border border-indigo-100 flex items-center justify-center text-indigo-600 mb-6 group-hover:bg-indigo-100 transition-colors">
-           <Icon className="w-5 h-5" />
-        </div>
-        <p className="text-slate-500 font-bold text-xs uppercase tracking-wider mb-2">{label}</p>
-        <h4 className="text-4xl font-black text-slate-900 tracking-tight mb-1">
-          {value}{suffix}
-        </h4>
-        <p className="text-slate-400 font-bold uppercase tracking-widest text-[10px]">{subtext}</p>
+    <div>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 5 }}>
+        <span style={{ fontSize: 11, fontWeight: 600, color: "#64748b" }}>{label}</span>
+        <span style={{ fontSize: 12, fontWeight: 800, color: "#0f172a" }}>{value}{suffix}</span>
       </div>
-    </div>
-  );
-}
-
-function CheckItem({ label, isComplete }: { label: string, isComplete: boolean }) {
-  return (
-    <div className="flex items-center justify-between p-4 bg-slate-50 border border-slate-100 rounded-xl hover:border-slate-200 hover:bg-slate-100/50 transition-colors">
-      <div className="flex items-center gap-4">
-        {isComplete ? (
-          <CheckCircle2 className="w-6 h-6 text-emerald-500 shrink-0" />
-        ) : (
-          <AlertCircle className="w-6 h-6 text-red-500 shrink-0" />
-        )}
-        <span className={`text-sm font-semibold ${isComplete ? "text-slate-900" : "text-slate-700"}`}>{label}</span>
-      </div>
-      {isComplete ? (
-        <span className="px-3 py-1 bg-emerald-100 text-emerald-700 rounded-lg text-xs font-bold uppercase tracking-wider">Optimized</span>
-      ) : (
-        <span className="px-3 py-1 bg-red-100 text-red-700 rounded-lg text-xs font-bold uppercase tracking-wider">Missing</span>
-      )}
-    </div>
-  );
-}
-
-function GaugeBlock({ label, value, max, color, suffix = "" }: any) {
-  const percentage = Math.min((value / max) * 100, 100);
-  
-  return (
-    <div className="space-y-3">
-      <div className="flex items-center justify-between text-[11px] font-bold uppercase tracking-widest">
-         <span className="text-slate-500">{label}</span>
-         <span className="text-slate-900 font-black text-sm">{value}{suffix} <span className="text-slate-400 font-medium text-xs">/ {max}{suffix}</span></span>
-      </div>
-      <div className="h-2 w-full bg-slate-100 rounded-full overflow-hidden">
-         <div 
-           className={`h-full ${color} rounded-full transition-all duration-1000`} 
-           style={{ width: `${percentage}%` }}
-         />
+      <div style={{ height: 5, background: "#f1f5f9", borderRadius: 99, overflow: "hidden" }}>
+        <div className="audit-bar" style={{ height: "100%", width: `${pct}%`, background: color, borderRadius: 99 }} />
       </div>
     </div>
   );
