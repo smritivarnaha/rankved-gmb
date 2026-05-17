@@ -44,16 +44,34 @@ export function AuditDashboard({ auditData, isPublic = false }: { auditData: any
   const total  = checkItems.length;
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
+    <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
       <style>{`
         @keyframes barGrow { from { width: 0 } }
         .audit-bar { animation: barGrow 0.9s ease-out forwards; }
         .audit-check-row:hover { background: #f8fafc !important; }
         .audit-metric-card:hover { box-shadow: 0 4px 16px rgba(0,0,0,0.08) !important; transform: translateY(-1px); }
         .audit-metric-card { transition: box-shadow 0.2s, transform 0.2s; }
-        @media (max-width: 700px) {
-          .audit-metric-row { grid-template-columns: 1fr 1fr !important; }
-          .audit-body-grid { flex-direction: column !important; }
+
+        @media (max-width: 640px) {
+          /* Metric cards: 2×2 grid */
+          .audit-metric-row { grid-template-columns: 1fr 1fr !important; gap: 8px !important; }
+
+          /* Body: single column */
+          .audit-body-grid { flex-direction: column !important; gap: 12px !important; }
+
+          /* Action step rows: stack content above CTA button */
+          .audit-action-row { grid-template-columns: 1fr !important; gap: 10px !important; }
+          .audit-action-cta { justify-self: flex-start !important; }
+
+          /* Audit header: stack title and download button */
+          .audit-header-row { flex-direction: column !important; align-items: flex-start !important; gap: 12px !important; }
+          .audit-header-row button { width: 100% !important; justify-content: center; }
+
+          /* Checklist rows: tighten padding */
+          .audit-check-row { padding: 10px 14px !important; }
+
+          /* Reduce card padding on mobile */
+          .audit-card-pad { padding: 14px !important; }
         }
       `}</style>
 
@@ -321,7 +339,7 @@ function ActionSteps({ auditData, checklist }: { auditData: any, checklist: any 
         {actions.map((action, i) => {
           const pc = priorityColors[action.priority];
           return (
-            <div key={i} className="audit-check-row" style={{
+            <div key={i} className="audit-check-row audit-action-row" style={{
               display: "grid", gridTemplateColumns: "1fr auto",
               alignItems: "center", gap: 16,
               padding: "12px 18px",
@@ -348,6 +366,7 @@ function ActionSteps({ auditData, checklist }: { auditData: any, checklist: any 
                 href={action.href}
                 target="_blank"
                 rel="noopener noreferrer"
+                className="audit-action-cta"
                 style={{
                   flexShrink: 0, padding: "6px 14px", borderRadius: 8,
                   border: "1px solid #e2e8f0", background: "#fff",

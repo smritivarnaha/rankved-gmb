@@ -67,17 +67,17 @@ export function AuditReport({ profileId, publicData }: { profileId: string, publ
 
   return (
     <div className="space-y-6 audit-container">
-      <div className="flex justify-between items-center mb-12 no-print">
+      <div className="flex justify-between items-center mb-6 no-print audit-header-row">
         <div>
           <h4 className="text-xs font-black text-slate-400 uppercase tracking-[0.2em] mb-1">Live Intelligence</h4>
-          <h2 className="text-3xl font-black text-slate-900 tracking-tight">On-Screen Audit</h2>
+          <h2 className="text-2xl font-black text-slate-900 tracking-tight">On-Screen Audit</h2>
         </div>
         <button 
           onClick={handleDownloadPDF}
-          className="px-8 py-4 bg-slate-900 text-white rounded-2xl text-xs font-black uppercase tracking-widest hover:bg-indigo-600 transition-all shadow-2xl flex items-center gap-3"
+          className="px-6 py-3 bg-slate-900 text-white rounded-xl text-xs font-black uppercase tracking-widest hover:bg-indigo-600 transition-all shadow-lg flex items-center gap-3"
         >
           <Zap className="w-4 h-4 fill-current" />
-          Download Client PDF
+          Download PDF
         </button>
       </div>
 
