@@ -410,20 +410,23 @@ export function PerformanceView({ profile, onBack }: { profile: any; onBack?: ()
 
       {/* ── Period row + view mode tabs ── */}
       <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", marginBottom:20, gap:12, flexWrap:"wrap" }}>
-        {/* Period pills */}
-        <div style={{ display:"inline-flex", alignItems:"center", gap:2, background:"#F8FAFC", border:"1px solid #E2E8F0", borderRadius:10, padding:4 }}>
-          {PERIODS.map(p => (
-            <button key={p.months} onClick={() => setMonths(p.months as 1|3|6)} style={{
-              padding:"6px 16px", borderRadius:7, border:"none", cursor:"pointer",
-              fontSize:13, fontWeight:600, transition:"all 0.15s",
-              background: months===p.months?"#fff":"transparent",
-              color: months===p.months?"#111827":"#94A3B8",
-              boxShadow: months===p.months?"0 1px 4px rgba(0,0,0,0.08)":"none",
-            }}>
-              {p.label}
-            </button>
-          ))}
-        </div>
+        {/* Period pills — hidden on Audit tab */}
+        {viewMode !== "audit" && (
+          <div style={{ display:"inline-flex", alignItems:"center", gap:2, background:"#F8FAFC", border:"1px solid #E2E8F0", borderRadius:10, padding:4 }}>
+            {PERIODS.map(p => (
+              <button key={p.months} onClick={() => setMonths(p.months as 1|3|6)} style={{
+                padding:"6px 16px", borderRadius:7, border:"none", cursor:"pointer",
+                fontSize:13, fontWeight:600, transition:"all 0.15s",
+                background: months===p.months?"#fff":"transparent",
+                color: months===p.months?"#111827":"#94A3B8",
+                boxShadow: months===p.months?"0 1px 4px rgba(0,0,0,0.08)":"none",
+              }}>
+                {p.label}
+              </button>
+            ))}
+          </div>
+        )}
+        {viewMode === "audit" && <div />}
         {/* Search Breakdown + Audit tabs — right side */}
         <div style={{ display:"flex", gap:8 }}>
           {(["discovery","audit"] as const).map(mode => {
@@ -458,8 +461,8 @@ export function PerformanceView({ profile, onBack }: { profile: any; onBack?: ()
         </div>
       )}
 
-      {/* ── Analytics chart tabs (always visible) ── */}
-      <div style={{ background:"#fff", border:"1px solid #E2E8F0", borderRadius:16, overflow:"hidden", marginBottom:20 }}>
+      {/* ── Analytics chart tabs (hidden on audit) ── */}
+      {viewMode !== "audit" && <div style={{ background:"#fff", border:"1px solid #E2E8F0", borderRadius:16, overflow:"hidden", marginBottom:20 }}>
         <div style={{ display:"flex", borderBottom:"1px solid #E2E8F0" }} className="perf-metric-tabs">
           {METRIC_TABS.map(tab => {
             const active = activeMetric === tab.key;
@@ -535,8 +538,7 @@ export function PerformanceView({ profile, onBack }: { profile: any; onBack?: ()
             )}
           </div>
         )}
-      </div>
-      {/* spacer if discovery open and chart closed */}
+      </div>}
 
       {/* ── Quick stats ── */}
       {isAnalytics && (

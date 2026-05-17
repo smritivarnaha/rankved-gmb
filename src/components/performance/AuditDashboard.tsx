@@ -157,12 +157,14 @@ export function AuditDashboard({ auditData, isPublic = false }: { auditData: any
                 Fill {total - passed} missing {total - passed === 1 ? "field" : "fields"} to boost your visibility score.
               </div>
             </div>
-            <button style={{
+            <button
+              onClick={() => window.open("https://business.google.com", "_blank")}
+              style={{
               flexShrink: 0, height: 36, padding: "0 16px",
               background: "#6366f1", color: "#fff", border: "none", borderRadius: 8,
               fontSize: 12, fontWeight: 700, cursor: "pointer", whiteSpace: "nowrap"
             }}>
-              Growth Plan
+              Improve Profile
             </button>
           </div>
         </div>
@@ -199,7 +201,9 @@ export function AuditDashboard({ auditData, isPublic = false }: { auditData: any
           </div>
 
           {/* Download CTA */}
-          <div style={{
+          <div
+            onClick={() => window.print()}
+            style={{
             background: "#6366f1", borderRadius: 12, padding: "14px 18px",
             display: "flex", alignItems: "center", justifyContent: "space-between", cursor: "pointer"
           }}>
