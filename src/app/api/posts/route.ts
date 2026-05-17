@@ -75,56 +75,49 @@ export async function POST(req: NextRequest) {
       const accessToken = await getGoogleAccessTokenForLocation(profileId);
       
       if (!accessToken) {
-        await prisma.post.update({
+        const updatedPost = await prisma.post.update({
           where: { id: post.id },
           data: { status: "FAILED", failureReason: "No Google access token. Please reconnect in Settings." },
         });
+        return NextResponse.json({ data: updatedPost, message: "Publish failed: No Google access token" }, { status: 400 });
       } else {
-        // Run publishing in background — do not await
-        (async () => {
-          try {
-            const result = await publishToGBP({
-              post,
-              accessToken,
-              imageDataUri: body.imageUrl || null,
-            });
+        try {
+          const result = await publishToGBP({
+            post,
+            accessToken,
+            imageDataUri: body.imageUrl || null,
+          });
 
-            if (result.success) {
-              await prisma.post.update({
-                where: { id: post.id },
-                data: {
-                  status: "PUBLISHED",
-                  publishedAt: new Date(),
-                  gbpPostName: result.gbpPostName || null,
-                },
-              });
-              const template = await getTemplate("SUCCESS", post);
-              await notifyAdmin(template);
-            } else {
-              await prisma.post.update({
-                where: { id: post.id },
-                data: { status: "FAILED", failureReason: result.error || "GBP publish failed" },
-              });
-              const template = await getTemplate("FAILURE", { ...post, error: result.error });
-              await notifyAdmin(template);
-            }
-          } catch (bgErr) {
-            console.error("[BG Publish] Failed:", bgErr);
-            await prisma.post.update({
+          if (result.success) {
+            const updatedPost = await prisma.post.update({
               where: { id: post.id },
-              data: { status: "FAILED", failureReason: "Unexpected server error during publish." },
+              data: {
+                status: "PUBLISHED",
+                publishedAt: new Date(),
+                gbpPostName: result.gbpPostName || null,
+              },
             });
+            const template = await getTemplate("SUCCESS", updatedPost);
+            await notifyAdmin(template);
+            return NextResponse.json({ data: updatedPost, message: "Published successfully" }, { status: 201 });
+          } else {
+            const updatedPost = await prisma.post.update({
+              where: { id: post.id },
+              data: { status: "FAILED", failureReason: result.error || "GBP publish failed" },
+            });
+            const template = await getTemplate("FAILURE", { ...updatedPost, error: result.error });
+            await notifyAdmin(template);
+            return NextResponse.json({ data: updatedPost, message: "Publish failed: " + (result.error || "Unknown error") }, { status: 400 });
           }
-        })();
+        } catch (bgErr) {
+          console.error("[Publish] Failed:", bgErr);
+          const updatedPost = await prisma.post.update({
+            where: { id: post.id },
+            data: { status: "FAILED", failureReason: "Unexpected server error during publish." },
+          });
+          return NextResponse.json({ data: updatedPost, message: "Publish failed: Unexpected server error" }, { status: 500 });
+        }
       }
-      
-      if (post.status === "SCHEDULED") {
-        const template = await getTemplate("SCHEDULED", post);
-        await notifyAdmin(template);
-      }
-
-      // Return 201 immediately with status 'DRAFT' (will update to PUBLISHED in seconds)
-      return NextResponse.json({ data: post, message: "Publishing in progress..." }, { status: 201 });
     }
 
     return NextResponse.json({ data: post }, { status: 201 });

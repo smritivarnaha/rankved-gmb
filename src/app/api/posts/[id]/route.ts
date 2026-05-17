@@ -71,39 +71,37 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
     if (requestedStatus === "PUBLISHED") {
       const accessToken = await getGoogleAccessTokenForLocation(profileId);
       if (!accessToken) {
-        await updatePost(id, { status: "FAILED", failureReason: "No Google access token. Please reconnect in Settings.", publishedAt: null });
+        const updatedPost = await updatePost(id, { status: "FAILED", failureReason: "No Google access token. Please reconnect in Settings.", publishedAt: null });
+        return NextResponse.json({ data: updatedPost, message: "Publish failed: No Google access token" }, { status: 400 });
       } else {
-        // Background publish
-        (async () => {
-          try {
-            const result = await publishToGBP({
-              post,
-              accessToken,
-              imageDataUri: body.imageUrl || null,
-            });
+        try {
+          const result = await publishToGBP({
+            post,
+            accessToken,
+            imageDataUri: body.imageUrl || null,
+          });
 
-            if (result.success) {
-              await updatePost(id, {
-                status: "PUBLISHED",
-                publishedAt: new Date().toISOString(),
-                gbpPostName: result.gbpPostName || undefined,
-              });
-              const template = await getTemplate("SUCCESS", post);
-              await notifyAdmin(template);
-            } else {
-              // If it fails, revert to FAILED (or could revert to DRAFT if preferred)
-              await updatePost(id, { status: "FAILED", failureReason: result.error || "GBP publish failed", publishedAt: null });
-              const template = await getTemplate("FAILURE", { ...post, error: result.error });
-              await notifyAdmin(template);
-            }
-          } catch (bgErr) {
-            console.error("[BG Update Publish] Failed:", bgErr);
-            await updatePost(id, { status: "FAILED", failureReason: "Unexpected server error during publish.", publishedAt: null });
+          if (result.success) {
+            const updatedPost = await updatePost(id, {
+              status: "PUBLISHED",
+              publishedAt: new Date().toISOString(),
+              gbpPostName: result.gbpPostName || undefined,
+            });
+            const template = await getTemplate("SUCCESS", post);
+            await notifyAdmin(template);
+            return NextResponse.json({ data: updatedPost, message: "Published successfully" });
+          } else {
+            const updatedPost = await updatePost(id, { status: "FAILED", failureReason: result.error || "GBP publish failed", publishedAt: null });
+            const template = await getTemplate("FAILURE", { ...post, error: result.error });
+            await notifyAdmin(template);
+            return NextResponse.json({ data: updatedPost, message: "Publish failed: " + (result.error || "Unknown error") }, { status: 400 });
           }
-        })();
+        } catch (bgErr) {
+          console.error("[Publish] Failed:", bgErr);
+          const updatedPost = await updatePost(id, { status: "FAILED", failureReason: "Unexpected server error during publish.", publishedAt: null });
+          return NextResponse.json({ data: updatedPost, message: "Publish failed: Unexpected server error" }, { status: 500 });
+        }
       }
-      
-      return NextResponse.json({ data: post, message: "Publishing in progress..." });
     }
 
     return NextResponse.json({ data: post });
