@@ -200,36 +200,48 @@ export default async function DashboardPage() {
                 <p style={{ fontSize: 13, color: "#64748B", margin: 0 }}>Posts you schedule will appear here.</p>
               </div>
             ) : (
-              <div style={{ display: "flex", flexDirection: "column" }}>
-                {upcomingPosts.map((post: any, idx: number) => (
-                  <Link key={post.id} href={`/posts/${post.id}`} style={{
-                    display: "flex", alignItems: "center", justifyContent: "space-between", gap: 14,
-                    padding: "16px 20px", textDecoration: "none",
-                    borderBottom: idx === upcomingPosts.length - 1 ? "none" : "1px solid #f8f9fa",
-                    transition: "background 0.15s"
-                  }} className="hover-bg-muted">
-                    <div style={{ flex: 1, minWidth: 0 }}>
-                      <p style={{ fontSize: 14, fontWeight: 500, color: "#111827", margin: "0 0 4px", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
-                        {post.summary || "No content"}
-                      </p>
-                      <p style={{ fontSize: 12, color: "#64748B", margin: 0, display: "flex", alignItems: "center", gap: 6 }}>
-                        <MapPin size={12} color="#94A3B8" style={{ flexShrink: 0 }} />
-                        <span style={{ whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
-                          {post.location?.name || "Unknown Location"}
-                        </span>
-                      </p>
-                    </div>
-                    <div style={{ textAlign: "right", flexShrink: 0 }}>
-                      <p style={{ fontSize: 13, fontWeight: 600, color: "#111827", margin: "0 0 2px" }}>
-                        {post.scheduledAt ? new Date(post.scheduledAt).toLocaleDateString("en-US", { month: "short", day: "numeric", timeZone: "Asia/Kolkata" }) : "N/A"}
-                      </p>
-                      <p style={{ fontSize: 11, color: "#94A3B8", margin: 0 }}>
-                        {post.scheduledAt ? new Date(post.scheduledAt).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit", hour12: true, timeZone: "Asia/Kolkata" }) : ""}
-                      </p>
-                    </div>
-                  </Link>
-                ))}
-              </div>
+              <table style={{ width: "100%", borderCollapse: "collapse", textAlign: "left", tableLayout: "fixed" }}>
+                <thead>
+                  <tr style={{ borderBottom: "1px solid #eaeaea", background: "#f8f9fa" }}>
+                    <th style={{ width: "45%", fontSize: 11, fontWeight: 600, color: "#64748B", padding: "12px 20px", textTransform: "uppercase", letterSpacing: "0.05em" }}>POST TITLE</th>
+                    <th style={{ width: "35%", fontSize: 11, fontWeight: 600, color: "#64748B", padding: "12px 20px", textTransform: "uppercase", letterSpacing: "0.05em" }}>LOCATION</th>
+                    <th style={{ width: "20%", fontSize: 11, fontWeight: 600, color: "#64748B", padding: "12px 20px", textTransform: "uppercase", letterSpacing: "0.05em", textAlign: "right" }}>DATE & TIME</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {upcomingPosts.map((post: any, idx: number) => {
+                    const title = post.summary || "No content";
+                    const shortTitle = title.length > 60 ? title.substring(0, 60) + "..." : title;
+                    return (
+                      <tr key={post.id} style={{ borderBottom: "1px solid #f8f9fa", transition: "background 0.15s" }} className="hover-bg-muted">
+                        <td style={{ padding: "16px 20px", overflow: "hidden" }}>
+                          <Link href={`/posts/${post.id}`} style={{ textDecoration: "none", display: "block" }}>
+                            <p style={{ fontSize: 13, fontWeight: 500, color: "#111827", margin: 0, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }} title={title}>
+                              {shortTitle}
+                            </p>
+                          </Link>
+                        </td>
+                        <td style={{ padding: "16px 20px", overflow: "hidden" }}>
+                          <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                            <MapPin size={12} color="#94A3B8" style={{ flexShrink: 0 }} />
+                            <span style={{ fontSize: 12, color: "#64748B", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }} title={post.location?.name || "Unknown Location"}>
+                              {post.location?.name || "Unknown Location"}
+                            </span>
+                          </div>
+                        </td>
+                        <td style={{ padding: "16px 20px", textAlign: "right" }}>
+                          <p style={{ fontSize: 13, fontWeight: 600, color: "#111827", margin: "0 0 2px", whiteSpace: "nowrap" }}>
+                            {post.scheduledAt ? new Date(post.scheduledAt).toLocaleDateString("en-US", { month: "short", day: "numeric", timeZone: "Asia/Kolkata" }) : "N/A"}
+                          </p>
+                          <p style={{ fontSize: 11, color: "#94A3B8", margin: 0, whiteSpace: "nowrap" }}>
+                            {post.scheduledAt ? new Date(post.scheduledAt).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit", hour12: true, timeZone: "Asia/Kolkata" }) : ""}
+                          </p>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
             )}
           </div>
 
