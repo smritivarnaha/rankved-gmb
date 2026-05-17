@@ -40,6 +40,14 @@ export default async function DashboardPage() {
     return { locations, scheduled, published, drafts, pending };
   });
 
+  // Upcoming scheduled posts
+  const upcomingPosts = await prisma.post.findMany({
+    where: { ...postWhereBase, status: "SCHEDULED" },
+    orderBy: { scheduledAt: "asc" },
+    take: 5,
+    include: { location: { select: { name: true } } }
+  });
+
   // Team members with post stats (admins only)
   let teamMembers: any[] = [];
   if (isAdmin) {
@@ -165,75 +173,136 @@ export default async function DashboardPage() {
       </div>
 
       <div style={{ display: "grid", gridTemplateColumns: "1fr 300px", gap: 24 }} className="dash-main-grid">
-        {/* Team Members (admins only) */}
-        {isAdmin ? (
-          <div style={{ ...cardStyle, padding: 0, overflow: "hidden", alignSelf: "flex-start" }}>
+        {/* Left Column (Upcoming Posts & Team) */}
+        <div style={{ display: "flex", flexDirection: "column", gap: 24 }}>
+          
+          {/* Upcoming Scheduled Posts Widget */}
+          <div style={{ ...cardStyle, padding: 0, overflow: "hidden", alignSelf: "stretch" }}>
             <div style={{ padding: "16px 20px", borderBottom: "1px solid #eaeaea", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
               <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                <Users size={16} color="#64748B" />
-                <h2 style={{ fontSize: 15, fontWeight: 600, color: "#111827", margin: 0 }}>Team Members</h2>
-                <span style={{ fontSize: 11, background: "#F1F5F9", color: "#64748B", padding: "2px 8px", borderRadius: 100, fontWeight: 600 }}>
-                  {teamMembers.length}
-                </span>
+                <Clock size={16} color="#64748B" />
+                <h2 style={{ fontSize: 15, fontWeight: 600, color: "#111827", margin: 0 }}>Upcoming Scheduled Posts</h2>
+                {upcomingPosts.length > 0 && (
+                  <span style={{ fontSize: 11, background: "#FEF3C7", color: "#D97706", padding: "2px 8px", borderRadius: 100, fontWeight: 600 }}>
+                    {upcomingPosts.length} soon
+                  </span>
+                )}
               </div>
-              <Link href="/users" style={{ fontSize: 13, color: "#2563EB", fontWeight: 500, textDecoration: "none" }}>
-                Manage team &rarr;
+              <Link href="/calendar" style={{ fontSize: 13, color: "#2563EB", fontWeight: 500, textDecoration: "none" }}>
+                View all &rarr;
               </Link>
             </div>
 
-            {teamMembers.length === 0 ? (
+            {upcomingPosts.length === 0 ? (
               <div style={{ padding: "40px 24px", textAlign: "center" }}>
-                <Users style={{ width: 32, height: 32, color: "#CBD5E1", margin: "0 auto 12px" }} />
-                <p style={{ fontSize: 14, fontWeight: 500, color: "#111827", margin: "0 0 4px" }}>No team members yet</p>
-                <p style={{ fontSize: 13, color: "#64748B", margin: 0 }}>Add members from the Users section to delegate posting.</p>
+                <Clock style={{ width: 32, height: 32, color: "#CBD5E1", margin: "0 auto 12px" }} />
+                <p style={{ fontSize: 14, fontWeight: 500, color: "#111827", margin: "0 0 4px" }}>No scheduled posts</p>
+                <p style={{ fontSize: 13, color: "#64748B", margin: 0 }}>Posts you schedule will appear here.</p>
               </div>
             ) : (
-              <table style={{ width: "100%", borderCollapse: "collapse", textAlign: "left" }}>
-                <thead>
-                  <tr style={{ borderBottom: "1px solid #eaeaea", background: "#f8f9fa" }}>
-                    <th style={{ fontSize: 11, fontWeight: 600, color: "#64748B", padding: "12px 20px", textTransform: "uppercase", letterSpacing: "0.05em" }}>MEMBER</th>
-                    <th style={{ fontSize: 11, fontWeight: 600, color: "#64748B", padding: "12px 20px", textTransform: "uppercase", letterSpacing: "0.05em", textAlign: "center" }}>PUBLISHED</th>
-                    <th style={{ fontSize: 11, fontWeight: 600, color: "#64748B", padding: "12px 20px", textTransform: "uppercase", letterSpacing: "0.05em", textAlign: "center" }}>SCHEDULED</th>
-                    <th style={{ fontSize: 11, fontWeight: 600, color: "#64748B", padding: "12px 20px", textTransform: "uppercase", letterSpacing: "0.05em" }}>STATUS</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {teamMembers.map((m: any) => (
-                    <tr key={m.id} style={{ borderBottom: "1px solid #f8f9fa" }}>
-                      <td style={{ padding: "16px 20px" }}>
-                        <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-                          <div style={{ width: 32, height: 32, borderRadius: "50%", background: "#EFF6FF", color: "#2563EB", display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 600, fontSize: 13, flexShrink: 0 }}>
-                            {m.initials}
-                          </div>
-                          <div style={{ minWidth: 0 }}>
-                            <p style={{ fontSize: 14, fontWeight: 500, color: "#111827", margin: 0, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{m.name || "Unnamed"}</p>
-                            <p style={{ fontSize: 12, color: "#94A3B8", margin: 0, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{m.email}</p>
-                          </div>
-                        </div>
-                      </td>
-                      <td style={{ padding: "16px 20px", textAlign: "center" }}>
-                        <span style={{ fontSize: 14, fontWeight: 600, color: "#111827" }}>{m.published}</span>
-                      </td>
-                      <td style={{ padding: "16px 20px", textAlign: "center" }}>
-                        <span style={{ fontSize: 14, fontWeight: 600, color: "#111827" }}>{m.scheduled}</span>
-                      </td>
-                      <td style={{ padding: "16px 20px" }}>
-                        <span style={{
-                          fontSize: 10, fontWeight: 600, padding: "4px 8px", borderRadius: 4,
-                          background: m.isApproved ? "#ECFDF5" : "#FEF2F2",
-                          color: m.isApproved ? "#059669" : "#DC2626",
-                          textTransform: "uppercase", letterSpacing: "0.05em"
-                        }}>
-                          {m.isApproved ? "Active" : "Pending"}
+              <div style={{ display: "flex", flexDirection: "column" }}>
+                {upcomingPosts.map((post: any, idx: number) => (
+                  <Link key={post.id} href={`/posts/${post.id}`} style={{
+                    display: "flex", alignItems: "center", justifyContent: "space-between", gap: 14,
+                    padding: "16px 20px", textDecoration: "none",
+                    borderBottom: idx === upcomingPosts.length - 1 ? "none" : "1px solid #f8f9fa",
+                    transition: "background 0.15s"
+                  }} className="hover-bg-muted">
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <p style={{ fontSize: 14, fontWeight: 500, color: "#111827", margin: "0 0 4px", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+                        {post.summary || "No content"}
+                      </p>
+                      <p style={{ fontSize: 12, color: "#64748B", margin: 0, display: "flex", alignItems: "center", gap: 6 }}>
+                        <MapPin size={12} color="#94A3B8" style={{ flexShrink: 0 }} />
+                        <span style={{ whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+                          {post.location?.name || "Unknown Location"}
                         </span>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+                      </p>
+                    </div>
+                    <div style={{ textAlign: "right", flexShrink: 0 }}>
+                      <p style={{ fontSize: 13, fontWeight: 600, color: "#111827", margin: "0 0 2px" }}>
+                        {post.scheduledAt ? new Date(post.scheduledAt).toLocaleDateString("en-US", { month: "short", day: "numeric", timeZone: "Asia/Kolkata" }) : "N/A"}
+                      </p>
+                      <p style={{ fontSize: 11, color: "#94A3B8", margin: 0 }}>
+                        {post.scheduledAt ? new Date(post.scheduledAt).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit", hour12: true, timeZone: "Asia/Kolkata" }) : ""}
+                      </p>
+                    </div>
+                  </Link>
+                ))}
+              </div>
             )}
           </div>
-        ) : <div />}
+
+          {/* Team Members (admins only) */}
+          {isAdmin && (
+            <div style={{ ...cardStyle, padding: 0, overflow: "hidden", alignSelf: "stretch" }}>
+              <div style={{ padding: "16px 20px", borderBottom: "1px solid #eaeaea", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                  <Users size={16} color="#64748B" />
+                  <h2 style={{ fontSize: 15, fontWeight: 600, color: "#111827", margin: 0 }}>Team Members</h2>
+                  <span style={{ fontSize: 11, background: "#F1F5F9", color: "#64748B", padding: "2px 8px", borderRadius: 100, fontWeight: 600 }}>
+                    {teamMembers.length}
+                  </span>
+                </div>
+                <Link href="/users" style={{ fontSize: 13, color: "#2563EB", fontWeight: 500, textDecoration: "none" }}>
+                  Manage team &rarr;
+                </Link>
+              </div>
+
+              {teamMembers.length === 0 ? (
+                <div style={{ padding: "40px 24px", textAlign: "center" }}>
+                  <Users style={{ width: 32, height: 32, color: "#CBD5E1", margin: "0 auto 12px" }} />
+                  <p style={{ fontSize: 14, fontWeight: 500, color: "#111827", margin: "0 0 4px" }}>No team members yet</p>
+                  <p style={{ fontSize: 13, color: "#64748B", margin: 0 }}>Add members from the Users section to delegate posting.</p>
+                </div>
+              ) : (
+                <table style={{ width: "100%", borderCollapse: "collapse", textAlign: "left" }}>
+                  <thead>
+                    <tr style={{ borderBottom: "1px solid #eaeaea", background: "#f8f9fa" }}>
+                      <th style={{ fontSize: 11, fontWeight: 600, color: "#64748B", padding: "12px 20px", textTransform: "uppercase", letterSpacing: "0.05em" }}>MEMBER</th>
+                      <th style={{ fontSize: 11, fontWeight: 600, color: "#64748B", padding: "12px 20px", textTransform: "uppercase", letterSpacing: "0.05em", textAlign: "center" }}>PUBLISHED</th>
+                      <th style={{ fontSize: 11, fontWeight: 600, color: "#64748B", padding: "12px 20px", textTransform: "uppercase", letterSpacing: "0.05em", textAlign: "center" }}>SCHEDULED</th>
+                      <th style={{ fontSize: 11, fontWeight: 600, color: "#64748B", padding: "12px 20px", textTransform: "uppercase", letterSpacing: "0.05em" }}>STATUS</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {teamMembers.map((m: any) => (
+                      <tr key={m.id} style={{ borderBottom: "1px solid #f8f9fa" }}>
+                        <td style={{ padding: "16px 20px" }}>
+                          <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+                            <div style={{ width: 32, height: 32, borderRadius: "50%", background: "#EFF6FF", color: "#2563EB", display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 600, fontSize: 13, flexShrink: 0 }}>
+                              {m.initials}
+                            </div>
+                            <div style={{ minWidth: 0 }}>
+                              <p style={{ fontSize: 14, fontWeight: 500, color: "#111827", margin: 0, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{m.name || "Unnamed"}</p>
+                              <p style={{ fontSize: 12, color: "#94A3B8", margin: 0, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{m.email}</p>
+                            </div>
+                          </div>
+                        </td>
+                        <td style={{ padding: "16px 20px", textAlign: "center" }}>
+                          <span style={{ fontSize: 14, fontWeight: 600, color: "#111827" }}>{m.published}</span>
+                        </td>
+                        <td style={{ padding: "16px 20px", textAlign: "center" }}>
+                          <span style={{ fontSize: 14, fontWeight: 600, color: "#111827" }}>{m.scheduled}</span>
+                        </td>
+                        <td style={{ padding: "16px 20px" }}>
+                          <span style={{
+                            fontSize: 10, fontWeight: 600, padding: "4px 8px", borderRadius: 4,
+                            background: m.isApproved ? "#ECFDF5" : "#FEF2F2",
+                            color: m.isApproved ? "#059669" : "#DC2626",
+                            textTransform: "uppercase", letterSpacing: "0.05em"
+                          }}>
+                            {m.isApproved ? "Active" : "Pending"}
+                          </span>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              )}
+            </div>
+          )}
+        </div>
 
         {/* Quick Actions */}
         <div style={{ ...cardStyle, padding: 0, alignSelf: "flex-start" }}>
