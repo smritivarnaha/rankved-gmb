@@ -43,22 +43,19 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
 
     // --- CALCULATIONS ---
 
-    // A. Profile Completion Score
-    const fieldsToTrack = [
-      'title', 'storefrontAddress', 'phoneNumbers', 'websiteUri', 
-      'regularHours', 'profile.description', 'categories.primaryCategory'
-    ];
-    let filledFields = 0;
-    const missingFields = [];
+    // A. Profile Completion Score & Checklist
+    const checklist = {
+      businessName: !!location.title,
+      address: !!location.storefrontAddress,
+      phone: !!location.phoneNumbers?.primaryPhone,
+      website: !!location.websiteUri,
+      hours: !!location.regularHours,
+      description: !!location.profile?.description,
+      category: !!location.categories?.primaryCategory
+    };
 
-    if (location.title) filledFields++; else missingFields.push("Business Name");
-    if (location.storefrontAddress) filledFields++; else missingFields.push("Address");
-    if (location.phoneNumbers?.primaryPhone) filledFields++; else missingFields.push("Phone Number");
-    if (location.websiteUri) filledFields++; else missingFields.push("Website URL");
-    if (location.regularHours) filledFields++; else missingFields.push("Operating Hours");
-    if (location.profile?.description) filledFields++; else missingFields.push("Business Description");
-    if (location.categories?.primaryCategory) filledFields++; else missingFields.push("Categories");
-
+    const fieldsToTrack = Object.values(checklist);
+    const filledFields = fieldsToTrack.filter(Boolean).length;
     const completionScore = Math.round((filledFields / fieldsToTrack.length) * 100);
 
     // B. Review Reply Score
@@ -71,18 +68,18 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
     const recentReviews = reviews.filter((r: any) => new Date(r.createTime) > thirtyDaysAgo);
     const reviewsPerWeek = parseFloat((recentReviews.length / 4).toFixed(1));
 
-    // D. Search Rank (Mock/Proxy for now based on keywords)
-    // In a real scenario, we'd use search console or a scraper.
-    // For this audit, we'll assign a random "Good" score if they have impressions, or use a static calc.
-    const searchRank = 6.4; // Default mockup as per user screenshot
+    // D. Custom Visibility Score (0-100)
+    // Combines Profile Quality (50%), Reply Rate (30%), and Review Velocity (20% maxed at 2 reviews/week)
+    const velocityScore = Math.min(reviewsPerWeek / 2, 1) * 20;
+    const visibilityScore = Math.min(100, Math.round((completionScore * 0.5) + (replyRate * 0.3) + velocityScore));
 
     return NextResponse.json({
       data: {
         completionScore,
-        missingFields,
+        checklist,
         replyRate,
         reviewsPerWeek,
-        searchRank,
+        visibilityScore,
         totalReviews: location.metadata?.userReviewCount || reviews.length,
         averageRating: location.metadata?.averageRating || 0,
       }

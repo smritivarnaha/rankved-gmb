@@ -19,23 +19,31 @@ export function AuditReport({ profileId, publicData }: { profileId: string, publ
   const publicAudit = useMemo(() => {
     if (!isPublic) return null;
     
-    const fields = ['name', 'formatted_address', 'rating', 'user_ratings_total', 'photos', 'types'];
-    let filled = 0;
-    if (publicData.name) filled++;
-    if (publicData.formatted_address) filled++;
-    if (publicData.rating) filled++;
-    if (publicData.user_ratings_total) filled++;
-    if (publicData.photos?.length > 0) filled++;
-    if (publicData.types?.length > 0) filled++;
+    const checklist = {
+      businessName: !!publicData.name,
+      address: !!publicData.formatted_address,
+      phone: !!publicData.formatted_phone_number,
+      website: !!publicData.website,
+      hours: !!publicData.opening_hours,
+      description: false,
+      category: !!publicData.types?.length
+    };
+
+    const fieldsToTrack = Object.values(checklist);
+    const filledFields = fieldsToTrack.filter(Boolean).length;
+    const completionScore = Math.round((filledFields / fieldsToTrack.length) * 100);
+    
+    // Simplistic visibility for public data since we lack reply/velocity
+    const visibilityScore = Math.min(100, Math.round(completionScore * 0.5));
 
     return {
-      completionScore: Math.round((filled / fields.length) * 100),
-      searchRank: "N/A",
+      completionScore,
+      checklist,
+      visibilityScore,
       reviewsPerWeek: 0,
       replyRate: 0,
       totalReviews: publicData.user_ratings_total || 0,
       averageRating: publicData.rating || 0,
-      missingFields: ["Connect account to view full report"]
     };
   }, [isPublic, publicData]);
 
@@ -56,34 +64,6 @@ export function AuditReport({ profileId, publicData }: { profileId: string, publ
   );
 
   if (!audit) return null;
-
-  const getStatus = (val: any, type: 'completion' | 'reply' | 'velocity' | 'rank') => {
-    if (type === 'completion' || type === 'reply') {
-      const num = parseInt(val) || 0;
-      if (num >= 80) return { label: 'Good', color: 'bg-emerald-50 text-emerald-600 border-emerald-100' };
-      if (num >= 50) return { label: 'Average', color: 'bg-amber-50 text-amber-600 border-amber-100' };
-      return { label: 'Poor', color: 'bg-red-50 text-red-600 border-red-100' };
-    }
-    if (type === 'velocity') {
-      const num = parseFloat(val) || 0;
-      if (num >= 2) return { label: 'Good', color: 'bg-emerald-50 text-emerald-600 border-emerald-100' };
-      if (num >= 0.5) return { label: 'Average', color: 'bg-amber-50 text-amber-600 border-amber-100' };
-      return { label: 'Poor', color: 'bg-red-50 text-red-600 border-red-100' };
-    }
-    if (type === 'rank') {
-      const num = parseFloat(val);
-      if (isNaN(num)) return { label: 'N/A', color: 'bg-slate-50 text-slate-400 border-slate-100' };
-      if (num <= 5) return { label: 'Good', color: 'bg-emerald-50 text-emerald-600 border-emerald-100' };
-      if (num <= 10) return { label: 'Average', color: 'bg-amber-50 text-amber-600 border-amber-100' };
-      return { label: 'Poor', color: 'bg-red-50 text-red-600 border-red-100' };
-    }
-    return { label: 'N/A', color: 'bg-slate-50 text-slate-400 border-slate-100' };
-  };
-
-  const rankStatus = getStatus(audit.searchRank, 'rank');
-  const completionStatus = getStatus(audit.completionScore, 'completion');
-  const velocityStatus = getStatus(audit.reviewsPerWeek, 'velocity');
-  const replyStatus = getStatus(audit.replyRate, 'reply');
 
   return (
     <div className="space-y-6 audit-container">
