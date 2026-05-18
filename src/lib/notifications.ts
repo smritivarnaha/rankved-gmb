@@ -120,3 +120,36 @@ export const templates = {
     };
   }
 };
+
+/**
+ * Build a simple review alert email (used externally if needed)
+ */
+export function buildReviewAlert(opts: {
+  profileName: string;
+  reviewerName: string;
+  starRating: number;
+  comment: string;
+  replyUrl: string;
+}): EmailOptions {
+  const stars = "⭐".repeat(Math.min(opts.starRating, 5));
+  return {
+    subject: `${stars} New ${opts.starRating}-Star Review — ${opts.profileName}`,
+    text: `New review on ${opts.profileName}\nFrom: ${opts.reviewerName}\nRating: ${opts.starRating}/5\n\n"${opts.comment}"\n\nReply here: ${opts.replyUrl}`,
+  };
+}
+
+/**
+ * Build a performance spike alert email (used externally if needed)
+ */
+export function buildPerformanceAlert(opts: {
+  profileName: string;
+  metricLabel: string;
+  prevValue: number;
+  currentValue: number;
+  changePercent: number;
+}): EmailOptions {
+  return {
+    subject: `📈 ${opts.metricLabel} up ${opts.changePercent}% — ${opts.profileName}`,
+    text: `Performance spike on ${opts.profileName}\n${opts.metricLabel}: ${opts.prevValue} → ${opts.currentValue} (+${opts.changePercent}%)\n\nLog in to view your full analytics dashboard.`,
+  };
+}

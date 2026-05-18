@@ -5,7 +5,8 @@ import { useState, useEffect } from "react";
 import {
   Loader2, CheckCircle2, RefreshCw, MapPin, 
   AlertCircle, User, Trash2, Image as ImageIcon, Upload, Save,
-  Mail, Bookmark, Palette, Eye, Send, Code, Copy, Users, Globe
+  Mail, Bookmark, Palette, Eye, Send, Code, Copy, Users, Globe,
+  Bell, Star, Phone, BarChart2, ToggleLeft, ToggleRight, TrendingUp
 } from "lucide-react";
 import { useGlobalSettings } from "@/hooks/useGlobalSettings";
 
@@ -184,6 +185,7 @@ export default function SettingsPage() {
   const tabs = [
     { id: "accounts", label: "Google Accounts", icon: GoogleIcon },
     { id: "notifications", label: "Email Notifications", icon: Mail },
+    { id: "alerts", label: "GBP Alerts", icon: Bell },
     { id: "profiles", label: "Saved Profiles", icon: Bookmark },
     ...(isSuperAdmin ? [{ id: "branding", label: "Sidebar Branding", icon: Palette }] : [])
   ];
@@ -506,6 +508,156 @@ export default function SettingsPage() {
                   {testingEmail ? <Loader2 className="anim-spin" style={{ width: 16, height: 16 }} /> : <Send style={{ width: 16, height: 16 }} />}
                   Send Test Email
                 </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* GBP Intelligence Alerts */}
+      {canConnectGoogle && activeTab === "alerts" && (
+        <div className="s-card">
+          <div className="s-card-header">
+            <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
+              <div className="icon-box" style={{ background: "#fdf4ff", color: "#9333ea" }}><Bell size={22} /></div>
+              <div>
+                <h2 style={{ fontSize: 18, fontWeight: 600, color: "#111827", margin: "0 0 4px" }}>GBP Intelligence Alerts</h2>
+                <p style={{ fontSize: 13, color: "#64748b", margin: 0 }}>Get notified when customers leave reviews or your performance spikes.</p>
+              </div>
+            </div>
+          </div>
+          <div className="s-card-body">
+            <div style={{ display: "flex", flexDirection: "column", gap: 28 }}>
+
+              {/* Master toggle */}
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "16px 20px", background: localSettings?.monitoringEnabled ? "#f0fdf4" : "#f8fafc", border: `1px solid ${localSettings?.monitoringEnabled ? "#bbf7d0" : "#e2e8f0"}`, borderRadius: 10 }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+                  <div style={{ width: 36, height: 36, borderRadius: 8, background: localSettings?.monitoringEnabled ? "#dcfce7" : "#f1f5f9", display: "flex", alignItems: "center", justifyContent: "center", color: localSettings?.monitoringEnabled ? "#16a34a" : "#94a3b8" }}>
+                    <Bell size={18} />
+                  </div>
+                  <div>
+                    <p style={{ margin: "0 0 2px", fontSize: 15, fontWeight: 600, color: "#111827" }}>Enable GBP Monitoring</p>
+                    <p style={{ margin: 0, fontSize: 12, color: "#64748b" }}>Master switch — runs every 6 hours automatically</p>
+                  </div>
+                </div>
+                <button
+                  onClick={() => updateSettings({ monitoringEnabled: !localSettings?.monitoringEnabled })}
+                  style={{ background: "transparent", border: "none", cursor: "pointer", padding: 0 }}
+                >
+                  {localSettings?.monitoringEnabled
+                    ? <ToggleRight size={40} color="#16a34a" />
+                    : <ToggleLeft size={40} color="#cbd5e1" />}
+                </button>
+              </div>
+
+              {/* Section: Reviews */}
+              <div>
+                <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 16 }}>
+                  <Star size={16} color="#d97706" />
+                  <h3 style={{ margin: 0, fontSize: 14, fontWeight: 700, color: "#111827" }}>Review Alerts</h3>
+                </div>
+                <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+                  {[
+                    { key: "reviewAlertsEnabled", label: "New review received", desc: "Email when any new review is posted (includes reviewer name, stars, and text)", icon: Star, color: "#d97706", bg: "#fffbeb" },
+                  ].map(item => (
+                    <div key={item.key} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "14px 16px", background: localSettings?.[item.key] ? item.bg : "#f8fafc", border: `1px solid ${localSettings?.[item.key] ? "#fde68a" : "#e2e8f0"}`, borderRadius: 10 }}>
+                      <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+                        <item.icon size={16} color={localSettings?.[item.key] ? item.color : "#94a3b8"} />
+                        <div>
+                          <p style={{ margin: "0 0 2px", fontSize: 14, fontWeight: 600, color: "#111827" }}>{item.label}</p>
+                          <p style={{ margin: 0, fontSize: 12, color: "#64748b" }}>{item.desc}</p>
+                        </div>
+                      </div>
+                      <button onClick={() => updateSettings({ [item.key]: !localSettings?.[item.key] })} style={{ background: "transparent", border: "none", cursor: "pointer", padding: 0 }}>
+                        {localSettings?.[item.key] ? <ToggleRight size={32} color={item.color} /> : <ToggleLeft size={32} color="#cbd5e1" />}
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Section: Performance */}
+              <div>
+                <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 16 }}>
+                  <TrendingUp size={16} color="#2563eb" />
+                  <h3 style={{ margin: 0, fontSize: 14, fontWeight: 700, color: "#111827" }}>Performance Spike Alerts</h3>
+                </div>
+                <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+                  {[
+                    { key: "performanceAlertsEnabled", label: "Phone calls, directions & website clicks spike", desc: "Email when any metric jumps significantly week-over-week", icon: BarChart2, color: "#2563eb", bg: "#eff6ff" },
+                  ].map(item => (
+                    <div key={item.key} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "14px 16px", background: localSettings?.[item.key] ? item.bg : "#f8fafc", border: `1px solid ${localSettings?.[item.key] ? "#bfdbfe" : "#e2e8f0"}`, borderRadius: 10 }}>
+                      <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+                        <item.icon size={16} color={localSettings?.[item.key] ? item.color : "#94a3b8"} />
+                        <div>
+                          <p style={{ margin: "0 0 2px", fontSize: 14, fontWeight: 600, color: "#111827" }}>{item.label}</p>
+                          <p style={{ margin: 0, fontSize: 12, color: "#64748b" }}>{item.desc}</p>
+                        </div>
+                      </div>
+                      <button onClick={() => updateSettings({ [item.key]: !localSettings?.[item.key] })} style={{ background: "transparent", border: "none", cursor: "pointer", padding: 0 }}>
+                        {localSettings?.[item.key] ? <ToggleRight size={32} color={item.color} /> : <ToggleLeft size={32} color="#cbd5e1" />}
+                      </button>
+                    </div>
+                  ))}
+                </div>
+
+                {/* Thresholds */}
+                {localSettings?.performanceAlertsEnabled && (
+                  <div style={{ marginTop: 20, padding: 20, background: "#f8fafc", border: "1px solid #e2e8f0", borderRadius: 10 }}>
+                    <p style={{ margin: "0 0 16px", fontSize: 13, fontWeight: 700, color: "#374151" }}>Spike Thresholds (% increase week-over-week to trigger alert)</p>
+                    <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(200px, 1fr))", gap: 16 }}>
+                      {[
+                        { key: "callsSpikeThreshold", label: "📞 Phone Calls", icon: Phone },
+                        { key: "directionsSpikeThreshold", label: "📍 Directions", icon: MapPin },
+                        { key: "clicksSpikeThreshold", label: "🌐 Website Clicks", icon: Globe },
+                      ].map(t => (
+                        <div key={t.key}>
+                          <label style={{ fontSize: 12, fontWeight: 600, color: "#64748b", display: "block", marginBottom: 8 }}>{t.label}</label>
+                          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                            <input
+                              type="number"
+                              min={5} max={200}
+                              value={localSettings?.[t.key] ?? 20}
+                              onChange={e => updateSettings({ [t.key]: parseInt(e.target.value, 10) || 20 })}
+                              style={{ flex: 1, padding: "8px 12px", border: "1px solid #e2e8f0", borderRadius: 8, fontSize: 14, background: "#fff", outline: "none" }}
+                            />
+                            <span style={{ fontSize: 14, fontWeight: 600, color: "#475569" }}>%</span>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Info banner */}
+              <div style={{ padding: "14px 16px", background: "#fafafa", border: "1px solid #e2e8f0", borderRadius: 10, display: "flex", gap: 10 }}>
+                <Bell size={16} color="#64748b" style={{ flexShrink: 0, marginTop: 2 }} />
+                <p style={{ margin: 0, fontSize: 12, color: "#64748b", lineHeight: 1.6 }}>
+                  Alerts are sent to the same emails configured in <strong>Email Notifications</strong>. The monitor runs automatically every 6 hours and only sends emails when something new or significant happens — no spam.
+                </p>
+              </div>
+
+              {/* Save button */}
+              <div style={{ display: "flex", gap: 12, alignItems: "center" }}>
+                <button
+                  onClick={handleSaveSettings}
+                  disabled={savingSettings}
+                  className="btn btn-primary"
+                  style={{ padding: "10px 20px", fontSize: 14 }}
+                >
+                  {savingSettings ? <Loader2 className="anim-spin" style={{ width: 16, height: 16 }} /> : <Save style={{ width: 16, height: 16 }} />}
+                  Save Alert Settings
+                </button>
+                <a
+                  href="/api/cron/gbp-monitor"
+                  target="_blank"
+                  rel="noreferrer"
+                  className="btn"
+                  style={{ padding: "10px 20px", fontSize: 14, background: "#fff", border: "1px solid #e2e8f0", color: "#111827", textDecoration: "none", display: "flex", alignItems: "center", gap: 8 }}
+                >
+                  <RefreshCw size={14} /> Run Monitor Now
+                </a>
               </div>
             </div>
           </div>

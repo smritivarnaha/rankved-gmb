@@ -94,6 +94,7 @@ model User {
   posts           Post[]
   apiKeys         ApiKey[]
   prompts         PromptTemplate[]
+  notifications   Notification[]
   createdAt       DateTime    @default(now())
   updatedAt       DateTime    @updatedAt
 }
@@ -123,6 +124,7 @@ model Location {
   clientId      String
   client        Client   @relation(fields: [clientId], references: [id], onDelete: Cascade)
   posts         Post[]
+  notifications Notification[]
   assignedUsers User[] @relation("LocationAssignments")
 
   // AI Configuration
@@ -242,6 +244,14 @@ model GlobalSetting {
   failureTemplateBody       String  @default("Your post failed to publish.\n\nProfile: {profileName}\nError: {error}\nPost: {postSummary}")
   scheduledTemplateSubject  String  @default("🕒 Post Scheduled: {profileName}")
   scheduledTemplateBody     String  @default("A new post has been scheduled.\n\nProfile: {profileName}\nDate: {scheduledAt}")
+
+  // GBP Intelligence Monitoring
+  monitoringEnabled         Boolean @default(true)
+  reviewAlertsEnabled       Boolean @default(true)
+  performanceAlertsEnabled  Boolean @default(true)
+  callsSpikeThreshold       Int     @default(20)   // % increase week-over-week
+  directionsSpikeThreshold  Int     @default(20)
+  clicksSpikeThreshold      Int     @default(15)
   
   updatedAt        DateTime @updatedAt
 }
@@ -263,4 +273,46 @@ model Backup {
   name      String
   data      Json
   createdAt DateTime @default(now())
+}
+
+model Notification {
+  id          String   @id @default(cuid())
+  type        String   @default("INTERNAL") // INTERNAL (system), EXTERNAL (customer)
+  title       String
+  message     String   @db.Text
+  isRead      Boolean  @default(false)
+  actionUrl   String?
+  
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  locationId  String?
+  location    Location? @relation(fields: [locationId], references: [id], onDelete: SetNull)
+
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([userId, isRead])
+  @@index([locationId])
+}
+
+// ─── GBP Review Snapshots ─────────────────────────────────
+// Stores the last known review state per location to detect new reviews
+model ReviewSnapshot {
+  id               String   @id @default(cuid())
+  locationId       String   @unique
+  totalReviewCount Int      @default(0)
+  averageRating    Float    @default(0)
+  lastReviewIds    String   @default("") @db.Text  // JSON array of last seen review names
+  
+  // Performance baseline (last week's metrics for spike detection)
+  lastCallCount        Int @default(0)
+  lastDirectionCount   Int @default(0)
+  lastClickCount       Int @default(0)
+  lastCheckedAt        DateTime @default(now())
+  
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([locationId])
 }

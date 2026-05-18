@@ -93,6 +93,21 @@ export async function POST(req: NextRequest) {
     if (scheduledTemplateSubject !== null) updateData.scheduledTemplateSubject = scheduledTemplateSubject;
     if (scheduledTemplateBody !== null) updateData.scheduledTemplateBody = scheduledTemplateBody;
 
+    // GBP Intelligence Monitoring
+    const monitoringEnabled = formData.get("monitoringEnabled") as string;
+    const reviewAlertsEnabled = formData.get("reviewAlertsEnabled") as string;
+    const performanceAlertsEnabled = formData.get("performanceAlertsEnabled") as string;
+    const callsSpikeThreshold = formData.get("callsSpikeThreshold") as string;
+    const directionsSpikeThreshold = formData.get("directionsSpikeThreshold") as string;
+    const clicksSpikeThreshold = formData.get("clicksSpikeThreshold") as string;
+
+    if (monitoringEnabled !== null) updateData.monitoringEnabled = monitoringEnabled === "true";
+    if (reviewAlertsEnabled !== null) updateData.reviewAlertsEnabled = reviewAlertsEnabled === "true";
+    if (performanceAlertsEnabled !== null) updateData.performanceAlertsEnabled = performanceAlertsEnabled === "true";
+    if (callsSpikeThreshold !== null) updateData.callsSpikeThreshold = parseInt(callsSpikeThreshold, 10);
+    if (directionsSpikeThreshold !== null) updateData.directionsSpikeThreshold = parseInt(directionsSpikeThreshold, 10);
+    if (clicksSpikeThreshold !== null) updateData.clicksSpikeThreshold = parseInt(clicksSpikeThreshold, 10);
+
     if (file && file.size > 0) {
       // Store image as Base64 for persistence on Vercel
       const bytes = await file.arrayBuffer();
