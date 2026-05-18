@@ -6,29 +6,45 @@ import { useSession } from "next-auth/react";
 import { Save, Clock, Loader2, ImagePlus, X, Send, MapPin, Link as LinkIcon, Copy, Check, Lock, Phone, Sparkles, Download } from "lucide-react";
 import Link from "next/link";
 import { embedGPSInImage, CAMERA_TEMPLATES } from "@/lib/geo-exif";
-import Lottie from "lottie-react";
-
-// Lottie Animation URLs
-const ANIMATIONS = {
-  PUBLISH: "https://assets2.lottiefiles.com/packages/lf20_m6cuL6.json", 
-  SCHEDULED: "https://assets10.lottiefiles.com/packages/lf20_unp7v8.json", 
-  DRAFT: "https://assets5.lottiefiles.com/packages/lf20_vnikbe.json", 
-  SUCCESS: "https://assets3.lottiefiles.com/packages/lf20_yupe0msc.json", 
-};
-
-function LottieWrapper({ url, className }: { url: string; className?: string }) {
-  const [animationData, setAnimationData] = useState<any>(null);
-
-  useEffect(() => {
-    fetch(url)
-      .then((res) => res.json())
-      .then((data) => setAnimationData(data))
-      .catch((err) => console.error("Lottie fetch error:", err));
-  }, [url]);
-
-  if (!animationData) return <Loader2 className={`animate-spin ${className}`} />;
-
-  return <Lottie animationData={animationData} loop={true} className={className} />;
+function SmoothAnimation({ type, className }: { type: string; className?: string }) {
+  if (type === "SUCCESS") {
+    return (
+      <div className={`relative flex items-center justify-center ${className}`}>
+        <div className="absolute inset-0 rounded-full bg-green-100 animate-[ping_1.5s_ease-in-out_infinite]" />
+        <div className="relative bg-green-500 rounded-full p-6 shadow-lg shadow-green-500/30 transform transition-all duration-500 scale-110">
+          <Check size={40} className="text-white stroke-[3px]" />
+        </div>
+      </div>
+    );
+  }
+  if (type === "PUBLISH") {
+    return (
+      <div className={`relative flex items-center justify-center ${className}`}>
+        <div className="absolute inset-0 rounded-full bg-blue-100 animate-[ping_2s_ease-in-out_infinite]" />
+        <div className="relative bg-[#2563eb] rounded-full p-6 shadow-lg shadow-blue-500/30 animate-[bounce_2s_infinite]">
+          <Send size={40} className="text-white relative left-1 top-1" />
+        </div>
+      </div>
+    );
+  }
+  if (type === "SCHEDULED") {
+    return (
+      <div className={`relative flex items-center justify-center ${className}`}>
+        <div className="absolute inset-0 rounded-full bg-purple-100 animate-[pulse_2s_ease-in-out_infinite]" />
+        <div className="relative bg-purple-600 rounded-full p-6 shadow-lg shadow-purple-500/30">
+          <Clock size={40} className="text-white animate-[spin_3s_linear_infinite]" />
+        </div>
+      </div>
+    );
+  }
+  return (
+    <div className={`relative flex items-center justify-center ${className}`}>
+      <div className="absolute inset-0 rounded-full bg-slate-100 animate-[pulse_2s_ease-in-out_infinite]" />
+      <div className="relative bg-slate-700 rounded-full p-6 shadow-lg shadow-slate-500/30">
+        <Save size={40} className="text-white animate-pulse" />
+      </div>
+    </div>
+  );
 }
 
 // No fallback sample data — profiles load from /api/profiles only
@@ -455,7 +471,7 @@ export function PostEditor({
             {successMessage ? (
               <div className="flex flex-col items-center">
                 <div className="w-28 h-28 mb-6">
-                  <LottieWrapper url={ANIMATIONS.SUCCESS} className="w-full h-full" />
+                  <SmoothAnimation type="SUCCESS" className="w-full h-full" />
                 </div>
                 <h3 className="text-2xl font-bold text-[#0f172a] mb-2 text-center tracking-tight">{successMessage}</h3>
                 <p className="text-[15px] text-[#64748b] text-center font-medium">
@@ -465,10 +481,8 @@ export function PostEditor({
             ) : (
               <div className="flex flex-col items-center">
                 <div className="w-28 h-28 mb-6">
-                  <LottieWrapper 
-                    url={savingType === "PUBLISH" ? ANIMATIONS.PUBLISH : 
-                         savingType === "SCHEDULED" ? ANIMATIONS.SCHEDULED : 
-                         ANIMATIONS.DRAFT} 
+                  <SmoothAnimation 
+                    type={savingType} 
                     className="w-full h-full" 
                   />
                 </div>

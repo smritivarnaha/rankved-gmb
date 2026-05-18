@@ -136,6 +136,31 @@ export async function publishToGBP(opts: PublishOptions): Promise<PublishResult>
 
     if (!res.ok) {
       console.error("[GBP] Publish failed:", res.status, JSON.stringify(data));
+      
+      // Fallback Verification: Google API sometimes returns "Request contains an invalid argument."
+      // due to a temporary timeout when their crawler fetches the image, BUT still creates the post!
+      // We double-check the profile's recent posts to prevent false "FAILED" statuses.
+      try {
+        console.log("[GBP] Verifying if post was actually created despite error...");
+        const verifyRes = await fetch(`${GBP_BASE}/${locationName}/localPosts?pageSize=5`, {
+          headers: { Authorization: `Bearer ${accessToken}` }
+        });
+        
+        if (verifyRes.ok) {
+          const verifyData = await verifyRes.json();
+          if (verifyData.localPosts && verifyData.localPosts.length > 0) {
+            // Check if there is a recent post with the exact same summary
+            const duplicate = verifyData.localPosts.find((p: any) => p.summary === post.summary);
+            if (duplicate) {
+              console.log("[GBP] 🟢 FALSE NEGATIVE RESOLVED! Post was actually created:", duplicate.name);
+              return { success: true, gbpPostName: duplicate.name };
+            }
+          }
+        }
+      } catch (verifyErr) {
+        console.error("[GBP] Verification check failed:", verifyErr);
+      }
+
       const message = data?.error?.message || data?.error || `GBP API error ${res.status}`;
       return { success: false, error: message };
     }
