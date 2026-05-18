@@ -34,7 +34,7 @@ export default function SettingsPage() {
   const [savingSettings, setSavingSettings] = useState(false);
   const [selectedLogo, setSelectedLogo] = useState<File | null>(null);
   
-  const [activeTab, setActiveTab] = useState<"accounts" | "notifications" | "profiles" | "branding">("accounts");
+  const [activeTab, setActiveTab] = useState<"accounts" | "notifications" | "profiles" | "branding" | "alerts">("accounts");
 
   useEffect(() => {
     if (settings) {
