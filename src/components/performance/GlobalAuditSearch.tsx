@@ -116,173 +116,133 @@ export function GlobalAuditSearch() {
   })() : null;
 
   return (
-    <div className="flex flex-col w-full max-w-7xl mx-auto">
-      {/* ── Page Header (Hidden on print) ── */}
-      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-6 no-print">
+    <div style={{ display: "flex", flexDirection: "column", width: "100%", fontFamily: "Inter,-apple-system,sans-serif" }}>
+      <style>{`
+        .gaud-input:focus { outline: none; }
+        .gaud-input::placeholder { color: #94a3b8; }
+        .gaud-sug-btn:hover { background: #f8fafc !important; }
+        @keyframes spin { to { transform: rotate(360deg); } }
+        .anim-spin { animation: spin 1s linear infinite; }
+        @media print { .no-print { display: none !important; } }
+      `}</style>
+
+      {/* Page header */}
+      <div className="no-print page-header" style={{ marginBottom: 24 }}>
         <div>
-          <h1 className="text-3xl font-black text-slate-900 tracking-tight leading-none mb-1.5 flex items-center gap-2">
-            Command Center <span className="text-xs bg-indigo-50 text-indigo-600 px-2 py-0.5 rounded-full border border-indigo-100 font-extrabold tracking-wide uppercase">Lead Gen</span>
-          </h1>
-          <p className="text-sm text-slate-400 font-semibold">Search, audit, and export any business profile instantly</p>
+          <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 4 }}>
+            <h1 className="page-title">Command Center</h1>
+            <span style={{ fontSize: 9, fontWeight: 700, color: "#6366f1", background: "#eef2ff", padding: "2px 8px", borderRadius: 99, textTransform: "uppercase", letterSpacing: "0.06em" }}>Lead Gen</span>
+          </div>
+          <p className="page-subtitle">Search, audit, and export any business profile instantly</p>
         </div>
-        <button
-          onClick={copyLink}
-          className="flex items-center gap-2 px-4 py-2.5 bg-white border border-slate-200 rounded-xl text-xs font-bold text-slate-700 hover:border-indigo-600 hover:text-indigo-600 transition-all shadow-sm active:scale-95"
-        >
-          {copied ? <Check size={14} className="text-emerald-500" /> : <Copy size={14} />}
-          {copied ? "Link Copied!" : "Copy Onboarding Link"}
+        <button onClick={copyLink} className="btn btn-ghost" style={{ display: "flex", alignItems: "center", gap: 8 }}>
+          {copied ? <Check size={14} style={{ color: "#10b981" }} /> : <Copy size={14} />}
+          {copied ? "Copied!" : "Copy Onboarding Link"}
         </button>
       </div>
 
-      {/* ── Search Bar (Hidden on print) ── */}
-      <div ref={dropRef} className="relative w-full max-w-lg mb-6 no-print">
-        <div className="flex items-center bg-white border border-slate-200 rounded-2xl h-12 px-4 gap-3 shadow-sm hover:border-slate-300 focus-within:border-indigo-500 transition-all">
+      {/* Search bar */}
+      <div ref={dropRef} className="no-print" style={{ position: "relative", maxWidth: 480, marginBottom: 24 }}>
+        <div style={{ display: "flex", alignItems: "center", background: "#fff", border: "1px solid #e2e8f0", borderRadius: 10, height: 44, padding: "0 14px", gap: 10, boxShadow: "0 1px 3px rgba(0,0,0,0.04)" }}>
           {isSearching
-            ? <Loader2 size={18} className="animate-spin text-indigo-600 flex-shrink-0" />
-            : <Search size={18} className="text-slate-400 flex-shrink-0" />
+            ? <Loader2 size={16} className="anim-spin" style={{ color: "#6366f1", flexShrink: 0 }} />
+            : <Search size={16} style={{ color: "#94a3b8", flexShrink: 0 }} />
           }
-          <input
-            type="text"
-            placeholder="Search business name or location address..."
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-            className="flex-grow border-none outline-none text-sm text-slate-800 font-medium placeholder-slate-400 bg-transparent"
-          />
+          <input className="gaud-input" type="text" placeholder="Search a business name or address..."
+            value={query} onChange={e => setQuery(e.target.value)}
+            style={{ flex: 1, border: "none", outline: "none", fontSize: 14, background: "transparent", color: "#0f172a", fontFamily: "inherit" }} />
           {query && (
-            <button onClick={reset} className="text-slate-400 hover:text-slate-600 flex items-center p-1 rounded-full hover:bg-slate-50 transition-all">
+            <button onClick={reset} style={{ border: "none", background: "none", cursor: "pointer", color: "#94a3b8", display: "flex", padding: 2 }}>
               <X size={14} />
             </button>
           )}
         </div>
-
-        {/* API Error Message */}
         {apiError && (
-          <div className="flex items-start gap-2.5 mt-3 p-3.5 bg-rose-50 border border-rose-100 text-rose-700 rounded-xl text-xs font-semibold">
-            <X size={14} className="flex-shrink-0 mt-0.5 text-rose-500" />
-            {apiError}
+          <div style={{ display: "flex", alignItems: "flex-start", gap: 8, marginTop: 8, padding: "10px 14px", background: "#fef2f2", border: "1px solid #fecaca", borderRadius: 8, fontSize: 12, color: "#dc2626" }}>
+            <X size={13} style={{ flexShrink: 0, marginTop: 1 }} /> {apiError}
           </div>
         )}
-
-        {/* Autocomplete Dropdown suggestions */}
         {showDropdown && suggestions.length > 0 && (
-          <div className="absolute top-full left-0 right-0 mt-2 bg-white rounded-2xl border border-slate-200 shadow-xl z-50 overflow-hidden divide-y divide-slate-100 max-h-80 overflow-y-auto">
+          <div style={{ position: "absolute", top: "calc(100% + 6px)", left: 0, right: 0, background: "#fff", borderRadius: 10, border: "1px solid #e2e8f0", boxShadow: "0 8px 24px rgba(0,0,0,0.08)", zIndex: 200, overflow: "hidden" }}>
             {suggestions.map((s, i) => (
-              <button
-                key={s.id || i}
-                onClick={() => handleSelect(s)}
-                className="w-full px-5 py-3.5 flex items-center gap-3.5 text-left hover:bg-slate-50 transition-all group"
-              >
-                <div className="w-9 h-9 rounded-xl bg-slate-50 flex items-center justify-center flex-shrink-0 group-hover:bg-indigo-50 transition-all">
-                  <MapPin size={16} className="text-slate-400 group-hover:text-indigo-600 transition-all" />
+              <button key={s.id || i} onClick={() => handleSelect(s)} className="gaud-sug-btn"
+                style={{ width: "100%", padding: "11px 16px", border: "none", background: "none", cursor: "pointer", display: "flex", alignItems: "center", gap: 12, textAlign: "left", borderBottom: i < suggestions.length - 1 ? "1px solid #f1f5f9" : "none", fontFamily: "inherit" }}>
+                <div style={{ width: 32, height: 32, borderRadius: 8, background: "#f1f5f9", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                  <MapPin size={14} style={{ color: "#94a3b8" }} />
                 </div>
-                <div className="flex-grow min-w-0">
-                  <p className="text-sm font-bold text-slate-800 truncate leading-snug">
-                    {s.mainText}
-                  </p>
-                  <p className="text-xs text-slate-400 truncate leading-normal mt-0.5">{s.secondaryText}</p>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <p style={{ fontSize: 13, fontWeight: 600, color: "#0f172a", margin: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{s.mainText}</p>
+                  <p style={{ fontSize: 11, color: "#94a3b8", margin: 0 }}>{s.secondaryText}</p>
                 </div>
-                <ChevronRight size={14} className="text-slate-300 group-hover:text-slate-500 transition-all flex-shrink-0" />
+                <ChevronRight size={14} style={{ color: "#cbd5e1", flexShrink: 0 }} />
               </button>
             ))}
           </div>
         )}
       </div>
 
-      {/* ── Main Panel Area ── */}
-      <div className="w-full bg-white border border-slate-100 rounded-3xl shadow-sm overflow-hidden min-h-[420px] flex flex-col items-center justify-center p-1">
+      {/* Main panel */}
+      <div className="ds-card" style={{ minHeight: 400, padding: 0, overflow: "hidden" }}>
         {!selected ? (
-          /* Empty State */
-          <div className="flex flex-col items-center justify-center py-20 px-6 text-center max-w-sm">
-            <div className="w-16 h-16 rounded-2xl bg-indigo-50 flex items-center justify-center mb-5 border border-indigo-100 shadow-sm animate-pulse">
-              <Search size={26} className="text-indigo-600" />
+          <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: "80px 24px", textAlign: "center" }}>
+            <div style={{ width: 56, height: 56, borderRadius: "50%", background: "#eef2ff", display: "flex", alignItems: "center", justifyContent: "center", marginBottom: 20 }}>
+              <Search size={24} style={{ color: "#6366f1" }} />
             </div>
-            <h3 className="text-lg font-bold text-slate-900 mb-2">Instant Lead Generator</h3>
-            <p className="text-xs text-slate-400 leading-relaxed font-semibold">
-              Type at least 3 characters in the search bar above to fetch, audit, and download a gorgeous SEO proposal for any business.
+            <h3 style={{ fontSize: 18, fontWeight: 700, color: "#0f172a", marginBottom: 8 }}>Instant Lead Generator</h3>
+            <p style={{ fontSize: 14, color: "#94a3b8", maxWidth: 300, lineHeight: 1.6, margin: 0 }}>
+              Type 3+ characters to audit any Google Business Profile and generate a downloadable SEO proposal.
             </p>
           </div>
         ) : (
-          /* ── Full Interactive Audit Dashboard ── */
-          <div className="w-full flex flex-col p-6 gap-6">
-            
-            {/* Header controls for selected place */}
-            <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 pb-6 border-b border-slate-100 no-print">
+          <div style={{ padding: "24px 28px", display: "flex", flexDirection: "column", gap: 20 }}>
+            {/* Business header */}
+            <div className="no-print" style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 16, paddingBottom: 20, borderBottom: "1px solid #f1f5f9", flexWrap: "wrap" }}>
               <div>
-                <button
-                  onClick={reset}
-                  className="flex items-center gap-2 text-xs font-black text-slate-400 hover:text-indigo-600 uppercase tracking-widest leading-none mb-3 transition-all"
-                >
-                  <ArrowLeft size={13} /> Back to Search
+                <button onClick={reset} style={{ display: "flex", alignItems: "center", gap: 5, border: "none", background: "none", cursor: "pointer", color: "#94a3b8", fontSize: 12, fontWeight: 600, padding: 0, marginBottom: 10, fontFamily: "inherit" }}>
+                  <ArrowLeft size={13} /> Back to search
                 </button>
-                <h2 className="text-2xl font-black text-slate-950 tracking-tight leading-none mb-2">
-                  {selected.displayName?.text}
-                </h2>
-                <div className="flex items-center gap-3 text-xs text-slate-400 font-semibold flex-wrap">
-                  <span className="bg-slate-100 text-slate-600 px-2 py-0.5 rounded-md font-bold text-[10px] uppercase tracking-wider">
-                    {selected.primaryType?.replace(/_/g, " ") || "Local Business"}
-                  </span>
-                  {selected.websiteUri && (
-                    <a 
-                      href={selected.websiteUri} 
-                      target="_blank" 
-                      rel="noreferrer" 
-                      className="flex items-center gap-1.5 text-indigo-600 hover:underline"
-                    >
-                      <Globe size={13} /> Visit Website <ExternalLink size={10} />
-                    </a>
+                <h2 style={{ fontSize: 20, fontWeight: 800, color: "#0f172a", margin: "0 0 8px", letterSpacing: "-0.01em" }}>{selected.displayName?.text}</h2>
+                <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
+                  {selected.primaryType && (
+                    <span style={{ fontSize: 10, fontWeight: 700, color: "#64748b", background: "#f1f5f9", padding: "2px 8px", borderRadius: 6, textTransform: "uppercase", letterSpacing: "0.06em" }}>
+                      {selected.primaryType.replace(/_/g, " ")}
+                    </span>
                   )}
-                  {selected.googleMapsUri && (
-                    <a 
-                      href={selected.googleMapsUri} 
-                      target="_blank" 
-                      rel="noreferrer" 
-                      className="flex items-center gap-1.5 text-slate-500 hover:underline"
-                    >
-                      <MapPin size={13} /> View on Maps <ExternalLink size={10} />
+                  {selected.websiteUri && (
+                    <a href={selected.websiteUri} target="_blank" rel="noreferrer" style={{ display: "flex", alignItems: "center", gap: 4, fontSize: 12, fontWeight: 600, color: "#6366f1", textDecoration: "none" }}>
+                      <Globe size={12} /> Website <ExternalLink size={10} />
                     </a>
                   )}
                 </div>
               </div>
-
-              {/* Action row buttons */}
-              <div className="flex items-center gap-3 flex-wrap">
-                <button 
-                  onClick={() => window.print()}
-                  className="flex items-center gap-2 px-5 py-3 bg-slate-900 text-white rounded-xl text-xs font-black uppercase tracking-widest hover:bg-indigo-600 transition-all shadow-md active:scale-95"
-                >
-                  <Printer className="w-4 h-4" /> Download PDF Report
+              <div style={{ display: "flex", gap: 8 }}>
+                <button onClick={() => window.print()} style={{ display: "flex", alignItems: "center", gap: 8, height: 38, padding: "0 16px", background: "#0f172a", color: "#fff", border: "none", borderRadius: 10, fontSize: 12, fontWeight: 700, cursor: "pointer", fontFamily: "inherit" }}>
+                  <Printer size={14} /> Download PDF
                 </button>
-                <button 
-                  onClick={() => window.open("/connect", "_blank")}
-                  className="flex items-center gap-2 px-5 py-3 bg-indigo-600 text-white rounded-xl text-xs font-black uppercase tracking-widest hover:bg-indigo-700 transition-all shadow-md active:scale-95"
-                >
-                  <Sparkles className="w-4 h-4" /> Connect with RankVed
+                <button onClick={() => window.open("/connect", "_blank")} style={{ display: "flex", alignItems: "center", gap: 8, height: 38, padding: "0 16px", background: "#6366f1", color: "#fff", border: "none", borderRadius: 10, fontSize: 12, fontWeight: 700, cursor: "pointer", fontFamily: "inherit" }}>
+                  <Sparkles size={14} /> Connect Profile
                 </button>
               </div>
             </div>
 
-            {/* Redesigned Dashboard Component */}
             <AuditDashboard auditData={publicAudit} isPublic={true} publicData={selected} />
 
-            {/* Bottom Leads Conversion CTA Banner (Hidden on print) */}
-            <div className="mt-8 bg-gradient-to-r from-indigo-500/10 via-purple-500/5 to-transparent border border-indigo-100 rounded-3xl p-8 flex flex-col md:flex-row items-center justify-between gap-6 no-print">
-              <div className="max-w-xl text-center md:text-left">
-                <h3 className="text-lg font-extrabold text-slate-900 mb-2">Automate optimization & reviews for this business</h3>
-                <p className="text-xs text-slate-500 font-semibold leading-relaxed">
-                  Onboard this profile onto RankVed in 1 click. Unlock daily auto-post scheduling, automated review replies powered by custom AI context, photo SEO keyword optimization, and real-time rank tracking.
+            {/* CTA banner */}
+            <div className="no-print" style={{ background: "linear-gradient(135deg,#eef2ff,#f5f3ff)", border: "1px solid #e0e7ff", borderRadius: 16, padding: "24px 28px", display: "flex", alignItems: "center", justifyContent: "space-between", gap: 20, flexWrap: "wrap", marginTop: 8 }}>
+              <div style={{ maxWidth: 520 }}>
+                <h3 style={{ fontSize: 16, fontWeight: 800, color: "#0f172a", margin: "0 0 6px" }}>Automate optimization & reviews for this business</h3>
+                <p style={{ fontSize: 12, color: "#64748b", margin: 0, lineHeight: 1.6 }}>
+                  Onboard onto RankVed in 1-click. Unlock daily auto-posting, AI review replies, photo SEO, and real-time rank tracking.
                 </p>
               </div>
-              <button
-                onClick={() => window.open("/connect", "_blank")}
-                className="flex-shrink-0 px-6 py-4 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-black uppercase tracking-widest rounded-2xl shadow-lg hover:shadow-indigo-200 hover:-translate-y-0.5 active:scale-95 transition-all"
-              >
-                Launch Onboarding Flow
+              <button onClick={() => window.open("/connect", "_blank")} style={{ flexShrink: 0, height: 44, padding: "0 22px", background: "#6366f1", color: "#fff", border: "none", borderRadius: 12, fontSize: 13, fontWeight: 700, cursor: "pointer", fontFamily: "inherit", whiteSpace: "nowrap" }}>
+                Launch Onboarding →
               </button>
             </div>
-
           </div>
         )}
       </div>
     </div>
   );
 }
+
