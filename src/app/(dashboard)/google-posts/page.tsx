@@ -41,6 +41,20 @@ function getPostType(post: any): { label: string; color: string; bg: string; Ico
   return                         { label: "Update", color: "#059669", bg: "#ECFDF5", Icon: Star };
 }
 
+function getStatusBadge(state?: string) {
+  const s = (state || "").toUpperCase();
+  if (s === "LIVE") {
+    return { label: "Live", color: "#065f46", bg: "#d1fae5" };
+  }
+  if (s === "REJECTED") {
+    return { label: "Rejected", color: "#991b1b", bg: "#fee2e2" };
+  }
+  if (s === "PROCESSING") {
+    return { label: "Processing", color: "#92400e", bg: "#fef3c7" };
+  }
+  return { label: state || "Unknown", color: "#475569", bg: "#f1f5f9" };
+}
+
 function PostModal({ post, onClose, onDelete }: { post: any; onClose: () => void; onDelete: (name: string) => void }) {
   const type = getPostType(post);
   const TypeIcon = type.Icon;
@@ -93,6 +107,20 @@ function PostModal({ post, onClose, onDelete }: { post: any; onClose: () => void
                 <span style={{ fontSize: 11, fontWeight: 700, color: type.color, background: type.bg, padding: "2px 8px", borderRadius: 20, textTransform: "uppercase", letterSpacing: "0.06em" }}>
                   {type.label}
                 </span>
+                {post.state && (
+                  <span style={{
+                    fontSize: 11,
+                    fontWeight: 700,
+                    color: getStatusBadge(post.state).color,
+                    background: getStatusBadge(post.state).bg,
+                    padding: "2px 8px",
+                    borderRadius: 20,
+                    textTransform: "uppercase",
+                    letterSpacing: "0.06em"
+                  }}>
+                    {getStatusBadge(post.state).label}
+                  </span>
+                )}
                 <span style={{ fontSize: 12, color: "#94a3b8", fontWeight: 500 }}>
                   {post.createTime ? new Date(post.createTime).toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" }) : ""}
                 </span>
@@ -109,6 +137,31 @@ function PostModal({ post, onClose, onDelete }: { post: any; onClose: () => void
 
         {/* Scrollable Content Area */}
         <div style={{ overflowY: "auto", flex: 1, padding: "24px" }}>
+          {/* Rejection Alert */}
+          {post.state === "REJECTED" && (
+            <div style={{
+              background: "#fef2f2",
+              border: "1px solid #fee2e2",
+              borderRadius: 16,
+              padding: "16px 20px",
+              marginBottom: 24,
+              display: "flex",
+              gap: 12,
+              alignItems: "flex-start"
+            }}>
+              <AlertCircle size={20} style={{ color: "#ef4444", flexShrink: 0, marginTop: 2 }} />
+              <div>
+                <h4 style={{ fontSize: 14, fontWeight: 700, color: "#991b1b", margin: "0 0 4px" }}>Post Rejected by Google</h4>
+                <p style={{ fontSize: 13, color: "#b91c1c", margin: 0, lineHeight: 1.5 }}>
+                  Google automatically rejected this post. This typically happens for one of these reasons:
+                  <br />• Including a phone number, email address, or website link inside the post text (Google prohibits this; use the Call/Link button instead).
+                  <br />• Using stock photos or images containing too much text/logos.
+                  <br />• Regulated/medical terms that trigger Google's automated spam/YMYL filters.
+                </p>
+              </div>
+            </div>
+          )}
+
           {/* Image */}
           {post.media?.length > 0 && (
             <div style={{ marginBottom: 24, borderRadius: 16, overflow: "hidden", border: "1px solid #f1f5f9", boxShadow: "0 4px 12px rgba(0,0,0,0.05)" }}>
@@ -438,6 +491,23 @@ export default function GooglePostsPage() {
                                 <TypeIcon size={12} />{type.label}
                               </span>
                             </div>
+                            {post.state && (
+                              <div style={{ position: 'absolute', top: 12, right: 12 }}>
+                                <span style={{
+                                  fontSize: 10,
+                                  fontWeight: 800,
+                                  color: getStatusBadge(post.state).color,
+                                  background: getStatusBadge(post.state).bg,
+                                  padding: "4px 10px",
+                                  borderRadius: 8,
+                                  textTransform: "uppercase",
+                                  letterSpacing: "0.08em",
+                                  boxShadow: '0 4px 12px rgba(0,0,0,0.1)'
+                                }}>
+                                  {getStatusBadge(post.state).label}
+                                </span>
+                              </div>
+                            )}
                           </div>
 
                           {/* Card body */}
