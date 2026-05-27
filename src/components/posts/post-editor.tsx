@@ -3,9 +3,10 @@
 import { useState, useRef, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
-import { Save, Clock, Loader2, ImagePlus, X, Send, MapPin, Link as LinkIcon, Copy, Check, Lock, Phone, Sparkles, Download } from "lucide-react";
+import { Save, Clock, Loader2, ImagePlus, X, Send, MapPin, Link as LinkIcon, Copy, Check, Lock, Phone, Sparkles, Download, AlertTriangle } from "lucide-react";
 import Link from "next/link";
 import { embedGPSInImage, CAMERA_TEMPLATES } from "@/lib/geo-exif";
+import { checkProhibitedContent } from "@/lib/content-validation";
 function SmoothAnimation({ type, className }: { type: string; className?: string }) {
   if (type === "SUCCESS") {
     return (
@@ -357,6 +358,17 @@ export function PostEditor({
   };
 
   const handleSave = async (type: string) => {
+    // Prohibited content check
+    if (type === "PUBLISH" || type === "SCHEDULED") {
+      const prohibitedIssues = checkProhibitedContent(form.summary);
+      if (prohibitedIssues.length > 0) {
+        const message = `⚠️ POLICY WARNING: RESTRICTED CONTACT INFO DETECTED\n\nYour post description contains the following restricted contact details:\n${prohibitedIssues.map(i => `• ${i}`).join("\n")}\n\nGoogle Business Profile guidelines strictly prohibit phone numbers, email addresses, or links in the post text. Google's automated systems will likely REJECT this post instantly.\n\nTo avoid rejection, click 'Cancel' and use the dedicated 'Call Now' or 'Button Link' options instead.\n\nDo you want to proceed with publishing anyway?`;
+        if (!confirm(message)) {
+          return;
+        }
+      }
+    }
+
     // 0. Duplicate Content Check
     if (type === "PUBLISH" || type === "SCHEDULED") {
       try {
@@ -701,6 +713,18 @@ export function PostEditor({
                 style={{ width: "100%", minHeight: 220, padding: "16px", border: "1px solid #eaeaea", borderRadius: 12, fontSize: 15, fontWeight: 500, color: "#0f172a", background: "#fff", outline: "none", resize: "vertical" }}
                 className="focus:ring-2 focus:ring-[#2563eb] focus:border-transparent transition-all"
               />
+
+              {form.summary && checkProhibitedContent(form.summary).length > 0 && (
+                <div style={{ display: "flex", alignItems: "flex-start", gap: 10, padding: "12px 16px", background: "#fffbeb", border: "1px solid #fde68a", borderRadius: 12, marginTop: 8 }}>
+                  <AlertTriangle size={16} style={{ color: "#d97706", flexShrink: 0, marginTop: 2 }} />
+                  <div>
+                    <p style={{ fontSize: 12, fontWeight: 700, color: "#92400e", margin: "0 0 2px" }}>Restricted Contact Info Detected</p>
+                    <p style={{ fontSize: 11, color: "#b45309", margin: 0, lineHeight: 1.45 }}>
+                      GBP policies prohibit phone numbers, emails, or links inside the post body. Please remove them and use the dedicated buttons below instead to avoid Google automatic rejection.
+                    </p>
+                  </div>
+                </div>
+              )}
 
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
                 <div className="space-y-2">

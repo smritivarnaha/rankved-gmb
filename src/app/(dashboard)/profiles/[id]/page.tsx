@@ -14,6 +14,7 @@ import { AiSettingsTab, AiGenerationModal, AiBulkGenerationModal } from "@/compo
 import { ProfileEditor } from "@/components/profiles/ProfileEditor";
 import { ReviewManager } from "@/components/profiles/ReviewManager";
 import { useSearchParams } from "next/navigation";
+import { checkProhibitedContent } from "@/lib/content-validation";
 
 const fetcher = (url: string) => fetch(url).then(r => r.json());
 
@@ -59,6 +60,9 @@ function PostCard({
   const isPending = post.status === "PENDING_APPROVAL";
 
   const dot = DOT[post.status] || "#94a3b8";
+
+  const prohibitedIssues = checkProhibitedContent(post.summary);
+  const hasProhibited = prohibitedIssues.length > 0;
 
   const dateDisplay = isPublished && post.publishedAt
     ? `Published ${new Date(post.publishedAt).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric", timeZone: "Asia/Kolkata" })}`
@@ -111,6 +115,21 @@ function PostCard({
           <span style={{ width: 7, height: 7, borderRadius: "50%", background: dot, display: "inline-block", flexShrink: 0 }} />
           {STATUS_LABEL[post.status] || "Draft"}
         </div>
+        {/* Policy warning badge top-right */}
+        {hasProhibited && (isDraft || isScheduled || isPending) && (
+          <div style={{
+            position: "absolute", top: 8, right: selectMode ? 40 : 8,
+            background: "#fffbeb", border: "1px solid #fde68a",
+            padding: "3px 8px", borderRadius: 20,
+            display: "flex", alignItems: "center", gap: 4,
+            fontSize: 10, fontWeight: 700, color: "#b45309",
+            boxShadow: "0 2px 8px rgba(0,0,0,0.05)",
+            zIndex: 5
+          }} title={`Restricted details: ${prohibitedIssues.join(", ")}. Google will likely reject this post.`}>
+            <AlertTriangle size={10} style={{ color: "#d97706" }} />
+            <span>Warning</span>
+          </div>
+        )}
       </Link>
 
       {/* Body */}

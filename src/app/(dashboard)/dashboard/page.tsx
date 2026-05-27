@@ -3,6 +3,7 @@ import { authOptions } from "@/lib/auth";
 import prisma from "@/lib/prisma";
 import { MapPin, Clock, CheckCircle2, FileText, ArrowRight, Users, Send, AlertTriangle } from "lucide-react";
 import Link from "next/link";
+import { checkProhibitedContent } from "@/lib/content-validation";
 
 const cardStyle = {
   background: "#fff", border: "1px solid #eaeaea",
@@ -209,6 +210,8 @@ export default async function DashboardPage() {
                 {upcomingPosts.map((post: any, idx: number) => {
                   const title = post.summary || "No content";
                   const shortTitle = title.length > 70 ? title.substring(0, 70) + "..." : title;
+                  const prohibitedIssues = checkProhibitedContent(post.summary);
+                  const hasProhibited = prohibitedIssues.length > 0;
                   return (
                     <Link key={post.id} href={`/posts/${post.id}`} style={{ textDecoration: "none", display: "block" }}>
                       <div style={{
@@ -217,8 +220,13 @@ export default async function DashboardPage() {
                         transition: "background 0.15s"
                       }} className="hover-bg-muted dash-list-item">
                         <div style={{ flex: 1, minWidth: 0 }}>
-                          <p style={{ fontSize: 13, fontWeight: 600, color: "#111827", margin: "0 0 6px", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }} title={title}>
+                          <p style={{ fontSize: 13, fontWeight: 600, color: "#111827", margin: "0 0 6px", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", display: "flex", alignItems: "center", gap: 6 }} title={title}>
                             {shortTitle}
+                            {hasProhibited && (
+                              <span style={{ background: "#FEF3C7", color: "#D97706", fontSize: 10, padding: "1px 6px", borderRadius: 4, display: "inline-flex", alignItems: "center", gap: 3, fontWeight: 700 }} title={`Restricted details: ${prohibitedIssues.join(", ")}. Google will likely reject this post.`}>
+                                <AlertTriangle size={10} /> Policy Warning
+                              </span>
+                            )}
                           </p>
                           <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
                             <MapPin size={12} color="#94A3B8" style={{ flexShrink: 0 }} />

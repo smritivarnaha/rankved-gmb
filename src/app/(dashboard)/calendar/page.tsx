@@ -1,7 +1,8 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { ChevronLeft, ChevronRight, Loader2 } from "lucide-react";
+import { ChevronLeft, ChevronRight, Loader2, AlertTriangle } from "lucide-react";
+import { checkProhibitedContent } from "@/lib/content-validation";
 
 const MONTHS = ["January","February","March","April","May","June","July","August","September","October","November","December"];
 const DAYS = ["Sun","Mon","Tue","Wed","Thu","Fri","Sat"];
@@ -24,6 +25,7 @@ export default function CalendarPage() {
           setEvents(scheduled.map((p: any) => {
             // Convert UTC ISO to local date to ensure correct calendar cell
             const localDate = new Date(p.scheduledAt);
+            const prohibitedIssues = checkProhibitedContent(p.summary);
             return {
               id: p.id,
               day: localDate.getDate(),
@@ -32,6 +34,8 @@ export default function CalendarPage() {
               title: p.summary || "Post",
               status: p.status?.toLowerCase() || "scheduled",
               client: p.clientName || "",
+              hasWarning: prohibitedIssues.length > 0,
+              warningTooltip: prohibitedIssues.join(", ")
             };
           }));
         }
@@ -114,13 +118,17 @@ export default function CalendarPage() {
                   {dayEvts.map((ev, idx) => {
                     const sc = statusColor[ev.status] || statusColor.scheduled;
                     return (
-                      <div key={idx} title={ev.title} style={{
+                      <div key={idx} title={ev.hasWarning ? `⚠️ Policy Warning: ${ev.warningTooltip}\n\n${ev.title}` : ev.title} style={{
                         fontSize: 10, fontWeight: 600, padding: "2px 5px", borderRadius: 4,
-                        background: sc.bg, color: sc.color,
+                        background: ev.hasWarning ? "#fee2e2" : sc.bg,
+                        color: ev.hasWarning ? "#dc2626" : sc.color,
+                        border: ev.hasWarning ? "1px solid #fca5a5" : "none",
                         overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
                         cursor: "pointer",
+                        display: "flex", alignItems: "center", gap: 3
                       }}>
-                        {ev.title}
+                        {ev.hasWarning && <AlertTriangle size={8} style={{ color: "#dc2626", flexShrink: 0 }} />}
+                        <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{ev.title}</span>
                       </div>
                     );
                   })}
