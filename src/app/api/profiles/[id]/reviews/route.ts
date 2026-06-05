@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth"; // Corrected path
+import { authOptions } from "@/lib/auth";
+import prisma from "@/lib/prisma";
 
 export const dynamic = "force-dynamic";
 
@@ -11,18 +12,18 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
   const { id } = await params;
 
   try {
-    // 1. Get the profile to find the accountName (locations/id)
-    const profileRes = await fetch(`${process.env.NEXTAUTH_URL}/api/profiles`);
-    const profiles = await profileRes.json();
-    const profile = (profiles.data || []).find((p: any) => p.id === id);
+    // 1. Get the profile directly from the database using Prisma
+    const profile = await prisma.location.findUnique({
+      where: { id }
+    });
 
-    if (!profile || !profile.accountName) {
-      return NextResponse.json({ error: "Profile not found or not connected" }, { status: 404 });
+    if (!profile || !profile.gbpAccountId || !profile.gbpLocationId) {
+      return NextResponse.json({ error: "Profile not found or not connected to GMB" }, { status: 404 });
     }
 
     // 2. Fetch reviews from Google
     // Note: accountName must be in the format "accounts/ACC_ID/locations/LOC_ID"
-    const accountName = `${profile.accountId}/${profile.googleName}`;
+    const accountName = `${profile.gbpAccountId}/${profile.gbpLocationId}`;
     const googleRes = await fetch(
       `https://mybusiness.googleapis.com/v4/${accountName}/reviews`,
       {
