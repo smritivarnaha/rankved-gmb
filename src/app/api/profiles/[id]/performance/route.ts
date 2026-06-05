@@ -33,20 +33,36 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
   const resourceName = profile.googleName;
     
   const { searchParams } = new URL(req.url);
-  const months = parseInt(searchParams.get("months") || "1");
+  const monthParam = searchParams.get("month");
+  const yearParam = searchParams.get("year");
 
-  const now = new Date();
+  let startDate: Date;
+  let endDate: Date;
 
-  // Use calendar month boundaries to match Google's period display (e.g. Dec 1 – May 13)
-  // Google shows "Dec 2025–May 2026", so we start on the 1st of the month X months ago
-  const startDate = new Date(now.getFullYear(), now.getMonth() - months, 1); // 1st of month, X months ago
+  if (monthParam !== null && yearParam !== null) {
+    const m = parseInt(monthParam);
+    const y = parseInt(yearParam);
+    startDate = new Date(y, m, 1);
+    
+    const lastDayOfMonth = new Date(y, m + 1, 0);
+    const now = new Date();
+    const lagDate = new Date(now.getTime() - 3 * 24 * 60 * 60 * 1000);
 
-  // End date: 3 days ago (Google API has ~3-day data lag)
-  const endDate = new Date(now.getTime() - 3 * 24 * 60 * 60 * 1000);
+    if (y === now.getFullYear() && m === now.getMonth()) {
+      endDate = lagDate < startDate ? startDate : lagDate;
+    } else {
+      endDate = lastDayOfMonth;
+    }
+  } else {
+    const months = parseInt(searchParams.get("months") || "1");
+    const now = new Date();
+    startDate = new Date(now.getFullYear(), now.getMonth() - months, 1);
+    endDate = new Date(now.getTime() - 3 * 24 * 60 * 60 * 1000);
+  }
 
   const startYear  = startDate.getFullYear();
   const startMonth = startDate.getMonth() + 1;
-  const startDay   = 1; // always 1st of month
+  const startDay   = startDate.getDate();
 
   const endYear  = endDate.getFullYear();
   const endMonth = endDate.getMonth() + 1;

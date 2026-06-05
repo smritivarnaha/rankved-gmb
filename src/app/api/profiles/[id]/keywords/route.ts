@@ -34,13 +34,23 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
 
   // Support dynamic date ranges
   const { searchParams } = new URL(req.url);
-  const months = parseInt(searchParams.get("months") || "1");
+  const monthParam = searchParams.get("month");
+  const yearParam = searchParams.get("year");
 
-  const now = new Date();
+  let startMonthDate: Date;
+  let endMonthDate: Date;
 
-  // Calendar month boundaries to match Google's period
-  const startMonthDate = new Date(now.getFullYear(), now.getMonth() - months, 1);
-  const endMonthDate   = new Date(now.getFullYear(), now.getMonth(), 1);
+  if (monthParam !== null && yearParam !== null) {
+    const m = parseInt(monthParam);
+    const y = parseInt(yearParam);
+    startMonthDate = new Date(y, m, 1);
+    endMonthDate   = new Date(y, m, 1);
+  } else {
+    const months = parseInt(searchParams.get("months") || "1");
+    const now = new Date();
+    startMonthDate = new Date(now.getFullYear(), now.getMonth() - months, 1);
+    endMonthDate   = new Date(now.getFullYear(), now.getMonth(), 1);
+  }
 
   const baseUrl =
     `https://businessprofileperformance.googleapis.com/v1/${resourceName}/searchkeywords/impressions/monthly` +

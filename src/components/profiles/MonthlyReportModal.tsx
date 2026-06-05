@@ -30,6 +30,7 @@ export function MonthlyReportModal({
   const [brandingText, setBrandingText] = useState("");
   const [includeDate, setIncludeDate] = useState(false);
   const [includeReviews, setIncludeReviews] = useState(false);
+  const [includePerformance, setIncludePerformance] = useState(false);
   const [columns, setColumns] = useState<number>(2); // 2 or 3, default to 2
 
   const months = [
@@ -205,9 +206,105 @@ export function MonthlyReportModal({
       }
     }
 
+    // 5.5 Fetch performance & keywords if checked
+    let performanceHtml = "";
+    if (includePerformance) {
+      try {
+        const [perfRes, kwRes] = await Promise.all([
+          fetch(`/api/profiles/${profileId}/performance?month=${selectedMonth}&year=${selectedYear}&t=${Date.now()}`, { cache: "no-store" }),
+          fetch(`/api/profiles/${profileId}/keywords?month=${selectedMonth}&year=${selectedYear}&t=${Date.now()}`, { cache: "no-store" })
+        ]);
+
+        let views = 0;
+        let calls = 0;
+        let directions = 0;
+        let keywords: any[] = [];
+
+        if (perfRes.ok) {
+          const perfData = await perfRes.json();
+          const rawPerf = perfData.data || [];
+          rawPerf.forEach((item: any) => {
+            (item.dailyMetricTimeSeries || []).forEach((series: any) => {
+              const metric: string = series.dailyMetric || "";
+              const sum = (series.timeSeries?.datedValues || []).reduce((acc: number, valPoint: any) => acc + (parseInt(valPoint.value) || 0), 0);
+              if (metric.includes("IMPRESSIONS")) {
+                views += sum;
+              } else if (metric.includes("CALL_CLICKS")) {
+                calls += sum;
+              } else if (metric.includes("DIRECTION")) {
+                directions += sum;
+              }
+            });
+          });
+        }
+
+        if (kwRes.ok) {
+          const kwData = await kwRes.json();
+          keywords = kwData.data || [];
+        }
+
+        const topKeywords = keywords.slice(0, 10);
+        let keywordsRows = "";
+        if (topKeywords.length > 0) {
+          keywordsRows = topKeywords.map((kw: any, index: number) => {
+            const displayCount = kw.belowThreshold ? `<${kw.count}` : kw.count.toLocaleString();
+            return `
+              <tr>
+                <td><span class="kw-rank">${index + 1}</span> ${kw.keyword}</td>
+                <td style="text-align: right; font-weight: 700;">${displayCount}</td>
+              </tr>
+            `;
+          }).join("");
+        } else {
+          keywordsRows = `
+            <tr>
+              <td colspan="2" style="text-align: center; color: var(--text-muted); padding: 20px;">No keyword searches reported for this period.</td>
+            </tr>
+          `;
+        }
+
+        performanceHtml = `
+          <div class="performance-section page-break">
+            <h2 class="performance-title">Performance & Search Insights</h2>
+            <div class="perf-metrics-grid">
+              <div class="perf-metric-card">
+                <p class="perf-val">${views.toLocaleString()}</p>
+                <p class="perf-lbl">Search & Map Views</p>
+              </div>
+              <div class="perf-metric-card">
+                <p class="perf-val">${calls.toLocaleString()}</p>
+                <p class="perf-lbl">Call Clicks</p>
+              </div>
+              <div class="perf-metric-card">
+                <p class="perf-val">${directions.toLocaleString()}</p>
+                <p class="perf-lbl">Direction Requests</p>
+              </div>
+            </div>
+            
+            <div class="keywords-box">
+              <h3 class="keywords-subtitle">Top Search Queries Used to Find You</h3>
+              <table class="keywords-table">
+                <thead>
+                  <tr>
+                    <th>Keyword / Search Query</th>
+                    <th style="text-align: right;">Impressions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  ${keywordsRows}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        `;
+      } catch (err) {
+        console.error("Failed to fetch performance data for report:", err);
+      }
+    }
+
     // Check if we have any data to output
-    if (filteredPosts.length === 0 && (!includeReviews || filteredReviewsCount === 0)) {
-      setError(`No posts or reviews found for ${months[selectedMonth].label} ${selectedYear}.`);
+    if (filteredPosts.length === 0 && (!includeReviews || filteredReviewsCount === 0) && !includePerformance) {
+      setError(`No posts, reviews or performance data found for ${months[selectedMonth].label} ${selectedYear}.`);
       setLoading(false);
       return;
     }
@@ -731,6 +828,100 @@ export function MonthlyReportModal({
             color: #15803d;
           }
 
+          /* Performance Section Styles */
+          .performance-section {
+            margin-top: 50px;
+            border-top: 2px dashed var(--border-light);
+            padding-top: 40px;
+          }
+
+          .performance-title {
+            font-size: 20px;
+            font-weight: 800;
+            color: var(--text-main);
+            font-family: 'Outfit', sans-serif;
+            margin-bottom: 24px;
+            letter-spacing: -0.01em;
+          }
+
+          .perf-metrics-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 20px;
+            margin-bottom: 30px;
+          }
+
+          .perf-metric-card {
+            background-color: var(--card-bg);
+            border: 1.5px solid var(--border-color);
+            border-radius: 8px;
+            padding: 20px;
+            text-align: center;
+          }
+
+          .perf-val {
+            font-size: 28px;
+            font-weight: 850;
+            color: var(--text-main);
+            font-family: 'Outfit', sans-serif;
+            line-height: 1.1;
+          }
+
+          .perf-lbl {
+            font-size: 11px;
+            font-weight: 700;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            margin-top: 6px;
+          }
+
+          .keywords-box {
+            background-color: var(--card-bg);
+            border: 1.5px solid var(--border-color);
+            border-radius: 8px;
+            padding: 24px;
+          }
+
+          .keywords-subtitle {
+            font-size: 15px;
+            font-weight: 800;
+            color: var(--text-main);
+            font-family: 'Outfit', sans-serif;
+            margin-bottom: 18px;
+          }
+
+          .keywords-table {
+            width: 100%;
+            border-collapse: collapse;
+          }
+
+          .keywords-table th {
+            text-align: left;
+            font-size: 11px;
+            font-weight: 700;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            padding-bottom: 12px;
+            border-bottom: 1.5px solid var(--border-color);
+          }
+
+          .keywords-table td {
+            font-size: 13px;
+            color: var(--text-main);
+            font-weight: 600;
+            padding: 12px 0;
+            border-bottom: 1px solid var(--border-light);
+          }
+
+          .kw-rank {
+            color: var(--text-muted);
+            margin-right: 6px;
+            font-weight: 700;
+            font-size: 11px;
+          }
+
           /* Print overrides */
           @media print {
             body {
@@ -777,6 +968,15 @@ export function MonthlyReportModal({
             }
             .review-reply {
               border: 1.5px solid #000 !important;
+            }
+            .perf-metric-card {
+              border: 1.5px solid #000 !important;
+            }
+            .keywords-box {
+              border: 1.5px solid #000 !important;
+            }
+            .keywords-table th {
+              border-bottom: 1.5px solid #000 !important;
             }
           }
         </style>
@@ -842,6 +1042,9 @@ export function MonthlyReportModal({
           <div class="posts-grid">
             ${postsHtml}
           </div>
+
+          <!-- Performance Section -->
+          ${performanceHtml}
 
           <!-- Reviews Section -->
           ${reviewsHtml ? `
@@ -1021,10 +1224,44 @@ export function MonthlyReportModal({
                 Include Customer Reviews & Ratings
               </span>
             </label>
+
+            {/* Custom Checkbox for Performance */}
+            <label 
+              style={{ display: "flex", alignItems: "center", gap: 8, cursor: "pointer", userSelect: "none" }}
+            >
+              <input
+                type="checkbox"
+                checked={includePerformance}
+                onChange={e => setIncludePerformance(e.target.checked)}
+                style={{ position: "absolute", opacity: 0, width: 0, height: 0, pointerEvents: "none" }}
+              />
+              <div style={{
+                width: 18,
+                height: 18,
+                borderRadius: 5,
+                border: "2px solid",
+                borderColor: includePerformance ? "#2563eb" : "#cbd5e1",
+                backgroundColor: includePerformance ? "#2563eb" : "#fff",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                transition: "all 0.15s",
+                flexShrink: 0
+              }}>
+                {includePerformance && (
+                  <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round">
+                    <polyline points="20 6 9 17 4 12" />
+                  </svg>
+                )}
+              </div>
+              <span style={{ fontSize: 12.5, color: "#334155", fontWeight: 600 }}>
+                Include Performance & Search Insights
+              </span>
+            </label>
           </div>
 
           <p style={{ fontSize: 11, color: "#94a3b8", lineHeight: 1.4, margin: 0 }}>
-            This will fetch published posts (and optionally reviews) directly from Google for the selected month and format them as cards with thumbnails.
+            This will fetch published posts (and optionally reviews or performance summary) directly from Google for the selected month and format them as cards with thumbnails.
           </p>
         </div>
 
