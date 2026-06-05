@@ -531,8 +531,7 @@ export function MonthlyReportModal({
           .posts-grid {
             display: grid;
             grid-template-columns: repeat(${columns}, 1fr);
-            column-gap: 20px;
-            row-gap: 32px; /* Clear gaps between rows */
+            gap: 28px; /* Equal spacing horizontally and vertically */
           }
 
           /* Wired border outline card */
@@ -544,6 +543,7 @@ export function MonthlyReportModal({
             display: flex;
             flex-direction: column;
             box-shadow: none; /* No shadow for wired box style */
+            height: ${columns === 2 ? "390px" : "310px"};
           }
 
           .post-image-container {
@@ -754,11 +754,11 @@ export function MonthlyReportModal({
             .posts-grid {
               display: grid !important;
               grid-template-columns: repeat(${columns}, 1fr) !important;
-              column-gap: 20px !important;
-              row-gap: 32px !important;
+              gap: 28px !important;
             }
             .post-card {
               border: 1.5px solid #000 !important;
+              height: ${columns === 2 ? "390px" : "310px"} !important;
             }
              .post-image-container {
                border-bottom: 1.5px solid #000 !important;
