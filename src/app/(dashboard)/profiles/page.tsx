@@ -86,7 +86,7 @@ function SkeletonProfileCard() {
 function ProfileCard({
   profile, onDelete, onEdit, deleting, onAiCreate, onBulkImport, aiFeaturesEnabled, onDownloadReport
 }: {
-  profile: Profile;
+  profile: Profile & { postCounts?: { drafts: number; scheduled: number; thisMonthPublished: number; published: number; pending: number; } };
   onDelete: (id: string) => void;
   onEdit: (p: Profile) => void;
   deleting: boolean;
@@ -95,8 +95,6 @@ function ProfileCard({
   aiFeaturesEnabled: boolean;
   onDownloadReport: (p: Profile) => void;
 }) {
-  const { data: postsData } = useSWR(`/api/posts?profileId=${profile.id}`, fetcher, { revalidateOnFocus: false });
-  const posts: any[] = postsData?.data || [];
   const [isMobile, setIsMobile] = useState(false);
 
   useEffect(() => {
@@ -106,14 +104,10 @@ function ProfileCard({
     return () => window.removeEventListener("resize", check);
   }, []);
 
-  const now = new Date();
-  const published = posts.filter((p: any) => {
-    if (p.status !== "PUBLISHED" || !p.publishedAt) return false;
-    const d = new Date(p.publishedAt);
-    return d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear();
-  }).length;
-  const scheduled = posts.filter((p: any) => p.status === "SCHEDULED").length;
-  const drafts    = posts.filter((p: any) => p.status === "DRAFT").length;
+  const drafts = profile.postCounts?.drafts || 0;
+  const scheduled = profile.postCounts?.scheduled || 0;
+  // The original component filtered published posts for the current month
+  const published = profile.postCounts?.thisMonthPublished || 0;
 
   const theme = getTheme(profile.name);
 

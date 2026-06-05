@@ -31,52 +31,64 @@ export default async function DashboardPage() {
   const locationWhere = isSuperAdmin ? {} : client ? { clientId: client.id } : { id: "none" };
   const postWhereBase = isSuperAdmin ? {} : client ? { location: { clientId: client.id } } : { id: "none" };
 
-  // Core stats
-  const stats = await prisma.$transaction(async (tx) => {
-    const locations = await tx.location.count({ where: locationWhere });
-    const scheduled = await tx.post.count({ where: { ...postWhereBase, status: "SCHEDULED" } });
-    const published = await tx.post.count({ where: { ...postWhereBase, status: "PUBLISHED" } });
-    const drafts = await tx.post.count({ where: { ...postWhereBase, status: "DRAFT" } });
-    const pending = await tx.post.count({ where: { ...postWhereBase, status: "PENDING_APPROVAL" } });
-    return { locations, scheduled, published, drafts, pending };
-  });
-
-  // Upcoming scheduled posts
-  const upcomingPosts = await prisma.post.findMany({
-    where: { ...postWhereBase, status: "SCHEDULED" },
-    orderBy: { scheduledAt: "asc" },
-    take: 5,
-    include: { location: { select: { name: true } } }
-  });
-
-  // Team members with post stats (admins only)
-  let teamMembers: any[] = [];
-  if (isAdmin) {
-    const members = await prisma.user.findMany({
-      where: isSuperAdmin ? { role: "TEAM_MEMBER" } : { role: "TEAM_MEMBER", ownerId: user?.id },
+  const teamMemberWhere = isSuperAdmin ? { role: "TEAM_MEMBER" } : { role: "TEAM_MEMBER", ownerId: user?.id };
+  
+  const [stats, upcomingPosts, members, postStatusCounts] = await Promise.all([
+    prisma.$transaction(async (tx) => {
+      const locations = await tx.location.count({ where: locationWhere });
+      const scheduled = await tx.post.count({ where: { ...postWhereBase, status: "SCHEDULED" } });
+      const published = await tx.post.count({ where: { ...postWhereBase, status: "PUBLISHED" } });
+      const drafts = await tx.post.count({ where: { ...postWhereBase, status: "DRAFT" } });
+      const pending = await tx.post.count({ where: { ...postWhereBase, status: "PENDING_APPROVAL" } });
+      return { locations, scheduled, published, drafts, pending };
+    }),
+    prisma.post.findMany({
+      where: { ...postWhereBase, status: "SCHEDULED" },
+      orderBy: { scheduledAt: "asc" },
+      take: 5,
+      include: { location: { select: { name: true } } }
+    }),
+    isAdmin ? prisma.user.findMany({
+      where: teamMemberWhere as any,
       select: {
         id: true, name: true, email: true, isApproved: true,
         canPublishNow: true, canSchedule: true, minScheduleDays: true,
         createdAt: true,
-        posts: {
-          select: { status: true, createdAt: true, publishedAt: true },
-        },
       },
       orderBy: { createdAt: "desc" },
-    });
+    }) : Promise.resolve([]),
+    isAdmin ? prisma.post.groupBy({
+      by: ['userId', 'status'],
+      where: { user: teamMemberWhere as any },
+      _count: true,
+    }) : Promise.resolve([])
+  ]);
 
-    const now = new Date();
-    teamMembers = members.map(m => {
-      const published = m.posts.filter(p => p.status === "PUBLISHED").length;
-      const scheduled = m.posts.filter(p => p.status === "SCHEDULED").length;
-      const drafts = m.posts.filter(p => p.status === "DRAFT").length;
-      const pending = m.posts.filter(p => p.status === "PENDING_APPROVAL").length;
-      const thisMonth = m.posts.filter(p => {
-        const d = new Date(p.createdAt);
-        return d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear();
-      }).length;
+  let teamMembers: any[] = [];
+  if (isAdmin) {
+    const countsByUserId: Record<string, any> = {};
+    for (const m of members as any[]) {
+      countsByUserId[m.id] = { published: 0, scheduled: 0, drafts: 0, pending: 0 };
+    }
+    for (const row of postStatusCounts as any[]) {
+      if (countsByUserId[row.userId]) {
+        if (row.status === 'PUBLISHED') countsByUserId[row.userId].published = row._count;
+        else if (row.status === 'SCHEDULED') countsByUserId[row.userId].scheduled = row._count;
+        else if (row.status === 'DRAFT') countsByUserId[row.userId].drafts = row._count;
+        else if (row.status === 'PENDING_APPROVAL') countsByUserId[row.userId].pending = row._count;
+      }
+    }
+
+    teamMembers = (members as any[]).map(m => {
       const initials = (m.name || m.email || "?").split(" ").map((w: string) => w[0]).join("").toUpperCase().slice(0, 2);
-      return { ...m, published, scheduled, drafts, pending, thisMonth, initials };
+      return { 
+        ...m, 
+        published: countsByUserId[m.id]?.published || 0,
+        scheduled: countsByUserId[m.id]?.scheduled || 0,
+        drafts: countsByUserId[m.id]?.drafts || 0,
+        pending: countsByUserId[m.id]?.pending || 0,
+        initials 
+      };
     });
   }
 
