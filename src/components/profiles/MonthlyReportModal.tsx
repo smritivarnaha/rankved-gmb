@@ -326,10 +326,10 @@ export function MonthlyReportModal({
         const perfPeriodStr = `${startStr} – ${endStr}`;
 
         performanceHtml = `
-          <div class="performance-section page-break">
+          <div class="performance-section">
             <h2 class="performance-title">Performance & Search Insights</h2>
             <p class="performance-period" style="font-size: 12.5px; color: var(--text-muted); font-weight: 600; margin-top: -18px; margin-bottom: 24px;">Reporting Period: ${perfPeriodStr}</p>
-            <div class="perf-metrics-grid">
+            <div class="perf-metrics-grid page-break">
               <div class="perf-metric-card">
                 <p class="perf-val">${perfViews.toLocaleString()}</p>
                 <p class="perf-lbl">Search & Map Views</p>
@@ -344,7 +344,7 @@ export function MonthlyReportModal({
               </div>
             </div>
             
-            <div class="keywords-box">
+            <div class="keywords-box page-break">
               <h3 class="keywords-subtitle">Top Search Queries Used to Find You</h3>
               <table class="keywords-table">
                 <thead>
@@ -360,7 +360,7 @@ export function MonthlyReportModal({
             </div>
 
             <!-- Performance Data Notice -->
-            <div class="perf-notice-box">
+            <div class="perf-notice-box page-break">
               <p class="perf-notice-title">ℹ️ Performance Data Notice</p>
               <p class="perf-notice-text">
                 Google Business Profile reports absolute view impressions (total search and map occurrences) via the API, which will typically be higher than the "Unique Viewers" displayed on the web dashboard. Finalized performance metrics are subject to a standard 3-to-4 day API latency.
@@ -383,6 +383,7 @@ export function MonthlyReportModal({
 
     // Calculate Stats Strip
     const statsCount = 2 + (includeReviews ? 1 : 0) + (includePerformance ? 2 : 0) + (!includeReviews && !includePerformance ? 1 : 0);
+    const statsCols = statsCount === 4 ? 2 : 3;
     let statsHtml = `
       <div class="stat-card">
         <p class="stat-value">${filteredPosts.length}</p>
@@ -713,9 +714,8 @@ export function MonthlyReportModal({
           /* Statistics */
           .stats-strip {
             display: grid;
-            grid-template-columns: repeat(3, 1fr);
             gap: 16px;
-            margin-bottom: 35px;
+            margin-bottom: 45px;
           }
 
           .stat-card {
@@ -759,11 +759,11 @@ export function MonthlyReportModal({
             display: flex;
             flex-direction: column;
             box-shadow: none; /* No shadow for wired box style */
-            height: ${columns === 2 ? "390px" : "310px"};
+            height: ${columns === 2 ? "380px" : "310px"};
           }
 
           .post-image-container {
-            height: ${columns === 2 ? "260px" : "180px"};
+            height: ${columns === 2 ? "240px" : "180px"};
             width: 100%;
             background: #f8fafc;
             position: relative;
@@ -791,11 +791,11 @@ export function MonthlyReportModal({
           }
 
           .post-card-body {
-            padding: 14px; /* Improved padding */
+            padding: 16px 14px 14px 14px; /* Improved padding to increase gap from image */
             flex-grow: 1;
             display: flex;
             flex-direction: column;
-            gap: 10px;
+            gap: 12px; /* Increased gap slightly */
           }
 
           .post-card-header {
@@ -1087,7 +1087,7 @@ export function MonthlyReportModal({
               break-inside: avoid;
             }
             .stats-strip {
-              margin-bottom: 25px;
+              margin-bottom: 35px;
             }
             .posts-grid {
               display: grid !important;
@@ -1096,11 +1096,11 @@ export function MonthlyReportModal({
             }
             .post-card {
               border: 1.5px solid #000 !important;
-              height: ${columns === 2 ? "390px" : "310px"} !important;
+              height: ${columns === 2 ? "380px" : "310px"} !important;
             }
              .post-image-container {
                border-bottom: 1.5px solid #000 !important;
-               height: ${columns === 2 ? "260px" : "180px"} !important;
+               height: ${columns === 2 ? "240px" : "180px"} !important;
              }
             .reviews-grid {
               display: grid !important;
@@ -1171,7 +1171,7 @@ export function MonthlyReportModal({
           </div>
 
           <!-- Statistics -->
-          <div class="stats-strip" style="grid-template-columns: repeat(${statsCount}, 1fr);">
+          <div class="stats-strip" style="grid-template-columns: repeat(${statsCols}, 1fr);">
             ${statsHtml}
           </div>
 
@@ -1185,7 +1185,7 @@ export function MonthlyReportModal({
 
           <!-- Reviews Section -->
           ${reviewsHtml ? `
-            <div class="reviews-section page-break">
+            <div class="reviews-section">
               <h2 class="reviews-title">Customer Reviews & Ratings</h2>
               <div class="reviews-grid">
                 ${reviewsHtml}
