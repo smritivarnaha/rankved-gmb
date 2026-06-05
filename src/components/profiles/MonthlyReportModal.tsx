@@ -208,6 +208,10 @@ export function MonthlyReportModal({
 
     // 5.5 Fetch performance & keywords if checked
     let performanceHtml = "";
+    let perfViews = 0;
+    let perfCalls = 0;
+    let perfDirections = 0;
+
     if (includePerformance) {
       try {
         const [perfRes, kwRes] = await Promise.all([
@@ -215,9 +219,6 @@ export function MonthlyReportModal({
           fetch(`/api/profiles/${profileId}/keywords?month=${selectedMonth}&year=${selectedYear}&t=${Date.now()}`, { cache: "no-store" })
         ]);
 
-        let views = 0;
-        let calls = 0;
-        let directions = 0;
         let keywords: any[] = [];
 
         if (perfRes.ok) {
@@ -228,11 +229,11 @@ export function MonthlyReportModal({
               const metric: string = series.dailyMetric || "";
               const sum = (series.timeSeries?.datedValues || []).reduce((acc: number, valPoint: any) => acc + (parseInt(valPoint.value) || 0), 0);
               if (metric.includes("IMPRESSIONS")) {
-                views += sum;
+                perfViews += sum;
               } else if (metric.includes("CALL_CLICKS")) {
-                calls += sum;
+                perfCalls += sum;
               } else if (metric.includes("DIRECTION")) {
-                directions += sum;
+                perfDirections += sum;
               }
             });
           });
@@ -268,15 +269,15 @@ export function MonthlyReportModal({
             <h2 class="performance-title">Performance & Search Insights</h2>
             <div class="perf-metrics-grid">
               <div class="perf-metric-card">
-                <p class="perf-val">${views.toLocaleString()}</p>
+                <p class="perf-val">${perfViews.toLocaleString()}</p>
                 <p class="perf-lbl">Search & Map Views</p>
               </div>
               <div class="perf-metric-card">
-                <p class="perf-val">${calls.toLocaleString()}</p>
+                <p class="perf-val">${perfCalls.toLocaleString()}</p>
                 <p class="perf-lbl">Call Clicks</p>
               </div>
               <div class="perf-metric-card">
-                <p class="perf-val">${directions.toLocaleString()}</p>
+                <p class="perf-val">${perfDirections.toLocaleString()}</p>
                 <p class="perf-lbl">Direction Requests</p>
               </div>
             </div>
@@ -295,11 +296,71 @@ export function MonthlyReportModal({
                 </tbody>
               </table>
             </div>
+
+            <!-- Performance Data Notice -->
+            <div class="perf-notice-box">
+              <p class="perf-notice-title">ℹ️ Performance Data Notice</p>
+              <p class="perf-notice-text">
+                Google Business Profile reports absolute view impressions (total search and map occurrences) via the API, which will typically be higher than the "Unique Viewers" displayed on the web dashboard. Finalized performance metrics are subject to a standard 3-to-4 day API latency.
+              </p>
+            </div>
           </div>
         `;
       } catch (err) {
         console.error("Failed to fetch performance data for report:", err);
       }
+    }
+
+    // Clean month name & date display details
+    const selectedMonthLabel = months[selectedMonth].label;
+    const reportDateStr = new Date().toLocaleDateString("en-IN", {
+      day: "2-digit",
+      month: "long",
+      year: "numeric"
+    });
+
+    // Calculate Stats Strip
+    const statsCount = 2 + (includeReviews ? 1 : 0) + (includePerformance ? 2 : 0) + (!includeReviews && !includePerformance ? 1 : 0);
+    let statsHtml = `
+      <div class="stat-card">
+        <p class="stat-value">${filteredPosts.length}</p>
+        <p class="stat-label">Published Posts</p>
+      </div>
+      <div class="stat-card">
+        <p class="stat-value">${selectedMonthLabel}</p>
+        <p class="stat-label">Report Month</p>
+      </div>
+    `;
+
+    if (includeReviews) {
+      statsHtml += `
+        <div class="stat-card">
+          <p class="stat-value">${filteredReviewsCount}</p>
+          <p class="stat-label">Reviews Received</p>
+        </div>
+      `;
+    }
+
+    if (includePerformance) {
+      statsHtml += `
+        <div class="stat-card">
+          <p class="stat-value">${perfViews.toLocaleString()}</p>
+          <p class="stat-label">Total Views</p>
+        </div>
+        <div class="stat-card">
+          <p class="stat-value">${(perfCalls + perfDirections).toLocaleString()}</p>
+          <p class="stat-label">Interactions</p>
+        </div>
+      `;
+    }
+
+    if (!includeReviews && !includePerformance) {
+      statsHtml += `
+        <div class="stat-card">
+          <p class="stat-value">${fetchedFromGoogle ? "Google Feed" : "Local Sync"}</p>
+          <p class="stat-label">Data Source</p>
+        </div>
+      `;
     }
 
     // Check if we have any data to output
@@ -317,13 +378,7 @@ export function MonthlyReportModal({
       return;
     }
 
-    // Clean month name & date display details
-    const selectedMonthLabel = months[selectedMonth].label;
-    const reportDateStr = new Date().toLocaleDateString("en-IN", {
-      day: "2-digit",
-      month: "long",
-      year: "numeric"
-    });
+
 
     // Generate posts HTML representation
     const postsHtml = filteredPosts
@@ -922,6 +977,33 @@ export function MonthlyReportModal({
             font-size: 11px;
           }
 
+          .perf-notice-box {
+            margin-top: 24px;
+            background-color: #f8fafc;
+            border: 1.5px solid var(--border-color);
+            border-radius: 8px;
+            padding: 16px 20px;
+            text-align: left;
+          }
+
+          .perf-notice-title {
+            font-size: 11px;
+            font-weight: 800;
+            color: var(--text-main);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            margin-bottom: 6px;
+            font-family: 'Outfit', sans-serif;
+          }
+
+          .perf-notice-text {
+            font-size: 11.5px;
+            color: var(--text-muted);
+            line-height: 1.65;
+            font-weight: 500;
+            margin: 0;
+          }
+
           /* Print overrides */
           @media print {
             body {
@@ -978,6 +1060,10 @@ export function MonthlyReportModal({
             .keywords-table th {
               border-bottom: 1.5px solid #000 !important;
             }
+            .perf-notice-box {
+              border: 1.5px solid #000 !important;
+              background-color: #fff !important;
+            }
           }
         </style>
       </head>
@@ -1023,19 +1109,8 @@ export function MonthlyReportModal({
           </div>
 
           <!-- Statistics -->
-          <div class="stats-strip">
-            <div class="stat-card">
-              <p class="stat-value">${filteredPosts.length}</p>
-              <p class="stat-label">Published Posts</p>
-            </div>
-            <div class="stat-card">
-              <p class="stat-value">${selectedMonthLabel}</p>
-              <p class="stat-label">Report Month</p>
-            </div>
-            <div class="stat-card">
-              <p class="stat-value">${includeReviews ? `${filteredReviewsCount}` : (fetchedFromGoogle ? "Google Feed" : "Local Sync")}</p>
-              <p class="stat-label">${includeReviews ? "Reviews Received" : "Data Source"}</p>
-            </div>
+          <div class="stats-strip" style="grid-template-columns: repeat(${statsCount}, 1fr);">
+            ${statsHtml}
           </div>
 
           <!-- Posts Grid -->
