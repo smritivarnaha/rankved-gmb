@@ -23,6 +23,9 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
       return NextResponse.json({ error: "Location not found or not synced with Google." }, { status: 404 });
     }
 
+    const { searchParams } = new URL(req.url);
+    const pageSize = searchParams.get("pageSize") || "20";
+
     // Normalise IDs — strip the "locations/" and "accounts/" prefixes if present
     const rawLocationId = location.gbpLocationId.replace("locations/", "");
     const rawAccountId  = (location.gbpAccountId || "").replace("accounts/", "");
@@ -32,10 +35,10 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
     // Using just locations/{id}/localPosts returns a 404 HTML response.
     let apiUrl: string;
     if (rawAccountId) {
-      apiUrl = `https://mybusiness.googleapis.com/v4/accounts/${rawAccountId}/locations/${rawLocationId}/localPosts?pageSize=20`;
+      apiUrl = `https://mybusiness.googleapis.com/v4/accounts/${rawAccountId}/locations/${rawLocationId}/localPosts?pageSize=${pageSize}`;
     } else {
       // Fallback (less reliable) — try without account prefix
-      apiUrl = `https://mybusiness.googleapis.com/v4/locations/${rawLocationId}/localPosts?pageSize=20`;
+      apiUrl = `https://mybusiness.googleapis.com/v4/locations/${rawLocationId}/localPosts?pageSize=${pageSize}`;
     }
 
     console.log(`[Google Posts API] Calling: ${apiUrl}`);

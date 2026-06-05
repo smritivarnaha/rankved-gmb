@@ -9,6 +9,7 @@ import { AiGenerationModal } from "@/components/ai/ai-components";
 import { GbpIcon } from "@/components/gbp-icon";
 import { BulkImportModal } from "@/components/posts/BulkImportModal";
 import { useGlobalSettings } from "@/hooks/useGlobalSettings";
+import { MonthlyReportModal } from "@/components/profiles/MonthlyReportModal";
 
 interface Profile {
   id: string;
@@ -83,7 +84,7 @@ function SkeletonProfileCard() {
 }
 
 function ProfileCard({
-  profile, onDelete, onEdit, deleting, onAiCreate, onBulkImport, aiFeaturesEnabled
+  profile, onDelete, onEdit, deleting, onAiCreate, onBulkImport, aiFeaturesEnabled, onDownloadReport
 }: {
   profile: Profile;
   onDelete: (id: string) => void;
@@ -92,6 +93,7 @@ function ProfileCard({
   onAiCreate: (id: string) => void;
   onBulkImport: (id: string) => void;
   aiFeaturesEnabled: boolean;
+  onDownloadReport: (p: Profile) => void;
 }) {
   const { data: postsData } = useSWR(`/api/posts?profileId=${profile.id}`, fetcher, { revalidateOnFocus: false });
   const posts: any[] = postsData?.data || [];
@@ -226,6 +228,10 @@ function ProfileCard({
           style={{ flex: 1, height: 32, display: "flex", alignItems: "center", justifyContent: "center", gap: 6, background: "#f8fafc", border: "1px solid #e2e8f0", borderRadius: 8, color: "#64748b", fontSize: 11, fontWeight: 600, cursor: "pointer" }}>
           <Upload size={12} /> Bulk
         </button>
+        <button onClick={() => onDownloadReport(profile)}
+          style={{ flex: 1, height: 32, display: "flex", alignItems: "center", justifyContent: "center", gap: 6, background: "#f8fafc", border: "1px solid #e2e8f0", borderRadius: 8, color: "#64748b", fontSize: 11, fontWeight: 600, cursor: "pointer" }}>
+          <FileDown size={12} /> Report
+        </button>
         <Link href={`/posts/new?profile=${profile.id}&from=profile`}
           style={{ flex: 1, height: 32, display: "flex", alignItems: "center", justifyContent: "center", gap: 6, background: "#2563eb", border: "none", borderRadius: 8, color: "#fff", fontSize: 11, fontWeight: 600, textDecoration: "none" }}>
           <Plus size={12} /> Post
@@ -248,6 +254,7 @@ export default function ProfilesPage() {
   const [message, setMessage] = useState<{ type: "success" | "error"; text: string } | null>(null);
   const [aiLocationId, setAiLocationId]   = useState<string | null>(null);
   const [bulkLocationId, setBulkLocationId] = useState<string | null>(null);
+  const [reportProfile, setReportProfile] = useState<Profile | null>(null);
 
   async function handleDelete(id: string) {
     if (!confirm("Delete this profile? Posts linked to it will lose their location reference.")) return;
@@ -387,6 +394,7 @@ export default function ProfilesPage() {
               onAiCreate={setAiLocationId}
               onBulkImport={setBulkLocationId}
               aiFeaturesEnabled={aiFeaturesEnabled}
+              onDownloadReport={setReportProfile}
             />
           ))}
         </div>
@@ -408,6 +416,15 @@ export default function ProfilesPage() {
           mutate(); // only refresh draft counts — do NOT close modal so success panel shows
         }}
         viewDraftsHref={bulkLocationId ? `/profiles/${bulkLocationId}` : undefined}
+      />
+
+      <MonthlyReportModal
+        profileId={reportProfile?.id || ""}
+        profileName={reportProfile?.name || ""}
+        logoUrl={reportProfile?.logoUrl}
+        address={reportProfile?.address}
+        isOpen={!!reportProfile}
+        onClose={() => setReportProfile(null)}
       />
     </div>
   );

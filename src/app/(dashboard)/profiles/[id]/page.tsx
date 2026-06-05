@@ -5,7 +5,7 @@ import { format, startOfMonth, endOfMonth, eachDayOfInterval, getDay, isSameMont
 import { useState, useEffect } from "react";
 import {
   ArrowLeft, MapPin, Plus, FileText, Clock, Send, Loader2, Lock,
-  ThumbsUp, Edit3, ExternalLink, AlertTriangle, ChevronLeft, ChevronRight, Trash2, Wand2, Brain, Layers, CheckSquare, Square, CalendarDays
+  ThumbsUp, Edit3, ExternalLink, AlertTriangle, ChevronLeft, ChevronRight, Trash2, Wand2, Brain, Layers, CheckSquare, Square, CalendarDays, FileDown
 } from "lucide-react";
 import { useParams } from "next/navigation";
 import useSWR from "swr";
@@ -15,12 +15,14 @@ import { ProfileEditor } from "@/components/profiles/ProfileEditor";
 import { ReviewManager } from "@/components/profiles/ReviewManager";
 import { useSearchParams } from "next/navigation";
 import { checkProhibitedContent } from "@/lib/content-validation";
+import { MonthlyReportModal } from "@/components/profiles/MonthlyReportModal";
 
 const fetcher = (url: string) => fetch(url).then(r => r.json());
 
 interface Profile {
   id: string; name: string; accountName: string;
   address: string; phone: string; website: string; fetchedAt: string;
+  logoUrl?: string;
 }
 
 interface Post {
@@ -336,6 +338,7 @@ export default function ProfileDetailPage() {
   const [activeTab, setActiveTab] = useState<"POSTS" | "AI_SETTINGS" | "EDIT_PROFILE" | "REVIEWS">(initialTab as any);
   const [isAiModalOpen, setIsAiModalOpen] = useState(false);
   const [isBulkAiModalOpen, setIsBulkAiModalOpen] = useState(false);
+  const [isReportModalOpen, setIsReportModalOpen] = useState(false);
   const [selectedPosts, setSelectedPosts] = useState<Set<string>>(new Set());
   const [selectMode, setSelectMode] = useState(false);
   const [bulkScheduleDate, setBulkScheduleDate] = useState("");
@@ -524,6 +527,13 @@ export default function ProfileDetailPage() {
         </div>
         
         <div style={{ display: "flex", gap: 10 }}>
+          <button onClick={() => setIsReportModalOpen(true)}
+            style={{ display: "inline-flex", alignItems: "center", gap: 8, padding: "9px 18px", background: "#fff", border: "1px solid #e2e8f0", color: "#475569", borderRadius: 8, fontSize: 13, fontWeight: 600, cursor: "pointer", transition: "all 0.15s" }}
+            onMouseEnter={e => e.currentTarget.style.background = "#f8fafc"}
+            onMouseLeave={e => e.currentTarget.style.background = "#fff"}
+          >
+            <FileDown style={{ width: 15, height: 15 }} /> Monthly Report
+          </button>
           <Link href={`/posts/new?profile=${profile.id}&from=profile`}
             style={{ display: "inline-flex", alignItems: "center", gap: 8, padding: "9px 20px", background: "#2563eb", color: "#fff", borderRadius: 8, fontSize: 13, fontWeight: 600 }}>
             <Plus style={{ width: 15, height: 15 }} /> Create Post
@@ -769,6 +779,14 @@ export default function ProfileDetailPage() {
           setActiveTab("POSTS");
           setStatusFilter("ALL"); // or DRAFT/SCHEDULED
         }}
+      />
+      <MonthlyReportModal 
+        profileId={profile.id}
+        profileName={profile.name}
+        logoUrl={profile.logoUrl}
+        address={profile.address}
+        isOpen={isReportModalOpen}
+        onClose={() => setIsReportModalOpen(false)}
       />
     </div>
   );
