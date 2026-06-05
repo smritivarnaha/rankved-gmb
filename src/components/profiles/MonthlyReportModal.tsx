@@ -27,7 +27,9 @@ export function MonthlyReportModal({
   const now = new Date();
   const [selectedMonth, setSelectedMonth] = useState<number>(now.getMonth()); // 0-11
   const [selectedYear, setSelectedYear] = useState<number>(now.getFullYear());
-  const [brandingText, setBrandingText] = useState("");
+  const [savedBrandingLabels, setSavedBrandingLabels] = useState<string[]>([]);
+  const [selectedBranding, setSelectedBranding] = useState<string>("");
+  const [customBrandingText, setCustomBrandingText] = useState<string>("");
   const [includeDate, setIncludeDate] = useState(false);
   const [includeReviews, setIncludeReviews] = useState(false);
   const [includePerformance, setIncludePerformance] = useState(false);
@@ -55,6 +57,28 @@ export function MonthlyReportModal({
     if (isOpen) {
       setError(null);
       setLoading(false);
+
+      if (typeof window !== "undefined") {
+        const saved = localStorage.getItem("savedBrandingLabels");
+        let labelsList = ["Managed by Manjot (SunMacEdits)", "Managed by Rankved Healthcare Martech"];
+        if (saved) {
+          try {
+            const parsed = JSON.parse(saved);
+            if (Array.isArray(parsed)) {
+              labelsList = parsed;
+            }
+          } catch (e) {
+            console.error("Failed to parse savedBrandingLabels", e);
+          }
+        }
+        setSavedBrandingLabels(labelsList);
+        
+        const lastSelected = localStorage.getItem("lastSelectedBranding") || labelsList[0] || "";
+        setSelectedBranding(lastSelected);
+        if (lastSelected === "custom") {
+          setCustomBrandingText(localStorage.getItem("customBrandingText") || "");
+        }
+      }
     }
   }, [isOpen]);
 
@@ -79,6 +103,27 @@ export function MonthlyReportModal({
   const handleDownload = async () => {
     setLoading(true);
     setError(null);
+
+    let resolvedBranding = "";
+    if (selectedBranding === "custom") {
+      resolvedBranding = customBrandingText.trim();
+      
+      if (resolvedBranding && typeof window !== "undefined") {
+        const newLabels = [...savedBrandingLabels];
+        if (!newLabels.includes(resolvedBranding)) {
+          newLabels.push(resolvedBranding);
+          localStorage.setItem("savedBrandingLabels", JSON.stringify(newLabels));
+          setSavedBrandingLabels(newLabels);
+        }
+        localStorage.setItem("lastSelectedBranding", "custom");
+        localStorage.setItem("customBrandingText", resolvedBranding);
+      }
+    } else {
+      resolvedBranding = selectedBranding;
+      if (typeof window !== "undefined") {
+        localStorage.setItem("lastSelectedBranding", selectedBranding);
+      }
+    }
 
     let posts: any[] = [];
     let fetchedFromGoogle = false;
@@ -264,9 +309,26 @@ export function MonthlyReportModal({
           `;
         }
 
+        const startDate = new Date(selectedYear, selectedMonth, 1);
+        const lastDayOfMonth = new Date(selectedYear, selectedMonth + 1, 0);
+        const now = new Date();
+        const lagDate = new Date(now.getTime() - 3 * 24 * 60 * 60 * 1000);
+        
+        let endDate: Date;
+        if (selectedYear === now.getFullYear() && selectedMonth === now.getMonth()) {
+          endDate = lagDate < startDate ? startDate : lagDate;
+        } else {
+          endDate = lastDayOfMonth;
+        }
+        
+        const startStr = startDate.toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" });
+        const endStr = endDate.toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" });
+        const perfPeriodStr = `${startStr} – ${endStr}`;
+
         performanceHtml = `
           <div class="performance-section page-break">
             <h2 class="performance-title">Performance & Search Insights</h2>
+            <p class="performance-period" style="font-size: 12.5px; color: var(--text-muted); font-weight: 600; margin-top: -18px; margin-bottom: 24px;">Reporting Period: ${perfPeriodStr}</p>
             <div class="perf-metrics-grid">
               <div class="perf-metric-card">
                 <p class="perf-val">${perfViews.toLocaleString()}</p>
@@ -1103,7 +1165,7 @@ export function MonthlyReportModal({
               </div>
             </div>
             <div class="header-right">
-              ${brandingText ? `<p class="report-branding" style="font-size: 14px; font-weight: 700; color: var(--text-muted); font-family: 'Outfit', sans-serif;">${brandingText}</p>` : ""}
+              ${resolvedBranding ? `<p class="report-branding" style="font-size: 14px; font-weight: 700; color: var(--text-muted); font-family: 'Outfit', sans-serif;">${resolvedBranding}</p>` : ""}
               ${includeDate ? `<p class="report-generated" style="font-size: 11px; color: var(--text-muted); margin-top: 4px; font-family: 'Plus Jakarta Sans', sans-serif;">Generated: ${reportDateStr}</p>` : ""}
             </div>
           </div>
@@ -1222,13 +1284,32 @@ export function MonthlyReportModal({
 
           <div>
             <label style={{ display: "block", fontSize: 11, fontWeight: 700, color: "#475569", textTransform: "uppercase", letterSpacing: "0.04em", marginBottom: 6 }}>Branding Label / Managed By</label>
-            <input
-              type="text"
-              placeholder="e.g. Managed by Rankved"
-              value={brandingText}
-              onChange={e => setBrandingText(e.target.value)}
-              style={{ width: "100%", height: 38, padding: "0 12px", borderRadius: 8, border: "1px solid #e2e8f0", fontSize: 13, background: "#fff", outline: "none", color: "#334155" }}
-            />
+            <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+              <select
+                value={selectedBranding}
+                onChange={e => {
+                  const val = e.target.value;
+                  setSelectedBranding(val);
+                }}
+                style={{ width: "100%", height: 38, padding: "0 10px", borderRadius: 8, border: "1px solid #e2e8f0", fontSize: 13, background: "#fff", outline: "none", color: "#334155", fontWeight: 600 }}
+              >
+                <option value="">None / No Branding</option>
+                {savedBrandingLabels.map(label => (
+                  <option key={label} value={label}>{label}</option>
+                ))}
+                <option value="custom">Type Custom Label...</option>
+              </select>
+
+              {selectedBranding === "custom" && (
+                <input
+                  type="text"
+                  placeholder="Type new branding name to save..."
+                  value={customBrandingText}
+                  onChange={e => setCustomBrandingText(e.target.value)}
+                  style={{ width: "100%", height: 38, padding: "0 12px", borderRadius: 8, border: "1px solid #e2e8f0", fontSize: 13, background: "#fff", outline: "none", color: "#334155" }}
+                />
+              )}
+            </div>
           </div>
 
           <div style={{ display: "flex", flexDirection: "column", gap: 12, marginTop: 4 }}>
