@@ -547,7 +547,7 @@ export function MonthlyReportModal({
           }
 
           .post-image-container {
-            height: 180px; /* Increased height to fit thumbnails correctly */
+            height: ${columns === 2 ? "260px" : "180px"};
             width: 100%;
             background: #f8fafc;
             position: relative;
@@ -760,10 +760,10 @@ export function MonthlyReportModal({
             .post-card {
               border: 1.5px solid #000 !important;
             }
-            .post-image-container {
-              border-bottom: 1.5px solid #000 !important;
-              height: 180px !important;
-            }
+             .post-image-container {
+               border-bottom: 1.5px solid #000 !important;
+               height: ${columns === 2 ? "260px" : "180px"} !important;
+             }
             .reviews-grid {
               display: grid !important;
               grid-template-columns: repeat(2, 1fr) !important;
