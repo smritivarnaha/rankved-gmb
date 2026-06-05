@@ -559,8 +559,9 @@ export function MonthlyReportModal({
           .post-image {
             width: 100%;
             height: 100%;
-            object-fit: cover;
+            object-fit: contain;
             object-position: center;
+            background: #f8fafc;
           }
 
           .post-image-placeholder {
