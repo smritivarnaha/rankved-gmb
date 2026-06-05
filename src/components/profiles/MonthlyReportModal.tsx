@@ -27,6 +27,7 @@ export function MonthlyReportModal({
   const now = new Date();
   const [selectedMonth, setSelectedMonth] = useState<number>(now.getMonth()); // 0-11
   const [selectedYear, setSelectedYear] = useState<number>(now.getFullYear());
+  const [brandingText, setBrandingText] = useState("");
 
   const months = [
     { value: 0, label: "January" },
@@ -645,7 +646,7 @@ export function MonthlyReportModal({
               </div>
             </div>
             <div class="header-right">
-              <p class="report-generated">Generated: ${reportDateStr}</p>
+              ${brandingText ? `<p class="report-branding" style="font-size: 14px; font-weight: 700; color: var(--text-muted); font-family: 'Outfit', sans-serif;">${brandingText}</p>` : ""}
             </div>
           </div>
 
@@ -746,6 +747,17 @@ export function MonthlyReportModal({
                 ))}
               </select>
             </div>
+          </div>
+
+          <div>
+            <label style={{ display: "block", fontSize: 11, fontWeight: 700, color: "#475569", textTransform: "uppercase", letterSpacing: "0.04em", marginBottom: 6 }}>Branding Label / Managed By</label>
+            <input
+              type="text"
+              placeholder="e.g. Managed by Rankved"
+              value={brandingText}
+              onChange={e => setBrandingText(e.target.value)}
+              style={{ width: "100%", height: 38, padding: "0 12px", borderRadius: 8, border: "1px solid #e2e8f0", fontSize: 13, background: "#fff", outline: "none", color: "#334155" }}
+            />
           </div>
 
           <p style={{ fontSize: 11, color: "#94a3b8", lineHeight: 1.4, margin: 0 }}>
