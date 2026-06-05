@@ -84,7 +84,7 @@ export function MonthlyReportModal({
 
     // 1. Try fetching from Google Live API
     try {
-      const res = await fetch(`/api/profiles/${profileId}/google-posts?pageSize=100`);
+      const res = await fetch(`/api/profiles/${profileId}/google-posts?pageSize=100&t=${Date.now()}`, { cache: "no-store" });
       if (res.ok) {
         const data = await res.json();
         posts = data.data || [];
@@ -145,7 +145,7 @@ export function MonthlyReportModal({
     let filteredReviewsCount = 0;
     if (includeReviews) {
       try {
-        const res = await fetch(`/api/profiles/${profileId}/reviews`);
+        const res = await fetch(`/api/profiles/${profileId}/reviews?t=${Date.now()}`, { cache: "no-store" });
         if (res.ok) {
           const data = await res.json();
           const allReviews = data.data || [];
