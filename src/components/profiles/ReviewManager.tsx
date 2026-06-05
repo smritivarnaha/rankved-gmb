@@ -98,9 +98,11 @@ export function ReviewManager({ profileId }: { profileId: string }) {
               </p>
             </div>
 
-            <p className="text-slate-600 font-medium leading-relaxed mb-6 italic">
-              "{r.comment || "No comment provided."}"
-            </p>
+            {r.comment && (
+              <p className="text-slate-600 font-medium leading-relaxed mb-6 italic">
+                "{r.comment}"
+              </p>
+            )}
 
             {/* Admin-Only Magic Reply Section */}
             {isAdmin && (

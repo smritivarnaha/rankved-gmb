@@ -184,6 +184,8 @@ export function MonthlyReportModal({
                 `;
               }
 
+              const commentHtml = r.comment ? `<p class="review-comment">"${r.comment}"</p>` : "";
+
               return `
                 <div class="review-card page-break">
                   <div class="review-header">
@@ -191,7 +193,7 @@ export function MonthlyReportModal({
                     <span class="review-stars">${stars}</span>
                   </div>
                   <span class="review-date">${reviewDate}</span>
-                  <p class="review-comment">"${r.comment || "No comment provided."}"</p>
+                  ${commentHtml}
                   ${replyHtml}
                 </div>
               `;
