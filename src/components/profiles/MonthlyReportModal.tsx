@@ -30,6 +30,7 @@ export function MonthlyReportModal({
   const [brandingText, setBrandingText] = useState("");
   const [includeDate, setIncludeDate] = useState(false);
   const [includeReviews, setIncludeReviews] = useState(false);
+  const [columns, setColumns] = useState<number>(2); // 2 or 3, default to 2
 
   const months = [
     { value: 0, label: "January" },
@@ -526,10 +527,10 @@ export function MonthlyReportModal({
             margin-top: 4px;
           }
 
-          /* Grid layout of post cards - 3 Column Layout */
+          /* Grid layout of post cards */
           .posts-grid {
             display: grid;
-            grid-template-columns: repeat(3, 1fr);
+            grid-template-columns: repeat(${columns}, 1fr);
             column-gap: 20px;
             row-gap: 32px; /* Clear gaps between rows */
           }
@@ -752,7 +753,7 @@ export function MonthlyReportModal({
             }
             .posts-grid {
               display: grid !important;
-              grid-template-columns: repeat(3, 1fr) !important;
+              grid-template-columns: repeat(${columns}, 1fr) !important;
               column-gap: 20px !important;
               row-gap: 32px !important;
             }
@@ -900,7 +901,7 @@ export function MonthlyReportModal({
             </div>
           )}
 
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+          <div style={{ display: "grid", gridTemplateColumns: "1.2fr 1fr 1fr", gap: 12 }}>
             <div>
               <label style={{ display: "block", fontSize: 11, fontWeight: 700, color: "#475569", textTransform: "uppercase", letterSpacing: "0.04em", marginBottom: 6 }}>Month</label>
               <select
@@ -923,6 +924,17 @@ export function MonthlyReportModal({
                 {years.map(y => (
                   <option key={y} value={y}>{y}</option>
                 ))}
+              </select>
+            </div>
+            <div>
+              <label style={{ display: "block", fontSize: 11, fontWeight: 700, color: "#475569", textTransform: "uppercase", letterSpacing: "0.04em", marginBottom: 6 }}>Columns</label>
+              <select
+                value={columns}
+                onChange={e => setColumns(Number(e.target.value))}
+                style={{ width: "100%", height: 38, padding: "0 10px", borderRadius: 8, border: "1px solid #e2e8f0", fontSize: 13, background: "#fff", outline: "none", color: "#334155", fontWeight: 600 }}
+              >
+                <option value={2}>2 Cols</option>
+                <option value={3}>3 Cols</option>
               </select>
             </div>
           </div>
