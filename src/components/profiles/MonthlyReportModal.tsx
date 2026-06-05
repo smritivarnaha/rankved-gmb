@@ -28,6 +28,8 @@ export function MonthlyReportModal({
   const [selectedMonth, setSelectedMonth] = useState<number>(now.getMonth()); // 0-11
   const [selectedYear, setSelectedYear] = useState<number>(now.getFullYear());
   const [brandingText, setBrandingText] = useState("");
+  const [includeDate, setIncludeDate] = useState(false);
+  const [includeReviews, setIncludeReviews] = useState(false);
 
   const months = [
     { value: 0, label: "January" },
@@ -130,12 +132,6 @@ export function MonthlyReportModal({
       return postMonth === selectedMonth && postYear === selectedYear && isLive;
     });
 
-    if (filteredPosts.length === 0) {
-      setError(`No published posts found for ${months[selectedMonth].label} ${selectedYear}.`);
-      setLoading(false);
-      return;
-    }
-
     // 4. Sort posts by date newest first
     filteredPosts.sort((a, b) => {
       const dateA = new Date(a.createTime || a.publishedAt || a.createdAt).getTime();
@@ -143,7 +139,77 @@ export function MonthlyReportModal({
       return dateB - dateA;
     });
 
-    // 5. Generate print window
+    // 5. Fetch reviews if checked
+    let reviewsHtml = "";
+    let filteredReviewsCount = 0;
+    if (includeReviews) {
+      try {
+        const res = await fetch(`/api/profiles/${profileId}/reviews`);
+        if (res.ok) {
+          const data = await res.json();
+          const allReviews = data.data || [];
+          
+          // Filter reviews for selected month and year
+          const filteredReviews = allReviews.filter((r: any) => {
+            if (!r.createTime) return false;
+            const dateObj = new Date(r.createTime);
+            return dateObj.getMonth() === selectedMonth && dateObj.getFullYear() === selectedYear;
+          });
+
+          // Sort reviews by date newest first
+          filteredReviews.sort((a: any, b: any) => new Date(b.createTime).getTime() - new Date(a.createTime).getTime());
+          filteredReviewsCount = filteredReviews.length;
+
+          if (filteredReviews.length > 0) {
+            reviewsHtml = filteredReviews.map((r: any) => {
+              const reviewDate = new Date(r.createTime).toLocaleDateString("en-IN", {
+                day: "2-digit",
+                month: "short",
+                year: "numeric"
+              });
+
+              // Rating stars mapping
+              const starCount = r.starRating === "FIVE" ? 5 : r.starRating === "FOUR" ? 4 : r.starRating === "THREE" ? 3 : r.starRating === "TWO" ? 2 : r.starRating === "ONE" ? 1 : typeof r.starRating === 'number' ? r.starRating : 5;
+              const stars = "★".repeat(starCount) + "☆".repeat(5 - starCount);
+
+              // Owner reply
+              let replyHtml = "";
+              if (r.reviewReply && r.reviewReply.comment) {
+                replyHtml = `
+                  <div class="review-reply">
+                    <p class="reply-title">Owner Response</p>
+                    <p>${r.reviewReply.comment}</p>
+                  </div>
+                `;
+              }
+
+              return `
+                <div class="review-card page-break">
+                  <div class="review-header">
+                    <span class="reviewer-name">${r.reviewer?.displayName || "Anonymous"}</span>
+                    <span class="review-stars">${stars}</span>
+                  </div>
+                  <span class="review-date">${reviewDate}</span>
+                  <p class="review-comment">"${r.comment || "No comment provided."}"</p>
+                  ${replyHtml}
+                </div>
+              `;
+            }).join("");
+          }
+        }
+      } catch (err) {
+        console.error("Failed to fetch reviews for report:", err);
+      }
+    }
+
+    // Check if we have any data to output
+    if (filteredPosts.length === 0 && (!includeReviews || filteredReviewsCount === 0)) {
+      setError(`No posts or reviews found for ${months[selectedMonth].label} ${selectedYear}.`);
+      setLoading(false);
+      return;
+    }
+
+    // 6. Generate print window
     const printWindow = window.open("", "_blank");
     if (!printWindow) {
       setError("Pop-up blocked. Please allow pop-ups for this website to download the report.");
@@ -232,7 +298,7 @@ export function MonthlyReportModal({
             --bg-body: #f8fafc;
             --text-main: #0f172a;
             --text-muted: #64748b;
-            --border-color: #1e293b; /* Darker charcoal color for the wired border outline */
+            --border-color: #1e293b; /* Charcoal outline for wired box style */
             --border-light: #e2e8f0;
             --primary-color: #2563eb;
             --card-bg: #ffffff;
@@ -427,11 +493,6 @@ export function MonthlyReportModal({
             flex-shrink: 0;
           }
 
-          .report-generated {
-            font-size: 12px;
-            color: var(--text-muted);
-          }
-
           /* Statistics */
           .stats-strip {
             display: grid;
@@ -469,7 +530,8 @@ export function MonthlyReportModal({
           .posts-grid {
             display: grid;
             grid-template-columns: repeat(3, 1fr);
-            gap: 18px;
+            column-gap: 20px;
+            row-gap: 32px; /* Clear gaps between rows */
           }
 
           /* Wired border outline card */
@@ -484,7 +546,7 @@ export function MonthlyReportModal({
           }
 
           .post-image-container {
-            height: 140px; /* Compact height for 3-column grid */
+            height: 180px; /* Increased height to fit thumbnails correctly */
             width: 100%;
             background: #f8fafc;
             position: relative;
@@ -497,6 +559,7 @@ export function MonthlyReportModal({
             width: 100%;
             height: 100%;
             object-fit: cover;
+            object-position: center;
           }
 
           .post-image-placeholder {
@@ -510,7 +573,7 @@ export function MonthlyReportModal({
           }
 
           .post-card-body {
-            padding: 12px;
+            padding: 14px; /* Improved padding */
             flex-grow: 1;
             display: flex;
             flex-direction: column;
@@ -525,8 +588,10 @@ export function MonthlyReportModal({
 
           .post-date {
             font-size: 10.5px;
-            font-weight: 600;
+            font-weight: 700;
             color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
           }
 
           .post-status-badge {
@@ -541,16 +606,16 @@ export function MonthlyReportModal({
           }
 
           .post-description {
-            font-size: 12px;
+            font-size: 12.5px; /* Improved typography */
             color: #334155;
-            line-height: 1.5;
+            line-height: 1.6;
             font-weight: 500;
             /* Clamp description to 2 lines */
             display: -webkit-box;
             -webkit-line-clamp: 2;
             -webkit-box-orient: vertical;
             overflow: hidden;
-            height: 36px; /* 1.5 line-height * 12px font-size * 2 lines */
+            height: 40px; /* line-height 1.6 * 12.5px * 2 */
             margin: 0;
           }
 
@@ -571,6 +636,95 @@ export function MonthlyReportModal({
             color: #475569;
             text-transform: uppercase;
             letter-spacing: 0.05em;
+          }
+
+          /* Reviews styling */
+          .reviews-section {
+            margin-top: 50px;
+            border-top: 2px dashed var(--border-light);
+            padding-top: 40px;
+          }
+
+          .reviews-title {
+            font-size: 20px;
+            font-weight: 800;
+            color: var(--text-main);
+            font-family: 'Outfit', sans-serif;
+            margin-bottom: 24px;
+            letter-spacing: -0.01em;
+          }
+
+          .reviews-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 20px;
+          }
+
+          .review-card {
+            background: var(--card-bg);
+            border: 1.5px solid var(--border-color); /* Charcoal outline */
+            border-radius: 8px;
+            padding: 18px;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            box-shadow: none;
+          }
+
+          .review-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 10px;
+          }
+
+          .reviewer-name {
+            font-size: 14px;
+            font-weight: 700;
+            color: var(--text-main);
+            font-family: 'Outfit', sans-serif;
+          }
+
+          .review-stars {
+            color: #fbbf24; /* Amber rating stars */
+            font-size: 14px;
+            letter-spacing: 2px;
+          }
+
+          .review-date {
+            font-size: 10px;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.04em;
+            font-weight: 600;
+          }
+
+          .review-comment {
+            font-size: 12.5px;
+            color: #475569;
+            line-height: 1.6;
+            font-style: italic;
+            margin-top: 4px;
+          }
+
+          .review-reply {
+            margin-top: 12px;
+            padding: 12px 14px;
+            background: #f0fdf4;
+            border: 1.5px solid var(--border-color); /* outline structure maintained */
+            border-radius: 6px;
+            font-size: 12px;
+            color: #166534;
+            line-height: 1.5;
+          }
+
+          .reply-title {
+            font-weight: 800;
+            text-transform: uppercase;
+            font-size: 9px;
+            letter-spacing: 0.08em;
+            margin-bottom: 4px;
+            color: #15803d;
           }
 
           /* Print overrides */
@@ -599,13 +753,26 @@ export function MonthlyReportModal({
             .posts-grid {
               display: grid !important;
               grid-template-columns: repeat(3, 1fr) !important;
-              gap: 15px !important;
+              column-gap: 20px !important;
+              row-gap: 32px !important;
             }
             .post-card {
               border: 1.5px solid #000 !important;
             }
             .post-image-container {
               border-bottom: 1.5px solid #000 !important;
+              height: 180px !important;
+            }
+            .reviews-grid {
+              display: grid !important;
+              grid-template-columns: repeat(2, 1fr) !important;
+              gap: 18px !important;
+            }
+            .review-card {
+              border: 1.5px solid #000 !important;
+            }
+            .review-reply {
+              border: 1.5px solid #000 !important;
             }
           }
         </style>
@@ -647,6 +814,7 @@ export function MonthlyReportModal({
             </div>
             <div class="header-right">
               ${brandingText ? `<p class="report-branding" style="font-size: 14px; font-weight: 700; color: var(--text-muted); font-family: 'Outfit', sans-serif;">${brandingText}</p>` : ""}
+              ${includeDate ? `<p class="report-generated" style="font-size: 11px; color: var(--text-muted); margin-top: 4px; font-family: 'Plus Jakarta Sans', sans-serif;">Generated: ${reportDateStr}</p>` : ""}
             </div>
           </div>
 
@@ -661,8 +829,8 @@ export function MonthlyReportModal({
               <p class="stat-label">Report Month</p>
             </div>
             <div class="stat-card">
-              <p class="stat-value">${fetchedFromGoogle ? "Google Feed" : "Local Sync"}</p>
-              <p class="stat-label">Data Source</p>
+              <p class="stat-value">${includeReviews ? `${filteredReviewsCount}` : (fetchedFromGoogle ? "Google Feed" : "Local Sync")}</p>
+              <p class="stat-label">${includeReviews ? "Reviews Received" : "Data Source"}</p>
             </div>
           </div>
 
@@ -670,6 +838,16 @@ export function MonthlyReportModal({
           <div class="posts-grid">
             ${postsHtml}
           </div>
+
+          <!-- Reviews Section -->
+          ${reviewsHtml ? `
+            <div class="reviews-section page-break">
+              <h2 class="reviews-title">Customer Reviews & Ratings</h2>
+              <div class="reviews-grid">
+                ${reviewsHtml}
+              </div>
+            </div>
+          ` : ""}
         </div>
 
         <script>
@@ -760,8 +938,36 @@ export function MonthlyReportModal({
             />
           </div>
 
+          <div style={{ display: "flex", flexDirection: "column", gap: 10, marginTop: 4 }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+              <input
+                type="checkbox"
+                id="includeDate"
+                checked={includeDate}
+                onChange={e => setIncludeDate(e.target.checked)}
+                style={{ width: 16, height: 16, cursor: "pointer" }}
+              />
+              <label htmlFor="includeDate" style={{ fontSize: 12, color: "#334155", fontWeight: 600, cursor: "pointer", userSelect: "none" }}>
+                Include Generated Date in Report
+              </label>
+            </div>
+
+            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+              <input
+                type="checkbox"
+                id="includeReviews"
+                checked={includeReviews}
+                onChange={e => setIncludeReviews(e.target.checked)}
+                style={{ width: 16, height: 16, cursor: "pointer" }}
+              />
+              <label htmlFor="includeReviews" style={{ fontSize: 12, color: "#334155", fontWeight: 600, cursor: "pointer", userSelect: "none" }}>
+                Include Customer Reviews & Ratings
+              </label>
+            </div>
+          </div>
+
           <p style={{ fontSize: 11, color: "#94a3b8", lineHeight: 1.4, margin: 0 }}>
-            This will fetch only published posts directly from Google (with local DB backup) for the selected month and format them as cards with thumbnails.
+            This will fetch published posts (and optionally reviews) directly from Google for the selected month and format them as cards with thumbnails.
           </p>
         </div>
 
