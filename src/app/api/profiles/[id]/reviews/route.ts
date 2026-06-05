@@ -19,9 +19,10 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
     }
 
     // 2. Fetch reviews from Google
-    // Note: accountName is in the format "accounts/ACC_ID/locations/LOC_ID"
+    // Note: accountName must be in the format "accounts/ACC_ID/locations/LOC_ID"
+    const accountName = `${profile.accountId}/${profile.googleName}`;
     const googleRes = await fetch(
-      `https://mybusiness.googleapis.com/v4/${profile.accountName}/reviews`,
+      `https://mybusiness.googleapis.com/v4/${accountName}/reviews`,
       {
         headers: {
           Authorization: `Bearer ${(session as any).accessToken}`,
@@ -30,6 +31,11 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
     );
 
     const data = await googleRes.json();
+    if (!googleRes.ok) {
+      console.error("Google Reviews API Error:", data);
+      return NextResponse.json({ error: data.error?.message || "Failed to fetch reviews from Google" }, { status: googleRes.status });
+    }
+
     return NextResponse.json({ data: data.reviews || [] });
   } catch (error) {
     console.error("Reviews API Error:", error);
