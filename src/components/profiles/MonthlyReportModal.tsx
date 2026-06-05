@@ -938,32 +938,74 @@ export function MonthlyReportModal({
             />
           </div>
 
-          <div style={{ display: "flex", flexDirection: "column", gap: 10, marginTop: 4 }}>
-            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+          <div style={{ display: "flex", flexDirection: "column", gap: 12, marginTop: 4 }}>
+            {/* Custom Checkbox for Date */}
+            <label 
+              style={{ display: "flex", alignItems: "center", gap: 8, cursor: "pointer", userSelect: "none" }}
+            >
               <input
                 type="checkbox"
-                id="includeDate"
                 checked={includeDate}
                 onChange={e => setIncludeDate(e.target.checked)}
-                style={{ width: 16, height: 16, cursor: "pointer" }}
+                style={{ position: "absolute", opacity: 0, width: 0, height: 0, pointerEvents: "none" }}
               />
-              <label htmlFor="includeDate" style={{ fontSize: 12, color: "#334155", fontWeight: 600, cursor: "pointer", userSelect: "none" }}>
+              <div style={{
+                width: 18,
+                height: 18,
+                borderRadius: 5,
+                border: "2px solid",
+                borderColor: includeDate ? "#2563eb" : "#cbd5e1",
+                backgroundColor: includeDate ? "#2563eb" : "#fff",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                transition: "all 0.15s",
+                flexShrink: 0
+              }}>
+                {includeDate && (
+                  <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round">
+                    <polyline points="20 6 9 17 4 12" />
+                  </svg>
+                )}
+              </div>
+              <span style={{ fontSize: 12.5, color: "#334155", fontWeight: 600 }}>
                 Include Generated Date in Report
-              </label>
-            </div>
+              </span>
+            </label>
 
-            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+            {/* Custom Checkbox for Reviews */}
+            <label 
+              style={{ display: "flex", alignItems: "center", gap: 8, cursor: "pointer", userSelect: "none" }}
+            >
               <input
                 type="checkbox"
-                id="includeReviews"
                 checked={includeReviews}
                 onChange={e => setIncludeReviews(e.target.checked)}
-                style={{ width: 16, height: 16, cursor: "pointer" }}
+                style={{ position: "absolute", opacity: 0, width: 0, height: 0, pointerEvents: "none" }}
               />
-              <label htmlFor="includeReviews" style={{ fontSize: 12, color: "#334155", fontWeight: 600, cursor: "pointer", userSelect: "none" }}>
+              <div style={{
+                width: 18,
+                height: 18,
+                borderRadius: 5,
+                border: "2px solid",
+                borderColor: includeReviews ? "#2563eb" : "#cbd5e1",
+                backgroundColor: includeReviews ? "#2563eb" : "#fff",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                transition: "all 0.15s",
+                flexShrink: 0
+              }}>
+                {includeReviews && (
+                  <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round">
+                    <polyline points="20 6 9 17 4 12" />
+                  </svg>
+                )}
+              </div>
+              <span style={{ fontSize: 12.5, color: "#334155", fontWeight: 600 }}>
                 Include Customer Reviews & Ratings
-              </label>
-            </div>
+              </span>
+            </label>
           </div>
 
           <p style={{ fontSize: 11, color: "#94a3b8", lineHeight: 1.4, margin: 0 }}>
