@@ -133,7 +133,7 @@ export function TimelineWidget() {
           <div style={{ overflowX: "auto" }}>
             <div style={{ minWidth: 800, padding: "16px 20px" }}>
               {/* Grid Header (Days) */}
-              <div style={{ display: "flex", marginLeft: 160, marginBottom: 8 }}>
+              <div style={{ display: "flex", marginLeft: 160, marginBottom: 8, paddingLeft: 16 }}>
                 {days.map(day => {
                   const isToday = new Date().getDate() === day && new Date().getMonth() + 1 === month && new Date().getFullYear() === year;
                   return (
@@ -150,19 +150,28 @@ export function TimelineWidget() {
               </div>
 
               {/* Grid Rows (Locations) */}
-              <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-                {locations.map((loc) => {
+              <div style={{ display: "flex", flexDirection: "column", gap: 8, position: "relative" }}>
+                {locations.map((loc, index) => {
                   const locPosts = posts.filter(p => p.locationId === loc.id);
+                  const locNum = index + 1;
                   
                   return (
                     <div key={loc.id} style={{ display: "flex", alignItems: "center" }}>
                       {/* Location Name */}
-                      <div style={{ width: 160, paddingRight: 16, fontSize: 13, fontWeight: 500, color: loc.isHidden ? "#94a3b8" : "#111827", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", flexShrink: 0 }}>
-                        {loc.name}
+                      <div style={{ 
+                        width: 160, paddingRight: 16, fontSize: 13, fontWeight: 500, 
+                        color: loc.isHidden ? "#94a3b8" : "#111827", whiteSpace: "nowrap", overflow: "hidden", 
+                        textOverflow: "ellipsis", flexShrink: 0,
+                        position: "sticky", left: 0, background: "#fff", zIndex: 5,
+                        display: "flex", alignItems: "center", gap: 6,
+                        boxShadow: "2px 0 4px rgba(0,0,0,0.02)"
+                      }}>
+                        <span style={{ fontSize: 11, fontWeight: 700, color: "#94a3b8", width: 16, textAlign: "right" }}>{locNum}.</span>
+                        <span style={{ overflow: "hidden", textOverflow: "ellipsis" }}>{loc.name}</span>
                       </div>
 
                       {/* Days Row */}
-                      <div style={{ display: "flex", flex: 1, gap: 4 }}>
+                      <div style={{ display: "flex", flex: 1, gap: 4, paddingLeft: 16 }}>
                         {days.map(day => {
                           // Find posts for this specific day
                           const dayPosts = locPosts.filter(p => {
@@ -187,9 +196,10 @@ export function TimelineWidget() {
                                   width: "100%", height: 24, borderRadius: 4, 
                                   background: getStatusColor(topPost.status),
                                   opacity: 0.8, transition: "opacity 0.2s",
-                                  display: "flex", alignItems: "center", justifyContent: "center"
+                                  display: "flex", alignItems: "center", justifyContent: "center",
+                                  color: "#fff", fontSize: 10, fontWeight: 700
                                 }}>
-                                  {dayPosts.length > 1 && <span style={{ fontSize: 10, color: "#fff", fontWeight: 700 }}>{dayPosts.length}</span>}
+                                  {locNum}
                                 </Link>
                               ) : (
                                 <div style={{ width: "100%", height: 24, borderRadius: 4, background: "#f1f5f9" }} />
