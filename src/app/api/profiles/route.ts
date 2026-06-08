@@ -296,28 +296,45 @@ export async function PATCH(req: NextRequest) {
   }
 
   try {
-    const formData = await req.formData();
-    const id = formData.get("id") as string;
-    const logoFile = formData.get("logo") as File | null;
-
-    if (!id) return NextResponse.json({ error: "Profile ID required" }, { status: 400 });
-
-    let base64Logo = undefined;
-    if (logoFile && logoFile.size > 0) {
-      const bytes = await logoFile.arrayBuffer();
-      const buffer = Buffer.from(bytes);
-      base64Logo = `data:${logoFile.type};base64,${buffer.toString("base64")}`;
-    }
-
-    if (base64Logo) {
+    const contentType = req.headers.get("content-type") || "";
+    
+    if (contentType.includes("application/json")) {
+      const body = await req.json();
+      const { id, isHidden } = body;
+      
+      if (!id) return NextResponse.json({ error: "Profile ID required" }, { status: 400 });
+      
       const prisma = (await import("@/lib/prisma")).default;
       await prisma.location.update({
         where: { id },
-        data: { logoUrl: base64Logo }
+        data: { isHidden: !!isHidden }
       });
-    }
+      
+      return NextResponse.json({ success: true, message: "Profile updated successfully" });
+    } else {
+      const formData = await req.formData();
+      const id = formData.get("id") as string;
+      const logoFile = formData.get("logo") as File | null;
 
-    return NextResponse.json({ success: true, message: "Profile updated successfully" });
+      if (!id) return NextResponse.json({ error: "Profile ID required" }, { status: 400 });
+
+      let base64Logo = undefined;
+      if (logoFile && logoFile.size > 0) {
+        const bytes = await logoFile.arrayBuffer();
+        const buffer = Buffer.from(bytes);
+        base64Logo = `data:${logoFile.type};base64,${buffer.toString("base64")}`;
+      }
+
+      if (base64Logo) {
+        const prisma = (await import("@/lib/prisma")).default;
+        await prisma.location.update({
+          where: { id },
+          data: { logoUrl: base64Logo }
+        });
+      }
+
+      return NextResponse.json({ success: true, message: "Profile updated successfully" });
+    }
   } catch (err: any) {
     console.error("Error updating profile:", err);
     return NextResponse.json({ error: "Failed to update profile" }, { status: 500 });

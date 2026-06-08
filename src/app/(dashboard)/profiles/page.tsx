@@ -21,6 +21,7 @@ interface Profile {
   logoUrl?: string;
   googleEmail?: string;
   fetchedAt: string;
+  isHidden?: boolean;
 }
 
 const fetcher = (url: string) => fetch(url).then((r) => r.json());
@@ -84,7 +85,7 @@ function SkeletonProfileCard() {
 }
 
 function ProfileCard({
-  profile, onDelete, onEdit, deleting, onAiCreate, onBulkImport, aiFeaturesEnabled, onDownloadReport
+  profile, onDelete, onEdit, deleting, onAiCreate, onBulkImport, aiFeaturesEnabled, onDownloadReport, onHideToggle
 }: {
   profile: Profile & { postCounts?: { drafts: number; scheduled: number; thisMonthPublished: number; published: number; pending: number; } };
   onDelete: (id: string) => void;
@@ -94,6 +95,7 @@ function ProfileCard({
   onBulkImport: (id: string) => void;
   aiFeaturesEnabled: boolean;
   onDownloadReport: (p: Profile) => void;
+  onHideToggle?: (p: Profile) => void;
 }) {
   const [isMobile, setIsMobile] = useState(false);
 
@@ -135,8 +137,17 @@ function ProfileCard({
         <div style={{ width: 4, background: theme.border, flexShrink: 0 }} />
 
         <div style={{ flex: 1, padding: "16px 14px 14px", position: "relative" }}>
-          {/* 3-dot kebab menu */}
-          <div style={{ position: "absolute", top: 12, right: 10 }}>
+          {/* 3-dot kebab menu and Hide button */}
+          <div style={{ position: "absolute", top: 12, right: 10, display: "flex", gap: 8 }}>
+            {onHideToggle && (
+              <button 
+                onClick={(e) => { e.preventDefault(); onHideToggle(profile); }} 
+                title={profile.isHidden ? "Unhide Profile" : "Hide Profile"} 
+                style={{ background: "none", border: "none", cursor: "pointer", color: "#9ca3af", padding: 4, display: "flex", alignItems: "center", justifyContent: "center" }}
+              >
+                {profile.isHidden ? <Eye size={16} /> : <Eye className="opacity-50" size={16} />}
+              </button>
+            )}
             <button onClick={() => onEdit(profile)} title="Options" style={{ background: "none", border: "none", cursor: "pointer", color: "#9ca3af", padding: 4, display: "flex", flexDirection: "column", gap: 2.5, alignItems: "center", justifyContent: "center", width: 20, height: 20 }}>
               <div style={{ width: 3, height: 3, background: "#9ca3af", borderRadius: "50%" }} />
               <div style={{ width: 3, height: 3, background: "#9ca3af", borderRadius: "50%" }} />
@@ -249,6 +260,9 @@ export default function ProfilesPage() {
   const [aiLocationId, setAiLocationId]   = useState<string | null>(null);
   const [bulkLocationId, setBulkLocationId] = useState<string | null>(null);
   const [reportProfile, setReportProfile] = useState<Profile | null>(null);
+  const [showHidden, setShowHidden] = useState(false);
+
+  const visibleProfiles = profiles.filter((p: Profile) => showHidden ? p.isHidden : !p.isHidden);
 
   async function handleDelete(id: string) {
     if (!confirm("Delete this profile? Posts linked to it will lose their location reference.")) return;
@@ -278,6 +292,26 @@ export default function ProfilesPage() {
       setMessage({ type: "error", text: "Network error during sync." });
     }
     setIsSyncing(false);
+  }
+
+  async function handleHideToggle(profile: Profile) {
+    const newHiddenState = !profile.isHidden;
+    
+    // Optimistic update
+    mutate({ ...data, data: profiles.map((p: Profile) => p.id === profile.id ? { ...p, isHidden: newHiddenState } : p) }, false);
+    
+    try {
+      const res = await fetch("/api/profiles", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id: profile.id, isHidden: newHiddenState })
+      });
+      if (!res.ok) throw new Error();
+      mutate();
+    } catch {
+      setMessage({ type: "error", text: "Failed to update profile visibility." });
+      mutate(); // Revert
+    }
   }
 
   return (
@@ -340,6 +374,17 @@ export default function ProfilesPage() {
             {isSyncing ? <Loader2 size={14} className="animate-spin mr-2" /> : <RefreshCw size={14} className="mr-2" />}
             Sync from Google
           </button>
+          <button 
+            onClick={() => setShowHidden(!showHidden)}
+            className={`btn ${showHidden ? 'btn-primary' : 'btn-outline'}`}
+            style={{ 
+              borderColor: showHidden ? "transparent" : "#cbd5e1", 
+              color: showHidden ? "#fff" : "#475569", 
+              background: showHidden ? "#2563eb" : "#fff" 
+            }}
+          >
+            {showHidden ? "Show Active" : "Show Hidden"}
+          </button>
           <button onClick={() => mutate()} className="btn btn-ghost" style={{ border: "1px solid var(--border)" }}>
             <RefreshCw style={{ width: 14, height: 14 }} /> Refresh
           </button>
@@ -368,17 +413,21 @@ export default function ProfilesPage() {
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(290px, 1fr))", gap: 16 }}>
           {[...Array(6)].map((_, i) => <SkeletonProfileCard key={i} />)}
         </div>
-      ) : profiles.length === 0 ? (
+      ) : visibleProfiles.length === 0 ? (
         <div className="card">
           <div className="empty-state">
-            <h3 className="empty-title">No profiles synced yet</h3>
-            <p className="empty-text">Go to <strong>Settings</strong>, connect your Google account, then click <strong>Fetch profiles</strong>.</p>
-            <Link href="/settings" className="btn btn-primary">Go to Settings</Link>
+            <h3 className="empty-title">{showHidden ? "No hidden profiles" : "No active profiles"}</h3>
+            <p className="empty-text">
+              {showHidden 
+                ? "You haven't hidden any profiles yet." 
+                : "Go to Settings, connect your Google account, then click Fetch profiles."}
+            </p>
+            {!showHidden && <Link href="/settings" className="btn btn-primary">Go to Settings</Link>}
           </div>
         </div>
       ) : (
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(290px, 1fr))", gap: 16 }}>
-          {profiles.map((p: Profile) => (
+          {visibleProfiles.map((p: Profile) => (
             <ProfileCard
               key={p.id}
               profile={p}
@@ -389,6 +438,7 @@ export default function ProfilesPage() {
               onBulkImport={setBulkLocationId}
               aiFeaturesEnabled={aiFeaturesEnabled}
               onDownloadReport={setReportProfile}
+              onHideToggle={handleHideToggle}
             />
           ))}
         </div>

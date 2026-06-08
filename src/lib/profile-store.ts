@@ -34,6 +34,7 @@ export interface ProfileData {
     pending: number;
     thisMonthPublished: number;
   };
+  isHidden?: boolean;
 }
 
 // Ensure a default Client row exists (for single-tenant use)
@@ -65,6 +66,7 @@ function locationToProfile(loc: any): ProfileData {
     cachedEngagements: loc.cachedEngagements || 0,
     statsUpdatedAt: loc.statsUpdatedAt ? loc.statsUpdatedAt.toISOString() : undefined,
     postCounts: loc.postCounts,
+    isHidden: loc.isHidden || false,
   };
 }
 

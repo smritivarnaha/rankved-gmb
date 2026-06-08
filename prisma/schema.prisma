@@ -151,6 +151,8 @@ model Location {
   cachedEngagements      Int       @default(0)
   statsUpdatedAt         DateTime?
   
+  isHidden               Boolean   @default(false)
+  
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
 
