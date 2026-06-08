@@ -21,7 +21,6 @@ interface ParsedRow {
   summary: string;
   focusKeyword: string;
   wasTruncated: boolean;
-  wasTruncated: boolean;
   warnings: string[];
   isSelected: boolean;
 }
