@@ -496,6 +496,18 @@ export default function ProfileDetailPage() {
       return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
     } else if (sortBy === "OLDEST") {
       return new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime();
+    } else if (sortBy === "WITH_IMAGES") {
+      const aHasImage = !!a.imageUrl;
+      const bHasImage = !!b.imageUrl;
+      if (aHasImage && !bHasImage) return -1;
+      if (!aHasImage && bHasImage) return 1;
+      return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+    } else if (sortBy === "WITHOUT_IMAGES") {
+      const aHasImage = !!a.imageUrl;
+      const bHasImage = !!b.imageUrl;
+      if (!aHasImage && bHasImage) return -1;
+      if (aHasImage && !bHasImage) return 1;
+      return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
     }
     
     // DEFAULT sort
@@ -677,6 +689,8 @@ export default function ProfileDetailPage() {
                 <option value="DEFAULT">Sort by: Default</option>
                 <option value="NEWEST">Sort by: Newest</option>
                 <option value="OLDEST">Sort by: Oldest</option>
+                <option value="WITH_IMAGES">Sort by: With Images</option>
+                <option value="WITHOUT_IMAGES">Sort by: Without Images</option>
               </select>
               <button
                 onClick={toggleSelectMode}
