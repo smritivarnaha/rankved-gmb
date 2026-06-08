@@ -4,6 +4,7 @@ import prisma from "@/lib/prisma";
 import { MapPin, Clock, CheckCircle2, FileText, ArrowRight, Users, Send, AlertTriangle } from "lucide-react";
 import Link from "next/link";
 import { checkProhibitedContent } from "@/lib/content-validation";
+import { TimelineWidget } from "@/components/dashboard/TimelineWidget";
 
 const cardStyle = {
   background: "#fff", border: "1px solid #eaeaea",
@@ -189,6 +190,8 @@ export default async function DashboardPage() {
           </Link>
         ))}
       </div>
+
+      <TimelineWidget />
 
       <div style={{ display: "grid", gridTemplateColumns: "1fr 300px", gap: 24 }} className="dash-main-grid">
         {/* Left Column (Upcoming Posts & Team) */}
