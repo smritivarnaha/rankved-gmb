@@ -16,6 +16,7 @@ import { ReviewManager } from "@/components/profiles/ReviewManager";
 import { useSearchParams } from "next/navigation";
 import { checkProhibitedContent } from "@/lib/content-validation";
 import { MonthlyReportModal } from "@/components/profiles/MonthlyReportModal";
+import { BulkImportModal } from "@/components/posts/BulkImportModal";
 
 const fetcher = (url: string) => fetch(url).then(r => r.json());
 
@@ -345,6 +346,8 @@ export default function ProfileDetailPage() {
   const [bulkScheduleFrequency, setBulkScheduleFrequency] = useState(1);
   const [showBulkSchedule, setShowBulkSchedule] = useState(false);
   const [bulkActionLoading, setBulkActionLoading] = useState(false);
+  const [sortBy, setSortBy] = useState("DEFAULT");
+  const [isBulkImportModalOpen, setIsBulkImportModalOpen] = useState(false);
 
   const { data: postsData, isLoading: postsLoading, mutate: mutatePosts } = useSWR(
     params.id ? `/api/posts?profileId=${params.id}` : null,
@@ -489,6 +492,13 @@ export default function ProfileDetailPage() {
 
   const filteredPosts = statusFilter === "ALL" ? posts : posts.filter(p => p.status === statusFilter);
   const sortedPosts = [...filteredPosts].sort((a, b) => {
+    if (sortBy === "NEWEST") {
+      return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+    } else if (sortBy === "OLDEST") {
+      return new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime();
+    }
+    
+    // DEFAULT sort
     // 1. Published posts always first
     if (a.status === "PUBLISHED" && b.status !== "PUBLISHED") return -1;
     if (a.status !== "PUBLISHED" && b.status === "PUBLISHED") return 1;
@@ -533,6 +543,10 @@ export default function ProfileDetailPage() {
             onMouseLeave={e => e.currentTarget.style.background = "#fff"}
           >
             <FileDown style={{ width: 15, height: 15 }} /> Monthly Report
+          </button>
+          <button onClick={() => setIsBulkImportModalOpen(true)}
+            style={{ display: "inline-flex", alignItems: "center", gap: 8, padding: "9px 20px", background: "#f8fafc", color: "#334155", border: "1px solid #e2e8f0", borderRadius: 8, fontSize: 13, fontWeight: 600, cursor: "pointer" }}>
+            <Layers style={{ width: 15, height: 15 }} /> Bulk Import
           </button>
           <Link href={`/posts/new?profile=${profile.id}&from=profile`}
             style={{ display: "inline-flex", alignItems: "center", gap: 8, padding: "9px 20px", background: "#2563eb", color: "#fff", borderRadius: 8, fontSize: 13, fontWeight: 600 }}>
@@ -651,12 +665,26 @@ export default function ProfileDetailPage() {
                 </button>
               ))}
             </div>
-            <button
-              onClick={toggleSelectMode}
-              style={{ padding: "5px 12px", borderRadius: 20, border: "1px solid #e2e8f0", cursor: "pointer", fontSize: 12, fontWeight: 600, display: "flex", alignItems: "center", gap: 5, background: selectMode ? "#0f172a" : "#f8fafc", color: selectMode ? "#fff" : "#64748b" }}>
-              <CheckSquare style={{ width: 12, height: 12 }} />
-              {selectMode ? "Exit Select" : "Select"}
-            </button>
+            <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+              <select
+                value={sortBy}
+                onChange={(e) => setSortBy(e.target.value)}
+                style={{
+                  padding: "4px 10px", borderRadius: 6, border: "1px solid #e2e8f0", background: "#fff",
+                  fontSize: 12, fontWeight: 600, color: "#64748b", cursor: "pointer", outline: "none"
+                }}
+              >
+                <option value="DEFAULT">Sort by: Default</option>
+                <option value="NEWEST">Sort by: Newest</option>
+                <option value="OLDEST">Sort by: Oldest</option>
+              </select>
+              <button
+                onClick={toggleSelectMode}
+                style={{ padding: "5px 12px", borderRadius: 20, border: "1px solid #e2e8f0", cursor: "pointer", fontSize: 12, fontWeight: 600, display: "flex", alignItems: "center", gap: 5, background: selectMode ? "#0f172a" : "#f8fafc", color: selectMode ? "#fff" : "#64748b" }}>
+                <CheckSquare style={{ width: 12, height: 12 }} />
+                {selectMode ? "Exit Select" : "Select"}
+              </button>
+            </div>
           </div>
 
           {/* Bulk Action Bar */}
@@ -787,6 +815,12 @@ export default function ProfileDetailPage() {
         address={profile.address}
         isOpen={isReportModalOpen}
         onClose={() => setIsReportModalOpen(false)}
+      />
+      <BulkImportModal
+        locationId={profile.id}
+        isOpen={isBulkImportModalOpen}
+        onClose={() => setIsBulkImportModalOpen(false)}
+        onSuccess={() => { mutatePosts(); setIsBulkImportModalOpen(false); }}
       />
     </div>
   );

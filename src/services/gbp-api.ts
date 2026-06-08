@@ -110,6 +110,20 @@ export class GBPApiService {
   }
 
   /**
+   * Fetches local posts for a location
+   */
+  async listLocalPosts(accountId: string, locationId: string): Promise<any[]> {
+    const acctStr = accountId.includes("accounts/") ? accountId : `accounts/${accountId}`;
+    const locStr = locationId.includes("locations/") ? locationId.split("/")[1] : locationId;
+    
+    const data = await this.fetchAPI(
+      `https://mybusiness.googleapis.com/v4/${acctStr}/locations/${locStr}/localPosts`
+    );
+    
+    return data?.localPosts || [];
+  }
+
+  /**
    * Transforms our generic post params into the specific shape expected by GBP API
    */
   private mapPrismaPostToGBPFormat(post: any): any {

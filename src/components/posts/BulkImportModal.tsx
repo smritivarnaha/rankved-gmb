@@ -21,7 +21,9 @@ interface ParsedRow {
   summary: string;
   focusKeyword: string;
   wasTruncated: boolean;
+  wasTruncated: boolean;
   warnings: string[];
+  isSelected: boolean;
 }
 
 const MAX_CHARS = 1500;
@@ -62,7 +64,7 @@ export function BulkImportModal({ locationId, isOpen, onClose, onSuccess, viewDr
     @keyframes bim-float    { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-6px)} }
   `;
 
-  const importableCount = parsedRows.filter(r => r.summary.trim().length > 0).length;
+  const importableCount = parsedRows.filter(r => r.summary.trim().length > 0 && r.isSelected).length;
   const skippedCount    = parsedRows.filter(r => r.summary.trim().length === 0).length;
   const truncatedCount  = parsedRows.filter(r => r.wasTruncated).length;
 
@@ -102,7 +104,7 @@ export function BulkImportModal({ locationId, isOpen, onClose, onSuccess, viewDr
             warnings.push(`Auto-truncated to ${MAX_CHARS} characters.`);
           }
 
-          return { index: i + 1, summary: content, focusKeyword, wasTruncated, warnings };
+          return { index: i + 1, summary: content, focusKeyword, wasTruncated, warnings, isSelected: !!content };
         });
 
         setParsedRows(processed);
@@ -135,7 +137,7 @@ export function BulkImportModal({ locationId, isOpen, onClose, onSuccess, viewDr
   };
 
   const handleImport = async () => {
-    const toImport = parsedRows.filter(r => r.summary.trim().length > 0);
+    const toImport = parsedRows.filter(r => r.summary.trim().length > 0 && r.isSelected);
     if (toImport.length === 0) return;
 
     setLoading(true);
@@ -527,8 +529,19 @@ export function BulkImportModal({ locationId, isOpen, onClose, onSuccess, viewDr
                   <table style={{ width: "100%", borderCollapse: "collapse" }}>
                     <thead style={{ position: "sticky", top: 0, background: "#F8FAFC", zIndex: 1 }}>
                       <tr>
-                        <th style={{ padding: "8px 12px", textAlign: "left", fontSize: 10, fontWeight: 700, color: "#94A3B8", textTransform: "uppercase", letterSpacing: "0.05em", borderBottom: "1px solid #E2E8F0", width: 28 }}>#</th>
+                        <th style={{ padding: "8px 12px", textAlign: "left", fontSize: 10, fontWeight: 700, color: "#94A3B8", textTransform: "uppercase", letterSpacing: "0.05em", borderBottom: "1px solid #E2E8F0", width: 40 }}>
+                          <input 
+                            type="checkbox"
+                            checked={parsedRows.every(r => r.isSelected || r.summary.trim().length === 0)}
+                            onChange={(e) => {
+                              const checked = e.target.checked;
+                              setParsedRows(prev => prev.map(r => r.summary.trim().length > 0 ? { ...r, isSelected: checked } : r));
+                            }}
+                            style={{ cursor: "pointer" }}
+                          />
+                        </th>
                         <th style={{ padding: "8px 12px", textAlign: "left", fontSize: 10, fontWeight: 700, color: "#94A3B8", textTransform: "uppercase", letterSpacing: "0.05em", borderBottom: "1px solid #E2E8F0" }}>Post Content</th>
+                        <th style={{ padding: "8px 12px", textAlign: "left", fontSize: 10, fontWeight: 700, color: "#94A3B8", textTransform: "uppercase", letterSpacing: "0.05em", borderBottom: "1px solid #E2E8F0", width: 60 }}>Chars</th>
                         <th style={{ padding: "8px 12px", textAlign: "left", fontSize: 10, fontWeight: 700, color: "#94A3B8", textTransform: "uppercase", letterSpacing: "0.05em", borderBottom: "1px solid #E2E8F0" }}>Focus Keyword</th>
                         <th style={{ padding: "8px 12px", textAlign: "center", fontSize: 10, fontWeight: 700, color: "#94A3B8", textTransform: "uppercase", letterSpacing: "0.05em", borderBottom: "1px solid #E2E8F0", width: 40 }}>OK</th>
                       </tr>
@@ -544,7 +557,18 @@ export function BulkImportModal({ locationId, isOpen, onClose, onSuccess, viewDr
                               background: isEmpty ? "#FFF1F2" : row.wasTruncated ? "#FFFBEB" : "#fff",
                             }}
                           >
-                            <td style={{ padding: "8px 12px", fontSize: 11, color: "#94A3B8", fontWeight: 600 }}>{row.index}</td>
+                            <td style={{ padding: "8px 12px", fontSize: 11, color: "#94A3B8", fontWeight: 600 }}>
+                              <input 
+                                type="checkbox"
+                                checked={row.isSelected}
+                                disabled={isEmpty}
+                                onChange={(e) => {
+                                  const checked = e.target.checked;
+                                  setParsedRows(prev => prev.map(r => r.index === row.index ? { ...r, isSelected: checked } : r));
+                                }}
+                                style={{ cursor: isEmpty ? "not-allowed" : "pointer" }}
+                              />
+                            </td>
                             <td style={{ padding: "8px 12px" }}>
                               <div style={{
                                 fontSize: 12, color: isEmpty ? "#BE123C" : "#334155",
@@ -569,6 +593,9 @@ export function BulkImportModal({ locationId, isOpen, onClose, onSuccess, viewDr
                                   ))}
                                 </div>
                               )}
+                            </td>
+                            <td style={{ padding: "8px 12px", fontSize: 11, color: "#334155", fontWeight: 600 }}>
+                              {isEmpty ? "-" : row.summary.length}
                             </td>
                             <td style={{ padding: "8px 12px", fontSize: 11, color: "#334155" }}>
                               {row.focusKeyword ? (
