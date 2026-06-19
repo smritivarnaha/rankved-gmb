@@ -34,6 +34,17 @@ import { X } from "lucide-react";
       ]
     },
     {
+      label: "SOCIAL MEDIA (SMM)",
+      items: [
+        { name: "SMM Dashboard", href: "/smm", icon: LayoutDashboard },
+        { name: "Clients", href: "/smm/clients", icon: Users },
+        { name: "Connections", href: "/smm/connections", icon: Share2 },
+        { name: "Composer", href: "/smm/composer", icon: Edit3 },
+        { name: "Calendar", href: "/smm/calendar", icon: CalendarDays },
+        { name: "Media Library", href: "/smm/media", icon: Database },
+      ]
+    },
+    {
       label: "MANAGEMENT",
       items: [
         { name: "Calendar", href: "/calendar", icon: CalendarDays },
@@ -145,6 +156,31 @@ export function Sidebar() {
                         >
                           <Icon size={15} strokeWidth={1.5} color={isActive ? "#2563eb" : "#60a5fa"} />
                           <span style={{ fontSize: 13, fontWeight: 500, color: isActive ? "#1d4ed8" : "#3b82f6" }}>{item.name}</span>
+                        </Link>
+                      );
+                    })}
+                  </nav>
+                </div>
+              ) : cat.label === "SOCIAL MEDIA (SMM)" ? (
+                <div style={{ marginBottom: 8, padding: "10px 12px 6px", background: "linear-gradient(135deg, #fdf4ff 0%, #eff6ff 100%)", borderRadius: 10, border: "1px solid #f3e8ff" }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 8 }}>
+                    <div style={{ width: 16, height: 16, borderRadius: 4, background: "linear-gradient(135deg, #a855f7, #3b82f6)", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                      <span style={{ fontSize: 9, fontWeight: 900, color: "#fff" }}>S</span>
+                    </div>
+                    <p style={{ fontSize: 10, fontWeight: 700, color: "#7e22ce", letterSpacing: "0.06em", margin: 0 }}>SOCIAL MEDIA (SMM)</p>
+                  </div>
+                  <nav style={{ display: "flex", flexDirection: "column", gap: 2 }}>
+                    {visibleItems.map((item) => {
+                      const isActive = pathname === item.href || pathname.startsWith(item.href + "/");
+                      const Icon = item.icon;
+                      return (
+                        <Link key={item.name} href={item.href}
+                          style={{ display: "flex", alignItems: "center", gap: 10, padding: "7px 10px", borderRadius: 7, textDecoration: "none", background: isActive ? "#f3e8ff" : "transparent", transition: "background 0.15s" }}
+                          onMouseEnter={e => { if (!isActive) e.currentTarget.style.background = "rgba(168,85,247,0.07)"; }}
+                          onMouseLeave={e => { if (!isActive) e.currentTarget.style.background = "transparent"; }}
+                        >
+                          <Icon size={15} strokeWidth={1.5} color={isActive ? "#7e22ce" : "#c084fc"} />
+                          <span style={{ fontSize: 13, fontWeight: 500, color: isActive ? "#6b21a8" : "#a855f7" }}>{item.name}</span>
                         </Link>
                       );
                     })}

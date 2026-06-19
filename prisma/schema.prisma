@@ -95,6 +95,11 @@ model User {
   apiKeys         ApiKey[]
   prompts         PromptTemplate[]
   notifications   Notification[]
+  
+  // SMM Fields
+  smmAssignedClients Client[]    @relation("SmmClientAssignments")
+  smmPosts           SmmPost[]
+
   createdAt       DateTime    @default(now())
   updatedAt       DateTime    @updatedAt
 }
@@ -110,6 +115,18 @@ model Client {
   locations   Location[]
   createdAt   DateTime   @default(now())
   updatedAt   DateTime   @updatedAt
+
+  // SMM Fields
+  businessClinicName String?
+  contactPerson      String?
+  email              String?
+  phone              String?
+  status             String     @default("ACTIVE") // ACTIVE, INACTIVE
+  smmAssignedUsers   User[]     @relation("SmmClientAssignments")
+  socialAccounts     SocialAccount[]
+  mediaAssets        MediaAsset[]
+  smmPosts           SmmPost[]
+  approvalGroups     SmmApprovalGroup[]
 
   @@index([userId])
 }
@@ -318,3 +335,107 @@ model ReviewSnapshot {
 
   @@index([locationId])
 }
+
+// ─── Social Media Management (SMM) Models ──────────────────
+model SocialAccount {
+  id             String   @id @default(cuid())
+  clientId       String
+  client         Client   @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  platform       String   // FACEBOOK, INSTAGRAM, LINKEDIN
+  accountId      String   // Facebook Page ID, Instagram Account ID, LinkedIn Org ID
+  accountName    String   // e.g. "Dr Prince Arthro Care Page"
+  accessToken    String?  // encrypted access token
+  status         String   @default("CONNECTED") // CONNECTED, DISCONNECTED, EXPIRED
+  avatarUrl      String?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+  posts          SmmPostDestination[]
+
+  @@unique([platform, accountId])
+  @@index([clientId])
+}
+
+model MediaAsset {
+  id         String   @id @default(cuid())
+  clientId   String
+  client     Client   @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  name       String
+  url        String
+  type       String   // IMAGE, VIDEO, DOCUMENT
+  sizeBytes  Int?
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@index([clientId])
+}
+
+model SmmApprovalGroup {
+  id          String    @id @default(cuid())
+  clientId    String
+  client      Client    @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  title       String    // e.g. "Week 1 Content Approval"
+  secureToken String    @unique // The xyz123 token used in the link
+  status      String    @default("PENDING") // PENDING, APPROVED, REJECTED, PARTIALLY_APPROVED
+  posts       SmmPost[]
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  @@index([clientId])
+}
+
+model SmmPost {
+  id              String         @id @default(cuid())
+  clientId        String
+  client          Client         @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  userId          String
+  user            User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  caption         String         @db.Text
+  hashtags        String?        @db.Text
+  internalNotes   String?        @db.Text
+  mediaUrls       String[]       // Array of media URLs associated with the post
+  status          String         @default("DRAFT") // DRAFT, REVIEW, PENDING_APPROVAL, APPROVED, REJECTED, SCHEDULED, PUBLISHED, FAILED
+  scheduledAt     DateTime?
+  publishedAt     DateTime?
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
+  
+  approvalGroupId String?
+  approvalGroup   SmmApprovalGroup? @relation(fields: [approvalGroupId], references: [id], onDelete: SetNull)
+  
+  destinations    SmmPostDestination[]
+  history         SmmApprovalHistory[]
+
+  @@index([clientId])
+  @@index([status])
+  @@index([scheduledAt])
+}
+
+model SmmPostDestination {
+  id              String        @id @default(cuid())
+  postId          String
+  post            SmmPost       @relation(fields: [postId], references: [id], onDelete: Cascade)
+  socialAccountId String
+  socialAccount   SocialAccount @relation(fields: [socialAccountId], references: [id], onDelete: Cascade)
+  status          String        @default("PENDING") // PENDING, PUBLISHED, FAILED
+  publishedAt     DateTime?
+  externalPostId  String?       // ID returned by the platform's API
+  errorMessage    String?       @db.Text
+  apiResponse     String?       @db.Text
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+
+  @@unique([postId, socialAccountId])
+}
+
+model SmmApprovalHistory {
+  id        String   @id @default(cuid())
+  postId    String
+  post      SmmPost  @relation(fields: [postId], references: [id], onDelete: Cascade)
+  action    String   // APPROVE, REJECT, REQUEST_CHANGES
+  actor     String   // "CLIENT" or User Name / User Email
+  comments  String?  @db.Text
+  createdAt DateTime @default(now())
+
+  @@index([postId])
+}
+
