@@ -14,7 +14,7 @@
     },
     {
       "path": "/api/cron/smm-publish",
-      "schedule": "*/10 * * * *"
+      "schedule": "0 9 * * *"
     }
   ]
 }
