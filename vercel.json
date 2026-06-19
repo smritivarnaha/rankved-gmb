@@ -11,10 +11,6 @@
     {
       "path": "/api/cron/watchkeeper",
       "schedule": "0 8 * * *"
-    },
-    {
-      "path": "/api/cron/smm-publish",
-      "schedule": "0 9 * * *"
     }
   ]
 }
