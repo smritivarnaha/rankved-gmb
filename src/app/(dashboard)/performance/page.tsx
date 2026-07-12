@@ -100,7 +100,7 @@ export default function PerformancePage() {
   const urlProfileId = searchParams.get("profileId");
   
   const { data, isLoading } = useSWR("/api/profiles", fetcher);
-  const profiles = data?.data || [];
+  const profiles = (data?.data || []).filter((p: any) => !p.isHidden);
   
   const [selectedProfileId, setSelectedProfileId] = useState<string | null>(null);
 

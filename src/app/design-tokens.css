@@ -78,7 +78,7 @@
      SURFACE BACKGROUNDS
      Rule: bg-page < bg-subtle < bg-card (elevation order)
   ────────────────────────────────────────────────────────────── */
-  --bg-page:    var(--neutral-50);    /* #FAFAFA — app shell */
+  --bg-page:    #f1f5f9;    /* #f1f5f9 — app shell */
   --bg-subtle:  var(--neutral-100);   /* #F4F4F5 — panels, sidebars */
   --bg-card:    #FFFFFF;              /* elevated card surface */
   --bg-input:   var(--neutral-150);   /* #EFEFEF — unfocused input fill */
@@ -86,7 +86,7 @@
   --bg-active:  var(--brand-subtle);  /* active nav item */
 
   /* Legacy aliases — keep for backward compat with existing pages */
-  --bg-body:     var(--bg-page);
+  --bg-body:     #f1f5f9;
   --bg-elevated: var(--neutral-100);
   --bg-secondary: var(--neutral-100);
   --bg-sidebar:  #FFFFFF;

@@ -16,11 +16,12 @@ const fetcher = (url: string) => fetch(url).then((res) => res.json());
 const DAYS = ["MONDAY", "TUESDAY", "WEDNESDAY", "THURSDAY", "FRIDAY", "SATURDAY", "SUNDAY"];
 
 // Proxy Google lh3 URLs through our authenticated media proxy
-function proxyLogoUrl(url?: string) {
+function proxyLogoUrl(url?: string, profileId?: string) {
   if (!url) return "";
   if (url.startsWith("data:")) return url;
   if (url.includes("maps.googleapis.com") || url.includes("places.googleapis.com")) return url;
-  return `/api/proxy/media?url=${encodeURIComponent(url)}`;
+  const suffix = profileId ? `&profileId=${profileId}` : "";
+  return `/api/proxy/media?url=${encodeURIComponent(url)}${suffix}`;
 }
 
 // Google GBP field rules
@@ -293,7 +294,7 @@ export default function EditProfilePage() {
                     {logoFile ? (
                       <img src={URL.createObjectURL(logoFile)} alt="Preview" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
                     ) : formData.logoUrl ? (
-                      <img src={proxyLogoUrl(formData.logoUrl)} alt="Logo" referrerPolicy="no-referrer" style={{ width: "100%", height: "100%", objectFit: "cover" }} onError={e => { (e.target as HTMLImageElement).style.display = "none"; }} />
+                      <img src={proxyLogoUrl(formData.logoUrl, id)} alt="Logo" referrerPolicy="no-referrer" style={{ width: "100%", height: "100%", objectFit: "cover" }} onError={e => { (e.target as HTMLImageElement).style.display = "none"; }} />
                     ) : (
                       <GbpIcon size={40} />
                     )}

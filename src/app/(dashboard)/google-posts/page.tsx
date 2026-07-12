@@ -5,7 +5,7 @@ import {
   Search, MapPin, ExternalLink, Trash2,
   AlertCircle, RefreshCw, Globe, Calendar, FileText,
   ArrowRight, Eye, X, ChevronDown, Tag, Megaphone, Gift, Star,
-  ChevronLeft, ChevronRight
+  ChevronLeft, ChevronRight, Phone, Link2
 } from "lucide-react";
 import Link from "next/link";
 import { ProfileItemSkeleton, PostCardSkeleton } from "@/components/ui/Skeleton";
@@ -13,7 +13,7 @@ import { ProfileItemSkeleton, PostCardSkeleton } from "@/components/ui/Skeleton"
 type SortOption = "newest" | "oldest" | "type";
 const POSTS_PER_PAGE = 12;
 
-function proxyUrl(url?: string) {
+function proxyUrl(url?: string, profileId?: string) {
   if (!url) return undefined;
   if (url.startsWith("data:")) return url;
   
@@ -28,7 +28,8 @@ function proxyUrl(url?: string) {
   }
   
   // For GBP Media API (lh3.googleusercontent.com) we MUST proxy to attach the OAuth token
-  return `/api/proxy/media?url=${encodeURIComponent(targetUrl)}`;
+  const suffix = profileId ? `&profileId=${profileId}` : "";
+  return `/api/proxy/media?url=${encodeURIComponent(targetUrl)}${suffix}`;
 }
 
 function getPostType(post: any): { label: string; color: string; bg: string; Icon: any } {
@@ -55,7 +56,7 @@ function getStatusBadge(state?: string) {
   return { label: state || "Unknown", color: "#475569", bg: "#f1f5f9" };
 }
 
-function PostModal({ post, onClose, onDelete }: { post: any; onClose: () => void; onDelete: (name: string) => void }) {
+function PostModal({ post, onClose, onDelete, profileId }: { post: any; onClose: () => void; onDelete: (name: string) => void; profileId?: string }) {
   const type = getPostType(post);
   const TypeIcon = type.Icon;
 
@@ -165,7 +166,7 @@ function PostModal({ post, onClose, onDelete }: { post: any; onClose: () => void
           {/* Image */}
           {post.media?.length > 0 && (
             <div style={{ marginBottom: 24, borderRadius: 16, overflow: "hidden", border: "1px solid #f1f5f9", boxShadow: "0 4px 12px rgba(0,0,0,0.05)" }}>
-            <img src={proxyUrl(post.media[0].googleUrl)} alt="" style={{ width: "100%", maxHeight: 400, objectFit: "contain", background: "#f8fafc", display: "block" }} />
+            <img src={proxyUrl(post.media[0].googleUrl, profileId)} alt="" style={{ width: "100%", maxHeight: 400, objectFit: "contain", background: "#f8fafc", display: "block" }} />
           </div>
           )}
 
@@ -283,8 +284,10 @@ export default function GooglePostsPage() {
   };
 
   const filteredProfiles = profiles.filter(p =>
-    p.name.toLowerCase().includes(search.toLowerCase()) ||
-    (p.accountName || "").toLowerCase().includes(search.toLowerCase())
+    !p.isHidden && (
+      p.name.toLowerCase().includes(search.toLowerCase()) ||
+      (p.accountName || "").toLowerCase().includes(search.toLowerCase())
+    )
   );
 
   const sortedPosts = useMemo(() => {
@@ -310,7 +313,7 @@ export default function GooglePostsPage() {
   return (
     <div style={{ fontFamily: "Inter, sans-serif", maxWidth: 1200, margin: "0 auto", paddingBottom: 60 }} className="ds-anim-fade">
       {/* View Post Modal */}
-      {viewPost && <PostModal post={viewPost} onClose={() => setViewPost(null)} onDelete={handleDelete} />}
+      {viewPost && <PostModal post={viewPost} onClose={() => setViewPost(null)} onDelete={handleDelete} profileId={selectedProfileId} />}
 
       {/* Header */}
       <div className="live-feed-page-header">
@@ -480,7 +483,7 @@ export default function GooglePostsPage() {
                           {/* Card image container */}
                           <div style={{ height: 180, overflow: "hidden", background: "#f8fafc", flexShrink: 0, position: 'relative' }}>
                             {hasImage ? (
-                              <img src={proxyUrl(post.media[0].googleUrl)} alt="" style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
+                              <img src={proxyUrl(post.media[0].googleUrl, selectedProfileId)} alt="" style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
                             ) : (
                               <div style={{ height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#cbd5e1' }}>
                                 <FileText size={40} />
@@ -512,9 +515,20 @@ export default function GooglePostsPage() {
 
                           {/* Card body */}
                           <div style={{ padding: "20px", flex: 1, display: "flex", flexDirection: "column", gap: 12 }}>
-                            <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                              <Calendar size={12} style={{ color: "#94a3b8" }} />
-                              <span style={{ fontSize: 12, color: "#94a3b8", fontWeight: 600 }}>{dateStr}</span>
+                            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", width: "100%" }}>
+                              <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                                <Calendar size={12} style={{ color: "#94a3b8" }} />
+                                <span style={{ fontSize: 12, color: "#94a3b8", fontWeight: 600 }}>{dateStr}</span>
+                              </div>
+                              {post.callToAction?.actionType === "CALL" ? (
+                                <span style={{ display: "inline-flex" }} title="Call Now button active">
+                                  <Phone size={11} style={{ color: "#94a3b8", flexShrink: 0 }} />
+                                </span>
+                              ) : post.callToAction?.url ? (
+                                <span style={{ display: "inline-flex" }} title={`${post.callToAction.actionType} button active: ${post.callToAction.url}`}>
+                                  <Link2 size={11} style={{ color: "#94a3b8", flexShrink: 0 }} />
+                                </span>
+                              ) : null}
                             </div>
 
                             {/* Summary — clamped to 2 lines */}

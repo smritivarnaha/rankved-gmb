@@ -9,24 +9,32 @@ import {
 } from "lucide-react";
 
 const Facebook = (props: any) => (
-  <svg viewBox="0 0 24 24" width="24" height="24" stroke="currentColor" strokeWidth="2" fill="none" strokeLinecap="round" strokeLinejoin="round" {...props}>
-    <path d="M18 2h-3a5 5 0 0 0-5 5v3H7v4h3v8h4v-8h3l1-4h-4V7a1 1 0 0 1 1-1h3z" />
+  <svg viewBox="0 0 24 24" width="24" height="24" fill="#1877F2" {...props}>
+    <path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/>
   </svg>
 );
 
 const Instagram = (props: any) => (
-  <svg viewBox="0 0 24 24" width="24" height="24" stroke="currentColor" strokeWidth="2" fill="none" strokeLinecap="round" strokeLinejoin="round" {...props}>
-    <rect x="2" y="2" width="20" height="20" rx="5" ry="5" />
-    <path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z" />
-    <line x1="17.5" y1="6.5" x2="17.51" y2="6.5" />
+  <svg viewBox="0 0 24 24" width="24" height="24" {...props}>
+    <defs>
+      <linearGradient id="ig-grad" x1="0%" y1="100%" x2="100%" y2="0%">
+        <stop offset="0%" stopColor="#f09433" />
+        <stop offset="25%" stopColor="#e6683c" />
+        <stop offset="50%" stopColor="#dc2743" />
+        <stop offset="75%" stopColor="#cc2366" />
+        <stop offset="100%" stopColor="#bc1888" />
+      </linearGradient>
+    </defs>
+    <rect x="2" y="2" width="20" height="20" rx="5" ry="5" fill="url(#ig-grad)" />
+    <rect x="5" y="5" width="14" height="14" rx="3.5" ry="3.5" fill="none" stroke="#fff" strokeWidth="1.8" />
+    <circle cx="12" cy="12" r="3" fill="none" stroke="#fff" strokeWidth="1.8" />
+    <circle cx="16.5" cy="7.5" r="0.9" fill="#fff" />
   </svg>
 );
 
 const Linkedin = (props: any) => (
-  <svg viewBox="0 0 24 24" width="24" height="24" stroke="currentColor" strokeWidth="2" fill="none" strokeLinecap="round" strokeLinejoin="round" {...props}>
-    <path d="M16 8a6 6 0 0 1 6 6v7h-4v-7a2 2 0 0 0-2-2 2 2 0 0 0-2 2v7h-4v-7a6 6 0 0 1 6-6z" />
-    <rect x="2" y="9" width="4" height="12" />
-    <circle cx="4" cy="4" r="2" />
+  <svg viewBox="0 0 24 24" width="24" height="24" fill="#0A66C2" {...props}>
+    <path d="M19 0h-14c-2.761 0-5 2.239-5 5v14c0 2.761 2.239 5 5 5h14c2.762 0 5-2.239 5-5v-14c0-2.761-2.238-5-5-5zm-11 19h-3v-11h3v11zm-1.5-12.268c-.966 0-1.75-.79-1.75-1.764s.784-1.764 1.75-1.764 1.75.79 1.75 1.764-.783 1.764-1.75 1.764zm13.5 12.268h-3v-5.604c0-3.368-4-3.113-4 0v5.604h-3v-11h3v1.765c1.396-2.586 7-2.777 7 2.476v6.759z"/>
   </svg>
 );
 
@@ -35,6 +43,25 @@ export default function SmmConnectionsPage() {
   const [connections, setConnections] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState<string | null>(null);
+  const [copiedOnboard, setCopiedOnboard] = useState(false);
+
+  const getOnboardLink = () => {
+    if (typeof window === "undefined") return "";
+    return `${window.location.origin}/smm/onboard/${activeClient.id}`;
+  };
+
+  const handleCopyOnboard = () => {
+    navigator.clipboard.writeText(getOnboardLink());
+    setCopiedOnboard(true);
+    setTimeout(() => setCopiedOnboard(false), 2000);
+  };
+
+  const handleShareOnboardWhatsApp = () => {
+    const link = getOnboardLink();
+    const contact = activeClient.contactPerson || "Doctor";
+    const text = `Hi ${contact},\n\nPlease connect your clinic's Facebook, Instagram, or LinkedIn accounts to our agency portal using this secure onboarding link:\n\n${link}\n\nThank you!`;
+    window.open(`https://api.whatsapp.com/send?text=${encodeURIComponent(text)}`, "_blank");
+  };
 
   const fetchConnections = async () => {
     if (!activeClient) return;
@@ -211,6 +238,68 @@ export default function SmmConnectionsPage() {
         <p style={{ fontSize: 14, color: "#64748B", margin: 0 }}>
           Manage API bindings for workspace: <strong style={{ color: "#7e22ce" }}>{activeClient.name}</strong>
         </p>
+      </div>
+
+      {/* Client Onboarding Link Card */}
+      <div style={{
+        background: "linear-gradient(135deg, #fdf4ff 0%, #eff6ff 100%)",
+        border: "1px solid #f3e8ff",
+        borderRadius: 12,
+        padding: "16px 20px",
+        marginBottom: 24,
+        display: "flex",
+        justifyContent: "space-between",
+        alignItems: "center",
+        flexWrap: "wrap",
+        gap: 16
+      }}>
+        <div style={{ flex: 1, minWidth: 280 }}>
+          <h4 style={{ fontSize: 13.5, fontWeight: 700, color: "#1e1b4b", margin: "0 0 4px" }}>Client Self-Onboarding Link</h4>
+          <p style={{ fontSize: 12.5, color: "#475569", margin: 0 }}>
+            Send this secure link to allow the doctor or clinic manager to connect their own social accounts without logging in.
+          </p>
+        </div>
+        <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
+          <button
+            onClick={handleCopyOnboard}
+            style={{
+              height: 34,
+              padding: "0 12px",
+              background: copiedOnboard ? "#ecfdf5" : "#fff",
+              border: "1px solid #e2e8f0",
+              color: copiedOnboard ? "#059669" : "#475569",
+              borderRadius: 8,
+              fontSize: 12,
+              fontWeight: 600,
+              cursor: "pointer",
+              display: "flex",
+              alignItems: "center",
+              gap: 6
+            }}
+          >
+            {copiedOnboard ? <CheckCircle2 size={13} /> : <Share2 size={13} />}
+            {copiedOnboard ? "Copied Link" : "Copy Link"}
+          </button>
+          <button
+            onClick={handleShareOnboardWhatsApp}
+            style={{
+              height: 34,
+              padding: "0 12px",
+              background: "#25d366",
+              color: "#fff",
+              border: "none",
+              borderRadius: 8,
+              fontSize: 12,
+              fontWeight: 600,
+              cursor: "pointer",
+              display: "flex",
+              alignItems: "center",
+              gap: 6
+            }}
+          >
+            <Share2 size={13} /> WhatsApp Invitation
+          </button>
+        </div>
       </div>
 
       {loading ? (

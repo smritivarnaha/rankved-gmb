@@ -18,7 +18,7 @@ const defaultHours: Record<string, { open: string; close: string; closed: boolea
   Sunday:    { open: "10:00", close: "16:00", closed: true  },
 };
 
-type Tab = "info" | "contact" | "hours";
+type Tab = "info" | "contact" | "hours" | "sitemap";
 
 /* ─── Field component ────────────────────────────── */
 function Field({
@@ -57,6 +57,7 @@ export function ProfileEditor({ profile, onUpdate }: { profile: any; onUpdate?: 
   const [loading, setLoading] = useState(false);
   const [saved, setSaved]     = useState(false);
   const [error, setError]     = useState<string | null>(null);
+  const [logoUrl, setLogoUrl] = useState<string | null>(profile.logoUrl || null);
 
   const [info, setInfo] = useState({
     name:        profile.name        || "",
@@ -72,12 +73,97 @@ export function ProfileEditor({ profile, onUpdate }: { profile: any; onUpdate?: 
   const [hours, setHours] = useState<typeof defaultHours>(
     profile.hours || defaultHours
   );
+  
+  const [sitemapUrl, setSitemapUrl] = useState(profile.sitemapUrl || "");
+  const [sitemapUrls, setSitemapUrls] = useState<string[]>(profile.sitemapUrls || []);
+  const [sitemapLoading, setSitemapLoading] = useState(false);
+  const [sitemapFilter, setSitemapFilter] = useState("");
+
+  const handleParseSitemap = async () => {
+    if (!sitemapUrl) return alert("Please enter a sitemap URL first.");
+    setSitemapLoading(true);
+    setError(null);
+    try {
+      const res = await fetch(`/api/profiles/${profile.id}/sitemap`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ sitemapUrl })
+      });
+      const data = await res.json();
+      if (res.ok) {
+        setSitemapUrls(data.urls || []);
+        alert(`Successfully fetched and parsed ${data.count} URLs!`);
+        if (onUpdate) onUpdate();
+      } else {
+        setError(data.error || "Failed to parse sitemap.");
+      }
+    } catch {
+      setError("Failed to reach the sitemap parsing service.");
+    } finally {
+      setSitemapLoading(false);
+    }
+  };
+
+  const handleAutoFetchSitemap = async () => {
+    setSitemapLoading(true);
+    setError(null);
+    try {
+      const res = await fetch(`/api/profiles/${profile.id}/sitemap`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" }
+      });
+      const data = await res.json();
+      if (res.ok) {
+        setSitemapUrls(data.urls || []);
+        if (data.website) {
+          profile.website = data.website; // Update the profile object locally
+        }
+        alert(`Successfully fetched website and parsed ${data.count} sitemap URLs from it!`);
+        if (onUpdate) onUpdate();
+      } else {
+        setError(data.error || "Failed to auto-discover website sitemap.");
+      }
+    } catch {
+      setError("Failed to reach the sitemap auto-fetch service.");
+    } finally {
+      setSitemapLoading(false);
+    }
+  };
+
+  const handleLogoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const formData = new FormData();
+    formData.append("id", profile.id);
+    formData.append("logo", file);
+
+    try {
+      const res = await fetch("/api/profiles", {
+        method: "PATCH",
+        body: formData,
+      });
+
+      if (res.ok) {
+        const reader = new FileReader();
+        reader.onload = () => {
+          setLogoUrl(reader.result as string);
+        };
+        reader.readAsDataURL(file);
+        if (onUpdate) onUpdate();
+      } else {
+        alert("Failed to upload logo.");
+      }
+    } catch {
+      alert("Error uploading logo.");
+    }
+  };
 
   const handleSave = async () => {
     setLoading(true); setSaved(false); setError(null);
     try {
       const payload = { ...info, ...contact, hours };
-      const res = await fetch(`/api/profiles/${profile.id}`, {
+      const res = await fetch(`/api/profiles/${profile.id}/gbp`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
@@ -98,6 +184,7 @@ export function ProfileEditor({ profile, onUpdate }: { profile: any; onUpdate?: 
     { key: "info",    label: "Business Info",  icon: Building2 },
     { key: "contact", label: "Contact",        icon: Phone     },
     { key: "hours",   label: "Hours",          icon: Clock     },
+    { key: "sitemap", label: "Sitemap Links",  icon: Globe     },
   ];
 
   return (
@@ -176,6 +263,24 @@ export function ProfileEditor({ profile, onUpdate }: { profile: any; onUpdate?: 
       {/* ── TAB: Business Info ── */}
       {activeTab === "info" && (
         <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
+          {/* Custom Avatar Upload card */}
+          <div style={{ display: "flex", alignItems: "center", gap: 16, padding: "16px", background: "#f8fafc", borderRadius: 12, border: "1px solid #cbd5e1" }}>
+            <div style={{ width: 60, height: 60, borderRadius: 10, background: "#ffffff", display: "flex", alignItems: "center", justifyContent: "center", border: "1px solid #cbd5e1", overflow: "hidden", fontSize: 22, fontWeight: 700, color: "#64748b" }}>
+              {logoUrl ? (
+                <img src={logoUrl.startsWith("gbp:") ? logoUrl.replace("gbp:", "") : logoUrl} alt="Avatar" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+              ) : (
+                profile.name.charAt(0).toUpperCase()
+              )}
+            </div>
+            <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+              <p style={{ fontSize: 13, fontWeight: 600, color: "#334155", margin: 0 }}>Location Logo / Avatar</p>
+              <label style={{ display: "inline-flex", alignItems: "center", padding: "6px 14px", background: "#ffffff", border: "1px solid #cbd5e1", borderRadius: 8, fontSize: 12, fontWeight: 600, color: "#475569", cursor: "pointer", width: "fit-content", transition: "all 0.15s" }}>
+                Upload Logo Image
+                <input type="file" accept="image/*" onChange={handleLogoUpload} style={{ display: "none" }} />
+              </label>
+            </div>
+          </div>
+
           <Field label="Business Name" icon={Building2}>
             <input
               style={inputStyle}
@@ -233,15 +338,51 @@ export function ProfileEditor({ profile, onUpdate }: { profile: any; onUpdate?: 
           </Field>
 
           <Field label="Website URL" icon={Globe}>
-            <input
-              style={inputStyle}
-              value={contact.website}
-              onChange={(e) => setContact({ ...contact, website: e.target.value })}
-              placeholder="https://yourwebsite.com"
-              type="url"
-              onFocus={(e) => e.target.style.borderColor = "#2563EB"}
-              onBlur={(e) => e.target.style.borderColor = "#E2E8F0"}
-            />
+            <div style={{ display: "flex", gap: 10 }}>
+              <input
+                style={{ ...inputStyle, flex: 1 }}
+                value={contact.website}
+                onChange={(e) => setContact({ ...contact, website: e.target.value })}
+                placeholder="https://yourwebsite.com"
+                type="url"
+                onFocus={(e) => e.target.style.borderColor = "#2563EB"}
+                onBlur={(e) => e.target.style.borderColor = "#E2E8F0"}
+              />
+              <button
+                type="button"
+                onClick={async () => {
+                  setLoading(true);
+                  try {
+                    const res = await fetch(`/api/profiles/${profile.id}/gbp`);
+                    if (res.ok) {
+                      const json = await res.json();
+                      const liveWebsite = json.data?.websiteUri || "";
+                      if (liveWebsite) {
+                        setContact(prev => ({ ...prev, website: liveWebsite }));
+                        alert(`Successfully fetched website from Google: ${liveWebsite}`);
+                      } else {
+                        alert("No website is configured on this profile inside Google Business Profile.");
+                      }
+                    } else {
+                      alert("Failed to fetch profile details from Google API.");
+                    }
+                  } catch {
+                    alert("Error reaching Google Business Profile API.");
+                  } finally {
+                    setLoading(false);
+                  }
+                }}
+                style={{
+                  height: 44, padding: "0 16px",
+                  background: "#eff6ff", color: "#2563eb",
+                  border: "1.5px solid #bfdbfe", borderRadius: 10,
+                  fontSize: 12, fontWeight: 700, cursor: "pointer",
+                  whiteSpace: "nowrap"
+                }}
+              >
+                Fetch from Google
+              </button>
+            </div>
           </Field>
 
           <Notice text="Updates to phone and website are usually reflected on Google Maps within a few hours." />
@@ -313,6 +454,111 @@ export function ProfileEditor({ profile, onUpdate }: { profile: any; onUpdate?: 
           </div>
 
           <Notice text="Business hours are shown on Google Search and Maps. Update these when your schedule changes." />
+        </div>
+      )}
+
+      {/* ── TAB: Sitemap ── */}
+      {activeTab === "sitemap" && (
+        <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
+          <div style={{ display: "flex", gap: 12, alignItems: "flex-end" }}>
+            <div style={{ flex: 1 }}>
+              <Field label="Sitemap URL" icon={Globe}>
+                <input
+                  style={inputStyle}
+                  value={sitemapUrl}
+                  onChange={(e) => setSitemapUrl(e.target.value)}
+                  placeholder="https://yourwebsite.com/sitemap.xml"
+                  type="url"
+                  onFocus={(e) => e.target.style.borderColor = "#2563EB"}
+                  onBlur={(e) => e.target.style.borderColor = "#E2E8F0"}
+                />
+              </Field>
+            </div>
+            <button
+              onClick={handleParseSitemap}
+              disabled={sitemapLoading}
+              style={{
+                height: 44, padding: "0 20px",
+                background: "#0f172a", color: "#fff",
+                borderRadius: 10, border: "none", fontSize: 13, fontWeight: 600,
+                cursor: sitemapLoading ? "default" : "pointer",
+                display: "flex", alignItems: "center", gap: 8,
+                transition: "all 0.2s", opacity: sitemapLoading ? 0.7 : 1
+              }}
+            >
+              Custom URL Parse
+            </button>
+            <button
+              onClick={handleAutoFetchSitemap}
+              disabled={sitemapLoading}
+              style={{
+                height: 44, padding: "0 20px",
+                background: "#2563eb", color: "#fff",
+                borderRadius: 10, border: "none", fontSize: 13, fontWeight: 600,
+                cursor: sitemapLoading ? "default" : "pointer",
+                display: "flex", alignItems: "center", gap: 8,
+                transition: "all 0.2s", opacity: sitemapLoading ? 0.7 : 1
+              }}
+            >
+              {sitemapLoading ? <Loader2 size={14} className="anim-spin" /> : null}
+              Fetch Now (Auto)
+            </button>
+          </div>
+
+          <Notice text="You can submit your website sitemap (e.g. sitemap.xml) here. We will fetch and parse all individual page URLs from it so you can easily pick them when creating Call-To-Action buttons on posts." />
+
+          {sitemapUrls.length > 0 && (
+            <div style={{ background: "#fff", border: "1px solid #cbd5e1", borderRadius: 12, overflow: "hidden", display: "flex", flexDirection: "column" }}>
+              <div style={{ padding: "12px 16px", background: "#f8fafc", borderBottom: "1px solid #e2e8f0", display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
+                <span style={{ fontSize: 13, fontWeight: 700, color: "#334155" }}>
+                  Parsed URLs ({sitemapUrls.length})
+                </span>
+                <input
+                  type="text"
+                  placeholder="Search URLs..."
+                  value={sitemapFilter}
+                  onChange={e => setSitemapFilter(e.target.value)}
+                  style={{
+                    padding: "6px 12px", borderRadius: 8, border: "1px solid #cbd5e1",
+                    fontSize: 12, outline: "none", width: 200, background: "#fff"
+                  }}
+                />
+              </div>
+              <div style={{ maxHeight: 250, overflowY: "auto", padding: "8px 0" }}>
+                {sitemapUrls
+                  .filter(u => {
+                    if (!sitemapFilter) return true;
+                    const val = sitemapFilter.toLowerCase();
+                    if (val.startsWith("http://") || val.startsWith("https://")) {
+                      return u.toLowerCase().includes(val);
+                    }
+                    try {
+                      const parsed = new URL(u);
+                      return (parsed.pathname + parsed.search).toLowerCase().includes(val);
+                    } catch {
+                      return u.toLowerCase().includes(val);
+                    }
+                  })
+                  .map((url, i) => (
+                    <div
+                      key={i}
+                      style={{
+                        padding: "8px 16px", fontSize: 13, color: "#475569",
+                        borderBottom: i < sitemapUrls.length - 1 ? "1px solid #f1f5f9" : "none",
+                        wordBreak: "break-all"
+                      }}
+                    >
+                      {url}
+                    </div>
+                  ))}
+                {sitemapUrls.filter(u => u.toLowerCase().includes(sitemapFilter.toLowerCase())).length === 0 && (
+                  <div style={{ padding: 24, fontSize: 13, color: "#94a3b8", textAlign: "center" }}>
+                    No matching URLs found.
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
         </div>
       )}
     </div>

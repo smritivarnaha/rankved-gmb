@@ -35,6 +35,9 @@ export interface ProfileData {
     thisMonthPublished: number;
   };
   isHidden?: boolean;
+  sitemapUrl?: string;
+  sitemapUrls?: string[];
+  sitemapUpdatedAt?: string;
 }
 
 // Ensure a default Client row exists (for single-tenant use)
@@ -56,7 +59,7 @@ function locationToProfile(loc: any): ProfileData {
     accountName: loc.gbpAccountId,
     address: loc.address || "",
     phone: loc.phone || "",
-    website: "",
+    website: loc.website || "",
     googleName: loc.gbpLocationId,
     logoUrl: loc.logoUrl || undefined,
     googleEmail: loc.googleEmail || undefined,
@@ -67,6 +70,9 @@ function locationToProfile(loc: any): ProfileData {
     statsUpdatedAt: loc.statsUpdatedAt ? loc.statsUpdatedAt.toISOString() : undefined,
     postCounts: loc.postCounts,
     isHidden: loc.isHidden || false,
+    sitemapUrl: loc.sitemapUrl || undefined,
+    sitemapUrls: loc.sitemapUrls ? (loc.sitemapUrls as string[]) : undefined,
+    sitemapUpdatedAt: loc.sitemapUpdatedAt ? loc.sitemapUpdatedAt.toISOString() : undefined,
   };
 }
 
@@ -155,6 +161,7 @@ export async function saveProfiles(profiles: ProfileData[], userId: string, owne
         name: p.name,
         address: p.address || null,
         phone: p.phone || null,
+        website: p.website || null,
         logoUrl: p.logoUrl || null,
         googleEmail: p.googleEmail || null,
         clientId: clientId,
@@ -164,6 +171,7 @@ export async function saveProfiles(profiles: ProfileData[], userId: string, owne
         name: p.name,
         address: p.address || null,
         phone: p.phone || null,
+        website: p.website || null,
         logoUrl: p.logoUrl || null,
         googleEmail: p.googleEmail || null,
         gbpAccountId: p.accountId,

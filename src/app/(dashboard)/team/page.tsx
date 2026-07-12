@@ -17,7 +17,7 @@ export default function TeamPage() {
   const { data: profileData, isLoading: profilesLoading } = useSWR(canManageTeam ? "/api/profiles" : null, fetcher);
 
   const members = teamData?.data || [];
-  const profiles = profileData?.data || [];
+  const profiles = (profileData?.data || []).filter((p: any) => !p.isHidden);
   const loading = teamLoading || profilesLoading;
   const [error, setError] = useState("");
   const [searchQuery, setSearchQuery] = useState("");

@@ -84,3 +84,51 @@ export async function DELETE(
     return NextResponse.json({ error: error.message || "Internal Server Error" }, { status: 500 });
   }
 }
+
+export async function GET(
+  req: Request,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  try {
+    const { id } = await params;
+    const session = await getServerSession(authOptions);
+
+    let client;
+    if (session && session.user?.id) {
+      // Authenticated access: verify role or assignment
+      const role = session.user.role;
+      const isSuperAdmin = role === "SUPER_ADMIN";
+      
+      client = await prisma.client.findFirst({
+        where: {
+          id,
+          OR: isSuperAdmin ? undefined : [
+            { userId: session.user.id },
+            { smmAssignedUsers: { some: { id: session.user.id } } }
+          ]
+        }
+      });
+    } else {
+      // Unauthenticated public access for self-onboarding link
+      client = await prisma.client.findFirst({
+        where: { id, status: "ACTIVE" },
+        select: {
+          id: true,
+          name: true,
+          businessClinicName: true,
+          logo: true,
+          contactPerson: true
+        }
+      });
+    }
+
+    if (!client) {
+      return NextResponse.json({ error: "Client not found or access denied" }, { status: 404 });
+    }
+
+    return NextResponse.json({ data: client });
+  } catch (error: any) {
+    console.error("GET SMM Client Error:", error);
+    return NextResponse.json({ error: error.message || "Internal Server Error" }, { status: 500 });
+  }
+}

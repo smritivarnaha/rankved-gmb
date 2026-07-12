@@ -81,14 +81,15 @@ export async function publishToGBP(opts: PublishOptions): Promise<PublishResult>
     topicType: post.topicType || "STANDARD",
   };
 
-  // CTA
-  if (post.ctaType && post.ctaType !== "CALL") {
-    const actionType = CTA_MAP[post.ctaType] || post.ctaType;
+  // CTA - default to CALL (Call Now) if not selected
+  const ctaType = post.ctaType || "CALL";
+  if (ctaType !== "CALL") {
+    const actionType = CTA_MAP[ctaType] || ctaType;
     payload.callToAction = {
       actionType,
       url: post.ctaUrl || undefined,
     };
-  } else if (post.ctaType === "CALL") {
+  } else {
     payload.callToAction = { actionType: "CALL" };
   }
 

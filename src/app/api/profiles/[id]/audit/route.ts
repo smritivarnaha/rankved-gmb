@@ -112,6 +112,48 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
     const recentReviews = reviews.filter((r: any) => new Date(r.createTime) > thirtyDaysAgo);
     const reviewsPerWeek = parseFloat((recentReviews.length / 4).toFixed(1));
 
+    // Calculate fallback rating and review counts from the reviews array
+    const starMap: Record<string, number> = {
+      "ONE": 1, "TWO": 2, "THREE": 3, "FOUR": 4, "FIVE": 5
+    };
+    let totalStars = 0;
+    let validReviewsCount = 0;
+    reviews.forEach((r: any) => {
+      const val = starMap[r.starRating] || 0;
+      if (val > 0) {
+        totalStars += val;
+        validReviewsCount++;
+      }
+    });
+    const fallbackRating = validReviewsCount > 0 ? parseFloat((totalStars / validReviewsCount).toFixed(1)) : 0;
+    const fallbackCount = reviews.length;
+
+    // Fetch rating from Google Places API if placeId is available
+    const placeId = location.metadata?.placeId;
+    let officialRating = 0;
+    let officialReviewCount = 0;
+
+    if (placeId) {
+      try {
+        const mapsKey = (process.env.GOOGLE_MAPS_API_KEY || "").replace(/["\s\\]/g, "");
+        if (mapsKey) {
+          const placesRes = await fetch(`https://places.googleapis.com/v1/places/${placeId}?key=${mapsKey}`, {
+            headers: { "X-Goog-FieldMask": "rating,userRatingCount" },
+          });
+          if (placesRes.ok) {
+            const placesData = await placesRes.json();
+            officialRating = placesData.rating || 0;
+            officialReviewCount = placesData.userRatingCount || 0;
+          }
+        }
+      } catch (e) {
+        console.error("Error fetching Places API in audit:", e);
+      }
+    }
+
+    const averageRating = officialRating || fallbackRating || 0;
+    const totalReviews = officialReviewCount || fallbackCount || 0;
+
     // D. Custom Visibility Score (0-100)
     // Combines Profile Quality (40%), Reply Rate (25%), Review Velocity (15%), Photo Count (10%), and Posts Recency (10%)
     const velocityScore = Math.min(reviewsPerWeek / 2, 1) * 15; // Max 15 points
@@ -138,8 +180,8 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
         replyRate,
         reviewsPerWeek,
         visibilityScore,
-        totalReviews: location.metadata?.userReviewCount || reviews.length,
-        averageRating: location.metadata?.averageRating || 0,
+        totalReviews,
+        averageRating,
         photoCount,
         recentPostCount,
         lastPostDaysAgo,

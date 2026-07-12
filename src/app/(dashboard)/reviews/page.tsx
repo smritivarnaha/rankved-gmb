@@ -211,7 +211,7 @@ function SkeletonCard() {
 
 export default function ReviewsPage() {
   const { data: profilesData, isLoading: profilesLoading } = useSWR("/api/profiles", fetcher, { revalidateOnFocus: false });
-  const profiles = profilesData?.data || [];
+  const profiles = (profilesData?.data || []).filter((p: any) => !p.isHidden);
 
   const [selectedProfileId, setSelectedProfileId] = useState<string>("");
   const [sentiment, setSentiment] = useState<SentimentFilter>("all");

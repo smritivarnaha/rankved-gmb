@@ -12,7 +12,7 @@ html, body {
   height: 100%;
   overflow: hidden; /* body must NEVER scroll — only app-content scrolls */
 }
-html { font-size: 14px; scroll-behavior: smooth; }
+html { font-size: 14px; }
 body {
   font-family: var(--font-sans);
   color: var(--text-primary);
@@ -74,14 +74,25 @@ select {
 @keyframes spin {
   to { transform: rotate(360deg); }
 }
+@keyframes ping {
+  0% { transform: scale(1); opacity: 1; }
+  75%, 100% { transform: scale(2); opacity: 0; }
+}
+@keyframes bounce {
+  0%, 100% { transform: translateY(-25%); animation-timing-function: cubic-bezier(0.8, 0, 1, 1); }
+  50% { transform: translateY(0); animation-timing-function: cubic-bezier(0, 0, 0.2, 1); }
+}
 @keyframes pulse {
-  50% { opacity: 0.5; }
+  0%, 100% { opacity: 1; }
+  50% { opacity: .5; }
 }
 
 .anim-fade    { animation: fadeIn 0.2s ease-out both; }
 .anim-scale   { animation: scaleIn 0.2s cubic-bezier(0.16, 1, 0.3, 1) both; }
-.anim-spin    { animation: spin 0.8s linear infinite; }
-.anim-pulse   { animation: pulse 1.5s ease-in-out infinite; }
+.anim-spin, .animate-spin { animation: spin 0.8s linear infinite; }
+.anim-pulse, .animate-pulse { animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite; }
+.animate-ping { animation: ping 1.5s cubic-bezier(0, 0, 0.2, 1) infinite; }
+.animate-bounce { animation: bounce 1s infinite; }
 
 @keyframes fadeUp {
   from { opacity: 0; transform: translateY(6px); }

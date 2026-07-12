@@ -53,7 +53,7 @@ export async function POST(req: NextRequest) {
 
   // Use the new utility to get all valid, non-expired Google accounts
   const { getValidGoogleAccounts, getEmailFromIdToken } = await import("@/lib/google-accounts");
-  const validAccounts = await getValidGoogleAccounts(userId);
+  const validAccounts = await getValidGoogleAccounts(userId, true);
   
   if (validAccounts.length === 0) {
     return NextResponse.json({ error: "No valid Google accounts connected. Please connect a Google account in Settings first." }, { status: 400 });
@@ -322,7 +322,19 @@ export async function PATCH(req: NextRequest) {
       if (logoFile && logoFile.size > 0) {
         const bytes = await logoFile.arrayBuffer();
         const buffer = Buffer.from(bytes);
-        base64Logo = `data:${logoFile.type};base64,${buffer.toString("base64")}`;
+        try {
+          const sharp = (await import("sharp")).default;
+          // Resize to max 128x128 inside and output as highly-compressed WebP
+          const optimized = await sharp(buffer)
+            .resize(128, 128, { fit: "inside", withoutEnlargement: true })
+            .webp({ quality: 80 })
+            .toBuffer();
+          base64Logo = `data:image/webp;base64,${optimized.toString("base64")}`;
+          console.log(`[Upload] Logo optimized from ${buffer.length} to ${optimized.length} bytes`);
+        } catch (sharpError) {
+          console.error("[Upload] Error optimizing with sharp, using original buffer:", sharpError);
+          base64Logo = `data:${logoFile.type};base64,${buffer.toString("base64")}`;
+        }
       }
 
       if (base64Logo) {

@@ -20,6 +20,7 @@ export async function resolveImageUrl(
 
   try {
     let buffer: Buffer;
+    let isPng = false;
 
     // 1. Get raw buffer from either HTTP URL or Data URI
     if (imageDataUri.startsWith("http")) {
@@ -33,22 +34,35 @@ export async function resolveImageUrl(
       if (!res.ok) {
         return { success: false, error: "Failed to download external image for processing" };
       }
+      const contentType = res.headers.get("content-type") || "";
+      if (contentType.toLowerCase().includes("png")) {
+        isPng = true;
+      }
       const arrayBuffer = await res.arrayBuffer();
       buffer = Buffer.from(arrayBuffer);
     } else {
       // Data URI
       const parts = imageDataUri.split(",");
       if (parts.length < 2) return { success: false, error: "Invalid image format" };
+      if (parts[0].toLowerCase().includes("image/png")) {
+        isPng = true;
+      }
       buffer = Buffer.from(parts[1], "base64");
     }
 
-    // 2. Scrub Metadata & Convert to standard JPEG via Sharp
+    // 2. Scrub Metadata & Convert/Optimize via Sharp
     // Sharp automatically removes all EXIF/metadata unless told otherwise.
     let cleanBuffer: Buffer;
     try {
-      cleanBuffer = await sharp(buffer)
-        .jpeg({ quality: 100, chromaSubsampling: '4:4:4' }) 
-        .toBuffer();
+      if (isPng) {
+        cleanBuffer = await sharp(buffer)
+          .png({ compressionLevel: 9 }) // lossless, crisp text/graphics
+          .toBuffer();
+      } else {
+        cleanBuffer = await sharp(buffer)
+          .jpeg({ quality: 100, chromaSubsampling: '4:4:4' }) // crisp jpegs
+          .toBuffer();
+      }
     } catch (err: any) {
       console.error("[Storage] Sharp processing failed:", err);
       // Fallback to original buffer if processing fails
@@ -56,13 +70,14 @@ export async function resolveImageUrl(
     }
 
     // 3. Upload cleaned image to Supabase
-    let filename = `${Date.now()}-${Math.floor(Math.random() * 1000)}.jpg`;
+    const extension = isPng ? "png" : "jpg";
+    let filename = `${Date.now()}-${Math.floor(Math.random() * 1000)}.${extension}`;
     if (desiredFilename) {
       const slug = desiredFilename
         .toLowerCase()
         .replace(/[^a-z0-9]+/g, '-')
         .replace(/^-|-$/g, '');
-      if (slug) filename = `${slug}.jpg`;
+      if (slug) filename = `${slug}.${extension}`;
     }
     const uploadUrl = `${cleanUrl}/storage/v1/object/post-images/${filename}`;
     
@@ -70,7 +85,7 @@ export async function resolveImageUrl(
       method: "POST",
       headers: {
         Authorization: `Bearer ${supabaseKey}`,
-        "Content-Type": "image/jpeg",
+        "Content-Type": isPng ? "image/png" : "image/jpeg",
         "x-upsert": "true",
       },
       body: cleanBuffer as any,

@@ -100,10 +100,43 @@ export default function SettingsPage() {
     setLoadingAccounts(false);
   };
 
+  const refreshProfiles = () => {
+    setLoadingProfiles(true);
+    fetch("/api/profiles")
+      .then(r => r.ok ? r.json() : { data: [] })
+      .then(d => setProfiles(d.data || []))
+      .catch(() => {})
+      .finally(() => setLoadingProfiles(false));
+  };
+
+  const handleLogoUpload = async (id: string, e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const formData = new FormData();
+    formData.append("id", id);
+    formData.append("logo", file);
+
+    try {
+      const res = await fetch("/api/profiles", {
+        method: "PATCH",
+        body: formData,
+      });
+
+      if (res.ok) {
+        refreshProfiles();
+      } else {
+        alert("Failed to upload logo.");
+      }
+    } catch {
+      alert("Error uploading logo.");
+    }
+  };
+
   useEffect(() => {
     if (canConnectGoogle) {
       fetchAccounts();
-      fetch("/api/profiles").then(r => r.ok ? r.json() : { data: [] }).then(d => setProfiles(d.data || [])).catch(() => {}).finally(() => setLoadingProfiles(false));
+      refreshProfiles();
     }
   }, [canConnectGoogle]);
 
@@ -201,6 +234,8 @@ export default function SettingsPage() {
         .tab-btn { display: flex; align-items: center; gap: 8px; padding: 16px 20px; font-size: 14px; font-weight: 500; cursor: pointer; border: none; background: transparent; transition: all 0.2s; border-bottom: 2px solid transparent; color: #64748b; }
         .tab-btn.active { color: #2563eb; border-bottom: 2px solid #2563eb; }
         .tab-btn:hover:not(.active) { color: #111827; }
+        
+        .logo-upload-hover:hover { opacity: 1 !important; }
         
         .icon-box { width: 44px; height: 44px; border-radius: 12px; background: #eff6ff; display: flex; align-items: center; justify-content: center; flex-shrink: 0; color: #2563eb; }
         
@@ -689,12 +724,19 @@ export default function SettingsPage() {
               <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))", gap: 16 }} className="sprofiles-grid">
                 {profiles.map((p) => (
                   <div key={p.id} style={{ padding: 16, borderRadius: 12, border: "1px solid #eaeaea", background: "#f8fafc", display: "flex", alignItems: "center", gap: 14 }}>
-                    <div style={{ width: 48, height: 48, borderRadius: 10, background: "#fff", border: "1px solid #e2e8f0", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, overflow: "hidden" }}>
+                    <div style={{ position: "relative", width: 48, height: 48, borderRadius: 10, background: "#fff", border: "1px solid #e2e8f0", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, overflow: "hidden", cursor: "pointer" }}>
                       {p.logoUrl ? (
                         <img src={p.logoUrl} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
                       ) : (
                         <MapPin style={{ width: 24, height: 24, color: "#94a3b8" }} />
                       )}
+                      {/* Hidden File Input */}
+                      <label style={{ position: "absolute", inset: 0, background: "rgba(15,23,42,0.5)", opacity: 0, display: "flex", alignItems: "center", justifyContent: "center", transition: "opacity 0.2s", cursor: "pointer" }}
+                        className="logo-upload-hover"
+                      >
+                        <Upload size={14} color="#fff" />
+                        <input type="file" accept="image/*" onChange={(e) => handleLogoUpload(p.id, e)} style={{ display: "none" }} />
+                      </label>
                     </div>
                     <div style={{ flex: 1, minWidth: 0 }}>
                       <p title={p.name} style={{ 

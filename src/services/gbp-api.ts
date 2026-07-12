@@ -133,10 +133,15 @@ export class GBPApiService {
       topicType: post.topicType || "STANDARD",
     };
 
-    // Add CTA if provided
-    if (post.ctaType && post.ctaUrl) {
+    // Add CTA if provided - default to CALL if not selected
+    const ctaType = post.ctaType || "CALL";
+    if (ctaType === "CALL") {
       payload.callToAction = {
-        actionType: post.ctaType,
+        actionType: "CALL",
+      };
+    } else if (post.ctaUrl) {
+      payload.callToAction = {
+        actionType: ctaType,
         url: post.ctaUrl,
       };
     }

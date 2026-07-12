@@ -39,7 +39,7 @@ function getTheme(name: string) {
   return THEMES[Math.abs(h) % THEMES.length];
 }
 
-function proxyUrl(url?: string) {
+function proxyUrl(url?: string, profileId?: string) {
   if (!url) return undefined;
   if (url.startsWith("data:")) return url;
   
@@ -54,7 +54,8 @@ function proxyUrl(url?: string) {
   }
   
   // For GBP Media API (lh3.googleusercontent.com) we MUST proxy to attach the OAuth token
-  return `/api/proxy/media?url=${encodeURIComponent(targetUrl)}`;
+  const suffix = profileId ? `&profileId=${profileId}` : "";
+  return `/api/proxy/media?url=${encodeURIComponent(targetUrl)}${suffix}`;
 }
 
 function SkeletonProfileCard() {
@@ -166,7 +167,7 @@ function ProfileCard({
             }}>
               {profile.logoUrl ? (
                 <img 
-                  src={proxyUrl(profile.logoUrl)} 
+                  src={proxyUrl(profile.logoUrl, profile.id)} 
                   alt={profile.name} 
                   referrerPolicy="no-referrer"
                   style={{ width: "100%", height: "100%", objectFit: "cover" }} 
@@ -181,7 +182,7 @@ function ProfileCard({
               )}
             </div>
 
-            <div style={{ minWidth: 0, flex: 1, paddingRight: 20 }}>
+            <div style={{ minWidth: 0, flex: 1, paddingRight: 54 }}>
               <Link href={`/profiles/${profile.id}/edit`} title={profile.name} style={{ fontSize: 14, fontWeight: 700, color: "#111827", display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical", overflow: "hidden", lineHeight: 1.3, textDecoration: "none" }}>
                 {profile.name}
               </Link>
@@ -359,33 +360,50 @@ export default function ProfilesPage() {
               setMessage({ type: "success", text: "Onboarding link copied to clipboard! Share this with your clients." });
             }}
             className="btn btn-outline"
-            style={{ borderColor: "#0f172a", color: "#0f172a", background: "#fff" }}
+            style={{ borderColor: "#cbd5e1", color: "#475569", background: "#fff", display: "inline-flex", alignItems: "center", gap: 6, fontSize: 13, fontWeight: 600, cursor: "pointer", transition: "all 0.15s" }}
+            onMouseEnter={e => e.currentTarget.style.background = "#f8fafc"}
+            onMouseLeave={e => e.currentTarget.style.background = "#fff"}
             title="Copy one-click authorization link for clients"
           >
-            <Plus size={14} className="mr-2" />
+            <Plus size={14} />
             Copy Onboarding Link
           </button>
           <button 
             onClick={handleSync}
             disabled={isSyncing}
-            className="btn btn-outline"
-            style={{ borderColor: "#2563eb", color: "#2563eb", background: "#fff" }}
+            className="btn"
+            style={{ background: "#2563eb", color: "#fff", border: "none", display: "inline-flex", alignItems: "center", gap: 6, fontSize: 13, fontWeight: 600, cursor: "pointer", transition: "all 0.15s" }}
+            onMouseEnter={e => e.currentTarget.style.background = "#1d4ed8"}
+            onMouseLeave={e => e.currentTarget.style.background = "#2563eb"}
           >
-            {isSyncing ? <Loader2 size={14} className="animate-spin mr-2" /> : <RefreshCw size={14} className="mr-2" />}
+            {isSyncing ? <Loader2 size={14} className="animate-spin" /> : <RefreshCw size={14} />}
             Sync from Google
           </button>
           <button 
             onClick={() => setShowHidden(!showHidden)}
-            className={`btn ${showHidden ? 'btn-primary' : 'btn-outline'}`}
+            className="btn btn-outline"
             style={{ 
-              borderColor: showHidden ? "transparent" : "#cbd5e1", 
-              color: showHidden ? "#fff" : "#475569", 
-              background: showHidden ? "#2563eb" : "#fff" 
+              borderColor: showHidden ? "#2563eb" : "#cbd5e1", 
+              color: showHidden ? "#2563eb" : "#475569", 
+              background: showHidden ? "#eff6ff" : "#fff",
+              display: "inline-flex", alignItems: "center", gap: 6, fontSize: 13, fontWeight: 600, cursor: "pointer", transition: "all 0.15s"
+            }}
+            onMouseEnter={e => {
+              if (!showHidden) e.currentTarget.style.background = "#f8fafc";
+            }}
+            onMouseLeave={e => {
+              if (!showHidden) e.currentTarget.style.background = "#fff";
             }}
           >
             {showHidden ? "Show Active" : "Show Hidden"}
           </button>
-          <button onClick={() => mutate()} className="btn btn-ghost" style={{ border: "1px solid var(--border)" }}>
+          <button 
+            onClick={() => mutate()} 
+            className="btn btn-outline" 
+            style={{ borderColor: "#cbd5e1", color: "#475569", background: "#fff", display: "inline-flex", alignItems: "center", gap: 6, fontSize: 13, fontWeight: 600, cursor: "pointer", transition: "all 0.15s" }}
+            onMouseEnter={e => e.currentTarget.style.background = "#f8fafc"}
+            onMouseLeave={e => e.currentTarget.style.background = "#fff"}
+          >
             <RefreshCw style={{ width: 14, height: 14 }} /> Refresh
           </button>
         </div>

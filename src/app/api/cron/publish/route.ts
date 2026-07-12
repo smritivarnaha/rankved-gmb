@@ -24,6 +24,33 @@ export async function GET(req: NextRequest) {
 
   const now = new Date();
 
+  // Self-heal: Reset stuck "PUBLISHING" posts older than 10 minutes
+  // If a server restarted or timed out during execution, this prevents posts from getting stuck forever.
+  try {
+    const tenMinutesAgo = new Date(Date.now() - 10 * 60 * 1000);
+    const stuckPosts = await prisma.post.findMany({
+      where: {
+        status: "PUBLISHING",
+        updatedAt: { lte: tenMinutesAgo }
+      }
+    });
+
+    if (stuckPosts.length > 0) {
+      console.log(`[CRON] Found ${stuckPosts.length} stuck PUBLISHING posts. Resetting them to FAILED.`);
+      await prisma.post.updateMany({
+        where: {
+          id: { in: stuckPosts.map(p => p.id) }
+        },
+        data: {
+          status: "FAILED",
+          failureReason: "Publishing timed out during execution (automatic recovery)."
+        }
+      });
+    }
+  } catch (err: any) {
+    console.error("[CRON] Self-healing failed:", err.message);
+  }
+
   // Find all posts that are scheduled and due
   const duePosts = await prisma.post.findMany({
     where: {
@@ -172,6 +199,37 @@ export async function GET(req: NextRequest) {
     } catch (e) {
       console.error("[CRON] Storage cleanup failed", e);
     }
+  }
+
+  // --- Auto-update sitemaps (once every 25 hours per profile) ---
+  try {
+    const twentyFiveHoursAgo = new Date(Date.now() - 25 * 60 * 60 * 1000);
+    const locationsToUpdate = await prisma.location.findMany({
+      where: {
+        OR: [
+          { sitemapUpdatedAt: null },
+          { sitemapUpdatedAt: { lte: twentyFiveHoursAgo } }
+        ],
+        AND: {
+          OR: [
+            { website: { not: null, notIn: [""] } },
+            { aiWebsite: { not: null, notIn: [""] } }
+          ]
+        }
+      },
+      take: 5 // Limit to 5 updates per run to keep execution fast and prevent timeouts
+    });
+
+    if (locationsToUpdate.length > 0) {
+      console.log(`[CRON] Found ${locationsToUpdate.length} locations needing sitemap updates. Auto-updating now...`);
+      const { autoFetchLocationSitemap } = await import("@/lib/sitemap-helper");
+      for (const loc of locationsToUpdate) {
+        const res = await autoFetchLocationSitemap(loc.id);
+        console.log(`[CRON] Sitemap auto-update for location "${loc.name}" (${loc.id}): ${res.success ? "SUCCESS" : "FAILED"} (${res.count} URLs)`);
+      }
+    }
+  } catch (sitemapErr) {
+    console.error("[CRON] Sitemap auto-update failed", sitemapErr);
   }
 
   // Send summary notification to admin

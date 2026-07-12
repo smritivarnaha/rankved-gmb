@@ -136,6 +136,7 @@ model Location {
   name          String
   address       String?
   phone         String?
+  website       String?
   gbpAccountId  String   // Google Business Account ID
   gbpLocationId String   // Google Business Location ID
   clientId      String
@@ -168,6 +169,10 @@ model Location {
   cachedEngagements      Int       @default(0)
   statsUpdatedAt         DateTime?
   
+  sitemapUrl             String?
+  sitemapUrls            Json?
+  sitemapUpdatedAt       DateTime?
+
   isHidden               Boolean   @default(false)
   
   createdAt     DateTime @default(now())

@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/lib/auth";
 import prisma from "@/lib/prisma";
-import { getValidGoogleAccounts } from "@/lib/google-accounts";
+import { getValidGoogleAccounts, getEmailFromIdToken } from "@/lib/google-accounts";
 
 const INFO_API_BASE = "https://mybusinessbusinessinformation.googleapis.com/v1";
 
@@ -18,7 +18,14 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
     const accounts = await getValidGoogleAccounts((session.user as any).id);
     if (!accounts.length) return NextResponse.json({ error: "No valid Google connection" }, { status: 401 });
 
-    const accessToken = accounts[0].access_token;
+    let accessToken: string | null = null;
+    if (loc.googleEmail) {
+      const matchedAccount = accounts.find(acc => getEmailFromIdToken(acc.id_token) === loc.googleEmail);
+      if (matchedAccount) accessToken = matchedAccount.access_token;
+    }
+    if (!accessToken) accessToken = accounts[0].access_token;
+    if (!accessToken) return NextResponse.json({ error: "No valid access token available." }, { status: 400 });
+
     const locationName = loc.gbpLocationId;
 
     // Valid readMask fields for Business Information API v1 — 'attributes' is NOT valid here
@@ -82,7 +89,14 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
     const accounts = await getValidGoogleAccounts((session.user as any).id);
     if (!accounts.length) return NextResponse.json({ error: "No valid Google connection" }, { status: 401 });
 
-    const accessToken = accounts[0].access_token;
+    let accessToken: string | null = null;
+    if (loc.googleEmail) {
+      const matchedAccount = accounts.find(acc => getEmailFromIdToken(acc.id_token) === loc.googleEmail);
+      if (matchedAccount) accessToken = matchedAccount.access_token;
+    }
+    if (!accessToken) accessToken = accounts[0].access_token;
+    if (!accessToken) return NextResponse.json({ error: "No valid access token available." }, { status: 400 });
+
     const locationName = loc.gbpLocationId;
 
     // Construct the payload and updateMask for Google API
@@ -158,6 +172,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
       data: {
         name: title !== undefined ? title : undefined,
         phone: phone !== undefined ? phone : undefined,
+        website: website !== undefined ? website : undefined,
       }
     });
 

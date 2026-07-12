@@ -13,6 +13,7 @@ export async function GET(req: NextRequest) {
 
   const { searchParams } = new URL(req.url);
   const targetUrl = searchParams.get("url");
+  const profileId = searchParams.get("profileId") || searchParams.get("locationId");
 
   if (!targetUrl) {
     return new NextResponse("Missing URL parameter", { status: 400 });
@@ -24,23 +25,32 @@ export async function GET(req: NextRequest) {
   }
 
   try {
-    const userId = (session as any).user.id;
-    const { getValidGoogleAccounts } = await import("@/lib/google-accounts");
-    const accounts = await getValidGoogleAccounts(userId);
-    
-    // We try to find the account that matches the email if possible, 
-    // but for now we just use the first valid one or the one linked to the session.
-    const accessToken = (session as any).accessToken || accounts[0]?.access_token;
+    let accessToken: string | null = null;
+
+    if (profileId) {
+      const { getGoogleAccessTokenForLocation } = await import("@/lib/google-token");
+      accessToken = await getGoogleAccessTokenForLocation(profileId);
+    }
+
+    if (!accessToken) {
+      const userId = (session as any).user.id;
+      const { getValidGoogleAccounts } = await import("@/lib/google-accounts");
+      const accounts = await getValidGoogleAccounts(userId);
+      accessToken = (session as any).accessToken || accounts[0]?.access_token || null;
+    }
 
     if (!accessToken) {
       return new NextResponse("No access token found for proxying", { status: 401 });
     }
 
-    const res = await fetch(targetUrl, {
-      headers: {
-        Authorization: `Bearer ${accessToken}`,
-      },
-    });
+    const isPublicGbpUrl = targetUrl.includes("googleusercontent.com");
+
+    const headers: Record<string, string> = {};
+    if (accessToken && !isPublicGbpUrl) {
+      headers["Authorization"] = `Bearer ${accessToken}`;
+    }
+
+    const res = await fetch(targetUrl, { headers });
 
     if (!res.ok) {
       return new NextResponse(`Upstream error: ${res.status}`, { status: res.status });

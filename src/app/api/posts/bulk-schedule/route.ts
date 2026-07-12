@@ -11,7 +11,7 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const { postIds, startDateISO, frequencyInterval } = await req.json();
+    const { postIds, startDateISO, frequencyInterval, ctaType, ctaUrl } = await req.json();
 
     if (!Array.isArray(postIds) || postIds.length === 0 || !startDateISO || typeof frequencyInterval !== 'number') {
       return NextResponse.json({ error: "Invalid data provided" }, { status: 400 });
@@ -54,6 +54,10 @@ export async function POST(req: Request) {
         data: {
           status: "SCHEDULED",
           scheduledAt: scheduledDate,
+          ...(ctaType !== undefined && ctaType !== "KEEP_ORIGINAL" ? {
+            ctaType: ctaType === "NONE" ? "" : ctaType,
+            ctaUrl: (ctaType === "NONE" || ctaType === "CALL") ? "" : (ctaUrl || ""),
+          } : {})
         }
       });
     });

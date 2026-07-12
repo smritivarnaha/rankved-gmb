@@ -75,7 +75,8 @@ export function BulkScheduleModal({ postIds, isOpen, onClose, onSuccess }: BulkS
                 type="date" 
                 value={startDate}
                 onChange={(e) => setStartDate(e.target.value)}
-                style={{ width: "100%", padding: "8px 12px 8px 34px", borderRadius: 6, border: "1px solid #d1d5db", fontSize: 14, outline: "none" }}
+                onClick={(e) => e.currentTarget.showPicker?.()}
+                style={{ width: "100%", padding: "8px 12px 8px 34px", borderRadius: 6, border: "1px solid #d1d5db", fontSize: 14, outline: "none", cursor: "pointer" }}
               />
             </div>
           </div>
@@ -100,12 +101,13 @@ export function BulkScheduleModal({ postIds, isOpen, onClose, onSuccess }: BulkS
               <select 
                 value={frequency}
                 onChange={(e) => setFrequency(Number(e.target.value))}
-                style={{ width: "100%", padding: "8px 12px 8px 34px", borderRadius: 6, border: "1px solid #d1d5db", fontSize: 14, outline: "none", appearance: "none", background: "#fff" }}
+                style={{ width: "100%", padding: "8px 12px 8px 34px", borderRadius: 6, border: "1px solid #d1d5db", fontSize: 14, outline: "none", appearance: "none", background: "#fff", cursor: "pointer" }}
               >
                 <option value={1}>Daily</option>
                 <option value={2}>Alternate Days (Every 2 days)</option>
                 <option value={3}>Every 3 Days</option>
                 <option value={4}>Every 4 Days</option>
+                <option value={5}>Every 5 Days</option>
                 <option value={7}>Weekly</option>
               </select>
             </div>

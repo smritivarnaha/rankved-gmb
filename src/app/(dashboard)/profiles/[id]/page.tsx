@@ -5,13 +5,15 @@ import { format, startOfMonth, endOfMonth, eachDayOfInterval, getDay, isSameMont
 import { useState, useEffect } from "react";
 import {
   ArrowLeft, MapPin, Plus, FileText, Clock, Send, Loader2, Lock,
-  ThumbsUp, Edit3, ExternalLink, AlertTriangle, ChevronLeft, ChevronRight, Trash2, Wand2, Brain, Layers, CheckSquare, Square, CalendarDays, FileDown
+  ThumbsUp, Edit3, ExternalLink, AlertTriangle, ChevronLeft, ChevronRight, Trash2, Wand2, Brain, Layers, CheckSquare, Square, CalendarDays, FileDown, X,
+  Phone, Link2
 } from "lucide-react";
 import { useParams } from "next/navigation";
 import useSWR from "swr";
 import { useSession } from "next-auth/react";
 import { AiSettingsTab, AiGenerationModal, AiBulkGenerationModal } from "@/components/ai/ai-components";
 import { ProfileEditor } from "@/components/profiles/ProfileEditor";
+import { PostEditor } from "@/components/posts/post-editor";
 import { ReviewManager } from "@/components/profiles/ReviewManager";
 import { useSearchParams } from "next/navigation";
 import { checkProhibitedContent } from "@/lib/content-validation";
@@ -24,12 +26,17 @@ interface Profile {
   id: string; name: string; accountName: string;
   address: string; phone: string; website: string; fetchedAt: string;
   logoUrl?: string;
+  sitemapUrl?: string;
+  sitemapUrls?: string[];
+  sitemapUpdatedAt?: string;
 }
 
 interface Post {
   id: string; summary: string; status: string;
   scheduledAt?: string; publishedAt?: string; createdAt: string;
   imageUrl?: string; topicType: string;
+  ctaType?: string;
+  ctaUrl?: string;
 }
 
 // Status dot colors
@@ -46,9 +53,48 @@ const STATUS_LABEL: Record<string, string> = {
   FAILED: "Failed", PENDING_APPROVAL: "Needs Approval",
 };
 
+const tabStyles: Record<string, { activeBg: string; activeColor: string; activeBadgeBg: string; activeBadgeColor: string; inactiveBadgeBg: string; inactiveBadgeColor: string; inactiveColor: string }> = {
+  ALL: {
+    activeBg: "#0f172a",
+    activeColor: "#ffffff",
+    activeBadgeBg: "rgba(255,255,255,0.2)",
+    activeBadgeColor: "#ffffff",
+    inactiveBadgeBg: "#f1f5f9",
+    inactiveBadgeColor: "#64748b",
+    inactiveColor: "#64748b",
+  },
+  PUBLISHED: {
+    activeBg: "#dcfce7",
+    activeColor: "#15803d",
+    activeBadgeBg: "#bbf7d0",
+    activeBadgeColor: "#15803d",
+    inactiveBadgeBg: "#f1f5f9",
+    inactiveBadgeColor: "#64748b",
+    inactiveColor: "#64748b",
+  },
+  SCHEDULED: {
+    activeBg: "#fef3c7",
+    activeColor: "#b45309",
+    activeBadgeBg: "#fde68a",
+    activeBadgeColor: "#b45309",
+    inactiveBadgeBg: "#f1f5f9",
+    inactiveBadgeColor: "#64748b",
+    inactiveColor: "#64748b",
+  },
+  DRAFT: {
+    activeBg: "#e2e8f0",
+    activeColor: "#334155",
+    activeBadgeBg: "#cbd5e1",
+    activeBadgeColor: "#334155",
+    inactiveBadgeBg: "#f1f5f9",
+    inactiveBadgeColor: "#64748b",
+    inactiveColor: "#64748b",
+  },
+};
+
 /* ─── Post Card ──────────────────────────────────────────────── */
 function PostCard({
-  post, canApprove, onApprove, onDelete, selected, onToggleSelect, selectMode,
+  post, canApprove, onApprove, onDelete, selected, onToggleSelect, selectMode, onEdit,
 }: {
   post: Post; canApprove: boolean;
   onApprove: (p: Post) => void;
@@ -56,6 +102,7 @@ function PostCard({
   selected: boolean;
   onToggleSelect: (id: string) => void;
   selectMode: boolean;
+  onEdit: (p: Post) => void;
 }) {
   const isPublished = post.status === "PUBLISHED";
   const isDraft = post.status === "DRAFT";
@@ -144,10 +191,21 @@ function PostCard({
         }}>
           {post.summary || "No content"}
         </p>
-        <p style={{ fontSize: 10, color: "#94a3b8", marginBottom: 10, display: "flex", alignItems: "center", gap: 4 }}>
-          {isScheduled && <Clock style={{ width: 9, height: 9 }} />}
-          {dateDisplay}
-        </p>
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 10 }}>
+          <p style={{ fontSize: 10, color: "#94a3b8", display: "flex", alignItems: "center", gap: 4, margin: 0 }}>
+            {isScheduled && <Clock style={{ width: 9, height: 9 }} />}
+            {dateDisplay}
+          </p>
+          {post.ctaType === "CALL" ? (
+            <span style={{ display: "inline-flex" }} title="Call Now button active">
+              <Phone size={11} style={{ color: "#94a3b8", flexShrink: 0 }} />
+            </span>
+          ) : post.ctaType && post.ctaUrl ? (
+            <span style={{ display: "inline-flex" }} title={`${post.ctaType} button active: ${post.ctaUrl}`}>
+              <Link2 size={11} style={{ color: "#94a3b8", flexShrink: 0 }} />
+            </span>
+          ) : null}
+        </div>
 
         {/* Actions */}
         <div style={{ display: "flex", gap: 5, alignItems: "center" }}>
@@ -160,7 +218,7 @@ function PostCard({
               </Link>
               <a href="https://business.google.com" target="_blank" rel="noopener noreferrer"
                 style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", gap: 4, padding: "5px 0", fontSize: 11, fontWeight: 600, color: "#2563eb", border: "1px solid #dbeafe", borderRadius: 6, background: "#eff6ff" }}>
-                <ExternalLink style={{ width: 9, height: 9 }} /> Edit on Google
+                <ExternalLink style={{ width: 9, height: 9 }} /> Edit
               </a>
             </>
           )}
@@ -168,10 +226,10 @@ function PostCard({
           {/* Draft & Scheduled */}
           {(isDraft || isScheduled) && (
             <>
-              <Link href={`/posts/${post.id}`}
-                style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", gap: 4, padding: "5px 0", fontSize: 11, fontWeight: 600, color: "#2563eb", border: "1px solid #dbeafe", borderRadius: 6, background: "#eff6ff" }}>
+              <button onClick={() => onEdit(post)}
+                style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", gap: 4, padding: "5px 0", fontSize: 11, fontWeight: 600, color: "#2563eb", border: "1px solid #dbeafe", borderRadius: 6, background: "#eff6ff", cursor: "pointer" }}>
                 <Edit3 style={{ width: 9, height: 9 }} /> Edit
-              </Link>
+              </button>
               <Link href={`/posts/${post.id}`}
                 style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", gap: 4, padding: "5px 0", fontSize: 11, fontWeight: 600, color: "#fff", background: "#16a34a", border: "none", borderRadius: 6 }}>
                 <Send style={{ width: 9, height: 9 }} /> Publish
@@ -346,8 +404,13 @@ export default function ProfileDetailPage() {
   const [bulkScheduleFrequency, setBulkScheduleFrequency] = useState(1);
   const [showBulkSchedule, setShowBulkSchedule] = useState(false);
   const [bulkActionLoading, setBulkActionLoading] = useState(false);
+  const [bulkCtaType, setBulkCtaType] = useState("KEEP_ORIGINAL");
+  const [bulkCtaUrl, setBulkCtaUrl] = useState("");
+  const [showBulkCtaUrlDropdown, setShowBulkCtaUrlDropdown] = useState(false);
   const [sortBy, setSortBy] = useState("DEFAULT");
   const [isBulkImportModalOpen, setIsBulkImportModalOpen] = useState(false);
+  const [isEditProfileOpen, setIsEditProfileOpen] = useState(false);
+  const [editingPost, setEditingPost] = useState<Post | null>(null);
 
   const { data: postsData, isLoading: postsLoading, mutate: mutatePosts } = useSWR(
     params.id ? `/api/posts?profileId=${params.id}` : null,
@@ -435,7 +498,11 @@ export default function ProfileDetailPage() {
         headers: {"Content-Type": "application/json"},
         body: JSON.stringify({
           status: "SCHEDULED",
-          scheduledAt: localDt.toISOString()
+          scheduledAt: localDt.toISOString(),
+          ...(bulkCtaType !== "KEEP_ORIGINAL" ? {
+            ctaType: bulkCtaType === "NONE" ? "" : bulkCtaType,
+            ctaUrl: (bulkCtaType === "NONE" || bulkCtaType === "CALL") ? "" : (bulkCtaUrl || ""),
+          } : {})
         })
       });
     }));
@@ -449,10 +516,9 @@ export default function ProfileDetailPage() {
   useEffect(() => {
     async function loadProfile() {
       try {
-        const res = await fetch("/api/profiles");
+        const res = await fetch(`/api/profiles/${params.id}`);
         const data = await res.json();
-        const found = (data.data || []).find((p: any) => p.id === params.id);
-        setProfile(found || null);
+        setProfile(data.data || null);
       } catch { setProfile(null); }
       setProfileLoading(false);
     }
@@ -491,23 +557,37 @@ export default function ProfileDetailPage() {
   ];
 
   const filteredPosts = statusFilter === "ALL" ? posts : posts.filter(p => p.status === statusFilter);
+  
+  const getSortingDate = (p: Post) => {
+    if (p.status === "PUBLISHED" && p.publishedAt) {
+      return new Date(p.publishedAt).getTime();
+    }
+    if (p.status === "SCHEDULED" && p.scheduledAt) {
+      return new Date(p.scheduledAt).getTime();
+    }
+    return new Date(p.createdAt).getTime();
+  };
+
   const sortedPosts = [...filteredPosts].sort((a, b) => {
+    const dateA = getSortingDate(a);
+    const dateB = getSortingDate(b);
+
     if (sortBy === "NEWEST") {
-      return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+      return dateB - dateA;
     } else if (sortBy === "OLDEST") {
-      return new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime();
+      return dateA - dateB;
     } else if (sortBy === "WITH_IMAGES") {
       const aHasImage = !!a.imageUrl;
       const bHasImage = !!b.imageUrl;
       if (aHasImage && !bHasImage) return -1;
       if (!aHasImage && bHasImage) return 1;
-      return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+      return dateB - dateA;
     } else if (sortBy === "WITHOUT_IMAGES") {
       const aHasImage = !!a.imageUrl;
       const bHasImage = !!b.imageUrl;
       if (!aHasImage && bHasImage) return -1;
       if (aHasImage && !bHasImage) return 1;
-      return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+      return dateB - dateA;
     }
     
     // DEFAULT sort
@@ -521,8 +601,8 @@ export default function ProfileDetailPage() {
     if (aHasImage && !bHasImage) return -1;
     if (!aHasImage && bHasImage) return 1;
 
-    // 3. Newest first (createdAt)
-    return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+    // 3. Status-specific newest first
+    return dateB - dateA;
   });
 
   return (
@@ -567,49 +647,71 @@ export default function ProfileDetailPage() {
         </div>
       </div>
 
-      {/* Tabs */}
-      <div style={{ display: "flex", gap: 24, marginBottom: 20, borderBottom: "1px solid #e2e8f0" }}>
-        <button 
-          onClick={() => setActiveTab("POSTS")}
-          style={{ 
-            padding: "10px 4px", fontSize: 14, fontWeight: 600, border: "none", background: "none", cursor: "pointer",
-            color: activeTab === "POSTS" ? "#2563eb" : "#94a3b8",
-            borderBottom: activeTab === "POSTS" ? "2px solid #2563eb" : "2px solid transparent",
-            transition: "all 0.2s"
-          }}
-        >
-          Posts
-        </button>
-        <button 
-          onClick={() => setActiveTab("EDIT_PROFILE")}
-          style={{ 
-            padding: "10px 4px", fontSize: 14, fontWeight: 600, border: "none", background: "none", cursor: "pointer",
-            color: activeTab === "EDIT_PROFILE" ? "#2563eb" : "#94a3b8",
-            borderBottom: activeTab === "EDIT_PROFILE" ? "2px solid #2563eb" : "2px solid transparent",
-            transition: "all 0.2s"
-          }}
-        >
-          Edit Profile
-        </button>
-        <button 
-          onClick={() => setActiveTab("REVIEWS")}
-          style={{ 
-            padding: "10px 4px", fontSize: 14, fontWeight: 600, border: "none", background: "none", cursor: "pointer",
-            color: activeTab === "REVIEWS" ? "#2563eb" : "#94a3b8",
-            borderBottom: activeTab === "REVIEWS" ? "2px solid #2563eb" : "2px solid transparent",
-            transition: "all 0.2s"
-          }}
-        >
-          Reviews
-        </button>
+      {/* Tabs Sticky Wrapper */}
+      <div style={{
+        position: "sticky",
+        top: -32,
+        zIndex: 40,
+        background: "#f1f5f9",
+        paddingTop: 32,
+        paddingBottom: 10,
+        marginTop: -32,
+        marginBottom: 10,
+      }}>
+        <div style={{ 
+          background: "#ffffff",
+          backgroundImage: `
+            linear-gradient(to right, rgba(226, 232, 240, 0.5) 1px, transparent 1px),
+            linear-gradient(to bottom, rgba(226, 232, 240, 0.5) 1px, transparent 1px)
+          `,
+          backgroundSize: "20px 20px",
+          border: "1px solid #e2e8f0",
+          borderRadius: 12,
+          padding: "12px 24px",
+          boxShadow: "0 4px 6px -1px rgba(15, 23, 42, 0.02), 0 2px 4px -2px rgba(15, 23, 42, 0.02)",
+          display: "flex", 
+          gap: 24 
+        }}>
+          <button 
+            onClick={() => setActiveTab("POSTS")}
+            style={{ 
+              padding: "10px 4px", fontSize: 14, fontWeight: 600, border: "none", background: "none", cursor: "pointer",
+              color: activeTab === "POSTS" ? "#2563eb" : "#94a3b8",
+              borderBottom: activeTab === "POSTS" ? "2px solid #2563eb" : "2px solid transparent",
+              transition: "all 0.2s"
+            }}
+          >
+            Posts
+          </button>
+          <button 
+            onClick={() => setIsEditProfileOpen(true)}
+            style={{ 
+              padding: "10px 4px", fontSize: 14, fontWeight: 600, border: "none", background: "none", cursor: "pointer",
+              color: isEditProfileOpen ? "#2563eb" : "#94a3b8",
+              borderBottom: isEditProfileOpen ? "2px solid #2563eb" : "2px solid transparent",
+              transition: "all 0.2s"
+            }}
+          >
+            Edit Profile
+          </button>
+          <button 
+            onClick={() => setActiveTab("REVIEWS")}
+            style={{ 
+              padding: "10px 4px", fontSize: 14, fontWeight: 600, border: "none", background: "none", cursor: "pointer",
+              color: activeTab === "REVIEWS" ? "#2563eb" : "#94a3b8",
+              borderBottom: activeTab === "REVIEWS" ? "2px solid #2563eb" : "2px solid transparent",
+              transition: "all 0.2s"
+            }}
+          >
+            Reviews
+          </button>
+        </div>
       </div>
 
       {activeTab === "AI_SETTINGS" ? (
         <div style={{ background: "#fff", border: "1px solid #e2e8f0", borderRadius: 12, overflow: "hidden" }}>
           <AiSettingsTab locationId={profile.id} profileName={profile.name} />
         </div>
-      ) : activeTab === "EDIT_PROFILE" ? (
-        <ProfileEditor profile={profile} onUpdate={() => mutatePosts()} />
       ) : activeTab === "REVIEWS" ? (
         <ReviewManager profileId={profile.id} />
       ) : (
@@ -652,58 +754,83 @@ export default function ProfileDetailPage() {
           </p>
         </div>
 
-        {/* RIGHT — Post Cards */}
-        <div style={{ background: "#fff", border: "1px solid #e2e8f0", borderRadius: 12, overflow: "hidden" }}>
-          {/* Filter tabs + Select Mode toggle */}
-          <div style={{ padding: "14px 16px", borderBottom: "1px solid #f1f5f9", display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap", justifyContent: "space-between" }}>
-            <div style={{ display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap" }}>
-              {tabs.map(t => (
-                <button key={t.key} onClick={() => setStatusFilter(t.key)}
+        {/* RIGHT — Post Cards Column */}
+        <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+          {/* Sticky Filters Card Wrapper */}
+          <div style={{
+            position: "sticky",
+            top: 90,
+            zIndex: 35,
+            background: "#f1f5f9",
+            paddingBottom: 10,
+          }}>
+            {/* Filter tabs + Select Mode toggle Card */}
+            <div style={{ 
+              background: "#ffffff",
+              border: "1px solid #e2e8f0",
+              borderRadius: 12,
+              padding: "14px 16px", 
+              display: "flex", 
+              alignItems: "center", 
+              gap: 6, 
+              flexWrap: "wrap", 
+              justifyContent: "space-between" 
+            }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap" }}>
+                {tabs.map(t => {
+                  const isSelected = statusFilter === t.key;
+                  const styleConfig = tabStyles[t.key] || tabStyles.ALL;
+                  return (
+                    <button key={t.key} onClick={() => setStatusFilter(t.key)}
+                      style={{
+                        padding: "5px 12px", borderRadius: 20, border: "none", cursor: "pointer",
+                        fontSize: 12, fontWeight: 600,
+                        background: isSelected ? styleConfig.activeBg : "transparent",
+                        color: isSelected ? styleConfig.activeColor : styleConfig.inactiveColor,
+                        display: "flex", alignItems: "center", gap: 5,
+                        transition: "all 0.15s"
+                      }}>
+                      {t.label}
+                      {t.count > 0 && (
+                        <span style={{
+                          fontSize: 10, 
+                          background: isSelected ? styleConfig.activeBadgeBg : styleConfig.inactiveBadgeBg,
+                          color: isSelected ? styleConfig.activeBadgeColor : styleConfig.inactiveBadgeColor,
+                          borderRadius: 10, padding: "0 6px", fontWeight: 700,
+                        }}>{t.count}</span>
+                      )}
+                    </button>
+                  );
+                })}
+              </div>
+              <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                <select
+                  value={sortBy}
+                  onChange={(e) => setSortBy(e.target.value)}
                   style={{
-                    padding: "5px 12px", borderRadius: 20, border: "none", cursor: "pointer",
-                    fontSize: 12, fontWeight: 600,
-                    background: statusFilter === t.key ? "#0f172a" : "transparent",
-                    color: statusFilter === t.key ? "#fff" : "#64748b",
-                    display: "flex", alignItems: "center", gap: 5,
-                  }}>
-                  {t.label}
-                  {t.count > 0 && (
-                    <span style={{
-                      fontSize: 10, background: statusFilter === t.key ? "rgba(255,255,255,0.25)" : "#e2e8f0",
-                      color: statusFilter === t.key ? "#fff" : "#64748b",
-                      borderRadius: 10, padding: "0 5px", fontWeight: 700,
-                    }}>{t.count}</span>
-                  )}
+                    padding: "4px 10px", borderRadius: 6, border: "1px solid #e2e8f0", background: "#fff",
+                    fontSize: 12, fontWeight: 600, color: "#64748b", cursor: "pointer", outline: "none"
+                  }}
+                >
+                  <option value="DEFAULT">Sort by: Default</option>
+                  <option value="NEWEST">Sort by: Newest</option>
+                  <option value="OLDEST">Sort by: Oldest</option>
+                  <option value="WITH_IMAGES">Sort by: With Images</option>
+                  <option value="WITHOUT_IMAGES">Sort by: Without Images</option>
+                </select>
+                <button
+                  onClick={toggleSelectMode}
+                  style={{ padding: "5px 12px", borderRadius: 20, border: "1px solid #e2e8f0", cursor: "pointer", fontSize: 12, fontWeight: 600, display: "flex", alignItems: "center", gap: 5, background: selectMode ? "#0f172a" : "#f8fafc", color: selectMode ? "#fff" : "#64748b" }}>
+                  <CheckSquare style={{ width: 12, height: 12 }} />
+                  {selectMode ? "Exit Select" : "Select"}
                 </button>
-              ))}
-            </div>
-            <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-              <select
-                value={sortBy}
-                onChange={(e) => setSortBy(e.target.value)}
-                style={{
-                  padding: "4px 10px", borderRadius: 6, border: "1px solid #e2e8f0", background: "#fff",
-                  fontSize: 12, fontWeight: 600, color: "#64748b", cursor: "pointer", outline: "none"
-                }}
-              >
-                <option value="DEFAULT">Sort by: Default</option>
-                <option value="NEWEST">Sort by: Newest</option>
-                <option value="OLDEST">Sort by: Oldest</option>
-                <option value="WITH_IMAGES">Sort by: With Images</option>
-                <option value="WITHOUT_IMAGES">Sort by: Without Images</option>
-              </select>
-              <button
-                onClick={toggleSelectMode}
-                style={{ padding: "5px 12px", borderRadius: 20, border: "1px solid #e2e8f0", cursor: "pointer", fontSize: 12, fontWeight: 600, display: "flex", alignItems: "center", gap: 5, background: selectMode ? "#0f172a" : "#f8fafc", color: selectMode ? "#fff" : "#64748b" }}>
-                <CheckSquare style={{ width: 12, height: 12 }} />
-                {selectMode ? "Exit Select" : "Select"}
-              </button>
+              </div>
             </div>
           </div>
 
           {/* Bulk Action Bar */}
           {selectMode && selectedPosts.size > 0 && (
-            <div style={{ padding: "10px 16px", background: "#eff6ff", borderBottom: "1px solid #bfdbfe", display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
+            <div style={{ padding: "12px 16px", background: "#eff6ff", border: "1px solid #bfdbfe", borderRadius: 12, display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap", boxShadow: "0 4px 6px -1px rgba(37, 99, 235, 0.02)" }}>
               <span style={{ fontSize: 12, fontWeight: 700, color: "#1e40af" }}>{selectedPosts.size} selected</span>
               <button onClick={selectAll} style={{ fontSize: 11, color: "#2563eb", background: "none", border: "none", cursor: "pointer", fontWeight: 600 }}>Select All</button>
               <div style={{ flex: 1 }} />
@@ -733,25 +860,114 @@ export default function ProfileDetailPage() {
 
           {/* Bulk Schedule Date + Frequency Picker */}
           {selectMode && selectedPosts.size > 0 && showBulkSchedule && (
-            <div style={{ padding: "12px 16px", background: "#f8fafc", borderBottom: "1px solid #e2e8f0", display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
+            <div style={{ padding: "14px 16px", background: "#f8fafc", border: "1px solid #e2e8f0", borderRadius: 12, display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap", boxShadow: "0 4px 6px -1px rgba(15, 23, 42, 0.02)" }}>
               <label style={{ fontSize: 12, fontWeight: 600, color: "#334155" }}>Start from:</label>
               <input
                 type="date"
                 value={bulkScheduleDate}
                 onChange={e => setBulkScheduleDate(e.target.value)}
-                style={{ padding: "6px 10px", borderRadius: 8, border: "1px solid #e2e8f0", fontSize: 13 }}
+                onClick={(e) => e.currentTarget.showPicker?.()}
+                style={{ padding: "6px 10px", borderRadius: 8, border: "1px solid #e2e8f0", fontSize: 13, cursor: "pointer" }}
               />
               <label style={{ fontSize: 12, fontWeight: 600, color: "#334155" }}>Frequency:</label>
               <select
                 value={bulkScheduleFrequency}
                 onChange={e => setBulkScheduleFrequency(Number(e.target.value))}
-                style={{ padding: "6px 10px", borderRadius: 8, border: "1px solid #e2e8f0", fontSize: 13 }}
+                style={{ padding: "6px 10px", borderRadius: 8, border: "1px solid #e2e8f0", fontSize: 13, cursor: "pointer" }}
               >
                 <option value={1}>Daily</option>
                 <option value={2}>Alternate Days</option>
                 <option value={3}>Every 3 Days</option>
+                <option value={4}>Every 4 Days</option>
+                <option value={5}>Every 5 Days</option>
                 <option value={7}>Weekly</option>
               </select>
+
+              <label style={{ fontSize: 12, fontWeight: 600, color: "#334155" }}>CTA Type:</label>
+              <select
+                value={bulkCtaType}
+                onChange={e => setBulkCtaType(e.target.value)}
+                style={{ padding: "6px 10px", borderRadius: 8, border: "1px solid #e2e8f0", fontSize: 13, cursor: "pointer" }}
+              >
+                <option value="KEEP_ORIGINAL">Keep Original</option>
+                <option value="NONE">None</option>
+                <option value="CALL">Call Now</option>
+                <option value="LEARN_MORE">Learn More</option>
+                <option value="BOOK">Book</option>
+                <option value="ORDER">Order Online</option>
+                <option value="SHOP">Shop</option>
+                <option value="SIGN_UP">Sign Up</option>
+              </select>
+
+              {bulkCtaType !== "KEEP_ORIGINAL" && bulkCtaType !== "NONE" && bulkCtaType !== "CALL" && (
+                <>
+                  <label style={{ fontSize: 12, fontWeight: 600, color: "#334155" }}>CTA URL:</label>
+                  <div style={{ position: "relative", display: "inline-block" }}>
+                    <input
+                      type="url"
+                      placeholder="https://example.com"
+                      value={bulkCtaUrl}
+                      onChange={e => setBulkCtaUrl(e.target.value)}
+                      onFocus={() => setShowBulkCtaUrlDropdown(true)}
+                      onBlur={() => setTimeout(() => setShowBulkCtaUrlDropdown(false), 200)}
+                      style={{ padding: "6px 10px", borderRadius: 8, border: "1px solid #e2e8f0", fontSize: 13, width: 220 }}
+                    />
+                    
+                    {/* Sitemap Autocomplete Dropdown overlay */}
+                    {showBulkCtaUrlDropdown && profile?.sitemapUrls && (profile.sitemapUrls as string[]).length > 0 && (
+                      <div style={{
+                        position: "absolute",
+                        top: "100%",
+                        left: 0,
+                        right: 0,
+                        background: "#fff",
+                        border: "1px solid #e2e8f0",
+                        borderRadius: 8,
+                        boxShadow: "0 10px 15px -3px rgba(0,0,0,0.1), 0 4px 6px -2px rgba(0,0,0,0.05)",
+                        zIndex: 100,
+                        maxHeight: 200,
+                        overflowY: "auto",
+                        marginTop: 4,
+                        width: 250
+                      }}>
+                        {(profile.sitemapUrls as string[])
+                          .filter((url: string) => !bulkCtaUrl || url.toLowerCase().includes(bulkCtaUrl.toLowerCase()))
+                          .slice(0, 15)
+                          .map((url: string, index: number) => (
+                            <div
+                              key={index}
+                              onMouseDown={() => {
+                                setBulkCtaUrl(url);
+                                setShowBulkCtaUrlDropdown(false);
+                              }}
+                              style={{
+                                padding: "8px 12px",
+                                fontSize: 12,
+                                color: "#334155",
+                                cursor: "pointer",
+                                borderBottom: "1px solid #f1f5f9",
+                                whiteSpace: "nowrap",
+                                overflow: "hidden",
+                                textOverflow: "ellipsis",
+                                textAlign: "left"
+                              }}
+                              onMouseEnter={e => e.currentTarget.style.background = "#f8fafc"}
+                              onMouseLeave={e => e.currentTarget.style.background = "transparent"}
+                            >
+                              {url}
+                            </div>
+                          ))}
+                        {(profile.sitemapUrls as string[]).filter((url: string) => !bulkCtaUrl || url.toLowerCase().includes(bulkCtaUrl.toLowerCase())).length === 0 && (
+                          <div style={{ padding: "10px", fontSize: 11, color: "#94a3b8", textAlign: "center" }}>
+                            No matching sitemap URLs.
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                </>
+              )}
+
               <button
                 onClick={handleBulkSchedule}
                 disabled={!bulkScheduleDate}
@@ -760,14 +976,20 @@ export default function ProfileDetailPage() {
               </button>
               {bulkScheduleDate && bulkScheduleFrequency > 0 && (
                 <span style={{ fontSize: 11, color: "#64748b", fontStyle: "italic" }}>
-                  {selectedPosts.size} posts · {bulkScheduleFrequency === 1 ? "daily" : bulkScheduleFrequency === 2 ? "alternate days" : `every ${bulkScheduleFrequency} days`} from {bulkScheduleDate}
+                  {selectedPosts.size} posts · {
+                    bulkScheduleFrequency === 1 ? "daily" : 
+                    bulkScheduleFrequency === 2 ? "alternate days" : 
+                    bulkScheduleFrequency === 4 ? "every 4 days" : 
+                    bulkScheduleFrequency === 5 ? "every 5 days" : 
+                    `every ${bulkScheduleFrequency} days`
+                  } from {bulkScheduleDate}
                 </span>
               )}
             </div>
           )}
 
-          {/* Cards Grid */}
-          <div style={{ padding: 16, minHeight: 300, background: "#f8fafc" }}>
+          {/* Cards Grid Card */}
+          <div style={{ background: "#fff", border: "1px solid #e2e8f0", borderRadius: 12, padding: "20px 24px", minHeight: 300 }}>
             {postsLoading ? (
               <div style={{ padding: "60px 0", display: "flex", justifyContent: "center" }}>
                 <Loader2 style={{ width: 18, height: 18, color: "#94a3b8" }} className="anim-spin" />
@@ -782,7 +1004,7 @@ export default function ProfileDetailPage() {
                 </Link>
               </div>
             ) : (
-              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(190px, 1fr))", gap: 12 }}>
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 12 }}>
                 {sortedPosts.map(post => (
                   <PostCard
                     key={post.id}
@@ -793,6 +1015,7 @@ export default function ProfileDetailPage() {
                     selected={selectedPosts.has(post.id)}
                     onToggleSelect={togglePostSelect}
                     selectMode={selectMode}
+                    onEdit={(p) => setEditingPost(p)}
                   />
                 ))}
               </div>
@@ -836,6 +1059,67 @@ export default function ProfileDetailPage() {
         onClose={() => setIsBulkImportModalOpen(false)}
         onSuccess={() => { mutatePosts(); setIsBulkImportModalOpen(false); }}
       />
+
+      {/* Edit Profile Modal */}
+      {isEditProfileOpen && (
+        <div style={{
+          position: "fixed", top: 0, left: 0, right: 0, bottom: 0,
+          background: "rgba(15, 23, 42, 0.6)", backdropFilter: "blur(4px)",
+          display: "flex", alignItems: "center", justifyContent: "center", zIndex: 1000,
+          padding: 20
+        }} onClick={() => setIsEditProfileOpen(false)}>
+          <div style={{
+            background: "#fff", borderRadius: 16, width: "100%", maxWidth: 650,
+            maxHeight: "90vh", display: "flex", flexDirection: "column",
+            boxShadow: "0 20px 25px -5px rgba(0,0,0,0.1), 0 10px 10px -5px rgba(0,0,0,0.04)",
+            position: "relative"
+          }} onClick={e => e.stopPropagation()}>
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "16px 24px", borderBottom: "1px solid #f1f5f9" }}>
+              <h3 style={{ fontSize: 16, fontWeight: 700, color: "#0f172a" }}>Edit Profile</h3>
+              <button onClick={() => setIsEditProfileOpen(false)} style={{ background: "none", border: "none", cursor: "pointer", color: "#64748b" }}>
+                <X style={{ width: 20, height: 20 }} />
+              </button>
+            </div>
+            <div style={{ padding: 24, overflowY: "auto", flex: 1 }}>
+              <ProfileEditor profile={profile} onUpdate={() => { mutatePosts(); setIsEditProfileOpen(false); }} />
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Edit Post Modal */}
+      {editingPost && (
+        <div style={{
+          position: "fixed", top: 0, left: 0, right: 0, bottom: 0,
+          background: "rgba(15, 23, 42, 0.6)", backdropFilter: "blur(4px)",
+          display: "flex", alignItems: "center", justifyContent: "center", zIndex: 1000,
+          padding: 20
+        }} onClick={() => setEditingPost(null)}>
+          <div style={{
+            background: "#fff", borderRadius: 16, width: "100%", maxWidth: 1100,
+            height: "90vh", display: "flex", flexDirection: "column",
+            boxShadow: "0 20px 25px -5px rgba(0,0,0,0.1), 0 10px 10px -5px rgba(0,0,0,0.04)",
+            position: "relative"
+          }} onClick={e => e.stopPropagation()}>
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "16px 24px", borderBottom: "1px solid #f1f5f9" }}>
+              <h3 style={{ fontSize: 16, fontWeight: 700, color: "#0f172a" }}>Edit Post</h3>
+              <button onClick={() => setEditingPost(null)} style={{ background: "none", border: "none", cursor: "pointer", color: "#64748b" }}>
+                <X style={{ width: 20, height: 20 }} />
+              </button>
+            </div>
+            <div style={{ flex: 1, overflowY: "auto" }}>
+              <PostEditor 
+                initialData={editingPost} 
+                lockedProfileId={profile.id}
+                onSaveSuccess={() => {
+                  mutatePosts();
+                  setEditingPost(null);
+                }} 
+              />
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

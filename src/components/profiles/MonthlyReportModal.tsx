@@ -27,6 +27,16 @@ export function MonthlyReportModal({
   const now = new Date();
   const [selectedMonth, setSelectedMonth] = useState<number>(now.getMonth()); // 0-11
   const [selectedYear, setSelectedYear] = useState<number>(now.getFullYear());
+  
+  // Custom range states
+  const [dateMode, setDateMode] = useState<"monthly" | "custom">("monthly");
+  const thirtyDaysAgo = new Date();
+  const formatDateString = (d: Date) => d.toISOString().split("T")[0];
+  const [customStart, setCustomStart] = useState<string>(
+    formatDateString(new Date(thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30)))
+  );
+  const [customEnd, setCustomEnd] = useState<string>(formatDateString(now));
+
   const [savedBrandingLabels, setSavedBrandingLabels] = useState<string[]>([]);
   const [selectedBranding, setSelectedBranding] = useState<string>("");
   const [customBrandingText, setCustomBrandingText] = useState<string>("");
@@ -97,7 +107,7 @@ export function MonthlyReportModal({
       return targetUrl;
     }
     
-    return `${window.location.origin}/api/proxy/media?url=${encodeURIComponent(targetUrl)}`;
+    return `${window.location.origin}/api/proxy/media?url=${encodeURIComponent(targetUrl)}&profileId=${profileId}`;
   }
 
   const handleDownload = async () => {
@@ -163,20 +173,26 @@ export function MonthlyReportModal({
       }
     }
 
-    // 3. Filter published posts for the chosen month and year
+    // 3. Filter published posts for the chosen range
     const filteredPosts = posts.filter((post: any) => {
       // Determine date property based on source (Google vs Local DB)
       const dateVal = post.createTime || post.publishedAt || post.createdAt;
       if (!dateVal) return false;
 
       const dateObj = new Date(dateVal);
-      const postMonth = dateObj.getMonth();
-      const postYear = dateObj.getFullYear();
-
-      // Also verify post state is LIVE/PUBLISHED
       const isLive = post.state ? post.state === "LIVE" : post.status === "PUBLISHED";
 
-      return postMonth === selectedMonth && postYear === selectedYear && isLive;
+      if (dateMode === "custom") {
+        const start = new Date(customStart);
+        start.setHours(0, 0, 0, 0);
+        const end = new Date(customEnd);
+        end.setHours(23, 59, 59, 999);
+        return dateObj >= start && dateObj <= end && isLive;
+      } else {
+        const postMonth = dateObj.getMonth();
+        const postYear = dateObj.getFullYear();
+        return postMonth === selectedMonth && postYear === selectedYear && isLive;
+      }
     });
 
     // 4. Sort posts by date newest first
@@ -196,11 +212,20 @@ export function MonthlyReportModal({
           const data = await res.json();
           const allReviews = data.data || [];
           
-          // Filter reviews for selected month and year
+          // Filter reviews for selected range
           const filteredReviews = allReviews.filter((r: any) => {
             if (!r.createTime) return false;
             const dateObj = new Date(r.createTime);
-            return dateObj.getMonth() === selectedMonth && dateObj.getFullYear() === selectedYear;
+            
+            if (dateMode === "custom") {
+              const start = new Date(customStart);
+              start.setHours(0, 0, 0, 0);
+              const end = new Date(customEnd);
+              end.setHours(23, 59, 59, 999);
+              return dateObj >= start && dateObj <= end;
+            } else {
+              return dateObj.getMonth() === selectedMonth && dateObj.getFullYear() === selectedYear;
+            }
           });
 
           // Sort reviews by date newest first
@@ -259,9 +284,13 @@ export function MonthlyReportModal({
 
     if (includePerformance) {
       try {
+        const queryParams = dateMode === "custom"
+          ? `start=${customStart}&end=${customEnd}`
+          : `month=${selectedMonth}&year=${selectedYear}`;
+
         const [perfRes, kwRes] = await Promise.all([
-          fetch(`/api/profiles/${profileId}/performance?month=${selectedMonth}&year=${selectedYear}&t=${Date.now()}`, { cache: "no-store" }),
-          fetch(`/api/profiles/${profileId}/keywords?month=${selectedMonth}&year=${selectedYear}&t=${Date.now()}`, { cache: "no-store" })
+          fetch(`/api/profiles/${profileId}/performance?${queryParams}&t=${Date.now()}`, { cache: "no-store" }),
+          fetch(`/api/profiles/${profileId}/keywords?${queryParams}&t=${Date.now()}`, { cache: "no-store" })
         ]);
 
         let keywords: any[] = [];
@@ -374,6 +403,18 @@ export function MonthlyReportModal({
     }
 
     // Clean month name & date display details
+    const getFormattedRange = () => {
+      if (dateMode === "monthly") {
+        return `${months[selectedMonth].label} ${selectedYear}`;
+      } else {
+        const startStr = new Date(customStart).toLocaleDateString("en-IN", { month: "short", day: "numeric", year: "numeric" });
+        const endStr = new Date(customEnd).toLocaleDateString("en-IN", { month: "short", day: "numeric", year: "numeric" });
+        return `${startStr} - ${endStr}`;
+      }
+    };
+    
+    const rangeLabel = dateMode === "monthly" ? "Report Month" : "Report Range";
+    const rangeValue = getFormattedRange();
     const selectedMonthLabel = months[selectedMonth].label;
     const reportDateStr = new Date().toLocaleDateString("en-IN", {
       day: "2-digit",
@@ -390,8 +431,8 @@ export function MonthlyReportModal({
         <p class="stat-label">Published Posts</p>
       </div>
       <div class="stat-card">
-        <p class="stat-value">${selectedMonthLabel}</p>
-        <p class="stat-label">Report Month</p>
+        <p class="stat-value" style="font-size: ${dateMode === 'custom' ? '13px' : '20px'}; line-height: ${dateMode === 'custom' ? '1.5' : '1.1'}; padding: ${dateMode === 'custom' ? '6px 0' : '0'};">${rangeValue}</p>
+        <p class="stat-label">${rangeLabel}</p>
       </div>
     `;
 
@@ -428,7 +469,8 @@ export function MonthlyReportModal({
 
     // Check if we have any data to output
     if (filteredPosts.length === 0 && (!includeReviews || filteredReviewsCount === 0) && !includePerformance) {
-      setError(`No posts, reviews or performance data found for ${months[selectedMonth].label} ${selectedYear}.`);
+      const displayRange = dateMode === "custom" ? `${customStart} to ${customEnd}` : `${months[selectedMonth].label} ${selectedYear}`;
+      setError(`No posts, reviews or performance data found for ${displayRange}.`);
       setLoading(false);
       return;
     }
@@ -501,6 +543,10 @@ export function MonthlyReportModal({
       ? `<img src="${proxiedLogo}" class="logo-image" alt="Profile Logo" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';" /><div class="logo-avatar" style="display:none;">${logoChar}</div>`
       : `<div class="logo-avatar">${logoChar}</div>`;
 
+    const subtitleText = dateMode === "custom"
+      ? `${rangeValue} GMB Update Report`
+      : `${selectedMonthLabel} ${selectedYear} GMB Update Report`;
+
     // Construct print window HTML
     printWindow.document.write(`
       <!DOCTYPE html>
@@ -508,7 +554,7 @@ export function MonthlyReportModal({
       <head>
         <meta charset="UTF-8">
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <title>${profileName} - GMB Update Report (${selectedMonthLabel} ${selectedYear})</title>
+        <title>${profileName} - GMB Update Report (${rangeValue})</title>
         <style>
           @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap');
           
@@ -1138,7 +1184,7 @@ export function MonthlyReportModal({
             </div>
             <div>
               <p class="floating-title">${profileName}</p>
-              <p class="floating-subtitle">${selectedMonthLabel} ${selectedYear} GMB Update Report</p>
+              <p class="floating-subtitle">${subtitleText}</p>
             </div>
           </div>
           <div class="floating-actions">
@@ -1160,7 +1206,7 @@ export function MonthlyReportModal({
               </div>
               <div class="header-meta">
                 <h1 class="profile-name">${profileName}</h1>
-                <p class="report-subtitle">${selectedMonthLabel} ${selectedYear} GMB Update Report</p>
+                <p class="report-subtitle">${subtitleText}</p>
                 ${address ? `<p class="profile-address">${address}</p>` : ""}
               </div>
             </div>
@@ -1224,8 +1270,8 @@ export function MonthlyReportModal({
         {/* Header */}
         <div style={{ padding: "18px 20px", borderBottom: "1px solid #f1f5f9", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
           <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-            <FileDown size={18} color="#2563eb" />
-            <h3 style={{ fontSize: 15, fontWeight: 700, color: "#0f172a", fontFamily: "inherit" }}>Download Monthly Report</h3>
+            <FileDown size={18} color="#2563eb" style={{ flexShrink: 0 }} />
+            <h3 style={{ fontSize: 15, fontWeight: 700, color: "#0f172a", fontFamily: "inherit" }}>Download Performance Report</h3>
           </div>
           <button onClick={onClose} disabled={loading} style={{ background: "none", border: "none", cursor: "pointer", color: "#94a3b8" }}><X size={18} /></button>
         </div>
@@ -1244,43 +1290,107 @@ export function MonthlyReportModal({
             </div>
           )}
 
-          <div style={{ display: "grid", gridTemplateColumns: "1.2fr 1fr 1fr", gap: 12 }}>
-            <div>
-              <label style={{ display: "block", fontSize: 11, fontWeight: 700, color: "#475569", textTransform: "uppercase", letterSpacing: "0.04em", marginBottom: 6 }}>Month</label>
-              <select
-                value={selectedMonth}
-                onChange={e => setSelectedMonth(Number(e.target.value))}
-                style={{ width: "100%", height: 38, padding: "0 10px", borderRadius: 8, border: "1px solid #e2e8f0", fontSize: 13, background: "#fff", outline: "none", color: "#334155", fontWeight: 600 }}
-              >
-                {months.map(m => (
-                  <option key={m.value} value={m.value}>{m.label}</option>
-                ))}
-              </select>
-            </div>
-            <div>
-              <label style={{ display: "block", fontSize: 11, fontWeight: 700, color: "#475569", textTransform: "uppercase", letterSpacing: "0.04em", marginBottom: 6 }}>Year</label>
-              <select
-                value={selectedYear}
-                onChange={e => setSelectedYear(Number(e.target.value))}
-                style={{ width: "100%", height: 38, padding: "0 10px", borderRadius: 8, border: "1px solid #e2e8f0", fontSize: 13, background: "#fff", outline: "none", color: "#334155", fontWeight: 600 }}
-              >
-                {years.map(y => (
-                  <option key={y} value={y}>{y}</option>
-                ))}
-              </select>
-            </div>
-            <div>
-              <label style={{ display: "block", fontSize: 11, fontWeight: 700, color: "#475569", textTransform: "uppercase", letterSpacing: "0.04em", marginBottom: 6 }}>Columns</label>
-              <select
-                value={columns}
-                onChange={e => setColumns(Number(e.target.value))}
-                style={{ width: "100%", height: 38, padding: "0 10px", borderRadius: 8, border: "1px solid #e2e8f0", fontSize: 13, background: "#fff", outline: "none", color: "#334155", fontWeight: 600 }}
-              >
-                <option value={2}>2 Cols</option>
-                <option value={3}>3 Cols</option>
-              </select>
-            </div>
+          {/* Date Mode Switcher */}
+          <div style={{ display: "flex", background: "#f1f5f9", borderRadius: 8, padding: 3, gap: 4 }}>
+            <button
+              type="button"
+              onClick={() => setDateMode("monthly")}
+              style={{
+                flex: 1, padding: "6px 12px", borderRadius: 6, border: "none", fontSize: 12, fontWeight: 700,
+                background: dateMode === "monthly" ? "#fff" : "transparent",
+                color: dateMode === "monthly" ? "#0f172a" : "#64748b",
+                boxShadow: dateMode === "monthly" ? "0 1px 2px rgba(0,0,0,0.05)" : "none",
+                cursor: "pointer", transition: "all 0.15s"
+              }}
+            >
+              Monthly Report
+            </button>
+            <button
+              type="button"
+              onClick={() => setDateMode("custom")}
+              style={{
+                flex: 1, padding: "6px 12px", borderRadius: 6, border: "none", fontSize: 12, fontWeight: 700,
+                background: dateMode === "custom" ? "#fff" : "transparent",
+                color: dateMode === "custom" ? "#0f172a" : "#64748b",
+                boxShadow: dateMode === "custom" ? "0 1px 2px rgba(0,0,0,0.05)" : "none",
+                cursor: "pointer", transition: "all 0.15s"
+              }}
+            >
+              Custom Range
+            </button>
           </div>
+
+          {dateMode === "monthly" ? (
+            <div style={{ display: "grid", gridTemplateColumns: "1.2fr 1fr 1fr", gap: 12 }}>
+              <div>
+                <label style={{ display: "block", fontSize: 11, fontWeight: 700, color: "#475569", textTransform: "uppercase", letterSpacing: "0.04em", marginBottom: 6 }}>Month</label>
+                <select
+                  value={selectedMonth}
+                  onChange={e => setSelectedMonth(Number(e.target.value))}
+                  style={{ width: "100%", height: 38, padding: "0 10px", borderRadius: 8, border: "1px solid #e2e8f0", fontSize: 13, background: "#fff", outline: "none", color: "#334155", fontWeight: 600 }}
+                >
+                  {months.map(m => (
+                    <option key={m.value} value={m.value}>{m.label}</option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label style={{ display: "block", fontSize: 11, fontWeight: 700, color: "#475569", textTransform: "uppercase", letterSpacing: "0.04em", marginBottom: 6 }}>Year</label>
+                <select
+                  value={selectedYear}
+                  onChange={e => setSelectedYear(Number(e.target.value))}
+                  style={{ width: "100%", height: 38, padding: "0 10px", borderRadius: 8, border: "1px solid #e2e8f0", fontSize: 13, background: "#fff", outline: "none", color: "#334155", fontWeight: 600 }}
+                >
+                  {years.map(y => (
+                    <option key={y} value={y}>{y}</option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label style={{ display: "block", fontSize: 11, fontWeight: 700, color: "#475569", textTransform: "uppercase", letterSpacing: "0.04em", marginBottom: 6 }}>Columns</label>
+                <select
+                  value={columns}
+                  onChange={e => setColumns(Number(e.target.value))}
+                  style={{ width: "100%", height: 38, padding: "0 10px", borderRadius: 8, border: "1px solid #e2e8f0", fontSize: 13, background: "#fff", outline: "none", color: "#334155", fontWeight: 600 }}
+                >
+                  <option value={2}>2 Cols</option>
+                  <option value={3}>3 Cols</option>
+                </select>
+              </div>
+            </div>
+          ) : (
+            <div style={{ display: "grid", gridTemplateColumns: "1.1fr 1.1fr 0.8fr", gap: 12 }}>
+              <div>
+                <label style={{ display: "block", fontSize: 11, fontWeight: 700, color: "#475569", textTransform: "uppercase", letterSpacing: "0.04em", marginBottom: 6 }}>Start Date</label>
+                <input
+                  type="date"
+                  value={customStart}
+                  onChange={e => setCustomStart(e.target.value)}
+                  style={{ width: "100%", height: 38, padding: "0 10px", borderRadius: 8, border: "1px solid #e2e8f0", fontSize: 13, background: "#fff", outline: "none", color: "#334155", fontWeight: 600 }}
+                />
+              </div>
+              <div>
+                <label style={{ display: "block", fontSize: 11, fontWeight: 700, color: "#475569", textTransform: "uppercase", letterSpacing: "0.04em", marginBottom: 6 }}>End Date</label>
+                <input
+                  type="date"
+                  value={customEnd}
+                  onChange={e => setCustomEnd(e.target.value)}
+                  style={{ width: "100%", height: 38, padding: "0 10px", borderRadius: 8, border: "1px solid #e2e8f0", fontSize: 13, background: "#fff", outline: "none", color: "#334155", fontWeight: 600 }}
+                />
+              </div>
+              <div>
+                <label style={{ display: "block", fontSize: 11, fontWeight: 700, color: "#475569", textTransform: "uppercase", letterSpacing: "0.04em", marginBottom: 6 }}>Columns</label>
+                <select
+                  value={columns}
+                  onChange={e => setColumns(Number(e.target.value))}
+                  style={{ width: "100%", height: 38, padding: "0 10px", borderRadius: 8, border: "1px solid #e2e8f0", fontSize: 13, background: "#fff", outline: "none", color: "#334155", fontWeight: 600 }}
+                >
+                  <option value={2}>2 Cols</option>
+                  <option value={3}>3 Cols</option>
+                </select>
+              </div>
+            </div>
+          )}
 
           <div>
             <label style={{ display: "block", fontSize: 11, fontWeight: 700, color: "#475569", textTransform: "uppercase", letterSpacing: "0.04em", marginBottom: 6 }}>Branding Label / Managed By</label>

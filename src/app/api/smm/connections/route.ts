@@ -6,11 +6,6 @@ import { encryptToken } from "@/lib/encryption";
 
 export async function GET(req: Request) {
   try {
-    const session = await getServerSession(authOptions);
-    if (!session || !session.user?.id) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
-
     const { searchParams } = new URL(req.url);
     const clientId = searchParams.get("clientId");
 
@@ -18,20 +13,33 @@ export async function GET(req: Request) {
       return NextResponse.json({ error: "Client ID is required" }, { status: 400 });
     }
 
-    // Verify user has access to this client
-    const userRole = session.user.role;
-    const isSuperAdmin = userRole === "SUPER_ADMIN";
-    const isAgencyOwner = userRole === "AGENCY_OWNER";
+    const session = await getServerSession(authOptions);
+    let client = null;
 
-    const client = await prisma.client.findFirst({
-      where: {
-        id: clientId,
-        OR: isSuperAdmin ? undefined : [
-          { userId: session.user.id },
-          { smmAssignedUsers: { some: { id: session.user.id } } }
-        ]
-      }
-    });
+    if (session && session.user?.id) {
+      // Verify user has access to this client
+      const userRole = session.user.role;
+      const isSuperAdmin = userRole === "SUPER_ADMIN";
+      const isAgencyOwner = userRole === "AGENCY_OWNER";
+
+      client = await prisma.client.findFirst({
+        where: {
+          id: clientId,
+          OR: isSuperAdmin ? undefined : [
+            { userId: session.user.id },
+            { smmAssignedUsers: { some: { id: session.user.id } } }
+          ]
+        }
+      });
+    } else {
+      // Unauthenticated access from client self-onboarding link
+      client = await prisma.client.findFirst({
+        where: {
+          id: clientId,
+          status: "ACTIVE"
+        }
+      });
+    }
 
     if (!client) {
       return NextResponse.json({ error: "Client not found or access denied" }, { status: 404 });
@@ -57,11 +65,6 @@ export async function GET(req: Request) {
 
 export async function POST(req: Request) {
   try {
-    const session = await getServerSession(authOptions);
-    if (!session || !session.user?.id) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
-
     const body = await req.json();
     const { clientId, platform, accountId, accountName, accessToken, avatarUrl, status } = body;
 
@@ -69,16 +72,29 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Missing required fields: clientId, platform, accountId, and accountName are required" }, { status: 400 });
     }
 
-    // Verify access to client
-    const client = await prisma.client.findFirst({
-      where: {
-        id: clientId,
-        OR: session.user.role === "SUPER_ADMIN" ? undefined : [
-          { userId: session.user.id },
-          { smmAssignedUsers: { some: { id: session.user.id } } }
-        ]
-      }
-    });
+    const session = await getServerSession(authOptions);
+    let client = null;
+
+    if (session && session.user?.id) {
+      // Verify access to client
+      client = await prisma.client.findFirst({
+        where: {
+          id: clientId,
+          OR: session.user.role === "SUPER_ADMIN" ? undefined : [
+            { userId: session.user.id },
+            { smmAssignedUsers: { some: { id: session.user.id } } }
+          ]
+        }
+      });
+    } else {
+      // Unauthenticated access from client self-onboarding link
+      client = await prisma.client.findFirst({
+        where: {
+          id: clientId,
+          status: "ACTIVE"
+        }
+      });
+    }
 
     if (!client) {
       return NextResponse.json({ error: "Client not found or access denied" }, { status: 404 });
@@ -120,13 +136,9 @@ export async function POST(req: Request) {
 
 export async function DELETE(req: Request) {
   try {
-    const session = await getServerSession(authOptions);
-    if (!session || !session.user?.id) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
-
     const { searchParams } = new URL(req.url);
     const id = searchParams.get("id");
+    const clientId = searchParams.get("clientId");
 
     if (!id) {
       return NextResponse.json({ error: "Connection ID is required" }, { status: 400 });
@@ -142,21 +154,35 @@ export async function DELETE(req: Request) {
       return NextResponse.json({ error: "Connection not found" }, { status: 404 });
     }
 
-    // Allow owner, super admin, or assigned user to disconnect
-    const userRole = session.user.role;
-    const isSuperAdmin = userRole === "SUPER_ADMIN";
-    const isAgencyOwner = userRole === "AGENCY_OWNER";
-    
-    if (!isSuperAdmin && !isAgencyOwner && account.client.userId !== session.user.id) {
-      const assigned = await prisma.client.findFirst({
-        where: {
-          id: account.clientId,
-          smmAssignedUsers: { some: { id: session.user.id } }
-        }
-      });
-      if (!assigned) {
-        return NextResponse.json({ error: "Forbidden: Access denied to client workspace" }, { status: 403 });
+    const session = await getServerSession(authOptions);
+    let allowed = false;
+
+    if (session && session.user?.id) {
+      // Allow owner, super admin, or assigned user to disconnect
+      const userRole = session.user.role;
+      const isSuperAdmin = userRole === "SUPER_ADMIN";
+      const isAgencyOwner = userRole === "AGENCY_OWNER";
+      
+      if (isSuperAdmin || isAgencyOwner || account.client.userId === session.user.id) {
+        allowed = true;
+      } else {
+        const assigned = await prisma.client.findFirst({
+          where: {
+            id: account.clientId,
+            smmAssignedUsers: { some: { id: session.user.id } }
+          }
+        });
+        if (assigned) allowed = true;
       }
+    } else {
+      // Unauthenticated access from client self-onboarding link
+      if (clientId && clientId === account.clientId && account.client.status === "ACTIVE") {
+        allowed = true;
+      }
+    }
+
+    if (!allowed) {
+      return NextResponse.json({ error: "Forbidden: Access denied to client workspace" }, { status: 403 });
     }
 
     await prisma.socialAccount.delete({

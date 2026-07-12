@@ -36,11 +36,16 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
   const { searchParams } = new URL(req.url);
   const monthParam = searchParams.get("month");
   const yearParam = searchParams.get("year");
+  const startParam = searchParams.get("start");
+  const endParam = searchParams.get("end");
 
   let startMonthDate: Date;
   let endMonthDate: Date;
 
-  if (monthParam !== null && yearParam !== null) {
+  if (startParam && endParam) {
+    startMonthDate = new Date(startParam);
+    endMonthDate   = new Date(endParam);
+  } else if (monthParam !== null && yearParam !== null) {
     const m = parseInt(monthParam);
     const y = parseInt(yearParam);
     startMonthDate = new Date(y, m, 1);
@@ -67,7 +72,7 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
     let pageCount = 0;
 
     do {
-      const pageUrl = pageToken ? `${baseUrl}&pageToken=${pageToken}` : baseUrl;
+      const pageUrl = pageToken ? `${baseUrl}&pageToken=${encodeURIComponent(pageToken)}` : baseUrl;
       const response = await fetch(pageUrl, {
         headers: { Authorization: `Bearer ${accessToken}` }
       });

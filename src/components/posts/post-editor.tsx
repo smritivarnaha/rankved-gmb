@@ -11,7 +11,7 @@ function SmoothAnimation({ type, className }: { type: string; className?: string
   if (type === "SUCCESS") {
     return (
       <div className={`relative flex items-center justify-center ${className}`}>
-        <div className="absolute inset-0 rounded-full bg-green-100 animate-[ping_1.5s_ease-in-out_infinite]" />
+        <div className="absolute inset-0 rounded-full bg-green-100 animate-ping" />
         <div className="relative bg-green-500 rounded-full p-6 shadow-lg shadow-green-500/30 transform transition-all duration-500 scale-110">
           <Check size={40} className="text-white stroke-[3px]" />
         </div>
@@ -21,8 +21,8 @@ function SmoothAnimation({ type, className }: { type: string; className?: string
   if (type === "PUBLISH") {
     return (
       <div className={`relative flex items-center justify-center ${className}`}>
-        <div className="absolute inset-0 rounded-full bg-blue-100 animate-[ping_2s_ease-in-out_infinite]" />
-        <div className="relative bg-[#2563eb] rounded-full p-6 shadow-lg shadow-blue-500/30 animate-[bounce_2s_infinite]">
+        <div className="absolute inset-0 rounded-full bg-blue-100 animate-ping" />
+        <div className="relative bg-[#2563eb] rounded-full p-6 shadow-lg shadow-blue-500/30 animate-bounce">
           <Send size={40} className="text-white relative left-1 top-1" />
         </div>
       </div>
@@ -31,16 +31,16 @@ function SmoothAnimation({ type, className }: { type: string; className?: string
   if (type === "SCHEDULED") {
     return (
       <div className={`relative flex items-center justify-center ${className}`}>
-        <div className="absolute inset-0 rounded-full bg-purple-100 animate-[pulse_2s_ease-in-out_infinite]" />
+        <div className="absolute inset-0 rounded-full bg-purple-100 animate-pulse" />
         <div className="relative bg-purple-600 rounded-full p-6 shadow-lg shadow-purple-500/30">
-          <Clock size={40} className="text-white animate-[spin_3s_linear_infinite]" />
+          <Clock size={40} className="text-white animate-spin" />
         </div>
       </div>
     );
   }
   return (
     <div className={`relative flex items-center justify-center ${className}`}>
-      <div className="absolute inset-0 rounded-full bg-slate-100 animate-[pulse_2s_ease-in-out_infinite]" />
+      <div className="absolute inset-0 rounded-full bg-slate-100 animate-pulse" />
       <div className="relative bg-slate-700 rounded-full p-6 shadow-lg shadow-slate-500/30">
         <Save size={40} className="text-white animate-pulse" />
       </div>
@@ -73,7 +73,8 @@ export function PostEditor({
   onDateChange, 
   lockedProfileId, 
   returnUrl,
-  showTimelineTop = false
+  showTimelineTop = false,
+  onSaveSuccess
 }: { 
   initialData?: any; 
   timelineDate?: string; 
@@ -81,6 +82,7 @@ export function PostEditor({
   lockedProfileId?: string; 
   returnUrl?: string;
   showTimelineTop?: boolean;
+  onSaveSuccess?: () => void;
 }) {
   const router = useRouter();
   const { data: session } = useSession();
@@ -97,6 +99,9 @@ export function PostEditor({
   const [imagePreview, setImagePreview] = useState<string | null>(initialData?.imageUrl || null);
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [locations, setLocations] = useState<{id:string;name:string;client:string}[]>(fallbackLocations);
+  
+  const [activeProfile, setActiveProfile] = useState<any>(null);
+  const [showUrlDropdown, setShowUrlDropdown] = useState(false);
 
   // Fetch real profiles from API
   useEffect(() => {
@@ -104,11 +109,43 @@ export function PostEditor({
       .then(r => r.ok ? r.json() : null)
       .then(d => {
         if (d?.data?.length > 0) {
-          setLocations(d.data.map((p: any) => ({ id: p.id, name: p.name, client: p.accountName })));
+          const visible = d.data.filter((p: any) => !p.isHidden);
+          setLocations(visible.map((p: any) => ({ id: p.id, name: p.name, client: p.accountName })));
         }
       })
       .catch(() => {});
   }, []);
+
+  const [form, setForm] = useState({
+    locationId: initialData?.locationId || initialData?.profileId || "",
+    summary: initialData?.summary || "",
+    focusKeyword: initialData?.focusKeyword || "",
+    topicType: initialData?.topicType || "STANDARD",
+    ctaType: initialData?.ctaType || "",
+    ctaUrl: initialData?.ctaUrl || "",
+    eventTitle: initialData?.eventTitle || "",
+    eventStart: initialData?.eventStart || "",
+    eventEnd: initialData?.eventEnd || "",
+  });
+
+  // Fetch active profile details (with sitemap URLs) when locationId changes
+  useEffect(() => {
+    const locId = form.locationId || lockedProfileId;
+    if (locId) {
+      fetch(`/api/profiles/${locId}`)
+        .then(r => r.ok ? r.json() : null)
+        .then(d => {
+          if (d?.data) {
+            setActiveProfile(d.data);
+          } else {
+            setActiveProfile(null);
+          }
+        })
+        .catch(() => setActiveProfile(null));
+    } else {
+      setActiveProfile(null);
+    }
+  }, [form.locationId, lockedProfileId]);
 
   // Lock profile if provided
   useEffect(() => {
@@ -179,18 +216,6 @@ export function PostEditor({
     }
   }, [timelineDate]);
 
-  const [form, setForm] = useState({
-    locationId: initialData?.locationId || initialData?.profileId || "",
-    summary: initialData?.summary || "",
-    focusKeyword: initialData?.focusKeyword || "",
-    topicType: initialData?.topicType || "STANDARD",
-    ctaType: initialData?.ctaType || "",
-    ctaUrl: initialData?.ctaUrl || "",
-    eventTitle: initialData?.eventTitle || "",
-    eventStart: initialData?.eventStart || "",
-    eventEnd: initialData?.eventEnd || "",
-  });
-
   const handleChange = (e: any) => setForm({ ...form, [e.target.name]: e.target.value });
 
   const [converting, setConverting] = useState(false);
@@ -201,8 +226,8 @@ export function PostEditor({
     if (!file.type.startsWith("image/")) return alert("Please select an image file.");
     if (file.size > 10 * 1024 * 1024) return alert("Image must be under 10MB.");
 
-    // If already JPEG, use directly
-    if (file.type === "image/jpeg") {
+    // If already JPEG or PNG, use directly (Google accepts both formats natively)
+    if (file.type === "image/jpeg" || file.type === "image/png") {
       setImageFile(file);
       const reader = new FileReader();
       reader.onload = () => setImagePreview(reader.result as string);
@@ -210,21 +235,21 @@ export function PostEditor({
       return;
     }
 
-    // Convert any other format (WebP, PNG, BMP, TIFF, GIF, AVIF, etc.) to JPEG
+    // Convert other formats (WebP, BMP, TIFF, GIF, AVIF, etc.) to transparent PNG to preserve quality
     setConverting(true);
     try {
-      const jpegFile = await convertToJpeg(file);
-      setImageFile(jpegFile);
+      const pngFile = await convertToPng(file);
+      setImageFile(pngFile);
       const reader = new FileReader();
       reader.onload = () => setImagePreview(reader.result as string);
-      reader.readAsDataURL(jpegFile);
+      reader.readAsDataURL(pngFile);
     } catch {
       alert("Failed to convert image. Try a different file.");
     }
     setConverting(false);
   };
 
-  const convertToJpeg = (file: File): Promise<File> => {
+  const convertToPng = (file: File): Promise<File> => {
     return new Promise((resolve, reject) => {
       const img = new Image();
       img.onload = () => {
@@ -232,17 +257,15 @@ export function PostEditor({
         canvas.width = img.width;
         canvas.height = img.height;
         const ctx = canvas.getContext("2d")!;
-        ctx.fillStyle = "#FFFFFF"; // white bg for transparency
-        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
         ctx.drawImage(img, 0, 0);
         canvas.toBlob(
           (blob) => {
             if (!blob) return reject(new Error("Conversion failed"));
-            const newName = file.name.replace(/\.[^.]+$/, ".jpg");
-            resolve(new File([blob], newName, { type: "image/jpeg" }));
+            const newName = file.name.replace(/\.[^.]+$/, ".png");
+            resolve(new File([blob], newName, { type: "image/png" }));
           },
-          "image/jpeg",
-          1.0
+          "image/png"
         );
       };
       img.onerror = () => reject(new Error("Could not load image"));
@@ -441,22 +464,22 @@ export function PostEditor({
       });
       const responseData = await res.json();
       if (res.status === 201 || res.status === 200) {
-        let msg = "Post saved successfully!";
-        if (type === "PUBLISH") msg = "Post published successfully!";
-        else if (type === "SCHEDULED") msg = "Post scheduled successfully!";
-        else if (type === "DRAFT") msg = "Draft saved successfully!";
-        await new Promise(r => setTimeout(r, 800));
-        setSuccessMessage(msg);
         setSaving(false);
         setSavingType("");
-        setTimeout(() => {
+        if (onSaveSuccess) {
+          onSaveSuccess();
+        } else {
           router.push(returnUrl || (form.locationId ? `/profiles/${form.locationId}` : "/profiles"));
-        }, 3000);
+        }
         return;
       } else if (res.status === 207) {
         // Partial success — saved to DB but GBP publish failed
         alert(`⚠️ Post saved but could not publish to Google:\n\n${responseData.error}\n\nCheck Settings to reconnect your Google account.`);
-        router.push(returnUrl || (form.locationId ? `/profiles/${form.locationId}` : "/profiles"));
+        if (onSaveSuccess) {
+          onSaveSuccess();
+        } else {
+          router.push(returnUrl || (form.locationId ? `/profiles/${form.locationId}` : "/profiles"));
+        }
       } else if (res.status === 409) {
         alert(responseData.error || "This post is already being processed.");
       } else {
@@ -476,7 +499,7 @@ export function PostEditor({
   const todayDay = now.getDate();
 
   return (
-    <div className="space-y-8 animate-in fade-in duration-500">
+    <div className="space-y-8">
       {(saving || successMessage) && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center bg-[#0f172a]/40 backdrop-blur-sm transition-opacity duration-500">
           <div className="bg-white rounded-2xl shadow-[0_20px_50px_rgba(0,0,0,0.15)] p-10 flex flex-col items-center justify-center max-w-sm w-full mx-4 transform transition-transform duration-300 scale-100 border border-[#f1f5f9]">
@@ -702,7 +725,107 @@ export function PostEditor({
           {/* Card 3: Post Content */}
           <div style={{ background: "#fff", border: "1px solid #eaeaea", borderRadius: 16, padding: "24px", boxShadow: "0 1px 3px rgba(0,0,0,0.02)" }}>
             <div className="space-y-4">
-              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+              
+              {/* Button Selection */}
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
+                <div className="space-y-2">
+                  <label className="text-[11px] font-bold text-[#64748b] uppercase tracking-[0.05em]">Button Type</label>
+                  <select name="ctaType" value={form.ctaType} onChange={handleChange} disabled={isPublished}
+                    style={{ width: "100%", padding: "12px", border: "1px solid #eaeaea", borderRadius: 10, fontSize: 14, fontWeight: 600, color: "#0f172a", background: "#fff" }}>
+                    <option value="">No Button</option>
+                    <option value="BOOK">Book</option>
+                    <option value="ORDER">Order Online</option>
+                    <option value="SHOP">Buy</option>
+                    <option value="LEARN_MORE">Learn More</option>
+                    <option value="SIGN_UP">Sign Up</option>
+                    <option value="CALL">Call Now</option>
+                  </select>
+                </div>
+                {form.ctaType && form.ctaType !== "CALL" && (
+                  <div className="space-y-2">
+                    <label className="text-[11px] font-bold text-[#64748b] uppercase tracking-[0.05em]">Button Link</label>
+                    <div style={{ position: "relative" }}>
+                      <input 
+                        type="url" 
+                        name="ctaUrl" 
+                        value={form.ctaUrl} 
+                        onChange={handleChange} 
+                        disabled={isPublished}
+                        onFocus={() => setShowUrlDropdown(true)}
+                        onBlur={() => setTimeout(() => setShowUrlDropdown(false), 200)}
+                        style={{ width: "100%", padding: "12px 12px 12px 36px", border: "1px solid #eaeaea", borderRadius: 10, fontSize: 14, fontWeight: 500 }}
+                        placeholder="https://..." 
+                      />
+                      <LinkIcon size={14} className="text-[#64748b]" style={{ position: "absolute", left: 12, top: "50%", transform: "translateY(-50%)" }} />
+                      
+                      {/* Sitemap Autocomplete Dropdown overlay */}
+                      {showUrlDropdown && activeProfile?.sitemapUrls && activeProfile.sitemapUrls.length > 0 && (
+                        <div style={{
+                          position: "absolute",
+                          top: "100%",
+                          left: 0,
+                          right: 0,
+                          background: "#fff",
+                          border: "1px solid #e2e8f0",
+                          borderRadius: 10,
+                          boxShadow: "0 10px 15px -3px rgba(0,0,0,0.1), 0 4px 6px -2px rgba(0,0,0,0.05)",
+                          zIndex: 100,
+                          maxHeight: 200,
+                          overflowY: "auto",
+                          marginTop: 4
+                        }}>
+                          {activeProfile.sitemapUrls
+                            .filter((url: string) => {
+                              if (!form.ctaUrl) return true;
+                              const val = form.ctaUrl.toLowerCase();
+                              if (val.startsWith("http://") || val.startsWith("https://")) {
+                                return url.toLowerCase().includes(val);
+                              }
+                              try {
+                                const parsed = new URL(url);
+                                return (parsed.pathname + parsed.search).toLowerCase().includes(val);
+                              } catch {
+                                return url.toLowerCase().includes(val);
+                              }
+                            })
+                            .slice(0, 15)
+                            .map((url: string, index: number) => (
+                              <div
+                                key={index}
+                                onMouseDown={() => {
+                                  setForm(f => ({ ...f, ctaUrl: url }));
+                                  setShowUrlDropdown(false);
+                                }}
+                                style={{
+                                  padding: "8px 12px",
+                                  fontSize: 13,
+                                  color: "#334155",
+                                  cursor: "pointer",
+                                  borderBottom: "1px solid #f1f5f9",
+                                  whiteSpace: "nowrap",
+                                  overflow: "hidden",
+                                  textOverflow: "ellipsis"
+                                }}
+                                onMouseEnter={e => e.currentTarget.style.background = "#f8fafc"}
+                                onMouseLeave={e => e.currentTarget.style.background = "transparent"}
+                              >
+                                {url}
+                              </div>
+                            ))}
+                          {activeProfile.sitemapUrls.filter((url: string) => !form.ctaUrl || url.toLowerCase().includes(form.ctaUrl.toLowerCase())).length === 0 && (
+                            <div style={{ padding: "12px", fontSize: 12, color: "#94a3b8", textAlign: "center" }}>
+                              No matching sitemap URLs.
+                            </div>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Post Content */}
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginTop: 12 }}>
                 <label className="text-[11px] font-bold text-[#64748b] uppercase tracking-[0.1em]">Post Content</label>
                 <span style={{ fontSize: 11, fontWeight: 600, color: form.summary.length > 1500 ? "#ef4444" : "#94a3b8" }}>{form.summary.length}/1500</span>
               </div>
@@ -726,32 +849,6 @@ export function PostEditor({
                 </div>
               )}
 
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
-                <div className="space-y-2">
-                  <label className="text-[11px] font-bold text-[#64748b] uppercase tracking-[0.05em]">Button Type</label>
-                  <select name="ctaType" value={form.ctaType} onChange={handleChange} disabled={isPublished}
-                    style={{ width: "100%", padding: "12px", border: "1px solid #eaeaea", borderRadius: 10, fontSize: 14, fontWeight: 600, color: "#0f172a", background: "#fff" }}>
-                    <option value="">No Button</option>
-                    <option value="BOOK">Book</option>
-                    <option value="ORDER">Order Online</option>
-                    <option value="SHOP">Buy</option>
-                    <option value="LEARN_MORE">Learn More</option>
-                    <option value="SIGN_UP">Sign Up</option>
-                    <option value="CALL">Call Now</option>
-                  </select>
-                </div>
-                {form.ctaType && form.ctaType !== "CALL" && (
-                  <div className="space-y-2">
-                    <label className="text-[11px] font-bold text-[#64748b] uppercase tracking-[0.05em]">Button Link</label>
-                    <div style={{ position: "relative" }}>
-                      <input type="url" name="ctaUrl" value={form.ctaUrl} onChange={handleChange} disabled={isPublished}
-                        style={{ width: "100%", padding: "12px 12px 12px 36px", border: "1px solid #eaeaea", borderRadius: 10, fontSize: 14, fontWeight: 500 }}
-                        placeholder="https://..." />
-                      <LinkIcon size={14} className="text-[#64748b]" style={{ position: "absolute", left: 12, top: "50%", transform: "translateY(-50%)" }} />
-                    </div>
-                  </div>
-                )}
-              </div>
             </div>
           </div>
         </div>
@@ -853,10 +950,17 @@ export function PostEditor({
                       style={{ 
                         width: "100%", padding: "10px", background: "#f8fafc", color: "#64748b", 
                         border: "1px solid #e2e8f0", borderRadius: 12, fontSize: 13, fontWeight: 600, 
-                        cursor: "pointer" 
+                        cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 8
                       }}
                     >
-                      Save Draft
+                      {saving && savingType === "DRAFT" ? (
+                        <>
+                          <Loader2 size={15} className="animate-spin" />
+                          <span>Saving Draft...</span>
+                        </>
+                      ) : (
+                        "Save Draft"
+                      )}
                     </button>
                   </>
                 ) : (

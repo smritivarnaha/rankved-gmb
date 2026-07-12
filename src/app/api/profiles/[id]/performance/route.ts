@@ -35,11 +35,16 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
   const { searchParams } = new URL(req.url);
   const monthParam = searchParams.get("month");
   const yearParam = searchParams.get("year");
+  const startParam = searchParams.get("start");
+  const endParam = searchParams.get("end");
 
   let startDate: Date;
   let endDate: Date;
 
-  if (monthParam !== null && yearParam !== null) {
+  if (startParam && endParam) {
+    startDate = new Date(startParam);
+    endDate = new Date(endParam);
+  } else if (monthParam !== null && yearParam !== null) {
     const m = parseInt(monthParam);
     const y = parseInt(yearParam);
     startDate = new Date(y, m, 1);

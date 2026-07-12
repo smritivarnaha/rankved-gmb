@@ -11,7 +11,7 @@ export function getEmailFromIdToken(idToken: string | null): string | null {
   }
 }
 
-export async function getValidGoogleAccounts(userId: string) {
+export async function getValidGoogleAccounts(userId: string, forceRefresh = false) {
   const accounts = await prisma.account.findMany({
     where: { userId, provider: "google" }
   });
@@ -19,15 +19,18 @@ export async function getValidGoogleAccounts(userId: string) {
   const validAccounts = [];
 
   for (const account of accounts) {
-    // Check if token is expired (expires_at is in seconds)
-    // Add a 5-minute buffer to be safe
-    if (account.expires_at && (account.expires_at * 1000) < Date.now() + 5 * 60 * 1000) {
+    const isExpired = account.expires_at && (account.expires_at * 1000) < Date.now() + 5 * 60 * 1000;
+    
+    if (forceRefresh || isExpired) {
       if (!account.refresh_token) {
-        console.warn(`[Google Auth] No refresh token for account ${account.providerAccountId}. Requires re-authentication.`);
+        console.warn(`[Google Auth] No refresh token for account ${account.providerAccountId}.`);
+        if (!isExpired) {
+          validAccounts.push(account);
+        }
         continue;
       }
 
-      console.log(`[Google Auth] Refreshing token for account ${account.providerAccountId}...`);
+      console.log(`[Google Auth] Refreshing token for account ${account.providerAccountId} (forceRefresh: ${forceRefresh})...`);
       try {
         const response = await fetch("https://oauth2.googleapis.com/token", {
           method: "POST",
@@ -44,7 +47,10 @@ export async function getValidGoogleAccounts(userId: string) {
 
         if (!response.ok) {
           console.error(`[Google Auth] Token refresh failed for ${account.providerAccountId}:`, refreshed);
-          continue; // Skip this account if refresh fails
+          if (!isExpired) {
+            validAccounts.push(account);
+          }
+          continue;
         }
 
         const updatedAccount = await prisma.account.update({
@@ -53,13 +59,16 @@ export async function getValidGoogleAccounts(userId: string) {
             access_token: refreshed.access_token,
             expires_at: Math.floor(Date.now() / 1000) + refreshed.expires_in,
             refresh_token: refreshed.refresh_token ?? account.refresh_token,
-            id_token: refreshed.id_token ?? account.id_token, // Update id_token if provided
+            id_token: refreshed.id_token ?? account.id_token,
           }
         });
         
         validAccounts.push(updatedAccount);
       } catch (error) {
         console.error(`[Google Auth] Exception refreshing token for ${account.providerAccountId}:`, error);
+        if (!isExpired) {
+          validAccounts.push(account);
+        }
       }
     } else {
       // Token is still valid
