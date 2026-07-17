@@ -28,16 +28,41 @@ function getGoogleMapsZoom(radiusKm: number): number {
 }
 
 /**
- * Extracts country code (gl) from profile address
+ * Strips punctuation and normalizes spaces for string comparison
  */
-function getCountryCode(address?: string): string {
-  if (!address) return "us";
-  const addr = address.toLowerCase();
-  if (addr.includes("india") || addr.includes(", in")) return "in";
-  if (addr.includes("australia") || addr.includes(", au")) return "au";
-  if (addr.includes("united kingdom") || addr.includes(", uk") || addr.includes(", gbr")) return "uk";
-  if (addr.includes("canada") || addr.includes(", ca")) return "ca";
-  return "us";
+function cleanString(str: string): string {
+  return str
+    .toLowerCase()
+    .replace(/[.,\/#!$%\^&\*;:{}=\-_`~()]/g, "") // strip punctuation
+    .replace(/\s{2,}/g, " ")                     // normalize spaces
+    .trim();
+}
+
+/**
+ * Dynamic country code selection based on coordinates bounding box
+ */
+export function getCountryCodeByCoords(lat: number, lng: number): string {
+  // India bounds: lat [8.0, 37.0], lng [68.0, 97.0]
+  if (lat >= 8.0 && lat <= 37.0 && lng >= 68.0 && lng <= 97.0) {
+    return "in";
+  }
+  // Australia bounds: lat [-44.0, -10.0], lng [112.0, 154.0]
+  if (lat >= -44.0 && lat <= -10.0 && lng >= 112.0 && lng <= 154.0) {
+    return "au";
+  }
+  // United Kingdom bounds: lat [49.0, 61.0], lng [-9.0, 2.0]
+  if (lat >= 49.0 && lat <= 61.0 && lng >= -9.0 && lng <= 2.0) {
+    return "uk";
+  }
+  // Canada bounds: lat [41.0, 83.0], lng [-141.0, -52.0]
+  if (lat >= 41.0 && lat <= 83.0 && lng >= -141.0 && lng <= -52.0) {
+    return "ca";
+  }
+  // US bounds fallback check: lat [24.0, 49.0], lng [-125.0, -66.0]
+  if (lat >= 24.0 && lat <= 49.0 && lng >= -125.0 && lng <= -66.0) {
+    return "us";
+  }
+  return "us"; // default fallback
 }
 
 /**
@@ -96,12 +121,11 @@ export async function scanPointRank(
 ): Promise<{ rank: number | null; competitors: Competitor[] }> {
   try {
     const radiusKm = extraConfig?.radiusKm || 2.5;
-    const address = extraConfig?.address || "";
 
     if (provider === "serpapi") {
-      return await scanViaSerpApi(apiKey, keyword, lat, lng, targetPlaceName, targetPlaceId, radiusKm, address);
+      return await scanViaSerpApi(apiKey, keyword, lat, lng, targetPlaceName, targetPlaceId, radiusKm);
     } else if (provider === "valueserp") {
-      return await scanViaValueSerp(apiKey, keyword, lat, lng, targetPlaceName, targetPlaceId, radiusKm, address);
+      return await scanViaValueSerp(apiKey, keyword, lat, lng, targetPlaceName, targetPlaceId, radiusKm);
     } else if (provider === "dataforseo") {
       return await scanViaDataForSeo(
         apiKey,
@@ -132,11 +156,10 @@ async function scanViaSerpApi(
   lng: number,
   targetName: string,
   targetPlaceId?: string,
-  radiusKm = 2.5,
-  address = ""
+  radiusKm = 2.5
 ): Promise<{ rank: number | null; competitors: Competitor[] }> {
   const zoom = getGoogleMapsZoom(radiusKm);
-  const gl = getCountryCode(address);
+  const gl = getCountryCodeByCoords(lat, lng);
   const url = `https://serpapi.com/search.json?engine=google_maps&q=${encodeURIComponent(keyword)}&ll=@${lat},${lng},${zoom}z&type=search&hl=en&gl=${gl}&api_key=${apiKey}`;
   
   const res = await fetch(url);
@@ -160,11 +183,10 @@ async function scanViaValueSerp(
   lng: number,
   targetName: string,
   targetPlaceId?: string,
-  radiusKm = 2.5,
-  address = ""
+  radiusKm = 2.5
 ): Promise<{ rank: number | null; competitors: Competitor[] }> {
   const zoom = getGoogleMapsZoom(radiusKm);
-  const gl = getCountryCode(address);
+  const gl = getCountryCodeByCoords(lat, lng);
   const url = `https://api.valueserp.com/search?engine=google_maps&q=${encodeURIComponent(keyword)}&ll=@${lat},${lng},${zoom}z&hl=en&gl=${gl}&api_key=${apiKey}`;
   
   const res = await fetch(url);
@@ -219,7 +241,7 @@ async function scanViaDataForSeo(
   const competitors: Competitor[] = [];
   let rank: number | null = null;
 
-  const cleanTargetName = targetName.toLowerCase().trim();
+  const cleanTarget = cleanString(targetName);
 
   rawResults.forEach((item: any) => {
     if (item.type !== "maps_search") return;
@@ -238,11 +260,13 @@ async function scanViaDataForSeo(
 
     competitors.push(comp);
 
-    // Lenient case-insensitive partial substring match
+    // Dynamic clean matching
+    const cleanComp = cleanString(item.title || "");
     const matchId = targetPlaceId && item.place_id === targetPlaceId;
-    const matchName = item.title && (
-      item.title.toLowerCase().includes(cleanTargetName) ||
-      cleanTargetName.includes(item.title.toLowerCase())
+    const matchName = cleanComp && (
+      cleanComp === cleanTarget ||
+      cleanComp.includes(cleanTarget) ||
+      (cleanTarget.includes(cleanComp) && cleanComp.length > 8)
     );
 
     if ((matchId || matchName) && rank === null) {
@@ -267,7 +291,7 @@ function parseLocalResults(
   const competitors: Competitor[] = [];
   let rank: number | null = null;
 
-  const cleanTargetName = targetName.toLowerCase().trim();
+  const cleanTarget = cleanString(targetName);
 
   rawResults.forEach((item: any, idx: number) => {
     const itemRank = item.position || (idx + 1);
@@ -283,11 +307,13 @@ function parseLocalResults(
 
     competitors.push(comp);
 
-    // Lenient case-insensitive partial substring match
+    // Dynamic clean matching
+    const cleanComp = cleanString(item.title || "");
     const matchId = targetPlaceId && item.place_id === targetPlaceId;
-    const matchName = item.title && (
-      item.title.toLowerCase().includes(cleanTargetName) ||
-      cleanTargetName.includes(item.title.toLowerCase())
+    const matchName = cleanComp && (
+      cleanComp === cleanTarget ||
+      cleanComp.includes(cleanTarget) ||
+      (cleanTarget.includes(cleanComp) && cleanComp.length > 8)
     );
 
     if ((matchId || matchName) && rank === null) {
