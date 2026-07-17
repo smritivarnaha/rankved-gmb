@@ -19,6 +19,7 @@ import { useSearchParams } from "next/navigation";
 import { checkProhibitedContent } from "@/lib/content-validation";
 import { MonthlyReportModal } from "@/components/profiles/MonthlyReportModal";
 import { BulkImportModal } from "@/components/posts/BulkImportModal";
+import RankTracker from "@/components/profiles/RankTracker";
 
 const fetcher = (url: string) => fetch(url).then(r => r.json());
 
@@ -394,7 +395,7 @@ export default function ProfileDetailPage() {
   const [statusFilter, setStatusFilter] = useState("ALL");
   const searchParamsHook = useSearchParams();
   const initialTab = searchParamsHook.get("tab") === "ai" ? "AI_SETTINGS" : "POSTS";
-  const [activeTab, setActiveTab] = useState<"POSTS" | "AI_SETTINGS" | "EDIT_PROFILE" | "REVIEWS">(initialTab as any);
+  const [activeTab, setActiveTab] = useState<"POSTS" | "AI_SETTINGS" | "EDIT_PROFILE" | "REVIEWS" | "RANK_TRACKER">(initialTab as any);
   const [isAiModalOpen, setIsAiModalOpen] = useState(false);
   const [isBulkAiModalOpen, setIsBulkAiModalOpen] = useState(false);
   const [isReportModalOpen, setIsReportModalOpen] = useState(false);
@@ -705,6 +706,19 @@ export default function ProfileDetailPage() {
           >
             Reviews
           </button>
+          {canApprove && (
+            <button 
+              onClick={() => setActiveTab("RANK_TRACKER")}
+              style={{ 
+                padding: "10px 4px", fontSize: 14, fontWeight: 600, border: "none", background: "none", cursor: "pointer",
+                color: activeTab === "RANK_TRACKER" ? "#2563eb" : "#94a3b8",
+                borderBottom: activeTab === "RANK_TRACKER" ? "2px solid #2563eb" : "2px solid transparent",
+                transition: "all 0.2s"
+              }}
+            >
+              Local Rank Tracker
+            </button>
+          )}
         </div>
       </div>
 
@@ -714,6 +728,8 @@ export default function ProfileDetailPage() {
         </div>
       ) : activeTab === "REVIEWS" ? (
         <ReviewManager profileId={profile.id} />
+      ) : activeTab === "RANK_TRACKER" ? (
+        <RankTracker profileId={profile.id} profileName={profile.name} address={profile.address} />
       ) : (
         /* Original Two-Column Layout */
         <div style={{ display: "grid", gridTemplateColumns: "270px 1fr", gap: 18, alignItems: "start" }}>

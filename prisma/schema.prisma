@@ -175,6 +175,11 @@ model Location {
 
   isHidden               Boolean   @default(false)
   
+  // Rank Grid Scan Coordinates
+  lat                    Float?
+  lng                    Float?
+  rankScans              RankScan[]
+
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
 
@@ -277,6 +282,12 @@ model GlobalSetting {
   directionsSpikeThreshold  Int     @default(20)
   clicksSpikeThreshold      Int     @default(15)
   
+  // Admin SERP API Settings
+  serpProvider              String  @default("serpapi") // serpapi, valueserp, dataforseo
+  serpApiKey                String?
+  dataforseoUsername        String?
+  dataforseoPassword        String?
+
   updatedAt        DateTime @updatedAt
 }
 
@@ -442,5 +453,31 @@ model SmmApprovalHistory {
   createdAt DateTime @default(now())
 
   @@index([postId])
+}
+
+model RankScan {
+  id          String            @id @default(cuid())
+  locationId  String
+  location    Location          @relation(fields: [locationId], references: [id], onDelete: Cascade)
+  keyword     String
+  gridSize    Int               @default(3) // 3 for 3x3, 5 for 5x5, 7 for 7x7
+  radiusKm    Float             @default(2.5)
+  createdAt   DateTime          @default(now())
+  points      RankScanPoint[]
+
+  @@index([locationId])
+}
+
+model RankScanPoint {
+  id           String      @id @default(cuid())
+  scanId       String
+  scan         RankScan    @relation(fields: [scanId], references: [id], onDelete: Cascade)
+  lat          Float
+  lng          Float
+  rank         Int?        // 1 to 20, or null if > 20
+  competitors  Json?       // JSON list of competitors at this point: [{ name, rank, placeId }]
+  createdAt    DateTime    @default(now())
+
+  @@index([scanId])
 }
 

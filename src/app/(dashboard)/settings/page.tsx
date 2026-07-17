@@ -34,7 +34,7 @@ export default function SettingsPage() {
   const [savingSettings, setSavingSettings] = useState(false);
   const [selectedLogo, setSelectedLogo] = useState<File | null>(null);
   
-  const [activeTab, setActiveTab] = useState<"accounts" | "notifications" | "profiles" | "branding" | "alerts">("accounts");
+  const [activeTab, setActiveTab] = useState<"accounts" | "notifications" | "profiles" | "branding" | "alerts" | "serp">("accounts");
 
   useEffect(() => {
     if (settings) {
@@ -220,7 +220,10 @@ export default function SettingsPage() {
     { id: "notifications", label: "Email Notifications", icon: Mail },
     { id: "alerts", label: "GBP Alerts", icon: Bell },
     { id: "profiles", label: "Saved Profiles", icon: Bookmark },
-    ...(isSuperAdmin ? [{ id: "branding", label: "Sidebar Branding", icon: Palette }] : [])
+    ...(isSuperAdmin ? [
+      { id: "branding", label: "Sidebar Branding", icon: Palette },
+      { id: "serp", label: "Rank Scan Settings", icon: Globe }
+    ] : [])
   ];
 
   return (
@@ -842,6 +845,83 @@ export default function SettingsPage() {
               >
                 {savingSettings ? <Loader2 className="anim-spin" style={{ width: 16, height: 16 }} /> : <Save size={16} />}
                 {savingSettings ? "Saving..." : "Save Branding Changes"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Rank Grid Scan Settings */}
+      {isSuperAdmin && activeTab === "serp" && (
+        <div className="s-card">
+          <div className="s-card-header">
+            <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
+              <div className="icon-box"><Globe size={22} /></div>
+              <div>
+                <h2 style={{ fontSize: 18, fontWeight: 600, color: "#111827", margin: "0 0 4px" }}>Rank Grid Scan Configuration</h2>
+                <p style={{ fontSize: 13, color: "#64748b", margin: 0 }}>Configure the global API key and provider for local grid rankings.</p>
+              </div>
+            </div>
+          </div>
+          <div className="s-card-body" style={{ display: "flex", flexDirection: "column", gap: 20 }}>
+            <div>
+              <label style={{ display: "block", fontSize: 13, fontWeight: 600, color: "#374151", marginBottom: 6 }}>SERP Provider</label>
+              <select
+                value={localSettings?.serpProvider || "serpapi"}
+                onChange={e => updateSettings({ serpProvider: e.target.value })}
+                style={{ width: "100%", padding: "10px 14px", background: "#fff", border: "1px solid #eaeaea", borderRadius: 8, fontSize: 14 }}
+              >
+                <option value="serpapi">SerpApi (Google Maps Engine)</option>
+                <option value="valueserp">Value SERP (Traject Data)</option>
+                <option value="dataforseo">DataForSEO (Live Google Maps)</option>
+              </select>
+            </div>
+
+            <div>
+              <label style={{ display: "block", fontSize: 13, fontWeight: 600, color: "#374151", marginBottom: 6 }}>API Key / Token</label>
+              <input
+                type="password"
+                placeholder={localSettings?.serpApiKey ? "••••••••••••••••" : "Enter API key"}
+                value={localSettings?.serpApiKey || ""}
+                onChange={e => updateSettings({ serpApiKey: e.target.value })}
+                style={{ width: "100%", padding: "10px 14px", background: "#fff", border: "1px solid #eaeaea", borderRadius: 8, fontSize: 14 }}
+              />
+            </div>
+
+            {(localSettings?.serpProvider === "dataforseo") && (
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
+                <div>
+                  <label style={{ display: "block", fontSize: 13, fontWeight: 600, color: "#374151", marginBottom: 6 }}>DataForSEO API Login (Username)</label>
+                  <input
+                    type="text"
+                    placeholder="Enter login email"
+                    value={localSettings?.dataforseoUsername || ""}
+                    onChange={e => updateSettings({ dataforseoUsername: e.target.value })}
+                    style={{ width: "100%", padding: "10px 14px", background: "#fff", border: "1px solid #eaeaea", borderRadius: 8, fontSize: 14 }}
+                  />
+                </div>
+                <div>
+                  <label style={{ display: "block", fontSize: 13, fontWeight: 600, color: "#374151", marginBottom: 6 }}>DataForSEO API Password</label>
+                  <input
+                    type="password"
+                    placeholder={localSettings?.dataforseoPassword ? "••••••••••••••••" : "Enter API password"}
+                    value={localSettings?.dataforseoPassword || ""}
+                    onChange={e => updateSettings({ dataforseoPassword: e.target.value })}
+                    style={{ width: "100%", padding: "10px 14px", background: "#fff", border: "1px solid #eaeaea", borderRadius: 8, fontSize: 14 }}
+                  />
+                </div>
+              </div>
+            )}
+
+            <div style={{ display: "flex", borderTop: "1px solid #eaeaea", paddingTop: 20, marginTop: 8 }}>
+              <button
+                onClick={handleSaveSettings}
+                disabled={savingSettings}
+                className="btn btn-primary"
+                style={{ fontSize: 14, padding: "10px 20px", marginLeft: "auto", display: "flex", alignItems: "center", gap: 8 }}
+              >
+                {savingSettings ? <Loader2 className="anim-spin" style={{ width: 16, height: 16 }} /> : <Save size={16} />}
+                {savingSettings ? "Saving..." : "Save Configuration"}
               </button>
             </div>
           </div>

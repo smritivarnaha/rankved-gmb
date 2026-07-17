@@ -37,8 +37,34 @@ async function getSettings() {
 }
 
 export async function GET() {
-  const settings = await getSettings();
-  return NextResponse.json(settings);
+  const session = await getServerSession(authOptions);
+  const settings = await getSettings() as any;
+  
+  const isSuperAdmin = session && (session.user as any).role === "SUPER_ADMIN";
+  
+  if (!isSuperAdmin) {
+    // Hide completely for non-admins
+    return NextResponse.json({
+      id: settings.id,
+      loginBgUrl: settings.loginBgUrl,
+      loginHeading: settings.loginHeading,
+      loginDescription: settings.loginDescription,
+      loginBgOpacity: settings.loginBgOpacity,
+      aiFeaturesEnabled: settings.aiFeaturesEnabled,
+      sidebarLogoUrl: settings.sidebarLogoUrl,
+      sidebarText: settings.sidebarText,
+      sidebarLogoShape: settings.sidebarLogoShape,
+      sidebarLogoSize: settings.sidebarLogoSize,
+      sidebarTextSize: settings.sidebarTextSize,
+    });
+  }
+
+  // For Super Admin, return masked key placeholders so they know they are set
+  return NextResponse.json({
+    ...settings,
+    serpApiKey: settings.serpApiKey ? "••••••••••••••••" : null,
+    dataforseoPassword: settings.dataforseoPassword ? "••••••••••••••••" : null,
+  });
 }
 
 export async function POST(req: NextRequest) {
@@ -72,6 +98,12 @@ export async function POST(req: NextRequest) {
     const scheduledTemplateSubject = formData.get("scheduledTemplateSubject") as string;
     const scheduledTemplateBody = formData.get("scheduledTemplateBody") as string;
 
+    // Admin SERP Settings
+    const serpProvider = formData.get("serpProvider") as string;
+    const serpApiKey = formData.get("serpApiKey") as string;
+    const dataforseoUsername = formData.get("dataforseoUsername") as string;
+    const dataforseoPassword = formData.get("dataforseoPassword") as string;
+
     const updateData: any = {};
     if (heading) updateData.loginHeading = heading;
     if (description) updateData.loginDescription = description;
@@ -92,6 +124,15 @@ export async function POST(req: NextRequest) {
     if (failureTemplateBody !== null) updateData.failureTemplateBody = failureTemplateBody;
     if (scheduledTemplateSubject !== null) updateData.scheduledTemplateSubject = scheduledTemplateSubject;
     if (scheduledTemplateBody !== null) updateData.scheduledTemplateBody = scheduledTemplateBody;
+
+    if (serpProvider !== null) updateData.serpProvider = serpProvider;
+    if (serpApiKey !== null && serpApiKey !== "" && serpApiKey !== "••••••••••••••••") {
+      updateData.serpApiKey = serpApiKey;
+    }
+    if (dataforseoUsername !== null) updateData.dataforseoUsername = dataforseoUsername;
+    if (dataforseoPassword !== null && dataforseoPassword !== "" && dataforseoPassword !== "••••••••••••••••") {
+      updateData.dataforseoPassword = dataforseoPassword;
+    }
 
     // GBP Intelligence Monitoring
     const monitoringEnabled = formData.get("monitoringEnabled") as string;
