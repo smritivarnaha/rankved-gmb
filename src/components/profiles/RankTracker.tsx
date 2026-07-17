@@ -332,7 +332,7 @@ export default function RankTracker() {
       `}</style>
 
       {/* LEFT PANEL: CONFIG & RESULTS */}
-      <div style={{ display: "flex", flexDirection: "column", background: "#fff", borderRight: "1px solid #e2e8f0", zIndex: 10 }}>
+      <div style={{ display: "flex", flexDirection: "column", background: "#fff", borderRight: "1px solid #e2e8f0", zIndex: 10, height: "100%", minHeight: 0 }}>
         {/* Top Header */}
         <div style={{ padding: "18px 20px", borderBottom: "1px solid #f1f5f9" }}>
           <h2 style={{ fontSize: 16, fontWeight: 700, color: "#0f172a", margin: 0, display: "flex", alignItems: "center", gap: 8 }}>
@@ -626,7 +626,7 @@ export default function RankTracker() {
       {/* RIGHT PANEL: LEAFLET MAP WITH OVERLAYS */}
       <div style={{ position: "relative", height: "100%", width: "100%" }}>
         {/* Floating Top-Left Control Bar */}
-        <div style={{ position: "absolute", left: 16, top: 16, zIndex: 100, display: "flex", flexDirection: "column", gap: 10 }}>
+        <div style={{ position: "absolute", left: 16, top: 16, zIndex: 1000, display: "flex", flexDirection: "column", gap: 10 }}>
           {/* Competitor toggler */}
           <div style={{ display: "flex", alignItems: "center", gap: 10, background: "#fff", padding: "8px 14px", borderRadius: 8, boxShadow: "0 2px 8px rgba(0,0,0,0.08)", border: "1px solid #e2e8f0" }}>
             <Settings size={14} color="#64748b" />
@@ -660,7 +660,7 @@ export default function RankTracker() {
         </div>
 
         {/* Floating Top-Right Actions & Visual Mode Toggles */}
-        <div style={{ position: "absolute", right: 16, top: 16, zIndex: 100, display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 10 }}>
+        <div style={{ position: "absolute", right: 16, top: 16, zIndex: 1000, display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 10 }}>
           {/* Action buttons list */}
           <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
             <button style={{ display: "flex", alignItems: "center", gap: 8, padding: "8px 14px", background: "#fff", border: "1px solid #e2e8f0", borderRadius: 8, fontSize: 12, fontWeight: 600, color: "#334155", boxShadow: "0 2px 8px rgba(0,0,0,0.05)", cursor: "pointer" }}>
