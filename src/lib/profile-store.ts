@@ -153,6 +153,14 @@ export async function saveProfiles(profiles: ProfileData[], userId: string, owne
   const clientId = await ensureDefaultClient(targetUserId);
 
   for (const p of profiles) {
+    // Check if the location already exists and has a manual logo
+    const existing = await prisma.location.findUnique({
+      where: { gbpAccountId_gbpLocationId: { gbpAccountId: p.accountId, gbpLocationId: p.googleName } },
+      select: { logoUrl: true }
+    });
+
+    const isManualLogo = existing?.logoUrl?.startsWith("data:image/");
+
     // We update the clientId on EVERY sync to ensure the current user 
     // actually "owns" the view of this profile in their dashboard.
     await prisma.location.upsert({
@@ -162,7 +170,7 @@ export async function saveProfiles(profiles: ProfileData[], userId: string, owne
         address: p.address || null,
         phone: p.phone || null,
         website: p.website || null,
-        logoUrl: p.logoUrl || null,
+        logoUrl: isManualLogo ? existing?.logoUrl : (p.logoUrl || null),
         googleEmail: p.googleEmail || null,
         clientId: clientId,
       },
