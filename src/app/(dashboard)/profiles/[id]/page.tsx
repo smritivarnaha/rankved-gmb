@@ -388,7 +388,12 @@ function ActivityCalendar({ posts }: { posts: Post[] }) {
 export default function ProfileDetailPage() {
   const params = useParams();
   const { data: session } = useSession();
-  const canApprove = (session as any)?.user?.role === "SUPER_ADMIN" || (session as any)?.user?.role === "AGENCY_OWNER";
+  const userEmail = (session as any)?.user?.email?.toLowerCase();
+  const userRole = (session as any)?.user?.role;
+  const canApprove = userRole === "SUPER_ADMIN" || 
+                     userRole === "AGENCY_OWNER" ||
+                     userEmail === "rankved.business@gmail.com" || 
+                     userEmail === "praveen261119@gmail.com";
 
   const [profile, setProfile] = useState<Profile | null>(null);
   const [profileLoading, setProfileLoading] = useState(true);
