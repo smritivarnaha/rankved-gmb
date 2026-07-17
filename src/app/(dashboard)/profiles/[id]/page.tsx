@@ -711,19 +711,6 @@ export default function ProfileDetailPage() {
           >
             Reviews
           </button>
-          {canApprove && (
-            <button 
-              onClick={() => setActiveTab("RANK_TRACKER")}
-              style={{ 
-                padding: "10px 4px", fontSize: 14, fontWeight: 600, border: "none", background: "none", cursor: "pointer",
-                color: activeTab === "RANK_TRACKER" ? "#2563eb" : "#94a3b8",
-                borderBottom: activeTab === "RANK_TRACKER" ? "2px solid #2563eb" : "2px solid transparent",
-                transition: "all 0.2s"
-              }}
-            >
-              Local Rank Tracker
-            </button>
-          )}
         </div>
       </div>
 
@@ -733,8 +720,6 @@ export default function ProfileDetailPage() {
         </div>
       ) : activeTab === "REVIEWS" ? (
         <ReviewManager profileId={profile.id} />
-      ) : activeTab === "RANK_TRACKER" ? (
-        <RankTracker profileId={profile.id} profileName={profile.name} address={profile.address} />
       ) : (
         /* Original Two-Column Layout */
         <div style={{ display: "grid", gridTemplateColumns: "270px 1fr", gap: 18, alignItems: "start" }}>

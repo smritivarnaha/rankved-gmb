@@ -22,6 +22,7 @@ import { X } from "lucide-react";
         { name: "Command Center", href: "/command-center", icon: Zap },
         { name: "Performance", href: "/performance", icon: BarChart3 },
         { name: "Profiles", href: "/profiles", icon: MapPin },
+        { name: "Rank Tracker", href: "/rank-tracker", icon: Globe, superAdminOnly: true },
         { name: "Prompts", href: "/prompts", icon: FileText, aiOnly: true },
       ]
     },
@@ -76,7 +77,9 @@ export function Sidebar() {
   const { mobileOpen, closeMobile } = useMobileLayout();
   const user = (session as any)?.user;
   const role = user?.role;
-  const isSuperAdmin = role === "SUPER_ADMIN" || user?.email?.toLowerCase() === "rankved.business@gmail.com";
+  const isSuperAdmin = role === "SUPER_ADMIN" || 
+                       user?.email?.toLowerCase() === "rankved.business@gmail.com" ||
+                       user?.email?.toLowerCase() === "praveen261119@gmail.com";
 
   return (
     <>
