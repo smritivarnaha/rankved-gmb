@@ -114,7 +114,9 @@ export async function POST(
         undefined, // targetPlaceId match fallback
         {
           dataforseoUsername: settings?.dataforseoUsername || "",
-          dataforseoPassword: settings?.dataforseoPassword || ""
+          dataforseoPassword: settings?.dataforseoPassword || "",
+          radiusKm: parsedRadiusKm,
+          address: location.address || ""
         }
       )
     );

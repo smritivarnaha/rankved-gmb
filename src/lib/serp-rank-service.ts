@@ -6,6 +6,7 @@ export interface Competitor {
   placeId?: string;
   rating?: number;
   reviews?: number;
+  address?: string;
 }
 
 export interface GridPoint {
@@ -16,11 +17,31 @@ export interface GridPoint {
 }
 
 /**
+ * Maps scan radius to optimal Google Maps zoom level
+ */
+function getGoogleMapsZoom(radiusKm: number): number {
+  if (radiusKm <= 1.0) return 16;
+  if (radiusKm <= 2.5) return 15;
+  if (radiusKm <= 5.0) return 14;
+  if (radiusKm <= 10.0) return 13;
+  return 12;
+}
+
+/**
+ * Extracts country code (gl) from profile address
+ */
+function getCountryCode(address?: string): string {
+  if (!address) return "us";
+  const addr = address.toLowerCase();
+  if (addr.includes("india") || addr.includes(", in")) return "in";
+  if (addr.includes("australia") || addr.includes(", au")) return "au";
+  if (addr.includes("united kingdom") || addr.includes(", uk") || addr.includes(", gbr")) return "uk";
+  if (addr.includes("canada") || addr.includes(", ca")) return "ca";
+  return "us";
+}
+
+/**
  * Generates grid points around a center coordinate.
- * @param centerLat Center latitude
- * @param centerLng Center longitude
- * @param gridSize Grid size (3 for 3x3, 5 for 5x5, 7 for 7x7)
- * @param sideLengthKm The total width/height side length of the grid in kilometers
  */
 export function generateGridCoordinates(
   centerLat: number,
@@ -35,24 +56,17 @@ export function generateGridCoordinates(
     return [{ lat: centerLat, lng: centerLng }];
   }
 
-  // Delta step size in kilometers
   const stepKm = sideLengthKm / (gridSize - 1);
   const halfSideKm = sideLengthKm / 2;
-
-  // Degrees per kilometer
   const latDegreePerKm = 1.0 / 111.32;
 
   for (let i = 0; i < gridSize; i++) {
-    // dy goes from north to south (+halfSideKm to -halfSideKm)
     const dy = halfSideKm - i * stepKm;
     const deltaLat = dy * latDegreePerKm;
     const pointLat = centerLat + deltaLat;
-
-    // Approximate longitude scale factor based on point's latitude
     const lngDegreePerKm = 1.0 / (111.32 * Math.cos((pointLat * Math.PI) / 180.0));
 
     for (let j = 0; j < gridSize; j++) {
-      // dx goes from west to east (-halfSideKm to +halfSideKm)
       const dx = -halfSideKm + j * stepKm;
       const deltaLng = dx * lngDegreePerKm;
       const pointLng = centerLng + deltaLng;
@@ -78,13 +92,16 @@ export async function scanPointRank(
   lng: number,
   targetPlaceName: string,
   targetPlaceId?: string,
-  extraConfig?: { dataforseoUsername?: string; dataforseoPassword?: string }
+  extraConfig?: { dataforseoUsername?: string; dataforseoPassword?: string; radiusKm?: number; address?: string }
 ): Promise<{ rank: number | null; competitors: Competitor[] }> {
   try {
+    const radiusKm = extraConfig?.radiusKm || 2.5;
+    const address = extraConfig?.address || "";
+
     if (provider === "serpapi") {
-      return await scanViaSerpApi(apiKey, keyword, lat, lng, targetPlaceName, targetPlaceId);
+      return await scanViaSerpApi(apiKey, keyword, lat, lng, targetPlaceName, targetPlaceId, radiusKm, address);
     } else if (provider === "valueserp") {
-      return await scanViaValueSerp(apiKey, keyword, lat, lng, targetPlaceName, targetPlaceId);
+      return await scanViaValueSerp(apiKey, keyword, lat, lng, targetPlaceName, targetPlaceId, radiusKm, address);
     } else if (provider === "dataforseo") {
       return await scanViaDataForSeo(
         apiKey,
@@ -114,9 +131,13 @@ async function scanViaSerpApi(
   lat: number,
   lng: number,
   targetName: string,
-  targetPlaceId?: string
+  targetPlaceId?: string,
+  radiusKm = 2.5,
+  address = ""
 ): Promise<{ rank: number | null; competitors: Competitor[] }> {
-  const url = `https://serpapi.com/search.json?engine=google_maps&q=${encodeURIComponent(keyword)}&ll=@${lat},${lng},14z&type=search&api_key=${apiKey}`;
+  const zoom = getGoogleMapsZoom(radiusKm);
+  const gl = getCountryCode(address);
+  const url = `https://serpapi.com/search.json?engine=google_maps&q=${encodeURIComponent(keyword)}&ll=@${lat},${lng},${zoom}z&type=search&hl=en&gl=${gl}&api_key=${apiKey}`;
   
   const res = await fetch(url);
   if (!res.ok) {
@@ -138,9 +159,13 @@ async function scanViaValueSerp(
   lat: number,
   lng: number,
   targetName: string,
-  targetPlaceId?: string
+  targetPlaceId?: string,
+  radiusKm = 2.5,
+  address = ""
 ): Promise<{ rank: number | null; competitors: Competitor[] }> {
-  const url = `https://api.valueserp.com/search?engine=google_maps&q=${encodeURIComponent(keyword)}&ll=@${lat},${lng},14z&api_key=${apiKey}`;
+  const zoom = getGoogleMapsZoom(radiusKm);
+  const gl = getCountryCode(address);
+  const url = `https://api.valueserp.com/search?engine=google_maps&q=${encodeURIComponent(keyword)}&ll=@${lat},${lng},${zoom}z&hl=en&gl=${gl}&api_key=${apiKey}`;
   
   const res = await fetch(url);
   if (!res.ok) {
@@ -166,7 +191,6 @@ async function scanViaDataForSeo(
   targetName: string,
   targetPlaceId?: string
 ): Promise<{ rank: number | null; competitors: Competitor[] }> {
-  // Use either base64 basic auth or credentials
   const authString = Buffer.from(`${username}:${password || apiKey}`).toString("base64");
   
   const res = await fetch("https://api.dataforseo.com/v3/serp/google/maps/live/advanced", {
@@ -208,14 +232,18 @@ async function scanViaDataForSeo(
       rank: itemRank,
       placeId: item.place_id,
       rating: item.rating?.value,
-      reviews: item.rating?.votes_count
+      reviews: item.rating?.votes_count,
+      address: item.address
     };
 
     competitors.push(comp);
 
-    // Match place ID or name
+    // Lenient case-insensitive partial substring match
     const matchId = targetPlaceId && item.place_id === targetPlaceId;
-    const matchName = item.title && item.title.toLowerCase().trim() === cleanTargetName;
+    const matchName = item.title && (
+      item.title.toLowerCase().includes(cleanTargetName) ||
+      cleanTargetName.includes(item.title.toLowerCase())
+    );
 
     if ((matchId || matchName) && rank === null) {
       rank = itemRank;
@@ -224,7 +252,7 @@ async function scanViaDataForSeo(
 
   return {
     rank,
-    competitors: competitors.slice(0, 10) // Cache top 10 competitors
+    competitors: competitors.slice(0, 10)
   };
 }
 
@@ -249,14 +277,18 @@ function parseLocalResults(
       rank: itemRank,
       placeId: item.place_id || item.data_id,
       rating: item.rating,
-      reviews: item.reviews
+      reviews: item.reviews,
+      address: item.address || item.address_info || item.vicinity
     };
 
     competitors.push(comp);
 
-    // Match place ID or title
+    // Lenient case-insensitive partial substring match
     const matchId = targetPlaceId && item.place_id === targetPlaceId;
-    const matchName = item.title && item.title.toLowerCase().trim() === cleanTargetName;
+    const matchName = item.title && (
+      item.title.toLowerCase().includes(cleanTargetName) ||
+      cleanTargetName.includes(item.title.toLowerCase())
+    );
 
     if ((matchId || matchName) && rank === null) {
       rank = itemRank;
