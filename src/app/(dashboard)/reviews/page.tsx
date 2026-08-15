@@ -4,7 +4,7 @@ import { useState, useMemo, useEffect } from "react";
 import {
   Star, MessageSquare, Search, RefreshCw, AlertCircle, CheckCircle2,
   ExternalLink, Building2, Clock, Loader2, Send, ChevronDown, Check,
-  Sparkles, ArrowUpDown, Filter
+  Sparkles, ArrowUpDown, Filter, Edit3, X
 } from "lucide-react";
 import useSWR from "swr";
 
@@ -104,13 +104,14 @@ function truncateName(name: string, maxLen = 8): string {
   return name.slice(0, maxLen) + "…";
 }
 
-interface PendingReviewCardProps {
+interface ReviewCardProps {
   review: any;
-  onRepliedSuccess: (reviewName: string) => void;
+  onRepliedSuccess: (reviewName: string, newComment: string) => void;
 }
 
-function PendingReviewCard({ review, onRepliedSuccess }: PendingReviewCardProps) {
-  const [replyText, setReplyText] = useState("");
+function ReviewCard({ review, onRepliedSuccess }: ReviewCardProps) {
+  const [replyText, setReplyText] = useState(review.reviewReply?.comment || "");
+  const [isEditing, setIsEditing] = useState(!review.isReplied);
   const [isPosting, setIsPosting] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
@@ -137,9 +138,10 @@ function PendingReviewCard({ review, onRepliedSuccess }: PendingReviewCardProps)
       const data = await res.json();
       if (res.ok && data.success) {
         setSuccessMsg("Reply posted successfully to Google!");
+        setIsEditing(false);
         setTimeout(() => {
-          onRepliedSuccess(review.name);
-        }, 800);
+          onRepliedSuccess(review.name, replyText.trim());
+        }, 600);
       } else {
         setErrorMsg(data.error || "Failed to post reply to Google.");
       }
@@ -160,20 +162,31 @@ function PendingReviewCard({ review, onRepliedSuccess }: PendingReviewCardProps)
         boxShadow: "0 1px 3px rgba(0,0,0,0.02)",
         display: "flex",
         flexDirection: "column",
-        gap: 16,
+        gap: 14,
         transition: "all 0.2s ease",
         position: "relative",
       }}
-      className="pending-review-card"
+      className="review-card-item"
     >
       {/* Top Header info: Reviewer + Profile Source Badge */}
       <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 12 }}>
         <div style={{ display: "flex", alignItems: "center", gap: 12, minWidth: 0 }}>
           <Avatar name={review.reviewer?.displayName || "?"} photoUrl={review.reviewer?.profilePhotoUrl} size={40} />
           <div style={{ minWidth: 0 }}>
-            <p style={{ margin: 0, fontWeight: 700, fontSize: 14, color: "#0f172a", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-              {review.reviewer?.displayName || "Anonymous Customer"}
-            </p>
+            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+              <p style={{ margin: 0, fontWeight: 700, fontSize: 14, color: "#0f172a", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                {review.reviewer?.displayName || "Anonymous Customer"}
+              </p>
+              {review.isReplied ? (
+                <span style={{ fontSize: 11, fontWeight: 700, color: "#15803d", background: "#f0fdf4", border: "1px solid #bbf7d0", padding: "1px 7px", borderRadius: 12 }}>
+                  ✓ Replied
+                </span>
+              ) : (
+                <span style={{ fontSize: 11, fontWeight: 700, color: "#b45309", background: "#fef3c7", border: "1px solid #fde68a", padding: "1px 7px", borderRadius: 12 }}>
+                  ⏳ Pending
+                </span>
+              )}
+            </div>
             <div style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 4 }}>
               <StarRating rating={rating} size={14} />
               <span style={{ fontSize: 12, fontWeight: 500, color: "#64748b" }}>• {dateFormatted}</span>
@@ -217,6 +230,26 @@ function PendingReviewCard({ review, onRepliedSuccess }: PendingReviewCardProps)
         )}
       </div>
 
+      {/* Existing Reply Display (if already replied and not currently editing) */}
+      {review.isReplied && !isEditing && review.reviewReply?.comment && (
+        <div style={{ background: "#eff6ff", border: "1px solid #dbeafe", borderRadius: 10, padding: "12px 14px" }}>
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 4 }}>
+            <span style={{ fontSize: 11, fontWeight: 700, color: "#1d4ed8", textTransform: "uppercase", letterSpacing: "0.04em" }}>
+              Owner Response
+            </span>
+            <button
+              onClick={() => setIsEditing(true)}
+              style={{ display: "flex", alignItems: "center", gap: 4, background: "none", border: "none", color: "#2563eb", fontSize: 12, fontWeight: 600, cursor: "pointer", padding: 0 }}
+            >
+              <Edit3 size={12} /> Edit Reply
+            </button>
+          </div>
+          <p style={{ margin: 0, fontSize: 13, color: "#1e3a8a", lineHeight: 1.55 }}>
+            {review.reviewReply.comment}
+          </p>
+        </div>
+      )}
+
       {/* Error / Success feedback */}
       {errorMsg && (
         <div style={{ padding: "8px 12px", background: "#fef2f2", border: "1px solid #fecaca", borderRadius: 8, color: "#dc2626", fontSize: 12, display: "flex", alignItems: "center", gap: 6 }}>
@@ -229,113 +262,134 @@ function PendingReviewCard({ review, onRepliedSuccess }: PendingReviewCardProps)
         </div>
       )}
 
-      {/* Reply Input Box */}
-      <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-          <label style={{ fontSize: 11, fontWeight: 700, color: "#475569", textTransform: "uppercase", letterSpacing: "0.04em" }}>
-            Write Reply
-          </label>
-          <span style={{ fontSize: 11, color: replyText.length > 1400 ? "#ea580c" : "#94a3b8" }}>
-            {replyText.length} / 1500
-          </span>
-        </div>
+      {/* Reply Input Box (Visible if editing or pending) */}
+      {isEditing && (
+        <div style={{ display: "flex", flexDirection: "column", gap: 8, marginTop: 2 }}>
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+            <label style={{ fontSize: 11, fontWeight: 700, color: "#475569", textTransform: "uppercase", letterSpacing: "0.04em" }}>
+              {review.isReplied ? "Edit Your Reply" : "Write Reply"}
+            </label>
+            <span style={{ fontSize: 11, color: replyText.length > 1400 ? "#ea580c" : "#94a3b8" }}>
+              {replyText.length} / 1500
+            </span>
+          </div>
 
-        <textarea
-          value={replyText}
-          onChange={e => setReplyText(e.target.value)}
-          placeholder={`Reply to ${review.reviewer?.displayName || "this customer"} as the business owner...`}
-          rows={3}
-          maxLength={1500}
-          style={{
-            width: "100%",
-            padding: "10px 12px",
-            fontSize: 13,
-            borderRadius: 8,
-            border: "1px solid #cbd5e1",
-            background: "#ffffff",
-            color: "#0f172a",
-            outline: "none",
-            resize: "vertical",
-            fontFamily: "inherit",
-            lineHeight: 1.5,
-            transition: "border-color 0.15s ease",
-            boxSizing: "border-box",
-          }}
-          onFocus={e => e.target.style.borderColor = "#2563eb"}
-          onBlur={e => e.target.style.borderColor = "#cbd5e1"}
-        />
+          <textarea
+            value={replyText}
+            onChange={e => setReplyText(e.target.value)}
+            placeholder={`Reply to ${review.reviewer?.displayName || "this customer"} as the business owner...`}
+            rows={3}
+            maxLength={1500}
+            style={{
+              width: "100%",
+              padding: "10px 12px",
+              fontSize: 13,
+              borderRadius: 8,
+              border: "1px solid #cbd5e1",
+              background: "#ffffff",
+              color: "#0f172a",
+              outline: "none",
+              resize: "vertical",
+              fontFamily: "inherit",
+              lineHeight: 1.5,
+              transition: "border-color 0.15s ease",
+              boxSizing: "border-box",
+            }}
+            onFocus={e => e.target.style.borderColor = "#2563eb"}
+            onBlur={e => e.target.style.borderColor = "#cbd5e1"}
+          />
 
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "flex-end", gap: 8, marginTop: 4 }}>
-          {review.reviewUrl && (
-            <a
-              href={review.reviewUrl}
-              target="_blank"
-              rel="noopener noreferrer"
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "flex-end", gap: 8, marginTop: 4 }}>
+            {review.isReplied && (
+              <button
+                onClick={() => setIsEditing(false)}
+                style={{
+                  padding: "7px 12px",
+                  background: "#f1f5f9",
+                  color: "#475569",
+                  border: "none",
+                  borderRadius: 8,
+                  fontSize: 12,
+                  fontWeight: 600,
+                  cursor: "pointer",
+                }}
+              >
+                Cancel
+              </button>
+            )}
+
+            {review.reviewUrl && (
+              <a
+                href={review.reviewUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 4,
+                  fontSize: 12,
+                  color: "#64748b",
+                  textDecoration: "none",
+                  padding: "7px 12px",
+                  borderRadius: 8,
+                  background: "#f1f5f9",
+                }}
+              >
+                <ExternalLink size={13} /> View on Google
+              </a>
+            )}
+
+            <button
+              onClick={handlePostReply}
+              disabled={isPosting || !replyText.trim()}
               style={{
                 display: "flex",
                 alignItems: "center",
-                gap: 4,
-                fontSize: 12,
-                color: "#64748b",
-                textDecoration: "none",
-                padding: "7px 12px",
+                gap: 6,
+                padding: "8px 16px",
+                background: "#2563eb",
+                color: "#ffffff",
+                border: "none",
                 borderRadius: 8,
-                background: "#f1f5f9",
+                fontSize: 12,
+                fontWeight: 600,
+                cursor: isPosting || !replyText.trim() ? "not-allowed" : "pointer",
+                opacity: isPosting || !replyText.trim() ? 0.6 : 1,
+                transition: "all 0.15s ease",
               }}
             >
-              <ExternalLink size={13} /> View on Google
-            </a>
-          )}
-
-          <button
-            onClick={handlePostReply}
-            disabled={isPosting || !replyText.trim()}
-            style={{
-              display: "flex",
-              alignItems: "center",
-              gap: 6,
-              padding: "8px 16px",
-              background: "#2563eb",
-              color: "#ffffff",
-              border: "none",
-              borderRadius: 8,
-              fontSize: 12,
-              fontWeight: 600,
-              cursor: isPosting || !replyText.trim() ? "not-allowed" : "pointer",
-              opacity: isPosting || !replyText.trim() ? 0.6 : 1,
-              transition: "all 0.15s ease",
-            }}
-          >
-            {isPosting ? (
-              <>
-                <Loader2 size={13} className="animate-spin" /> Posting to Google...
-              </>
-            ) : (
-              <>
-                <Send size={13} /> Post Reply
-              </>
-            )}
-          </button>
+              {isPosting ? (
+                <>
+                  <Loader2 size={13} className="animate-spin" /> Posting to Google...
+                </>
+              ) : (
+                <>
+                  <Send size={13} /> {review.isReplied ? "Update Reply" : "Post Reply"}
+                </>
+              )}
+            </button>
+          </div>
         </div>
-      </div>
+      )}
     </div>
   );
 }
 
 export default function ReviewsPage() {
   const [selectedTab, setSelectedTab] = useState<string>("all"); // "all" | profileId
+  const [statusFilter, setStatusFilter] = useState<"pending" | "all" | "replied">("pending");
   const [searchQuery, setSearchQuery] = useState("");
   const [starFilter, setStarFilter] = useState<string>("all"); // "all" | "5" | "4" | "3" | "2" | "1"
   const [sortBy, setSortBy] = useState<"NEWEST" | "OLDEST" | "LOWEST_STAR" | "HIGHEST_STAR">("NEWEST");
   const [isSyncing, setIsSyncing] = useState(false);
   const [lastSyncTime, setLastSyncTime] = useState<Date>(new Date());
 
-  // Local optimistic state of reviews so replied reviews disappear immediately
+  // Local optimistic state of reviews
   const [localReviews, setLocalReviews] = useState<any[]>([]);
 
-  // Fetch reviews using SWR
+  // Fetch reviews using SWR (fetches all reviews so client can switch between pending & all instantly)
   const { data: reviewsRes, isLoading, mutate, error } = useSWR(
-    "/api/reviews?profileId=all&pendingOnly=true",
+    "/api/reviews?profileId=all",
     fetcher,
     { revalidateOnFocus: false }
   );
@@ -354,7 +408,7 @@ export default function ReviewsPage() {
   const handleLiveSync = async () => {
     setIsSyncing(true);
     try {
-      const res = await fetch("/api/reviews?profileId=all&pendingOnly=true&forceRefresh=true");
+      const res = await fetch("/api/reviews?profileId=all&forceRefresh=true");
       const data = await res.json();
       if (data?.data) {
         setLocalReviews(data.data);
@@ -369,8 +423,19 @@ export default function ReviewsPage() {
   };
 
   // Callback when a review is replied to
-  const handleRepliedSuccess = (reviewName: string) => {
-    setLocalReviews(prev => prev.filter(r => r.name !== reviewName));
+  const handleRepliedSuccess = (reviewName: string, newComment: string) => {
+    setLocalReviews(prev =>
+      prev.map(r => {
+        if (r.name === reviewName) {
+          return {
+            ...r,
+            isReplied: true,
+            reviewReply: { comment: newComment, updateTime: new Date().toISOString() },
+          };
+        }
+        return r;
+      })
+    );
   };
 
   const profilesList = reviewsRes?.profiles || [];
@@ -379,16 +444,26 @@ export default function ReviewsPage() {
   const dynamicPendingCounts = useMemo(() => {
     const counts: Record<string, number> = {};
     localReviews.forEach(r => {
-      if (r.profileId) {
+      if (r.profileId && !r.isReplied) {
         counts[r.profileId] = (counts[r.profileId] || 0) + 1;
       }
     });
     return counts;
   }, [localReviews]);
 
+  const totalPending = localReviews.filter(r => !r.isReplied).length;
+  const totalAll = localReviews.length;
+
   // Filter & Sort reviews
   const displayedReviews = useMemo(() => {
     let list = [...localReviews];
+
+    // Status Filter (pending vs all vs replied)
+    if (statusFilter === "pending") {
+      list = list.filter(r => !r.isReplied);
+    } else if (statusFilter === "replied") {
+      list = list.filter(r => r.isReplied);
+    }
 
     // Profile Tab Filter
     if (selectedTab !== "all") {
@@ -426,9 +501,7 @@ export default function ReviewsPage() {
     });
 
     return list;
-  }, [localReviews, selectedTab, starFilter, searchQuery, sortBy]);
-
-  const totalPending = localReviews.length;
+  }, [localReviews, statusFilter, selectedTab, starFilter, searchQuery, sortBy]);
 
   return (
     <div style={{ maxWidth: 1280, margin: "0 auto", padding: "24px 20px 80px", display: "flex", flexDirection: "column", gap: 20 }}>
@@ -475,7 +548,23 @@ export default function ReviewsPage() {
           background: rgba(255,255,255,0.25);
           color: #ffffff;
         }
-        .pending-review-card:hover {
+        .status-pill-btn {
+          padding: 6px 14px;
+          font-size: 12px;
+          font-weight: 600;
+          border-radius: 8px;
+          border: 1px solid #e2e8f0;
+          background: #ffffff;
+          color: #64748b;
+          cursor: pointer;
+          transition: all 0.15s ease;
+        }
+        .status-pill-btn.active {
+          background: #eff6ff;
+          color: #2563eb;
+          border-color: #bfdbfe;
+        }
+        .review-card-item:hover {
           border-color: #cbd5e1;
           box-shadow: 0 4px 12px rgba(0,0,0,0.04);
         }
@@ -490,10 +579,10 @@ export default function ReviewsPage() {
             </div>
             <div>
               <h1 style={{ fontSize: 20, fontWeight: 800, color: "#0f172a", margin: 0 }}>
-                Pending Review Replies
+                Review Reply Centre
               </h1>
               <p style={{ fontSize: 13, color: "#64748b", margin: "2px 0 0" }}>
-                Manage and respond to unanswered Google Business Profile reviews in real-time.
+                Manage, reply, and monitor customer reviews across all your Google Business Profiles in real-time.
               </p>
             </div>
           </div>
@@ -529,14 +618,41 @@ export default function ReviewsPage() {
         </div>
       </div>
 
-      {/* Top Banner: Profiles Horizontal Tabs (Max 8-9 Chars Truncated) */}
-      <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "0 4px" }}>
-          <span style={{ fontSize: 11, fontWeight: 800, color: "#64748b", textTransform: "uppercase", letterSpacing: "0.06em" }}>
-            Filter By Profile
-          </span>
+      {/* Error alert banner if any */}
+      {reviewsRes?.error && (
+        <div style={{ padding: "12px 16px", background: "#fef2f2", border: "1px solid #fecaca", borderRadius: 10, color: "#dc2626", fontSize: 13, display: "flex", alignItems: "center", gap: 8 }}>
+          <AlertCircle size={16} />
+          <span>{reviewsRes.error}</span>
+        </div>
+      )}
+
+      {/* Status Toggle & Profiles Horizontal Tabs (Max 8-9 Chars Truncated) */}
+      <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+        {/* Status Filters (Pending, All, Replied) */}
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: 8 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+            <button
+              className={`status-pill-btn ${statusFilter === "pending" ? "active" : ""}`}
+              onClick={() => setStatusFilter("pending")}
+            >
+              ⏳ Pending Replies ({totalPending})
+            </button>
+            <button
+              className={`status-pill-btn ${statusFilter === "all" ? "active" : ""}`}
+              onClick={() => setStatusFilter("all")}
+            >
+              All Reviews ({totalAll})
+            </button>
+            <button
+              className={`status-pill-btn ${statusFilter === "replied" ? "active" : ""}`}
+              onClick={() => setStatusFilter("replied")}
+            >
+              ✓ Replied ({totalAll - totalPending})
+            </button>
+          </div>
+
           <span style={{ fontSize: 12, fontWeight: 600, color: totalPending > 0 ? "#ea580c" : "#16a34a" }}>
-            {totalPending > 0 ? `⏳ ${totalPending} reviews awaiting reply` : "✓ All reviews replied"}
+            {totalPending > 0 ? `⏳ ${totalPending} pending reply` : "✓ All reviews answered"}
           </span>
         </div>
 
@@ -556,14 +672,15 @@ export default function ReviewsPage() {
             onClick={() => setSelectedTab("all")}
             className={`profile-nav-tab ${selectedTab === "all" ? "active" : ""}`}
           >
-            <span>All</span>
-            <span className="tab-badge">{totalPending}</span>
+            <span>All Profiles</span>
+            <span className="tab-badge">{statusFilter === "pending" ? totalPending : totalAll}</span>
           </button>
 
           {/* Individual Profile Tabs */}
           {profilesList.map((p: any) => {
-            const count = dynamicPendingCounts[p.id] || 0;
+            const pendingForProfile = dynamicPendingCounts[p.id] || 0;
             const shortName = truncateName(p.name, 9);
+            const badgeCount = statusFilter === "pending" ? pendingForProfile : (p.totalCount || 0);
 
             return (
               <button
@@ -576,11 +693,11 @@ export default function ReviewsPage() {
                 <span
                   className="tab-badge"
                   style={{
-                    background: count > 0 && selectedTab !== p.id ? "#fef3c7" : undefined,
-                    color: count > 0 && selectedTab !== p.id ? "#b45309" : undefined,
+                    background: pendingForProfile > 0 && selectedTab !== p.id ? "#fef3c7" : undefined,
+                    color: pendingForProfile > 0 && selectedTab !== p.id ? "#b45309" : undefined,
                   }}
                 >
-                  {count}
+                  {badgeCount}
                 </span>
               </button>
             );
@@ -606,7 +723,7 @@ export default function ReviewsPage() {
         <div style={{ position: "relative", flex: 1, minWidth: 220, maxWidth: 400 }}>
           <input
             type="text"
-            placeholder="Search by customer, comment, or profile..."
+            placeholder="Search customer, comment, or profile..."
             value={searchQuery}
             onChange={e => setSearchQuery(e.target.value)}
             style={{
@@ -669,7 +786,7 @@ export default function ReviewsPage() {
               }}
             >
               <option value="NEWEST">Newest Date First</option>
-              <option value="OLDEST">Oldest Date First (Waiting longest)</option>
+              <option value="OLDEST">Oldest Date First</option>
               <option value="LOWEST_STAR">Lowest Star Rating First</option>
               <option value="HIGHEST_STAR">Highest Star Rating First</option>
             </select>
@@ -682,7 +799,7 @@ export default function ReviewsPage() {
         <div style={{ padding: "80px 20px", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 12, background: "#ffffff", border: "1px solid #e2e8f0", borderRadius: 14 }}>
           <Loader2 size={32} className="animate-spin" color="#2563eb" />
           <p style={{ fontSize: 13, fontWeight: 600, color: "#64748b", margin: 0 }}>
-            Fetching pending Google reviews in real-time...
+            Fetching Google reviews in real-time...
           </p>
         </div>
       ) : displayedReviews.length === 0 ? (
@@ -704,18 +821,18 @@ export default function ReviewsPage() {
             <CheckCircle2 size={28} />
           </div>
           <h3 style={{ fontSize: 18, fontWeight: 800, color: "#0f172a", margin: 0 }}>
-            All Caught Up! 🎉
+            {statusFilter === "pending" ? "All Caught Up! 🎉" : "No Reviews Found"}
           </h3>
           <p style={{ fontSize: 13, color: "#64748b", maxWidth: 420, margin: 0 }}>
-            {selectedTab !== "all"
-              ? "There are no pending reviews awaiting response for this profile."
-              : "Zero pending reviews found across all connected locations. All customer feedback has been answered!"}
+            {statusFilter === "pending"
+              ? "Zero pending reviews found awaiting response. All customer feedback has been answered!"
+              : "No reviews match your current filters or selected profile."}
           </p>
         </div>
       ) : (
         <div style={{ display: "grid", gridTemplateColumns: "1fr", gap: 16 }}>
           {displayedReviews.map((r: any) => (
-            <PendingReviewCard
+            <ReviewCard
               key={r.name || r.reviewId}
               review={r}
               onRepliedSuccess={handleRepliedSuccess}
