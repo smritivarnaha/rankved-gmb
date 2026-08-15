@@ -63,13 +63,10 @@ export async function GET(req: NextRequest) {
     },
   });
 
-  if (duePosts.length === 0) {
-    return NextResponse.json({ message: "No due posts", processed: 0 });
-  }
-
-  console.log(`[CRON] Found ${duePosts.length} due posts to publish`);
-  
   const results: { id: string; status: string; error?: string }[] = [];
+
+  if (duePosts.length > 0) {
+    console.log(`[CRON] Found ${duePosts.length} due posts to publish`);
 
   for (const dbPost of duePosts) {
     // Attempt to lock the post by updating its status from SCHEDULED to PUBLISHING.
@@ -158,6 +155,7 @@ export async function GET(req: NextRequest) {
     // Brief delay between posts to avoid GBP rate limits
     await new Promise(r => setTimeout(r, 500));
   }
+}
 
   // --- Auto-cleanup: Delete images from Supabase to save 50MB free quota ---
   // We delete images that have been published for more than 24 hours.
