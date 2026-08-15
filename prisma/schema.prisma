@@ -99,6 +99,7 @@ model User {
   // SMM Fields
   smmAssignedClients Client[]    @relation("SmmClientAssignments")
   smmPosts           SmmPost[]
+  scheduledReviewReplies ScheduledReviewReply[]
 
   createdAt       DateTime    @default(now())
   updatedAt       DateTime    @updatedAt
@@ -144,6 +145,7 @@ model Location {
   posts         Post[]
   notifications Notification[]
   assignedUsers User[] @relation("LocationAssignments")
+  scheduledReviewReplies ScheduledReviewReply[]
 
   // AI Configuration
   aiInstructions         String?   @db.Text
@@ -479,5 +481,30 @@ model RankScanPoint {
   createdAt    DateTime    @default(now())
 
   @@index([scanId])
+}
+
+model ScheduledReviewReply {
+  id               String    @id @default(cuid())
+  locationId       String
+  location         Location  @relation(fields: [locationId], references: [id], onDelete: Cascade)
+  userId           String
+  user             User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  reviewName       String    // Google review resource name: accounts/xxx/locations/yyy/reviews/zzz
+  reviewId         String?
+  reviewerName     String?
+  rating           Int?
+  reviewComment    String?   @db.Text
+  reviewCreateTime DateTime?
+  replyComment     String    @db.Text
+  scheduledFor     DateTime
+  status           String    @default("SCHEDULED") // SCHEDULED, PUBLISHED, FAILED
+  publishedAt      DateTime?
+  errorMessage     String?
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+
+  @@index([locationId])
+  @@index([userId])
+  @@index([status, scheduledFor])
 }
 

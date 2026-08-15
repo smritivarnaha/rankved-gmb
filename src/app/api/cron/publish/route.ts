@@ -201,35 +201,74 @@ export async function GET(req: NextRequest) {
     }
   }
 
-  // --- Auto-update sitemaps (once every 25 hours per profile) ---
+  // --- Auto-publish due Scheduled Review Replies ---
   try {
-    const twentyFiveHoursAgo = new Date(Date.now() - 25 * 60 * 60 * 1000);
-    const locationsToUpdate = await prisma.location.findMany({
+    const dueReplies = await prisma.scheduledReviewReply.findMany({
       where: {
-        OR: [
-          { sitemapUpdatedAt: null },
-          { sitemapUpdatedAt: { lte: twentyFiveHoursAgo } }
-        ],
-        AND: {
-          OR: [
-            { website: { not: null, notIn: [""] } },
-            { aiWebsite: { not: null, notIn: [""] } }
-          ]
-        }
+        status: "SCHEDULED",
+        scheduledFor: { lte: now },
       },
-      take: 5 // Limit to 5 updates per run to keep execution fast and prevent timeouts
+      include: {
+        location: true,
+      },
+      take: 10,
     });
 
-    if (locationsToUpdate.length > 0) {
-      console.log(`[CRON] Found ${locationsToUpdate.length} locations needing sitemap updates. Auto-updating now...`);
-      const { autoFetchLocationSitemap } = await import("@/lib/sitemap-helper");
-      for (const loc of locationsToUpdate) {
-        const res = await autoFetchLocationSitemap(loc.id);
-        console.log(`[CRON] Sitemap auto-update for location "${loc.name}" (${loc.id}): ${res.success ? "SUCCESS" : "FAILED"} (${res.count} URLs)`);
+    if (dueReplies.length > 0) {
+      console.log(`[CRON] Processing ${dueReplies.length} due scheduled review replies...`);
+      const { getValidGoogleAccounts, getEmailFromIdToken } = await import("@/lib/google-accounts");
+
+      for (const rep of dueReplies) {
+        try {
+          const accounts = await getValidGoogleAccounts(rep.userId);
+          let token: string | null = null;
+          if (rep.location.googleEmail) {
+            const match = accounts.find(a => getEmailFromIdToken(a.id_token) === rep.location.googleEmail);
+            if (match?.access_token) token = match.access_token;
+          }
+          if (!token) token = accounts[0]?.access_token || null;
+
+          if (!token) {
+            await prisma.scheduledReviewReply.update({
+              where: { id: rep.id },
+              data: { status: "FAILED", errorMessage: "No valid Google access token found for account." },
+            });
+            continue;
+          }
+
+          const replyRes = await fetch(`https://mybusiness.googleapis.com/v4/${rep.reviewName}/reply`, {
+            method: "PUT",
+            headers: {
+              Authorization: `Bearer ${token}`,
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({ comment: rep.replyComment }),
+          });
+
+          if (replyRes.ok) {
+            await prisma.scheduledReviewReply.update({
+              where: { id: rep.id },
+              data: { status: "PUBLISHED", publishedAt: new Date(), errorMessage: null },
+            });
+            console.log(`[CRON] ✅ Published review reply for ${rep.location.name} (Review: ${rep.reviewId || rep.id})`);
+          } else {
+            const errText = await replyRes.text();
+            await prisma.scheduledReviewReply.update({
+              where: { id: rep.id },
+              data: { status: "FAILED", errorMessage: `Google API ${replyRes.status}: ${errText.substring(0, 100)}` },
+            });
+          }
+        } catch (repErr: any) {
+          console.error(`[CRON] Error publishing review reply ${rep.id}:`, repErr);
+          await prisma.scheduledReviewReply.update({
+            where: { id: rep.id },
+            data: { status: "FAILED", errorMessage: repErr.message },
+          });
+        }
       }
     }
-  } catch (sitemapErr) {
-    console.error("[CRON] Sitemap auto-update failed", sitemapErr);
+  } catch (reviewCronErr) {
+    console.error("[CRON] Scheduled review replies cron step failed:", reviewCronErr);
   }
 
   // Send summary notification to admin
