@@ -34,6 +34,8 @@ export function Topbar() {
   else if (pathname.includes("/command-center")) pageTitle = "Command Center";
   else if (pathname.includes("/performance")) pageTitle = "Performance";
   else if (pathname.includes("/profiles")) pageTitle = "Profiles";
+  else if (pathname.includes("/reviews")) pageTitle = "Review Centre";
+  else if (pathname.includes("/rank-tracker")) pageTitle = "Rank Tracker";
   else if (pathname.includes("/calendar")) pageTitle = "Calendar";
 
   return (

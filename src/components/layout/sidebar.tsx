@@ -22,6 +22,7 @@ import { X } from "lucide-react";
         { name: "Command Center", href: "/command-center", icon: Zap },
         { name: "Performance", href: "/performance", icon: BarChart3 },
         { name: "Profiles", href: "/profiles", icon: MapPin },
+        { name: "Review Centre", href: "/reviews", icon: MessageSquare },
         { name: "Rank Tracker", href: "/rank-tracker", icon: Globe, superAdminOnly: true },
         { name: "Prompts", href: "/prompts", icon: FileText, aiOnly: true },
       ]
@@ -31,7 +32,7 @@ import { X } from "lucide-react";
       items: [
         { name: "Live Posts Feed", href: "/google-posts", icon: Globe },
         { name: "Edit Profile", href: "/profiles", icon: Edit3 },
-        { name: "Reviews", href: "/reviews", icon: MessageSquare },
+        { name: "Review Centre", href: "/reviews", icon: MessageSquare },
       ]
     },
     {
