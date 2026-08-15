@@ -1,423 +1,727 @@
 "use client";
 
-import { useState, useMemo } from "react";
-import { Star, MessageSquare, Search, RefreshCw, ChevronDown, AlertCircle, CheckCircle2, X, ExternalLink, Building2, TrendingUp, Clock, Loader2, ThumbsUp, Sparkles } from "lucide-react";
+import { useState, useMemo, useEffect } from "react";
+import {
+  Star, MessageSquare, Search, RefreshCw, AlertCircle, CheckCircle2,
+  ExternalLink, Building2, Clock, Loader2, Send, ChevronDown, Check,
+  Sparkles, ArrowUpDown, Filter
+} from "lucide-react";
 import useSWR from "swr";
 
 const fetcher = (url: string) => fetch(url).then(r => r.json());
 
-type SentimentFilter = "all" | "positive" | "negative" | "neutral";
-
-function StarRating({ rating, size = 13 }: { rating: number; size?: number }) {
+function StarRating({ rating, size = 14 }: { rating: number; size?: number }) {
   return (
-    <div style={{ display: "flex", gap: 2 }}>
-      {[1,2,3,4,5].map(i => (
-        <Star key={i} size={size} fill={i <= rating ? "#F59E0B" : "none"} color={i <= rating ? "#F59E0B" : "#D1D5DB"} strokeWidth={1.5} />
+    <div style={{ display: "flex", gap: 2, alignItems: "center" }}>
+      {[1, 2, 3, 4, 5].map(i => (
+        <Star
+          key={i}
+          size={size}
+          fill={i <= rating ? "#F59E0B" : "none"}
+          color={i <= rating ? "#F59E0B" : "#D1D5DB"}
+          strokeWidth={1.5}
+        />
       ))}
     </div>
   );
 }
 
-function Avatar({ name, photoUrl, size = 40 }: { name: string; photoUrl?: string; size?: number }) {
+function Avatar({ name, photoUrl, size = 36 }: { name: string; photoUrl?: string; size?: number }) {
   const initials = (name || "?").charAt(0).toUpperCase();
-  const colors = ["#3B82F6","#8B5CF6","#10B981","#F59E0B","#EF4444","#EC4899"];
+  const colors = ["#3B82F6", "#8B5CF6", "#10B981", "#F59E0B", "#EF4444", "#EC4899"];
   const color = colors[initials.charCodeAt(0) % colors.length];
-  if (photoUrl) return <img src={photoUrl} alt={name} style={{ width: size, height: size, borderRadius: "50%", objectFit: "cover", border: "2px solid var(--border-subtle)", flexShrink: 0 }} />;
+
+  if (photoUrl) {
+    return (
+      <img
+        src={photoUrl}
+        alt={name}
+        style={{
+          width: size,
+          height: size,
+          borderRadius: "50%",
+          objectFit: "cover",
+          border: "2px solid #e2e8f0",
+          flexShrink: 0,
+        }}
+      />
+    );
+  }
+
   return (
-    <div style={{ width: size, height: size, borderRadius: "50%", background: color + "20", border: `2px solid ${color}30`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: size * 0.38, fontWeight: 700, color, flexShrink: 0 }}>
+    <div
+      style={{
+        width: size,
+        height: size,
+        borderRadius: "50%",
+        background: color + "18",
+        border: `1.5px solid ${color}30`,
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        fontSize: Math.round(size * 0.38),
+        fontWeight: 700,
+        color,
+        flexShrink: 0,
+      }}
+    >
       {initials}
     </div>
   );
 }
 
-function getRating(r: any) {
+function getRating(r: any): number {
   const map: Record<string, number> = { FIVE: 5, FOUR: 4, THREE: 3, TWO: 2, ONE: 1 };
-  return map[r.starRating] ?? 1;
+  return map[r.starRating] ?? (typeof r.starRating === "number" ? r.starRating : 1);
 }
 
-function getSentiment(rating: number) {
-  if (rating >= 4) return "positive";
-  if (rating === 3) return "neutral";
-  return "negative";
+function formatRelativeTime(dateStr?: string): string {
+  if (!dateStr) return "";
+  try {
+    const d = new Date(dateStr);
+    const now = new Date();
+    const diffMs = now.getTime() - d.getTime();
+    const diffSec = Math.floor(diffMs / 1000);
+    const diffMin = Math.floor(diffSec / 60);
+    const diffHour = Math.floor(diffMin / 60);
+    const diffDay = Math.floor(diffHour / 24);
+
+    if (diffDay > 30) {
+      return d.toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" });
+    }
+    if (diffDay > 0) return `${diffDay}d ago`;
+    if (diffHour > 0) return `${diffHour}h ago`;
+    if (diffMin > 0) return `${diffMin}m ago`;
+    return "Just now";
+  } catch {
+    return dateStr;
+  }
 }
 
-const SENTIMENT_STYLES: Record<string, { color: string; bg: string; label: string }> = {
-  positive: { color: "var(--success-text)", bg: "var(--success-subtle)", label: "Positive" },
-  neutral:  { color: "var(--warning-text)", bg: "var(--warning-subtle)", label: "Neutral" },
-  negative: { color: "var(--danger-text)",  bg: "var(--danger-subtle)",  label: "Negative" },
-};
+function truncateName(name: string, maxLen = 8): string {
+  if (!name) return "";
+  if (name.length <= maxLen) return name;
+  return name.slice(0, maxLen) + "…";
+}
 
-function ReviewCard({ review, onReply }: { review: any; onReply: (r: any) => void }) {
-  const [expanded, setExpanded] = useState(false);
+interface PendingReviewCardProps {
+  review: any;
+  onRepliedSuccess: (reviewName: string) => void;
+}
+
+function PendingReviewCard({ review, onRepliedSuccess }: PendingReviewCardProps) {
+  const [replyText, setReplyText] = useState("");
+  const [isPosting, setIsPosting] = useState(false);
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  const [successMsg, setSuccessMsg] = useState<string | null>(null);
+
   const rating = getRating(review);
-  const sentiment = getSentiment(rating);
-  const { color, bg, label } = SENTIMENT_STYLES[sentiment];
-  const hasReply = !!review.reviewReply?.comment;
-  const date = review.createTime ? new Date(review.createTime).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" }) : "";
-  const isLong = (review.comment?.length ?? 0) > 180;
+  const dateFormatted = formatRelativeTime(review.createTime);
 
-  return (
-    <div className="ds-card ds-card-hover ds-anim-fade" style={{ display: "flex", flexDirection: "column", gap: 16, padding: 20, position: "relative", overflow: "hidden" }}>
-      {/* Sentiment accent line */}
-      <div style={{ position: "absolute", top: 0, left: 0, right: 0, height: 3, background: sentiment === "positive" ? "var(--success)" : sentiment === "neutral" ? "var(--warning)" : "var(--danger)", borderRadius: "10px 10px 0 0" }} />
+  const handlePostReply = async () => {
+    if (!replyText.trim()) return;
+    setIsPosting(true);
+    setErrorMsg(null);
 
-      {/* Header */}
-      <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 12, marginTop: 4 }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 12, minWidth: 0 }}>
-          <Avatar name={review.reviewer?.displayName || "?"} photoUrl={review.reviewer?.profilePhotoUrl} />
-          <div style={{ minWidth: 0 }}>
-            <p style={{ margin: 0, fontWeight: 600, fontSize: 14, color: "var(--text-primary)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-              {review.reviewer?.displayName || "Anonymous"}
-            </p>
-            <div style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 3 }}>
-              <StarRating rating={rating} />
-              <span style={{ fontSize: 11, color: "var(--text-tertiary)" }}>{date}</span>
-            </div>
-          </div>
-        </div>
-        <div style={{ display: "flex", alignItems: "center", gap: 6, flexShrink: 0 }}>
-          <span style={{ fontSize: 11, fontWeight: 600, color, background: bg, padding: "3px 8px", borderRadius: "var(--radius-full)", whiteSpace: "nowrap" }}>{label}</span>
-          {hasReply && <span style={{ fontSize: 11, fontWeight: 600, color: "var(--info-text)", background: "var(--info-subtle)", padding: "3px 8px", borderRadius: "var(--radius-full)" }}>Replied</span>}
-        </div>
-      </div>
-
-      {/* Review Text */}
-      {review.comment && (
-        <div>
-          <p style={{ margin: 0, fontSize: 13, color: "var(--text-secondary)", lineHeight: 1.65, display: expanded ? "block" : "-webkit-box", WebkitLineClamp: expanded ? undefined : 3, WebkitBoxOrient: "vertical", overflow: expanded ? "visible" : "hidden" }}>
-            "{review.comment}"
-          </p>
-          {isLong && (
-            <button onClick={() => setExpanded(!expanded)} style={{ background: "none", border: "none", color: "var(--brand)", fontSize: 12, fontWeight: 600, cursor: "pointer", marginTop: 4, padding: 0 }}>
-              {expanded ? "Show less" : "Read more"}
-            </button>
-          )}
-        </div>
-      )}
-      {!review.comment && (
-        <p style={{ margin: 0, fontSize: 13, color: "var(--text-muted)", fontStyle: "italic" }}>No written review — rating only.</p>
-      )}
-
-      {/* Existing Reply */}
-      {hasReply && (
-        <div style={{ background: "var(--bg-subtle)", border: "1px solid var(--border-subtle)", borderRadius: "var(--radius-btn)", padding: "12px 14px" }}>
-          <p style={{ margin: "0 0 4px", fontSize: 11, fontWeight: 700, color: "var(--brand)", textTransform: "uppercase", letterSpacing: "0.06em" }}>Your Reply</p>
-          <p style={{ margin: 0, fontSize: 12, color: "var(--text-secondary)", lineHeight: 1.55 }}>{review.reviewReply.comment}</p>
-        </div>
-      )}
-
-      {/* Actions */}
-      <div style={{ display: "flex", gap: 8, marginTop: "auto" }}>
-        <button onClick={() => onReply(review)} className={`ds-btn ${hasReply ? "ds-btn-secondary" : "ds-btn-primary"}`} style={{ flex: 1, height: 34, fontSize: 12 }}>
-          <MessageSquare size={13} />
-          {hasReply ? "Edit Reply" : "Reply Now"}
-        </button>
-        {review.reviewUrl && (
-          <a href={review.reviewUrl} target="_blank" rel="noopener noreferrer" className="ds-btn ds-btn-secondary" style={{ width: 34, height: 34, padding: 0, flexShrink: 0 }}>
-            <ExternalLink size={13} />
-          </a>
-        )}
-      </div>
-    </div>
-  );
-}
-
-function ReplyModal({ review, profileId, onClose, onSuccess }: { review: any; profileId: string; onClose: () => void; onSuccess: () => void }) {
-  const [text, setText] = useState(review.reviewReply?.comment || "");
-  const [saving, setSaving] = useState(false);
-  const [error, setError] = useState("");
-  const rating = getRating(review);
-
-  async function handleSave() {
-    if (!text.trim()) return;
-    setSaving(true); setError("");
     try {
       const res = await fetch("/api/reviews/reply", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ profileId, reviewName: review.name, comment: text }),
+        body: JSON.stringify({
+          profileId: review.profileId,
+          reviewName: review.name,
+          comment: replyText.trim(),
+        }),
       });
-      if (res.ok) { onSuccess(); onClose(); }
-      else { const d = await res.json(); setError(d.error || "Failed to save reply."); }
-    } catch { setError("Network error."); }
-    setSaving(false);
-  }
+
+      const data = await res.json();
+      if (res.ok && data.success) {
+        setSuccessMsg("Reply posted successfully to Google!");
+        setTimeout(() => {
+          onRepliedSuccess(review.name);
+        }, 800);
+      } else {
+        setErrorMsg(data.error || "Failed to post reply to Google.");
+      }
+    } catch {
+      setErrorMsg("Network error posting reply. Please try again.");
+    } finally {
+      setIsPosting(false);
+    }
+  };
 
   return (
-    <div className="modal-overlay" onClick={e => { if (e.target === e.currentTarget) onClose(); }}>
-      <div className="modal-content ds-anim-scale" style={{ maxWidth: 560 }}>
-        <div className="modal-header">
-          <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-            <Avatar name={review.reviewer?.displayName || "?"} photoUrl={review.reviewer?.profilePhotoUrl} size={36} />
-            <div>
-              <h2 style={{ margin: 0, fontSize: 15, fontWeight: 700, color: "var(--text-primary)" }}>Reply to Review</h2>
-              <div style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 2 }}>
-                <StarRating rating={rating} />
-                <span style={{ fontSize: 12, color: "var(--text-tertiary)" }}>by {review.reviewer?.displayName || "Anonymous"}</span>
-              </div>
+    <div
+      style={{
+        background: "#ffffff",
+        border: "1px solid #e2e8f0",
+        borderRadius: 14,
+        padding: 20,
+        boxShadow: "0 1px 3px rgba(0,0,0,0.02)",
+        display: "flex",
+        flexDirection: "column",
+        gap: 16,
+        transition: "all 0.2s ease",
+        position: "relative",
+      }}
+      className="pending-review-card"
+    >
+      {/* Top Header info: Reviewer + Profile Source Badge */}
+      <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 12 }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 12, minWidth: 0 }}>
+          <Avatar name={review.reviewer?.displayName || "?"} photoUrl={review.reviewer?.profilePhotoUrl} size={40} />
+          <div style={{ minWidth: 0 }}>
+            <p style={{ margin: 0, fontWeight: 700, fontSize: 14, color: "#0f172a", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+              {review.reviewer?.displayName || "Anonymous Customer"}
+            </p>
+            <div style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 4 }}>
+              <StarRating rating={rating} size={14} />
+              <span style={{ fontSize: 12, fontWeight: 500, color: "#64748b" }}>• {dateFormatted}</span>
             </div>
           </div>
-          <button onClick={onClose} className="ds-btn ds-btn-ghost" style={{ width: 32, height: 32, padding: 0 }}><X size={16} /></button>
         </div>
-        <div className="modal-body" style={{ gap: 16, display: "flex", flexDirection: "column" }}>
-          {review.comment && (
-            <div style={{ background: "var(--bg-subtle)", borderRadius: "var(--radius-btn)", padding: "12px 14px", borderLeft: "3px solid var(--border-default)" }}>
-              <p style={{ margin: 0, fontSize: 12, color: "var(--text-secondary)", lineHeight: 1.6, fontStyle: "italic" }}>"{review.comment}"</p>
-            </div>
+
+        {/* Profile Origin Tag */}
+        {review.profileName && (
+          <div
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: 6,
+              background: "#f1f5f9",
+              padding: "4px 10px",
+              borderRadius: 20,
+              border: "1px solid #e2e8f0",
+              flexShrink: 0,
+            }}
+            title={review.profileName}
+          >
+            <Building2 size={13} color="#2563eb" />
+            <span style={{ fontSize: 11, fontWeight: 600, color: "#334155", maxWidth: 140, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+              {review.profileName}
+            </span>
+          </div>
+        )}
+      </div>
+
+      {/* Review Comment Text */}
+      <div style={{ background: "#f8fafc", padding: "12px 14px", borderRadius: 10, border: "1px solid #f1f5f9" }}>
+        {review.comment ? (
+          <p style={{ margin: 0, fontSize: 13, color: "#334155", lineHeight: 1.6, fontStyle: "italic" }}>
+            "{review.comment}"
+          </p>
+        ) : (
+          <p style={{ margin: 0, fontSize: 12, color: "#94a3b8", fontStyle: "italic" }}>
+            Rating only — no written feedback provided.
+          </p>
+        )}
+      </div>
+
+      {/* Error / Success feedback */}
+      {errorMsg && (
+        <div style={{ padding: "8px 12px", background: "#fef2f2", border: "1px solid #fecaca", borderRadius: 8, color: "#dc2626", fontSize: 12, display: "flex", alignItems: "center", gap: 6 }}>
+          <AlertCircle size={14} /> {errorMsg}
+        </div>
+      )}
+      {successMsg && (
+        <div style={{ padding: "8px 12px", background: "#f0fdf4", border: "1px solid #bbf7d0", borderRadius: 8, color: "#16a34a", fontSize: 12, display: "flex", alignItems: "center", gap: 6 }}>
+          <CheckCircle2 size={14} /> {successMsg}
+        </div>
+      )}
+
+      {/* Reply Input Box */}
+      <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+          <label style={{ fontSize: 11, fontWeight: 700, color: "#475569", textTransform: "uppercase", letterSpacing: "0.04em" }}>
+            Write Reply
+          </label>
+          <span style={{ fontSize: 11, color: replyText.length > 1400 ? "#ea580c" : "#94a3b8" }}>
+            {replyText.length} / 1500
+          </span>
+        </div>
+
+        <textarea
+          value={replyText}
+          onChange={e => setReplyText(e.target.value)}
+          placeholder={`Reply to ${review.reviewer?.displayName || "this customer"} as the business owner...`}
+          rows={3}
+          maxLength={1500}
+          style={{
+            width: "100%",
+            padding: "10px 12px",
+            fontSize: 13,
+            borderRadius: 8,
+            border: "1px solid #cbd5e1",
+            background: "#ffffff",
+            color: "#0f172a",
+            outline: "none",
+            resize: "vertical",
+            fontFamily: "inherit",
+            lineHeight: 1.5,
+            transition: "border-color 0.15s ease",
+            boxSizing: "border-box",
+          }}
+          onFocus={e => e.target.style.borderColor = "#2563eb"}
+          onBlur={e => e.target.style.borderColor = "#cbd5e1"}
+        />
+
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "flex-end", gap: 8, marginTop: 4 }}>
+          {review.reviewUrl && (
+            <a
+              href={review.reviewUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: 4,
+                fontSize: 12,
+                color: "#64748b",
+                textDecoration: "none",
+                padding: "7px 12px",
+                borderRadius: 8,
+                background: "#f1f5f9",
+              }}
+            >
+              <ExternalLink size={13} /> View on Google
+            </a>
           )}
-          <div>
-            <label style={{ display: "block", fontSize: 12, fontWeight: 600, color: "var(--text-secondary)", marginBottom: 6 }}>Your Response</label>
-            <textarea
-              value={text}
-              onChange={e => setText(e.target.value)}
-              placeholder="Write a professional, helpful response..."
-              rows={5}
-              style={{ width: "100%", padding: "12px 14px", border: "1px solid var(--border-default)", borderRadius: "var(--radius-btn)", fontSize: 13, resize: "vertical", outline: "none", fontFamily: "var(--font-sans)", color: "var(--text-primary)", lineHeight: 1.6, background: "var(--bg-input)", boxSizing: "border-box", transition: "border-color 150ms ease" }}
-              onFocus={e => e.target.style.borderColor = "var(--brand)"}
-              onBlur={e => e.target.style.borderColor = "var(--border-default)"}
-            />
-            <div style={{ display: "flex", justifyContent: "space-between", marginTop: 4 }}>
-              {error ? <p style={{ color: "var(--danger)", fontSize: 12, margin: 0 }}>{error}</p> : <span />}
-              <span style={{ fontSize: 11, color: "var(--text-muted)" }}>{text.length}/1500</span>
-            </div>
-          </div>
-        </div>
-        <div className="modal-footer">
-          <button onClick={onClose} className="ds-btn ds-btn-secondary">Cancel</button>
-          <button onClick={handleSave} disabled={saving || !text.trim()} className="ds-btn ds-btn-primary" style={{ minWidth: 120 }}>
-            {saving ? <><Loader2 size={14} className="anim-spin" /> Posting...</> : <><CheckCircle2 size={14} /> Post Reply</>}
+
+          <button
+            onClick={handlePostReply}
+            disabled={isPosting || !replyText.trim()}
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: 6,
+              padding: "8px 16px",
+              background: "#2563eb",
+              color: "#ffffff",
+              border: "none",
+              borderRadius: 8,
+              fontSize: 12,
+              fontWeight: 600,
+              cursor: isPosting || !replyText.trim() ? "not-allowed" : "pointer",
+              opacity: isPosting || !replyText.trim() ? 0.6 : 1,
+              transition: "all 0.15s ease",
+            }}
+          >
+            {isPosting ? (
+              <>
+                <Loader2 size={13} className="animate-spin" /> Posting to Google...
+              </>
+            ) : (
+              <>
+                <Send size={13} /> Post Reply
+              </>
+            )}
           </button>
         </div>
       </div>
-    </div>
-  );
-}
-
-function SkeletonCard() {
-  return (
-    <div style={{ background: "#fff", border: "1px solid var(--border-subtle)", borderRadius: 10, padding: 20, display: "flex", flexDirection: "column", gap: 14 }}>
-      <div style={{ display: "flex", gap: 12, alignItems: "center" }}>
-        <div className="skeleton" style={{ width: 40, height: 40, borderRadius: "50%", flexShrink: 0 }} />
-        <div style={{ flex: 1, display: "flex", flexDirection: "column", gap: 6 }}>
-          <div className="skeleton" style={{ width: "40%", height: 13, borderRadius: 4 }} />
-          <div className="skeleton" style={{ width: "25%", height: 11, borderRadius: 4 }} />
-        </div>
-      </div>
-      <div className="skeleton" style={{ width: "100%", height: 52, borderRadius: 6 }} />
-      <div className="skeleton" style={{ width: "50%", height: 32, borderRadius: 6 }} />
     </div>
   );
 }
 
 export default function ReviewsPage() {
-  const { data: profilesData, isLoading: profilesLoading } = useSWR("/api/profiles", fetcher, { revalidateOnFocus: false });
-  const profiles = (profilesData?.data || []).filter((p: any) => !p.isHidden);
+  const [selectedTab, setSelectedTab] = useState<string>("all"); // "all" | profileId
+  const [searchQuery, setSearchQuery] = useState("");
+  const [starFilter, setStarFilter] = useState<string>("all"); // "all" | "5" | "4" | "3" | "2" | "1"
+  const [sortBy, setSortBy] = useState<"NEWEST" | "OLDEST" | "LOWEST_STAR" | "HIGHEST_STAR">("NEWEST");
+  const [isSyncing, setIsSyncing] = useState(false);
+  const [lastSyncTime, setLastSyncTime] = useState<Date>(new Date());
 
-  const [selectedProfileId, setSelectedProfileId] = useState<string>("");
-  const [sentiment, setSentiment] = useState<SentimentFilter>("all");
-  const [search, setSearch] = useState("");
-  const [replyReview, setReplyReview] = useState<any>(null);
-  const [message, setMessage] = useState<{ type: "success" | "error"; text: string } | null>(null);
-  const [dropdownOpen, setDropdownOpen] = useState(false);
+  // Local optimistic state of reviews so replied reviews disappear immediately
+  const [localReviews, setLocalReviews] = useState<any[]>([]);
 
-  const activeProfile = profiles.find((p: any) => p.id === selectedProfileId) || profiles[0];
-
-  const { data: reviewsData, isLoading: reviewsLoading, mutate, error: reviewsError } = useSWR(
-    activeProfile ? `/api/reviews?profileId=${activeProfile.id}` : null,
+  // Fetch reviews using SWR
+  const { data: reviewsRes, isLoading, mutate, error } = useSWR(
+    "/api/reviews?profileId=all&pendingOnly=true",
     fetcher,
     { revalidateOnFocus: false }
   );
 
-  const allReviews: any[] = reviewsData?.data || [];
-  const apiError = reviewsData?.error || (reviewsError ? "Failed to load reviews" : null);
-
-  const filteredReviews = useMemo(() => {
-    let r = allReviews;
-    if (sentiment !== "all") r = r.filter(rv => getSentiment(getRating(rv)) === sentiment);
-    if (search.trim()) {
-      const q = search.toLowerCase();
-      r = r.filter(rv => rv.comment?.toLowerCase().includes(q) || rv.reviewer?.displayName?.toLowerCase().includes(q));
+  // Sync SWR data into local state
+  useEffect(() => {
+    if (reviewsRes?.data) {
+      setLocalReviews(reviewsRes.data);
+      if (reviewsRes.lastSynced) {
+        setLastSyncTime(new Date(reviewsRes.lastSynced));
+      }
     }
-    return r;
-  }, [allReviews, sentiment, search]);
+  }, [reviewsRes]);
 
-  const avgRating = allReviews.length
-    ? (allReviews.reduce((s, r) => s + getRating(r), 0) / allReviews.length).toFixed(1) : "—";
-  const replied = allReviews.filter(r => r.reviewReply?.comment).length;
-  const pending = allReviews.length - replied;
-  const replyRate = allReviews.length ? Math.round((replied / allReviews.length) * 100) : 0;
+  // Live Sync button handler
+  const handleLiveSync = async () => {
+    setIsSyncing(true);
+    try {
+      const res = await fetch("/api/reviews?profileId=all&pendingOnly=true&forceRefresh=true");
+      const data = await res.json();
+      if (data?.data) {
+        setLocalReviews(data.data);
+        mutate(data, false);
+        setLastSyncTime(new Date());
+      }
+    } catch (err) {
+      console.error("Live Sync error:", err);
+    } finally {
+      setIsSyncing(false);
+    }
+  };
 
-  const FILTERS: { key: SentimentFilter; label: string; emoji: string }[] = [
-    { key: "all", label: "All", emoji: "✦" },
-    { key: "positive", label: "Positive", emoji: "⭐" },
-    { key: "neutral", label: "Neutral", emoji: "😐" },
-    { key: "negative", label: "Negative", emoji: "👎" },
-  ];
+  // Callback when a review is replied to
+  const handleRepliedSuccess = (reviewName: string) => {
+    setLocalReviews(prev => prev.filter(r => r.name !== reviewName));
+  };
 
-  const STATS = [
-    { label: "Avg Rating", value: avgRating, sub: "out of 5.0", icon: Star, iconColor: "#F59E0B", iconBg: "#FFFBEB" },
-    { label: "Total Reviews", value: allReviews.length, sub: "Google reviews", icon: MessageSquare, iconColor: "var(--brand)", iconBg: "var(--brand-subtle)" },
-    { label: "Replied", value: replied, sub: `${replyRate}% reply rate`, icon: ThumbsUp, iconColor: "var(--success)", iconBg: "var(--success-subtle)" },
-    { label: "Awaiting Reply", value: pending, sub: pending > 0 ? "needs attention" : "all caught up!", icon: Clock, iconColor: pending > 0 ? "var(--danger)" : "var(--success)", iconBg: pending > 0 ? "var(--danger-subtle)" : "var(--success-subtle)" },
-  ];
+  const profilesList = reviewsRes?.profiles || [];
+
+  // Compute pending counts per profile dynamically from localReviews
+  const dynamicPendingCounts = useMemo(() => {
+    const counts: Record<string, number> = {};
+    localReviews.forEach(r => {
+      if (r.profileId) {
+        counts[r.profileId] = (counts[r.profileId] || 0) + 1;
+      }
+    });
+    return counts;
+  }, [localReviews]);
+
+  // Filter & Sort reviews
+  const displayedReviews = useMemo(() => {
+    let list = [...localReviews];
+
+    // Profile Tab Filter
+    if (selectedTab !== "all") {
+      list = list.filter(r => r.profileId === selectedTab);
+    }
+
+    // Star Rating Filter
+    if (starFilter !== "all") {
+      const targetStar = parseInt(starFilter, 10);
+      list = list.filter(r => getRating(r) === targetStar);
+    }
+
+    // Search Query
+    if (searchQuery.trim()) {
+      const q = searchQuery.toLowerCase();
+      list = list.filter(r =>
+        (r.reviewer?.displayName && r.reviewer.displayName.toLowerCase().includes(q)) ||
+        (r.comment && r.comment.toLowerCase().includes(q)) ||
+        (r.profileName && r.profileName.toLowerCase().includes(q))
+      );
+    }
+
+    // Sorting
+    list.sort((a, b) => {
+      const dateA = new Date(a.createTime || 0).getTime();
+      const dateB = new Date(b.createTime || 0).getTime();
+      const ratingA = getRating(a);
+      const ratingB = getRating(b);
+
+      if (sortBy === "NEWEST") return dateB - dateA;
+      if (sortBy === "OLDEST") return dateA - dateB;
+      if (sortBy === "LOWEST_STAR") return ratingA - ratingB || dateB - dateA;
+      if (sortBy === "HIGHEST_STAR") return ratingB - ratingA || dateB - dateA;
+      return dateB - dateA;
+    });
+
+    return list;
+  }, [localReviews, selectedTab, starFilter, searchQuery, sortBy]);
+
+  const totalPending = localReviews.length;
 
   return (
-    <div>
-      {/* Page Header */}
-      <div className="page-header">
+    <div style={{ maxWidth: 1280, margin: "0 auto", padding: "24px 20px 80px", display: "flex", flexDirection: "column", gap: 20 }}>
+      <style>{`
+        .profile-nav-tab {
+          display: inline-flex;
+          align-items: center;
+          gap: 6px;
+          padding: 8px 14px;
+          border-radius: 20px;
+          font-size: 13px;
+          font-weight: 600;
+          cursor: pointer;
+          border: 1px solid #e2e8f0;
+          background: #ffffff;
+          color: #475569;
+          white-space: nowrap;
+          transition: all 0.15s ease;
+          flex-shrink: 0;
+          user-select: none;
+        }
+        .profile-nav-tab:hover {
+          border-color: #cbd5e1;
+          background: #f8fafc;
+        }
+        .profile-nav-tab.active {
+          background: #2563eb;
+          color: #ffffff;
+          border-color: #2563eb;
+          box-shadow: 0 2px 6px rgba(37,99,235,0.25);
+        }
+        .profile-nav-tab .tab-badge {
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          font-size: 10px;
+          font-weight: 800;
+          padding: 1px 6px;
+          border-radius: 12px;
+          background: #f1f5f9;
+          color: #475569;
+        }
+        .profile-nav-tab.active .tab-badge {
+          background: rgba(255,255,255,0.25);
+          color: #ffffff;
+        }
+        .pending-review-card:hover {
+          border-color: #cbd5e1;
+          box-shadow: 0 4px 12px rgba(0,0,0,0.04);
+        }
+      `}</style>
+
+      {/* Header Bar */}
+      <div style={{ background: "#ffffff", border: "1px solid #e2e8f0", borderRadius: 14, padding: "20px 24px", display: "flex", flexWrap: "wrap", alignItems: "center", justifyContent: "space-between", gap: 16 }}>
         <div>
-          <h1 className="page-title" style={{ fontSize: 20, fontWeight: 700 }}>Reviews</h1>
-          <p className="page-subtitle">Monitor and respond to Google Business Profile reviews</p>
+          <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+            <div style={{ width: 36, height: 36, borderRadius: 10, background: "#eff6ff", display: "flex", alignItems: "center", justifyContent: "center", color: "#2563eb" }}>
+              <MessageSquare size={18} />
+            </div>
+            <div>
+              <h1 style={{ fontSize: 20, fontWeight: 800, color: "#0f172a", margin: 0 }}>
+                Pending Review Replies
+              </h1>
+              <p style={{ fontSize: 13, color: "#64748b", margin: "2px 0 0" }}>
+                Manage and respond to unanswered Google Business Profile reviews in real-time.
+              </p>
+            </div>
+          </div>
         </div>
-        <div style={{ display: "flex", gap: 8 }}>
-          {activeProfile?.metadata?.mapsUri && (
-            <a href={activeProfile.metadata?.mapsUri} target="_blank" rel="noopener noreferrer" className="ds-btn ds-btn-secondary" style={{ fontSize: 12, gap: 6 }}>
-              <ExternalLink size={13} /> View on Maps
-            </a>
-          )}
-          <button onClick={() => mutate()} className="ds-btn ds-btn-secondary" style={{ gap: 6 }}>
-            <RefreshCw size={13} className={reviewsLoading ? "anim-spin" : ""} />
-            Refresh
+
+        {/* Live Sync Action */}
+        <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+          <span style={{ fontSize: 11, color: "#94a3b8", display: "flex", alignItems: "center", gap: 4 }}>
+            <Clock size={12} /> Synced {formatRelativeTime(lastSyncTime.toISOString())}
+          </span>
+          <button
+            onClick={handleLiveSync}
+            disabled={isSyncing}
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: 8,
+              padding: "9px 16px",
+              background: "#ffffff",
+              border: "1px solid #cbd5e1",
+              borderRadius: 8,
+              fontSize: 13,
+              fontWeight: 600,
+              color: "#1e293b",
+              cursor: isSyncing ? "not-allowed" : "pointer",
+              boxShadow: "0 1px 2px rgba(0,0,0,0.04)",
+              transition: "all 0.15s ease",
+            }}
+          >
+            <RefreshCw size={14} className={isSyncing ? "animate-spin text-blue-600" : "text-slate-600"} />
+            {isSyncing ? "Syncing Google..." : "Live Sync"}
           </button>
         </div>
       </div>
 
-      {/* Toast */}
-      {message && (
-        <div style={{ padding: "10px 16px", borderRadius: "var(--radius-btn)", marginBottom: 20, fontSize: 13, display: "flex", alignItems: "center", gap: 8, background: message.type === "success" ? "var(--success-subtle)" : "var(--danger-subtle)", border: `1px solid ${message.type === "success" ? "var(--success-muted)" : "var(--danger-muted)"}`, color: message.type === "success" ? "var(--success-text)" : "var(--danger-text)" }} className="ds-anim-fade">
-          {message.type === "success" ? <CheckCircle2 size={14} /> : <AlertCircle size={14} />}
-          <span>{message.text}</span>
-          <button onClick={() => setMessage(null)} style={{ marginLeft: "auto", background: "none", border: "none", cursor: "pointer", color: "inherit", display: "flex" }}><X size={13} /></button>
+      {/* Top Banner: Profiles Horizontal Tabs (Max 8-9 Chars Truncated) */}
+      <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "0 4px" }}>
+          <span style={{ fontSize: 11, fontWeight: 800, color: "#64748b", textTransform: "uppercase", letterSpacing: "0.06em" }}>
+            Filter By Profile
+          </span>
+          <span style={{ fontSize: 12, fontWeight: 600, color: totalPending > 0 ? "#ea580c" : "#16a34a" }}>
+            {totalPending > 0 ? `⏳ ${totalPending} reviews awaiting reply` : "✓ All reviews replied"}
+          </span>
         </div>
-      )}
 
-      {/* Profile Selector */}
-      <div style={{ marginBottom: 24 }}>
-        {profilesLoading ? (
-          <div className="skeleton" style={{ height: 44, borderRadius: "var(--radius-btn)", maxWidth: 440 }} />
-        ) : (
-          <div style={{ position: "relative", maxWidth: 440 }}>
-            <Building2 size={15} style={{ position: "absolute", left: 12, top: "50%", transform: "translateY(-50%)", color: "var(--text-muted)", pointerEvents: "none", zIndex: 1 }} />
-            <select
-              value={selectedProfileId || activeProfile?.id || ""}
-              onChange={e => setSelectedProfileId(e.target.value)}
-              style={{ width: "100%", height: 44, paddingLeft: 36, paddingRight: 36, border: "1px solid var(--border-default)", borderRadius: "var(--radius-btn)", fontSize: 13, fontWeight: 600, color: "var(--text-primary)", cursor: "pointer", background: "#fff", appearance: "none" }}
-            >
-              {profiles.map((p: any) => <option key={p.id} value={p.id}>{p.name}</option>)}
-            </select>
-            <ChevronDown size={14} style={{ position: "absolute", right: 12, top: "50%", transform: "translateY(-50%)", color: "var(--text-muted)", pointerEvents: "none" }} />
-          </div>
-        )}
+        {/* Scrollable Tabs row */}
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: 8,
+            overflowX: "auto",
+            paddingBottom: 6,
+            scrollbarWidth: "thin",
+          }}
+        >
+          {/* Tab 1: All */}
+          <button
+            onClick={() => setSelectedTab("all")}
+            className={`profile-nav-tab ${selectedTab === "all" ? "active" : ""}`}
+          >
+            <span>All</span>
+            <span className="tab-badge">{totalPending}</span>
+          </button>
+
+          {/* Individual Profile Tabs */}
+          {profilesList.map((p: any) => {
+            const count = dynamicPendingCounts[p.id] || 0;
+            const shortName = truncateName(p.name, 9);
+
+            return (
+              <button
+                key={p.id}
+                onClick={() => setSelectedTab(p.id)}
+                className={`profile-nav-tab ${selectedTab === p.id ? "active" : ""}`}
+                title={p.name}
+              >
+                <span>{shortName}</span>
+                <span
+                  className="tab-badge"
+                  style={{
+                    background: count > 0 && selectedTab !== p.id ? "#fef3c7" : undefined,
+                    color: count > 0 && selectedTab !== p.id ? "#b45309" : undefined,
+                  }}
+                >
+                  {count}
+                </span>
+              </button>
+            );
+          })}
+        </div>
       </div>
 
-      {/* Stats Strip */}
-      {!reviewsLoading && allReviews.length > 0 && (
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 12, marginBottom: 24 }} className="ds-anim-fade">
-          {STATS.map(s => (
-            <div key={s.label} className="ds-card" style={{ padding: "16px 20px", display: "flex", alignItems: "center", gap: 14 }}>
-              <div style={{ width: 40, height: 40, borderRadius: "var(--radius-btn)", background: s.iconBg, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-                <s.icon size={18} color={s.iconColor} />
-              </div>
-              <div style={{ minWidth: 0 }}>
-                <p style={{ margin: 0, fontSize: 11, fontWeight: 600, color: "var(--text-tertiary)", textTransform: "uppercase", letterSpacing: "0.06em" }}>{s.label}</p>
-                <p style={{ margin: "2px 0 0", fontSize: 24, fontWeight: 700, color: "var(--text-primary)", lineHeight: 1, fontVariantNumeric: "tabular-nums" }}>{s.value}</p>
-                <p style={{ margin: "3px 0 0", fontSize: 11, color: "var(--text-muted)" }}>{s.sub}</p>
-              </div>
-            </div>
-          ))}
-        </div>
-      )}
-
-      {/* API Error */}
-      {apiError && (
-        <div style={{ padding: "14px 16px", borderRadius: "var(--radius-btn)", marginBottom: 20, display: "flex", alignItems: "flex-start", gap: 12, background: "var(--danger-subtle)", border: "1px solid var(--danger-muted)", color: "var(--danger-text)" }} className="ds-anim-fade">
-          <AlertCircle size={16} style={{ flexShrink: 0, marginTop: 1 }} />
-          <div>
-            <p style={{ margin: 0, fontWeight: 600, fontSize: 13 }}>Could not load reviews</p>
-            <p style={{ margin: "3px 0 0", fontSize: 12 }}>{apiError}</p>
-          </div>
-        </div>
-      )}
-
-      {/* Search + Filters */}
-      <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 20, flexWrap: "wrap" }}>
-        <div style={{ position: "relative", flex: 1, minWidth: 220 }}>
-          <Search size={14} style={{ position: "absolute", left: 12, top: "50%", transform: "translateY(-50%)", color: "var(--text-muted)" }} />
+      {/* Search, Filter & Sort Controls Toolbar */}
+      <div
+        style={{
+          display: "flex",
+          flexWrap: "wrap",
+          alignItems: "center",
+          justifyContent: "space-between",
+          gap: 12,
+          background: "#ffffff",
+          border: "1px solid #e2e8f0",
+          borderRadius: 12,
+          padding: "12px 16px",
+        }}
+      >
+        {/* Search Input */}
+        <div style={{ position: "relative", flex: 1, minWidth: 220, maxWidth: 400 }}>
           <input
-            value={search}
-            onChange={e => setSearch(e.target.value)}
-            placeholder="Search by reviewer or content..."
-            className="ds-input"
-            style={{ height: 38, paddingLeft: 36, paddingRight: search ? 36 : 12 }}
+            type="text"
+            placeholder="Search by customer, comment, or profile..."
+            value={searchQuery}
+            onChange={e => setSearchQuery(e.target.value)}
+            style={{
+              width: "100%",
+              height: 36,
+              padding: "0 12px 0 34px",
+              border: "1px solid #cbd5e1",
+              borderRadius: 8,
+              fontSize: 13,
+              outline: "none",
+              background: "#f8fafc",
+            }}
           />
-          {search && (
-            <button onClick={() => setSearch("")} style={{ position: "absolute", right: 10, top: "50%", transform: "translateY(-50%)", background: "none", border: "none", cursor: "pointer", color: "var(--text-muted)", display: "flex" }}>
-              <X size={14} />
-            </button>
-          )}
+          <Search size={14} color="#94a3b8" style={{ position: "absolute", left: 11, top: 11 }} />
         </div>
-        <div style={{ display: "flex", gap: 6 }}>
-          {FILTERS.map(f => (
-            <button
-              key={f.key}
-              onClick={() => setSentiment(f.key)}
+
+        {/* Dropdowns: Star Rating & Sorting */}
+        <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
+          {/* Star Filter */}
+          <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+            <span style={{ fontSize: 12, fontWeight: 600, color: "#64748b" }}>Rating:</span>
+            <select
+              value={starFilter}
+              onChange={e => setStarFilter(e.target.value)}
               style={{
-                height: 38, padding: "0 14px", borderRadius: "var(--radius-btn)", border: "1px solid",
-                fontSize: 12, fontWeight: 600, cursor: "pointer", whiteSpace: "nowrap",
-                borderColor: sentiment === f.key ? "var(--brand-muted)" : "var(--border-default)",
-                background: sentiment === f.key ? "var(--brand-subtle)" : "#fff",
-                color: sentiment === f.key ? "var(--brand)" : "var(--text-secondary)",
-                transition: "all 150ms ease",
+                height: 36,
+                padding: "0 10px",
+                border: "1px solid #cbd5e1",
+                borderRadius: 8,
+                fontSize: 13,
+                background: "#ffffff",
+                color: "#1e293b",
+                outline: "none",
               }}
             >
-              {f.emoji} {f.label}
-            </button>
-          ))}
+              <option value="all">All Stars (1★ - 5★)</option>
+              <option value="5">⭐⭐⭐⭐⭐ (5 Stars)</option>
+              <option value="4">⭐⭐⭐⭐ (4 Stars)</option>
+              <option value="3">⭐⭐⭐ (3 Stars)</option>
+              <option value="2">⭐⭐ (2 Stars)</option>
+              <option value="1">⭐ (1 Star)</option>
+            </select>
+          </div>
+
+          {/* Sort By */}
+          <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+            <span style={{ fontSize: 12, fontWeight: 600, color: "#64748b" }}>Sort:</span>
+            <select
+              value={sortBy}
+              onChange={e => setSortBy(e.target.value as any)}
+              style={{
+                height: 36,
+                padding: "0 10px",
+                border: "1px solid #cbd5e1",
+                borderRadius: 8,
+                fontSize: 13,
+                background: "#ffffff",
+                color: "#1e293b",
+                outline: "none",
+              }}
+            >
+              <option value="NEWEST">Newest Date First</option>
+              <option value="OLDEST">Oldest Date First (Waiting longest)</option>
+              <option value="LOWEST_STAR">Lowest Star Rating First</option>
+              <option value="HIGHEST_STAR">Highest Star Rating First</option>
+            </select>
+          </div>
         </div>
-        {filteredReviews.length > 0 && (
-          <span style={{ fontSize: 12, color: "var(--text-muted)", whiteSpace: "nowrap" }}>
-            {filteredReviews.length} {filteredReviews.length === 1 ? "review" : "reviews"}
-          </span>
-        )}
       </div>
 
-      {/* Reviews Grid */}
-      {reviewsLoading ? (
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(320px, 1fr))", gap: 16 }}>
-          {[...Array(6)].map((_, i) => <SkeletonCard key={i} />)}
-        </div>
-      ) : filteredReviews.length === 0 && !apiError ? (
-        <div style={{ background: "#fff", border: "1px solid var(--border-subtle)", borderRadius: "var(--radius-card)", padding: "72px 24px", textAlign: "center" }}>
-          <div style={{ width: 56, height: 56, borderRadius: "var(--radius-card)", background: "var(--bg-subtle)", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 16px" }}>
-            <Sparkles size={24} color="var(--text-muted)" />
-          </div>
-          <h3 style={{ margin: "0 0 8px", fontSize: 16, fontWeight: 700, color: "var(--text-primary)" }}>
-            {allReviews.length === 0 ? "No reviews yet" : "No matching reviews"}
-          </h3>
-          <p style={{ margin: 0, fontSize: 13, color: "var(--text-tertiary)" }}>
-            {allReviews.length === 0 ? "Reviews from Google will appear here automatically." : "Try adjusting your search or filter."}
+      {/* Main Reviews Stream / Empty State */}
+      {isLoading ? (
+        <div style={{ padding: "80px 20px", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 12, background: "#ffffff", border: "1px solid #e2e8f0", borderRadius: 14 }}>
+          <Loader2 size={32} className="animate-spin" color="#2563eb" />
+          <p style={{ fontSize: 13, fontWeight: 600, color: "#64748b", margin: 0 }}>
+            Fetching pending Google reviews in real-time...
           </p>
-          {allReviews.length > 0 && (
-            <button onClick={() => { setSearch(""); setSentiment("all"); }} className="ds-btn ds-btn-secondary" style={{ margin: "16px auto 0" }}>
-              Clear filters
-            </button>
-          )}
+        </div>
+      ) : displayedReviews.length === 0 ? (
+        <div
+          style={{
+            padding: "80px 20px",
+            display: "flex",
+            flexDirection: "column",
+            alignItems: "center",
+            justifyContent: "center",
+            gap: 12,
+            background: "#ffffff",
+            border: "1px solid #e2e8f0",
+            borderRadius: 14,
+            textAlign: "center",
+          }}
+        >
+          <div style={{ width: 56, height: 56, borderRadius: "50%", background: "#ecfdf5", display: "flex", alignItems: "center", justifyContent: "center", color: "#16a34a" }}>
+            <CheckCircle2 size={28} />
+          </div>
+          <h3 style={{ fontSize: 18, fontWeight: 800, color: "#0f172a", margin: 0 }}>
+            All Caught Up! 🎉
+          </h3>
+          <p style={{ fontSize: 13, color: "#64748b", maxWidth: 420, margin: 0 }}>
+            {selectedTab !== "all"
+              ? "There are no pending reviews awaiting response for this profile."
+              : "Zero pending reviews found across all connected locations. All customer feedback has been answered!"}
+          </p>
         </div>
       ) : (
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(320px, 1fr))", gap: 16 }}>
-          {filteredReviews.map((review: any) => (
-            <ReviewCard key={review.name} review={review} onReply={setReplyReview} />
+        <div style={{ display: "grid", gridTemplateColumns: "1fr", gap: 16 }}>
+          {displayedReviews.map((r: any) => (
+            <PendingReviewCard
+              key={r.name || r.reviewId}
+              review={r}
+              onRepliedSuccess={handleRepliedSuccess}
+            />
           ))}
         </div>
-      )}
-
-      {replyReview && (
-        <ReplyModal
-          review={replyReview}
-          profileId={activeProfile?.id || ""}
-          onClose={() => setReplyReview(null)}
-          onSuccess={() => { mutate(); setMessage({ type: "success", text: "Reply posted successfully!" }); }}
-        />
       )}
     </div>
   );

@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/lib/auth";
-import { getValidGoogleAccounts } from "@/lib/google-accounts";
+import { getValidGoogleAccounts, getEmailFromIdToken } from "@/lib/google-accounts";
 
 /**
  * POST /api/reviews/reply
@@ -25,12 +25,26 @@ export async function POST(req: NextRequest) {
     const location = await prisma.location.findUnique({ where: { id: profileId } });
     if (!location) return NextResponse.json({ error: "Profile not found" }, { status: 404 });
 
-    // Get access token
+    // Get valid access token matched to this location
     const accounts = await getValidGoogleAccounts(userId);
-    const accessToken = accounts[0]?.access_token;
-    if (!accessToken) return NextResponse.json({ error: "No valid Google account" }, { status: 400 });
+    if (accounts.length === 0) {
+      return NextResponse.json({ error: "No connected Google accounts found" }, { status: 400 });
+    }
 
-    // GBP v4: PUT accounts/{id}/locations/{id}/reviews/{reviewId}/reply
+    let accessToken = accounts[0]?.access_token;
+    if (location.googleEmail) {
+      const match = accounts.find(a => {
+        const email = getEmailFromIdToken(a.id_token);
+        return email?.toLowerCase() === location.googleEmail?.toLowerCase();
+      });
+      if (match?.access_token) {
+        accessToken = match.access_token;
+      }
+    }
+
+    if (!accessToken) return NextResponse.json({ error: "No valid Google access token available" }, { status: 400 });
+
+    // GBP v4: PUT https://mybusiness.googleapis.com/v4/{reviewName}/reply
     const replyRes = await fetch(`https://mybusiness.googleapis.com/v4/${reviewName}/reply`, {
       method: "PUT",
       headers: {
