@@ -115,20 +115,48 @@ function ExportModal({
   profiles: any[];
   selectedTab: string;
 }) {
-  const [profileScope, setProfileScope] = useState<string>(selectedTab);
+  // Initialize with selectedTab or all profiles
+  const [selectedProfileIds, setSelectedProfileIds] = useState<string[]>(() => {
+    if (selectedTab && selectedTab !== "all") {
+      return [selectedTab];
+    }
+    return profiles.map(p => p.id);
+  });
+  const [profileSearch, setProfileSearch] = useState<string>("");
   const [dateRange, setDateRange] = useState<string>("all");
   const [startDate, setStartDate] = useState<string>("");
   const [endDate, setEndDate] = useState<string>("");
   const [reviewStatus, setReviewStatus] = useState<string>("pending");
   const [isExporting, setIsExporting] = useState(false);
 
+  const toggleProfile = (id: string) => {
+    setSelectedProfileIds(prev =>
+      prev.includes(id) ? prev.filter(pId => pId !== id) : [...prev, id]
+    );
+  };
+
+  const selectAll = () => setSelectedProfileIds(profiles.map(p => p.id));
+  const deselectAll = () => setSelectedProfileIds([]);
+
+  const filteredProfiles = useMemo(() => {
+    if (!profileSearch.trim()) return profiles;
+    const q = profileSearch.toLowerCase();
+    return profiles.filter(p => p.name.toLowerCase().includes(q));
+  }, [profiles, profileSearch]);
+
   const handleDownload = () => {
+    if (selectedProfileIds.length === 0) return;
     setIsExporting(true);
-    let url = `/api/reviews/export?profileId=${profileScope}&dateRange=${dateRange}&status=${reviewStatus}`;
+
+    const isAll = selectedProfileIds.length === profiles.length;
+    const profileParam = isAll ? "all" : selectedProfileIds.join(",");
+
+    let url = `/api/reviews/export?profileIds=${encodeURIComponent(profileParam)}&dateRange=${dateRange}&status=${reviewStatus}`;
     if (dateRange === "custom") {
       if (startDate) url += `&startDate=${startDate}`;
       if (endDate) url += `&endDate=${endDate}`;
     }
+
     window.location.href = url;
     setTimeout(() => {
       setIsExporting(false);
@@ -138,7 +166,8 @@ function ExportModal({
 
   return (
     <div style={{ position: "fixed", inset: 0, background: "rgba(15,23,42,0.6)", zIndex: 1000, display: "flex", alignItems: "center", justifyContent: "center", padding: 20 }}>
-      <div style={{ background: "#ffffff", borderRadius: 16, width: "100%", maxWidth: 480, padding: 24, boxShadow: "0 20px 25px -5px rgba(0,0,0,0.1), 0 8px 10px -6px rgba(0,0,0,0.1)", display: "flex", flexDirection: "column", gap: 18 }}>
+      <div style={{ background: "#ffffff", borderRadius: 16, width: "100%", maxWidth: 520, maxHeight: "90vh", padding: 24, boxShadow: "0 20px 25px -5px rgba(0,0,0,0.1), 0 8px 10px -6px rgba(0,0,0,0.1)", display: "flex", flexDirection: "column", gap: 16, overflowY: "auto" }}>
+        {/* Header */}
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
           <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
             <div style={{ width: 36, height: 36, borderRadius: 10, background: "#eff6ff", display: "flex", alignItems: "center", justifyContent: "center", color: "#2563eb" }}>
@@ -146,7 +175,7 @@ function ExportModal({
             </div>
             <div>
               <h3 style={{ margin: 0, fontSize: 16, fontWeight: 700, color: "#0f172a" }}>Export Reviews to CSV</h3>
-              <p style={{ margin: "2px 0 0", fontSize: 12, color: "#64748b" }}>Download reviews with pre-mapped resource IDs</p>
+              <p style={{ margin: "2px 0 0", fontSize: 12, color: "#64748b" }}>Select profiles, review status, and date range</p>
             </div>
           </div>
           <button onClick={onClose} style={{ background: "none", border: "none", color: "#94a3b8", cursor: "pointer", padding: 4 }}>
@@ -155,19 +184,105 @@ function ExportModal({
         </div>
 
         <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
-          {/* Profile Scope */}
+          {/* Multi-Profile Selector Section */}
           <div>
-            <label style={{ display: "block", fontSize: 12, fontWeight: 600, color: "#334155", marginBottom: 6 }}>Profile Scope</label>
-            <select
-              value={profileScope}
-              onChange={e => setProfileScope(e.target.value)}
-              style={{ width: "100%", height: 38, padding: "0 10px", border: "1px solid #cbd5e1", borderRadius: 8, fontSize: 13, background: "#ffffff", outline: "none" }}
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 6 }}>
+              <label style={{ fontSize: 12, fontWeight: 700, color: "#334155" }}>
+                Select Profiles ({selectedProfileIds.length}/{profiles.length})
+              </label>
+              <div style={{ display: "flex", gap: 8 }}>
+                <button
+                  type="button"
+                  onClick={selectAll}
+                  style={{ background: "none", border: "none", color: "#2563eb", fontSize: 11, fontWeight: 600, cursor: "pointer", padding: 0 }}
+                >
+                  Select All
+                </button>
+                <span style={{ color: "#cbd5e1" }}>•</span>
+                <button
+                  type="button"
+                  onClick={deselectAll}
+                  style={{ background: "none", border: "none", color: "#64748b", fontSize: 11, fontWeight: 600, cursor: "pointer", padding: 0 }}
+                >
+                  Clear All
+                </button>
+              </div>
+            </div>
+
+            {/* Profile search input if > 4 profiles */}
+            {profiles.length > 4 && (
+              <div style={{ position: "relative", marginBottom: 8 }}>
+                <input
+                  type="text"
+                  placeholder="Filter profiles..."
+                  value={profileSearch}
+                  onChange={e => setProfileSearch(e.target.value)}
+                  style={{
+                    width: "100%",
+                    height: 32,
+                    padding: "0 8px 0 28px",
+                    border: "1px solid #cbd5e1",
+                    borderRadius: 6,
+                    fontSize: 12,
+                    background: "#f8fafc",
+                    outline: "none",
+                    boxSizing: "border-box",
+                  }}
+                />
+                <Search size={12} color="#94a3b8" style={{ position: "absolute", left: 9, top: 10 }} />
+              </div>
+            )}
+
+            {/* Profile Checkboxes Box */}
+            <div
+              style={{
+                border: "1px solid #e2e8f0",
+                borderRadius: 10,
+                maxHeight: 140,
+                overflowY: "auto",
+                background: "#f8fafc",
+                padding: 6,
+                display: "flex",
+                flexDirection: "column",
+                gap: 4,
+              }}
             >
-              <option value="all">All Connected Profiles ({profiles.length})</option>
-              {profiles.map((p: any) => (
-                <option key={p.id} value={p.id}>{p.name}</option>
-              ))}
-            </select>
+              {filteredProfiles.map((p: any) => {
+                const isChecked = selectedProfileIds.includes(p.id);
+                return (
+                  <div
+                    key={p.id}
+                    onClick={() => toggleProfile(p.id)}
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "space-between",
+                      padding: "6px 10px",
+                      borderRadius: 6,
+                      background: isChecked ? "#eff6ff" : "#ffffff",
+                      border: isChecked ? "1px solid #bfdbfe" : "1px solid #f1f5f9",
+                      cursor: "pointer",
+                      transition: "all 0.1s ease",
+                    }}
+                  >
+                    <div style={{ display: "flex", alignItems: "center", gap: 8, minWidth: 0 }}>
+                      <input
+                        type="checkbox"
+                        checked={isChecked}
+                        onChange={() => {}} // Handled by container
+                        style={{ cursor: "pointer" }}
+                      />
+                      <span style={{ fontSize: 12, fontWeight: 600, color: isChecked ? "#1e40af" : "#334155", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                        {p.name}
+                      </span>
+                    </div>
+                    <span style={{ fontSize: 10, fontWeight: 700, color: "#64748b", background: isChecked ? "#dbeafe" : "#f1f5f9", padding: "1px 6px", borderRadius: 10, flexShrink: 0 }}>
+                      {p.totalCount ?? 0} reviews
+                    </span>
+                  </div>
+                );
+              })}
+            </div>
           </div>
 
           {/* Review Status */}
@@ -250,13 +365,13 @@ function ExportModal({
           )}
         </div>
 
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "flex-end", gap: 10, marginTop: 6 }}>
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "flex-end", gap: 10, marginTop: 4 }}>
           <button onClick={onClose} style={{ padding: "8px 16px", background: "#f1f5f9", border: "none", borderRadius: 8, fontSize: 13, fontWeight: 600, color: "#475569", cursor: "pointer" }}>
             Cancel
           </button>
           <button
             onClick={handleDownload}
-            disabled={isExporting}
+            disabled={isExporting || selectedProfileIds.length === 0}
             style={{
               padding: "8px 20px",
               background: "#2563eb",
@@ -268,11 +383,12 @@ function ExportModal({
               display: "flex",
               alignItems: "center",
               gap: 8,
-              cursor: isExporting ? "not-allowed" : "pointer",
+              cursor: isExporting || selectedProfileIds.length === 0 ? "not-allowed" : "pointer",
+              opacity: selectedProfileIds.length === 0 ? 0.6 : 1,
             }}
           >
             {isExporting ? <Loader2 size={14} className="animate-spin" /> : <Download size={14} />}
-            Download CSV
+            Download CSV ({selectedProfileIds.length} profiles)
           </button>
         </div>
       </div>

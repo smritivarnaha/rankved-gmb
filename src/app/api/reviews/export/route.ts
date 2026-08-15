@@ -16,7 +16,8 @@ function getRating(r: any): number {
 /**
  * GET /api/reviews/export
  * Query parameters:
- * - profileId: "all" | locationId
+ * - profileId: "all" | locationId (or comma-separated list of IDs: "id1,id2,id3")
+ * - profileIds: comma-separated list of locationIds
  * - dateRange: "all" | "30d" | "60d" | "90d" | "custom"
  * - startDate: ISO string or YYYY-MM-DD
  * - endDate: ISO string or YYYY-MM-DD
@@ -27,7 +28,8 @@ export async function GET(req: NextRequest) {
   if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   const { searchParams } = new URL(req.url);
-  const profileId = searchParams.get("profileId") || "all";
+  const profileIdParam = searchParams.get("profileId") || "";
+  const profileIdsParam = searchParams.get("profileIds") || "";
   const dateRange = searchParams.get("dateRange") || "all";
   const startDateParam = searchParams.get("startDate");
   const endDateParam = searchParams.get("endDate");
@@ -38,7 +40,7 @@ export async function GET(req: NextRequest) {
     const origin = req.nextUrl.origin;
     const cookie = req.headers.get("cookie") || "";
 
-    const reviewsRes = await fetch(`${origin}/api/reviews?profileId=${profileId}&pendingOnly=${statusParam === "pending"}`, {
+    const reviewsRes = await fetch(`${origin}/api/reviews?profileId=all&pendingOnly=${statusParam === "pending"}`, {
       headers: { cookie },
     });
 
@@ -48,6 +50,15 @@ export async function GET(req: NextRequest) {
 
     const reviewsData = await reviewsRes.json();
     let reviews: any[] = reviewsData.allReviews || reviewsData.data || [];
+
+    // Filter by selected profile(s)
+    const combinedProfileFilter = profileIdsParam || profileIdParam;
+    if (combinedProfileFilter && combinedProfileFilter !== "all") {
+      const selectedIdList = combinedProfileFilter.split(",").map(id => id.trim()).filter(Boolean);
+      if (selectedIdList.length > 0) {
+        reviews = reviews.filter(r => selectedIdList.includes(r.profileId));
+      }
+    }
 
     // 2. Filter by Date Range
     const now = new Date();
@@ -117,7 +128,7 @@ export async function GET(req: NextRequest) {
     const csvContent = "\uFEFF" + rows.join("\r\n");
 
     const dateStamp = new Date().toISOString().slice(0, 10);
-    const filename = `gbp-reviews-${profileId === "all" ? "all-profiles" : "profile"}-${dateStamp}.csv`;
+    const filename = `gbp-reviews-export-${dateStamp}.csv`;
 
     return new Response(csvContent, {
       status: 200,
