@@ -4,7 +4,7 @@ import { useState, useMemo, useEffect } from "react";
 import {
   Star, MessageSquare, Search, RefreshCw, AlertCircle, CheckCircle2,
   ExternalLink, Building2, Clock, Loader2, Send, ChevronDown, Check,
-  Sparkles, ArrowUpDown, Filter, Edit3, X
+  Sparkles, ArrowUpDown, Filter, Edit3, X, AlertTriangle
 } from "lucide-react";
 import useSWR from "swr";
 
@@ -230,7 +230,7 @@ function ReviewCard({ review, onRepliedSuccess }: ReviewCardProps) {
         )}
       </div>
 
-      {/* Existing Reply Display (if already replied and not currently editing) */}
+      {/* Existing Reply Display */}
       {review.isReplied && !isEditing && review.reviewReply?.comment && (
         <div style={{ background: "#eff6ff", border: "1px solid #dbeafe", borderRadius: 10, padding: "12px 14px" }}>
           <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 4 }}>
@@ -262,7 +262,7 @@ function ReviewCard({ review, onRepliedSuccess }: ReviewCardProps) {
         </div>
       )}
 
-      {/* Reply Input Box (Visible if editing or pending) */}
+      {/* Reply Input Box */}
       {isEditing && (
         <div style={{ display: "flex", flexDirection: "column", gap: 8, marginTop: 2 }}>
           <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
@@ -383,11 +383,12 @@ export default function ReviewsPage() {
   const [sortBy, setSortBy] = useState<"NEWEST" | "OLDEST" | "LOWEST_STAR" | "HIGHEST_STAR">("NEWEST");
   const [isSyncing, setIsSyncing] = useState(false);
   const [lastSyncTime, setLastSyncTime] = useState<Date>(new Date());
+  const [showErrors, setShowErrors] = useState(false);
 
   // Local optimistic state of reviews
   const [localReviews, setLocalReviews] = useState<any[]>([]);
 
-  // Fetch reviews using SWR (fetches all reviews so client can switch between pending & all instantly)
+  // Fetch reviews using SWR
   const { data: reviewsRes, isLoading, mutate, error } = useSWR(
     "/api/reviews?profileId=all",
     fetcher,
@@ -506,6 +507,29 @@ export default function ReviewsPage() {
   return (
     <div style={{ maxWidth: 1280, margin: "0 auto", padding: "24px 20px 80px", display: "flex", flexDirection: "column", gap: 20 }}>
       <style>{`
+        .profile-tabs-scroll {
+          display: flex;
+          align-items: center;
+          gap: 8px;
+          overflow-x: auto;
+          padding-bottom: 8px;
+          scrollbar-width: thin;
+          scrollbar-color: #cbd5e1 #f8fafc;
+        }
+        .profile-tabs-scroll::-webkit-scrollbar {
+          height: 6px;
+        }
+        .profile-tabs-scroll::-webkit-scrollbar-track {
+          background: #f1f5f9;
+          border-radius: 6px;
+        }
+        .profile-tabs-scroll::-webkit-scrollbar-thumb {
+          background: #cbd5e1;
+          border-radius: 6px;
+        }
+        .profile-tabs-scroll::-webkit-scrollbar-thumb:hover {
+          background: #94a3b8;
+        }
         .profile-nav-tab {
           display: inline-flex;
           align-items: center;
@@ -618,11 +642,35 @@ export default function ReviewsPage() {
         </div>
       </div>
 
-      {/* Error alert banner if any */}
+      {/* Global Error Banner if any */}
       {reviewsRes?.error && (
         <div style={{ padding: "12px 16px", background: "#fef2f2", border: "1px solid #fecaca", borderRadius: 10, color: "#dc2626", fontSize: 13, display: "flex", alignItems: "center", gap: 8 }}>
           <AlertCircle size={16} />
           <span>{reviewsRes.error}</span>
+        </div>
+      )}
+
+      {/* Per-profile Google API warnings if some locations fail */}
+      {reviewsRes?.errors && reviewsRes.errors.length > 0 && (
+        <div style={{ background: "#fffbeb", border: "1px solid #fef3c7", borderRadius: 10, padding: "10px 14px" }}>
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+            <span style={{ fontSize: 12, fontWeight: 700, color: "#b45309", display: "flex", alignItems: "center", gap: 6 }}>
+              <AlertTriangle size={14} /> Google API Status Notice ({reviewsRes.errors.length} profiles have issues)
+            </span>
+            <button
+              onClick={() => setShowErrors(!showErrors)}
+              style={{ background: "none", border: "none", color: "#b45309", fontSize: 11, fontWeight: 600, cursor: "pointer", textDecoration: "underline" }}
+            >
+              {showErrors ? "Hide Details" : "View Details"}
+            </button>
+          </div>
+          {showErrors && (
+            <ul style={{ margin: "8px 0 0", paddingLeft: 18, fontSize: 11, color: "#92400e" }}>
+              {reviewsRes.errors.map((err: string, i: number) => (
+                <li key={i}>{err}</li>
+              ))}
+            </ul>
+          )}
         </div>
       )}
 
@@ -656,17 +704,8 @@ export default function ReviewsPage() {
           </span>
         </div>
 
-        {/* Scrollable Tabs row */}
-        <div
-          style={{
-            display: "flex",
-            alignItems: "center",
-            gap: 8,
-            overflowX: "auto",
-            paddingBottom: 6,
-            scrollbarWidth: "thin",
-          }}
-        >
+        {/* Clean Theme-styled Scrollable Tabs row */}
+        <div className="profile-tabs-scroll">
           {/* Tab 1: All */}
           <button
             onClick={() => setSelectedTab("all")}
