@@ -165,6 +165,19 @@ export async function POST(req: NextRequest) {
       // Calculate next available slot at 3-per-day limit
       const scheduledFor = await getNextAvailableReplySlot(location.id);
 
+      // Sanitize rating and date against NaN / Invalid Date
+      let parsedRating: number | null = null;
+      if (ratingStr) {
+        const r = parseInt(ratingStr, 10);
+        if (!isNaN(r) && r >= 1 && r <= 5) parsedRating = r;
+      }
+
+      let parsedCreateTime: Date | null = null;
+      if (reviewDateStr) {
+        const d = new Date(reviewDateStr);
+        if (!isNaN(d.getTime())) parsedCreateTime = d;
+      }
+
       // Upsert into ScheduledReviewReply
       await prisma.scheduledReviewReply.upsert({
         where: {
@@ -177,9 +190,9 @@ export async function POST(req: NextRequest) {
           reviewName: reviewResourceName,
           reviewId: reviewId || null,
           reviewerName: reviewerName || null,
-          rating: ratingStr ? parseInt(ratingStr, 10) : null,
+          rating: parsedRating,
           reviewComment: customerReview || null,
-          reviewCreateTime: reviewDateStr ? new Date(reviewDateStr) : null,
+          reviewCreateTime: parsedCreateTime,
           replyComment: ownerReply,
           scheduledFor,
           status: "SCHEDULED",

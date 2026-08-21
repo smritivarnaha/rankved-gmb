@@ -57,10 +57,9 @@ export async function publishToGBP(opts: PublishOptions): Promise<PublishResult>
         where: { id: post.profileId },
         select: { gbpAccountId: true, gbpLocationId: true }
       });
-      if (loc && loc.gbpAccountId && loc.gbpLocationId) {
-        const accId = loc.gbpAccountId.replace("accounts/", "");
-        const locId = loc.gbpLocationId.replace("locations/", "");
-        locationName = `accounts/${accId}/locations/${locId}`;
+      if (loc) {
+        const { buildGoogleLocationPath } = await import("@/lib/google-accounts");
+        locationName = buildGoogleLocationPath(loc.gbpAccountId, loc.gbpLocationId);
       }
     } catch (err) {
       console.error("[GBP] Failed to resolve location UUID:", err);

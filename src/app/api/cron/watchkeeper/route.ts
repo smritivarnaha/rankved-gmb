@@ -5,6 +5,13 @@ import { notifyAdmin } from "@/lib/notifications";
 export const dynamic = "force-dynamic";
 
 export async function GET(req: NextRequest) {
+  // Auth check
+  const authHeader = req.headers.get("authorization");
+  const cronSecret = process.env.CRON_SECRET;
+  if (cronSecret && authHeader !== `Bearer ${cronSecret}`) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
   try {
     // 1. Find posts that are SCHEDULED but missed their time by more than 1 hour.
     // This gives the regular publisher cron job enough time to process them.

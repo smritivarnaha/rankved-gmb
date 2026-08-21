@@ -78,3 +78,27 @@ export async function getValidGoogleAccounts(userId: string, forceRefresh = fals
 
   return validAccounts;
 }
+
+/**
+ * Canonical normalizer for Google Business Profile resource paths.
+ * Resolves locationId and accountId into "accounts/{accId}/locations/{locId}"
+ * without duplicating prefixes or creating malformed paths.
+ */
+export function buildGoogleLocationPath(accountId?: string | null, locationId?: string | null): string {
+  const loc = (locationId || "").trim();
+  const acc = (accountId || "").trim();
+
+  if (!loc && !acc) return "";
+
+  // If locationId is already a full canonical path (accounts/123/locations/456)
+  if (loc.includes("accounts/") && loc.includes("locations/")) {
+    return loc;
+  }
+
+  const cleanAcc = acc ? (acc.startsWith("accounts/") ? acc : `accounts/${acc}`) : "";
+  const cleanLoc = loc ? (loc.startsWith("locations/") ? loc : `locations/${loc}`) : "";
+
+  if (cleanAcc && cleanLoc) return `${cleanAcc}/${cleanLoc}`;
+  return cleanLoc || cleanAcc;
+}
+

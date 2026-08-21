@@ -71,17 +71,21 @@ export async function GET(req: NextRequest) {
 
   for (const location of locations) {
     try {
-      // Get the best access token for this location's owner
-      const userId = location.client.userId;
-      const accounts = await getValidGoogleAccounts(userId);
-      const accessToken = accounts[0]?.access_token;
+      const { getGoogleAccessTokenForLocation } = await import("@/lib/google-token");
+      const { buildGoogleLocationPath } = await import("@/lib/google-accounts");
+
+      const accessToken = await getGoogleAccessTokenForLocation(location.id);
 
       if (!accessToken) {
-        console.warn(`[GBP Monitor] No token for location ${location.name} (userId: ${userId})`);
+        console.warn(`[GBP Monitor] No token for location ${location.name} (id: ${location.id})`);
         continue;
       }
 
-      const locationPath = `${location.gbpAccountId}/${location.gbpLocationId}`;
+      const locationPath = buildGoogleLocationPath(location.gbpAccountId, location.gbpLocationId);
+      if (!locationPath) {
+        console.warn(`[GBP Monitor] Invalid locationPath for ${location.name}`);
+        continue;
+      }
 
       // ── 1. Review Monitoring ─────────────────────────────────────────────
       if (settings.reviewAlertsEnabled) {

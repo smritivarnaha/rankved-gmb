@@ -214,17 +214,21 @@ export async function GET(req: NextRequest) {
 
     if (dueReplies.length > 0) {
       console.log(`[CRON] Processing ${dueReplies.length} due scheduled review replies...`);
-      const { getValidGoogleAccounts, getEmailFromIdToken } = await import("@/lib/google-accounts");
 
       for (const rep of dueReplies) {
+        // Atomic lock to prevent duplicate execution across concurrent cron invocations
         try {
-          const accounts = await getValidGoogleAccounts(rep.userId);
-          let token: string | null = null;
-          if (rep.location.googleEmail) {
-            const match = accounts.find(a => getEmailFromIdToken(a.id_token) === rep.location.googleEmail);
-            if (match?.access_token) token = match.access_token;
-          }
-          if (!token) token = accounts[0]?.access_token || null;
+          await prisma.scheduledReviewReply.update({
+            where: { id: rep.id, status: "SCHEDULED" },
+            data: { status: "PUBLISHING" },
+          });
+        } catch {
+          console.log(`[CRON] Skipping review reply ${rep.id} - already being processed by another worker.`);
+          continue;
+        }
+
+        try {
+          const token = await getGoogleAccessTokenForLocation(rep.locationId);
 
           if (!token) {
             await prisma.scheduledReviewReply.update({

@@ -24,8 +24,8 @@ export async function getNextAvailableReplySlot(locationId: string, baseDate = n
     const dayEnd = new Date(candidateDate);
     dayEnd.setHours(23, 59, 59, 999);
 
-    // Count how many are scheduled on this day for this profile
-    const scheduledOnDay = await prisma.scheduledReviewReply.count({
+    // Fetch existing scheduled replies on this day for this profile
+    const scheduledOnDay = await prisma.scheduledReviewReply.findMany({
       where: {
         locationId,
         status: "SCHEDULED",
@@ -34,32 +34,27 @@ export async function getNextAvailableReplySlot(locationId: string, baseDate = n
           lte: dayEnd,
         },
       },
+      select: { scheduledFor: true },
     });
 
-    if (scheduledOnDay < DAILY_PROFILE_REPLY_LIMIT) {
-      const slotIndex = scheduledOnDay; // 0, 1, or 2
-      const slotHour = DEFAULT_POSTING_SLOT_HOURS[slotIndex] ?? 18;
+    const isToday = candidateDate.toDateString() === now.toDateString();
+    const currentHour = now.getHours();
+    const bookedHours = new Set(scheduledOnDay.map(s => new Date(s.scheduledFor).getHours()));
 
+    // Find the first slot hour not yet booked (and strictly in future if today)
+    const availableHour = DEFAULT_POSTING_SLOT_HOURS.find(hour => {
+      if (bookedHours.has(hour)) return false;
+      if (isToday && hour <= currentHour) return false;
+      return true;
+    });
+
+    if (availableHour !== undefined && bookedHours.size < DAILY_PROFILE_REPLY_LIMIT) {
       const slotTime = new Date(candidateDate);
-      slotTime.setHours(slotHour, 0, 0, 0);
-
-      // If candidate is today and the slot hour is already in the past, adjust to now + 5 mins or next slot
-      if (candidateDate.toDateString() === now.toDateString() && slotTime <= now) {
-        // If there is still a later slot today
-        const nextSlotIndex = DEFAULT_POSTING_SLOT_HOURS.findIndex(h => h > now.getHours());
-        if (nextSlotIndex !== -1 && nextSlotIndex >= scheduledOnDay) {
-          slotTime.setHours(DEFAULT_POSTING_SLOT_HOURS[nextSlotIndex], 0, 0, 0);
-          return slotTime;
-        }
-        // No remaining slots today -> advance candidateDate to tomorrow
-        candidateDate.setDate(candidateDate.getDate() + 1);
-        continue;
-      }
-
+      slotTime.setHours(availableHour, 0, 0, 0);
       return slotTime;
     }
 
-    // Day is full (3 replies already), advance to next day
+    // Day is full or no future slots available today, advance candidateDate to next day
     candidateDate.setDate(candidateDate.getDate() + 1);
   }
 

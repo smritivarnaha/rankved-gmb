@@ -26,20 +26,14 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
     const { searchParams } = new URL(req.url);
     const pageSize = searchParams.get("pageSize") || "20";
 
-    // Normalise IDs — strip the "locations/" and "accounts/" prefixes if present
-    const rawLocationId = location.gbpLocationId.replace("locations/", "");
-    const rawAccountId  = (location.gbpAccountId || "").replace("accounts/", "");
+    const { buildGoogleLocationPath } = await import("@/lib/google-accounts");
+    const locationPath = buildGoogleLocationPath(location.gbpAccountId, location.gbpLocationId);
 
-    // The CORRECT Google My Business API endpoint requires the full account path:
-    // accounts/{accountId}/locations/{locationId}/localPosts
-    // Using just locations/{id}/localPosts returns a 404 HTML response.
-    let apiUrl: string;
-    if (rawAccountId) {
-      apiUrl = `https://mybusiness.googleapis.com/v4/accounts/${rawAccountId}/locations/${rawLocationId}/localPosts?pageSize=${pageSize}`;
-    } else {
-      // Fallback (less reliable) — try without account prefix
-      apiUrl = `https://mybusiness.googleapis.com/v4/locations/${rawLocationId}/localPosts?pageSize=${pageSize}`;
+    if (!locationPath) {
+      return NextResponse.json({ error: "Invalid Google location configuration." }, { status: 400 });
     }
+
+    const apiUrl = `https://mybusiness.googleapis.com/v4/${locationPath}/localPosts?pageSize=${pageSize}`;
 
     console.log(`[Google Posts API] Calling: ${apiUrl}`);
 

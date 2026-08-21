@@ -21,14 +21,24 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
       return NextResponse.json({ error: "Profile not found or not connected to GMB" }, { status: 404 });
     }
 
-    // 2. Fetch reviews from Google
-    // Note: accountName must be in the format "accounts/ACC_ID/locations/LOC_ID"
-    const accountName = `${profile.gbpAccountId}/${profile.gbpLocationId}`;
+    const { buildGoogleLocationPath } = await import("@/lib/google-accounts");
+    const { getGoogleAccessTokenForLocation } = await import("@/lib/google-token");
+
+    const accountName = buildGoogleLocationPath(profile.gbpAccountId, profile.gbpLocationId);
+    if (!accountName) {
+      return NextResponse.json({ error: "Invalid Google location configuration." }, { status: 400 });
+    }
+
+    const accessToken = ((session as any).accessToken) || (await getGoogleAccessTokenForLocation(profile.id));
+    if (!accessToken) {
+      return NextResponse.json({ error: "No valid Google connection found for this location." }, { status: 401 });
+    }
+
     const googleRes = await fetch(
       `https://mybusiness.googleapis.com/v4/${accountName}/reviews`,
       {
         headers: {
-          Authorization: `Bearer ${(session as any).accessToken}`,
+          Authorization: `Bearer ${accessToken}`,
         },
         cache: "no-store"
       }
