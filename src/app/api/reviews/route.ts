@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/lib/auth";
-import { getValidGoogleAccounts, getEmailFromIdToken } from "@/lib/google-accounts";
+import { getValidGoogleAccounts, getEmailFromIdToken, buildGoogleLocationPath } from "@/lib/google-accounts";
 import { getAllProfiles } from "@/lib/profile-store";
 
 async function fetchWithRetry(url: string, options: RequestInit, retries = 2): Promise<Response> {
@@ -14,25 +14,6 @@ async function fetchWithRetry(url: string, options: RequestInit, retries = 2): P
     return res;
   }
   return fetch(url, options);
-}
-
-function buildGoogleLocationPath(accountId?: string, locationId?: string): string {
-  const loc = (locationId || "").trim();
-  const acc = (accountId || "").trim();
-
-  if (!loc && !acc) return "";
-
-  // Case 1: locationId is already full resource path (e.g. accounts/123/locations/456)
-  if (loc.includes("accounts/") && loc.includes("locations/")) {
-    return loc;
-  }
-
-  // Case 2: locationId has locations/456 and accountId has accounts/123
-  const cleanAcc = acc ? (acc.startsWith("accounts/") ? acc : `accounts/${acc}`) : "";
-  const cleanLoc = loc ? (loc.startsWith("locations/") ? loc : `locations/${loc}`) : "";
-
-  if (cleanAcc && cleanLoc) return `${cleanAcc}/${cleanLoc}`;
-  return cleanLoc || cleanAcc;
 }
 
 /**
@@ -109,7 +90,7 @@ export async function GET(req: NextRequest) {
       return tokens;
     };
 
-    // Helper to fetch reviews for a single location
+    // Helper to fetch reviews for a single location with full pagination
     const fetchReviewsForLocation = async (loc: any) => {
       const tokens = getTokensForLocation(loc);
       if (tokens.length === 0) return { profile: loc, reviews: [], error: "No access token" };
@@ -122,15 +103,35 @@ export async function GET(req: NextRequest) {
       // Try tokens in sequence until one succeeds
       for (const token of tokens) {
         try {
-          const reviewsUrl = `https://mybusiness.googleapis.com/v4/${locationPath}/reviews?pageSize=50`;
-          const res = await fetchWithRetry(reviewsUrl, {
-            headers: { Authorization: `Bearer ${token}` }
-          });
+          let pageToken = "";
+          const rawReviews: any[] = [];
+          let pageCount = 0;
+          const maxPages = 10; // Up to 500 reviews per location
 
-          if (res.ok) {
-            const data = await res.json();
-            const rawReviews = data.reviews || [];
+          while (pageCount < maxPages) {
+            const reviewsUrl = `https://mybusiness.googleapis.com/v4/${locationPath}/reviews?pageSize=50${pageToken ? `&pageToken=${encodeURIComponent(pageToken)}` : ""}`;
+            const res = await fetchWithRetry(reviewsUrl, {
+              headers: { Authorization: `Bearer ${token}` }
+            });
 
+            if (res.ok) {
+              const data = await res.json();
+              const pageReviews = data.reviews || [];
+              rawReviews.push(...pageReviews);
+
+              if (!data.nextPageToken || pageReviews.length === 0) {
+                break;
+              }
+              pageToken = data.nextPageToken;
+              pageCount++;
+            } else {
+              const errText = await res.text();
+              lastError = `Google API ${res.status}: ${errText.substring(0, 120)}`;
+              break;
+            }
+          }
+
+          if (rawReviews.length > 0 || lastError === null) {
             const mappedReviews = rawReviews.map((r: any) => {
               const hasReply = !!(r.reviewReply && r.reviewReply.comment && r.reviewReply.comment.trim());
               return {
@@ -144,9 +145,6 @@ export async function GET(req: NextRequest) {
             });
 
             return { profile: loc, reviews: mappedReviews, error: null };
-          } else {
-            const errText = await res.text();
-            lastError = `Google API ${res.status}: ${errText.substring(0, 120)}`;
           }
         } catch (e: any) {
           lastError = e.message;
@@ -171,6 +169,7 @@ export async function GET(req: NextRequest) {
 
       return NextResponse.json({
         data: reviews,
+        allReviews: result.reviews,
         pendingCount,
         totalCount: result.reviews.length,
         profilePendingCounts: { [location.id]: pendingCount },
@@ -185,6 +184,7 @@ export async function GET(req: NextRequest) {
     if (allProfiles.length === 0) {
       return NextResponse.json({
         data: [],
+        allReviews: [],
         profiles: [],
         pendingCount: 0,
         totalCount: 0,

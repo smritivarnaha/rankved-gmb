@@ -21,7 +21,7 @@ function getRating(r: any): number {
  * - dateRange: "all" | "30d" | "60d" | "90d" | "custom"
  * - startDate: ISO string or YYYY-MM-DD
  * - endDate: ISO string or YYYY-MM-DD
- * - status: "pending" | "all"
+ * - status: "pending" | "replied" | "all"
  */
 export async function GET(req: NextRequest) {
   const session = await getServerSession(authOptions);
@@ -33,14 +33,14 @@ export async function GET(req: NextRequest) {
   const dateRange = searchParams.get("dateRange") || "all";
   const startDateParam = searchParams.get("startDate");
   const endDateParam = searchParams.get("endDate");
-  const statusParam = searchParams.get("status") || "all";
+  const statusParam = (searchParams.get("status") || "all").toLowerCase();
 
   try {
-    // 1. Fetch reviews from our internal reviews API handler
+    // 1. Fetch complete review stream (with all reviews un-filtered)
     const origin = req.nextUrl.origin;
     const cookie = req.headers.get("cookie") || "";
 
-    const reviewsRes = await fetch(`${origin}/api/reviews?profileId=all&pendingOnly=${statusParam === "pending"}`, {
+    const reviewsRes = await fetch(`${origin}/api/reviews?profileId=all&pendingOnly=false`, {
       headers: { cookie },
     });
 
@@ -51,7 +51,7 @@ export async function GET(req: NextRequest) {
     const reviewsData = await reviewsRes.json();
     let reviews: any[] = reviewsData.allReviews || reviewsData.data || [];
 
-    // Filter by selected profile(s)
+    // 2. Filter by Profile(s)
     const combinedProfileFilter = profileIdsParam || profileIdParam;
     if (combinedProfileFilter && combinedProfileFilter !== "all") {
       const selectedIdList = combinedProfileFilter.split(",").map(id => id.trim()).filter(Boolean);
@@ -60,7 +60,15 @@ export async function GET(req: NextRequest) {
       }
     }
 
-    // 2. Filter by Date Range
+    // 3. Filter by Status (Pending Only vs Replied vs All Reviews)
+    if (statusParam === "pending") {
+      reviews = reviews.filter(r => !r.isReplied);
+    } else if (statusParam === "replied") {
+      reviews = reviews.filter(r => r.isReplied);
+    }
+    // If statusParam === "all", keep all reviews without filtering out replied ones
+
+    // 4. Filter by Date Range
     const now = new Date();
     let minDate: Date | null = null;
     let maxDate: Date | null = null;
@@ -89,7 +97,7 @@ export async function GET(req: NextRequest) {
       });
     }
 
-    // 3. Build CSV string
+    // 5. Build CSV string
     const headers = [
       "Profile_ID",
       "Profile_Name",
@@ -100,6 +108,7 @@ export async function GET(req: NextRequest) {
       "Review_Received_Date",
       "Customer_Review",
       "Owner_Reply",
+      "Status",
     ];
 
     const rows: string[] = [];
@@ -120,6 +129,7 @@ export async function GET(req: NextRequest) {
         escapeCsvCell(receivedDateStr),
         escapeCsvCell(r.comment || ""),
         escapeCsvCell(r.reviewReply?.comment || ""),
+        escapeCsvCell(r.isReplied ? "Replied" : "Pending"),
       ];
       rows.push(row.join(","));
     }
@@ -128,7 +138,7 @@ export async function GET(req: NextRequest) {
     const csvContent = "\uFEFF" + rows.join("\r\n");
 
     const dateStamp = new Date().toISOString().slice(0, 10);
-    const filename = `gbp-reviews-export-${dateStamp}.csv`;
+    const filename = `gbp-reviews-export-${statusParam === "pending" ? "pending" : "all"}-${dateStamp}.csv`;
 
     return new Response(csvContent, {
       status: 200,
