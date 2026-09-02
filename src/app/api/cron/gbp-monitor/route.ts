@@ -140,6 +140,14 @@ async function checkReviews({ location, locationPath, accessToken, settings, ale
   const totalCount: number = data.totalReviewCount ?? reviews.length;
   const avgRating: number = data.averageRating ?? 0;
 
+  // Auto-backup to permanent database vault and detect dropped/deleted reviews
+  try {
+    const { syncAndBackupLocationReviews } = await import("@/lib/review-backup-service");
+    await syncAndBackupLocationReviews(location.id, reviews, totalCount, avgRating);
+  } catch (backupErr) {
+    console.error(`[GBP Monitor] Review backup failed for ${location.name}:`, backupErr);
+  }
+
   // Get or create snapshot
   const snapshot = await prisma.reviewSnapshot.upsert({
     where: { locationId: location.id },

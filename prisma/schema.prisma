@@ -146,6 +146,8 @@ model Location {
   notifications Notification[]
   assignedUsers User[] @relation("LocationAssignments")
   scheduledReviewReplies ScheduledReviewReply[]
+  backedUpReviews        LocationReview[]
+  reviewDropIncidents    ReviewDropIncident[]
 
   // AI Configuration
   aiInstructions         String?   @db.Text
@@ -506,5 +508,52 @@ model ScheduledReviewReply {
   @@index([locationId])
   @@index([userId])
   @@index([status, scheduledFor])
+}
+
+model LocationReview {
+  id               String    @id @default(cuid())
+  locationId       String
+  location         Location  @relation(fields: [locationId], references: [id], onDelete: Cascade)
+  reviewName       String    // Google Resource Name e.g. accounts/xxx/locations/yyy/reviews/zzz
+  reviewId         String?   // Google Review ID
+  reviewerName     String?
+  reviewerPhotoUrl String?   @db.Text
+  starRating       String?   // FIVE, FOUR, THREE, TWO, ONE or numeric
+  rating           Int       @default(5)
+  comment          String?   @db.Text
+  reviewCreateTime DateTime?
+  reviewUpdateTime DateTime?
+  ownerReply       String?   @db.Text
+  ownerReplyTime   DateTime?
+  
+  // Google status tracking
+  status           String    @default("ACTIVE") // "ACTIVE" | "DELETED_BY_GOOGLE"
+  deletedAt        DateTime?
+  firstSeenAt      DateTime  @default(now())
+  lastSeenAt       DateTime  @default(now())
+  
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+
+  @@unique([locationId, reviewName])
+  @@index([locationId, status])
+  @@index([status])
+}
+
+model ReviewDropIncident {
+  id                String    @id @default(cuid())
+  locationId        String
+  location          Location  @relation(fields: [locationId], references: [id], onDelete: Cascade)
+  droppedCount      Int       @default(1)
+  previousCount     Int       @default(0)
+  currentCount      Int       @default(0)
+  previousAvgRating Float     @default(0)
+  currentAvgRating  Float     @default(0)
+  reviewNamesJson   String    @db.Text // JSON list of reviewName(s) dropped in this incident
+  alertSent         Boolean   @default(false)
+  createdAt         DateTime  @default(now())
+
+  @@index([locationId])
+  @@index([createdAt])
 }
 

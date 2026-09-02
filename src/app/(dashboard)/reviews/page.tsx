@@ -1010,10 +1010,202 @@ function ScheduledQueueView({ profileId }: { profileId: string }) {
   );
 }
 
+// ── Deleted / Missing Reviews View (Google Spam Drops) ───────────────────
+function DeletedReviewsView({ profileId }: { profileId: string }) {
+  const [copiedId, setCopiedId] = useState<string | null>(null);
+  const [toastMessage, setToastMessage] = useState<string | null>(null);
+
+  const { data: res, isLoading } = useSWR(
+    `/api/reviews/deleted?profileId=${profileId}`,
+    fetcher
+  );
+
+  const deletedList = res?.data || [];
+
+  const handleCopy = (item: any) => {
+    navigator.clipboard.writeText(item.appealEvidence || "");
+    setCopiedId(item.id);
+    setToastMessage(`✓ Google Appeal Evidence copied for ${item.reviewerName || "Customer"}!`);
+    setTimeout(() => {
+      setCopiedId(null);
+      setToastMessage(null);
+    }, 3500);
+  };
+
+  const handleDownloadCsv = () => {
+    window.location.href = `/api/reviews/deleted/export?profileId=${profileId}`;
+  };
+
+  if (isLoading) {
+    return (
+      <div style={{ padding: 40, textAlign: "center", background: "#ffffff", borderRadius: 12, border: "1px solid #e2e8f0" }}>
+        <Loader2 size={24} className="animate-spin" color="#dc2626" style={{ margin: "0 auto 8px" }} />
+        <p style={{ color: "#64748b", fontSize: 13 }}>Loading backed up deleted reviews...</p>
+      </div>
+    );
+  }
+
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+      {/* Toast Alert */}
+      {toastMessage && (
+        <div style={{ position: "fixed", bottom: 24, right: 24, zIndex: 9999, background: "#0f172a", color: "#ffffff", padding: "12px 20px", borderRadius: 10, fontSize: 13, fontWeight: 600, display: "flex", alignItems: "center", gap: 8, boxShadow: "0 10px 25px -5px rgba(0,0,0,0.3)" }}>
+          <Check size={16} color="#4ade80" />
+          {toastMessage}
+        </div>
+      )}
+
+      {/* Overview Warning Banner */}
+      <div style={{ background: "#fff1f2", border: "1px solid #fecdd3", borderRadius: 12, padding: "16px 20px", display: "flex", flexWrap: "wrap", alignItems: "center", justifyContent: "space-between", gap: 12 }}>
+        <div style={{ display: "flex", alignItems: "flex-start", gap: 12, maxWidth: 800 }}>
+          <div style={{ width: 36, height: 36, borderRadius: 10, background: "#fee2e2", display: "flex", alignItems: "center", justifyContent: "center", color: "#dc2626", flexShrink: 0 }}>
+            <AlertTriangle size={18} />
+          </div>
+          <div>
+            <h3 style={{ margin: 0, fontSize: 15, fontWeight: 700, color: "#9f1239" }}>
+              Google Spam Update Drops ({deletedList.length} deleted reviews detected)
+            </h3>
+            <p style={{ margin: "4px 0 0", fontSize: 12, color: "#be123c", lineHeight: 1.5 }}>
+              Google automated systems periodically remove genuine customer reviews without notice. Our permanent backup vault stored these reviews and has prepared formal Google Support Appeal Evidence for every removed review below.
+            </p>
+          </div>
+        </div>
+
+        {deletedList.length > 0 && (
+          <button
+            onClick={handleDownloadCsv}
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: 6,
+              padding: "8px 16px",
+              background: "#be123c",
+              color: "#ffffff",
+              border: "none",
+              borderRadius: 8,
+              fontSize: 12,
+              fontWeight: 700,
+              cursor: "pointer",
+              boxShadow: "0 2px 6px rgba(190,18,60,0.2)",
+            }}
+          >
+            <Download size={14} /> Export Evidence CSV
+          </button>
+        )}
+      </div>
+
+      {deletedList.length === 0 ? (
+        <div style={{ padding: 48, textAlign: "center", background: "#ffffff", borderRadius: 12, border: "1px solid #e2e8f0" }}>
+          <CheckCircle2 size={36} color="#16a34a" style={{ margin: "0 auto 12px" }} />
+          <h3 style={{ margin: 0, fontSize: 16, fontWeight: 700, color: "#0f172a" }}>
+            No Review Drops Detected
+          </h3>
+          <p style={{ margin: "4px 0 0", fontSize: 13, color: "#64748b" }}>
+            All customer reviews in your database backup vault are currently live and active on Google.
+          </p>
+        </div>
+      ) : (
+        <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+          {deletedList.map((item: any) => {
+            const receivedDateStr = item.reviewCreateTime
+              ? new Date(item.reviewCreateTime).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" })
+              : "N/A";
+            const deletedDateStr = item.deletedAt
+              ? new Date(item.deletedAt).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" })
+              : "Recently";
+
+            return (
+              <div
+                key={item.id}
+                style={{
+                  background: "#ffffff",
+                  border: "1px solid #fed7aa",
+                  borderLeft: "4px solid #ef4444",
+                  borderRadius: 12,
+                  padding: "18px 20px",
+                  display: "flex",
+                  flexDirection: "column",
+                  gap: 14,
+                  boxShadow: "0 2px 6px rgba(239,68,68,0.05)",
+                }}
+              >
+                {/* Header row */}
+                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: 10 }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                    <Avatar name={item.reviewerName || "Customer"} photoUrl={item.reviewerPhotoUrl} size={38} />
+                    <div>
+                      <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                        <span style={{ fontSize: 14, fontWeight: 700, color: "#0f172a" }}>
+                          {item.reviewerName || "Anonymous Customer"}
+                        </span>
+                        <StarRating rating={item.rating || 5} size={13} />
+                      </div>
+                      <span style={{ fontSize: 11, color: "#64748b" }}>
+                        Received: {receivedDateStr} • Location: <b>{item.location?.name || "Profile"}</b>
+                      </span>
+                    </div>
+                  </div>
+
+                  <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                    <span style={{ padding: "4px 10px", borderRadius: 20, background: "#fee2e2", color: "#b91c1c", fontSize: 11, fontWeight: 800, display: "flex", alignItems: "center", gap: 4 }}>
+                      <AlertTriangle size={12} /> Removed by Google on {deletedDateStr}
+                    </span>
+                    <button
+                      onClick={() => handleCopy(item)}
+                      style={{
+                        display: "flex",
+                        alignItems: "center",
+                        gap: 6,
+                        padding: "6px 14px",
+                        background: copiedId === item.id ? "#16a34a" : "#2563eb",
+                        color: "#ffffff",
+                        border: "none",
+                        borderRadius: 8,
+                        fontSize: 12,
+                        fontWeight: 600,
+                        cursor: "pointer",
+                        transition: "all 0.15s ease",
+                      }}
+                    >
+                      {copiedId === item.id ? <Check size={13} /> : <FileText size={13} />}
+                      {copiedId === item.id ? "Copied!" : "Copy Appeal Evidence"}
+                    </button>
+                  </div>
+                </div>
+
+                {/* Review Text */}
+                <div style={{ background: "#f8fafc", border: "1px solid #e2e8f0", borderRadius: 8, padding: "12px 16px" }}>
+                  <span style={{ fontSize: 10, fontWeight: 800, color: "#64748b", textTransform: "uppercase", letterSpacing: "0.04em", display: "block", marginBottom: 4 }}>
+                    Original Customer Review (Backed Up in Vault):
+                  </span>
+                  <p style={{ margin: 0, fontSize: 13, color: "#1e293b", lineHeight: 1.6, fontStyle: item.comment ? "normal" : "italic" }}>
+                    {item.comment ? `"${item.comment}"` : "(Customer left a 5-star rating without written comment)"}
+                  </p>
+                  {item.ownerReply && (
+                    <div style={{ marginTop: 8, paddingTop: 8, borderTop: "1px solid #e2e8f0", fontSize: 12, color: "#047857" }}>
+                      <b>Original Owner Reply:</b> "{item.ownerReply}"
+                    </div>
+                  )}
+                </div>
+
+                {/* Resource Details Footer */}
+                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: 8, fontSize: 11, color: "#94a3b8" }}>
+                  <span>Google Resource Name: <code style={{ background: "#f1f5f9", padding: "2px 6px", borderRadius: 4, color: "#475569" }}>{item.reviewName}</code></span>
+                  <span>Review ID: <code style={{ background: "#f1f5f9", padding: "2px 6px", borderRadius: 4, color: "#475569" }}>{item.reviewId || "N/A"}</code></span>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ── Main Page ─────────────────────────────────────────────────────────────
 export default function ReviewsPage() {
   const [selectedTab, setSelectedTab] = useState<string>("all"); // "all" | profileId
-  const [statusFilter, setStatusFilter] = useState<"pending" | "all" | "replied" | "queue">("pending");
+  const [statusFilter, setStatusFilter] = useState<"pending" | "all" | "replied" | "queue" | "deleted">("pending");
   const [searchQuery, setSearchQuery] = useState("");
   const [starFilter, setStarFilter] = useState<string>("all");
   const [sortBy, setSortBy] = useState<"NEWEST" | "OLDEST" | "LOWEST_STAR" | "HIGHEST_STAR">("NEWEST");
@@ -1088,6 +1280,7 @@ export default function ReviewsPage() {
 
   const totalPending = localReviews.filter(r => !r.isReplied).length;
   const totalAll = localReviews.length;
+  const totalDeleted = reviewsRes?.deletedCount || 0;
 
   const displayedReviews = useMemo(() => {
     let list = [...localReviews];
@@ -1356,6 +1549,22 @@ export default function ReviewsPage() {
             >
               <Clock size={12} /> 🕒 Scheduled Queue
             </button>
+            <button
+              className={`status-pill-btn ${statusFilter === "deleted" ? "active" : ""}`}
+              onClick={() => setStatusFilter("deleted")}
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: 4,
+                background: statusFilter === "deleted" ? "#fef2f2" : (totalDeleted > 0 ? "#fff1f2" : undefined),
+                color: statusFilter === "deleted" ? "#dc2626" : (totalDeleted > 0 ? "#b91c1c" : undefined),
+                borderColor: statusFilter === "deleted" ? "#fca5a5" : (totalDeleted > 0 ? "#fecdd3" : undefined),
+                fontWeight: totalDeleted > 0 ? 700 : 600,
+              }}
+            >
+              <AlertTriangle size={12} color={totalDeleted > 0 ? "#dc2626" : "#64748b"} />
+              ⚠️ Removed by Google ({totalDeleted})
+            </button>
           </div>
 
           <span style={{ fontSize: 12, fontWeight: 600, color: totalPending > 0 ? "#ea580c" : "#16a34a" }}>
@@ -1401,9 +1610,11 @@ export default function ReviewsPage() {
         </div>
       </div>
 
-      {/* Main Content Area: Scheduled Queue OR Review Cards Stream */}
+      {/* Main Content Area: Scheduled Queue OR Deleted Reviews OR Review Cards Stream */}
       {statusFilter === "queue" ? (
         <ScheduledQueueView profileId={selectedTab} />
+      ) : statusFilter === "deleted" ? (
+        <DeletedReviewsView profileId={selectedTab} />
       ) : (
         <>
           {/* Search, Filter & Sort Controls Toolbar */}

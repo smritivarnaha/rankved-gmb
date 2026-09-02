@@ -144,6 +144,14 @@ export async function GET(req: NextRequest) {
               };
             });
 
+            // Auto-backup reviews to database vault and check for Google spam drops
+            try {
+              const { syncAndBackupLocationReviews } = await import("@/lib/review-backup-service");
+              await syncAndBackupLocationReviews(loc.id, mappedReviews);
+            } catch (backupErr) {
+              console.error("[Review Backup] Sync error for location:", loc.name, backupErr);
+            }
+
             return { profile: loc, reviews: mappedReviews, error: null };
           }
         } catch (e: any) {
@@ -163,6 +171,10 @@ export async function GET(req: NextRequest) {
       let reviews = result.reviews;
       const pendingCount = result.reviews.filter((r: any) => !r.isReplied).length;
 
+      const deletedCount = await prisma.locationReview.count({
+        where: { locationId: profileId, status: "DELETED_BY_GOOGLE" },
+      });
+
       if (pendingOnly) {
         reviews = reviews.filter((r: any) => !r.isReplied);
       }
@@ -172,6 +184,7 @@ export async function GET(req: NextRequest) {
         allReviews: result.reviews,
         pendingCount,
         totalCount: result.reviews.length,
+        deletedCount,
         profilePendingCounts: { [location.id]: pendingCount },
         lastSynced: new Date().toISOString(),
         error: result.error,
@@ -188,6 +201,7 @@ export async function GET(req: NextRequest) {
         profiles: [],
         pendingCount: 0,
         totalCount: 0,
+        deletedCount: 0,
         profilePendingCounts: {},
         lastSynced: new Date().toISOString(),
       });
@@ -241,6 +255,14 @@ export async function GET(req: NextRequest) {
       }
     });
 
+    // Count all deleted reviews across profiles
+    const totalDeletedCount = await prisma.locationReview.count({
+      where: {
+        status: "DELETED_BY_GOOGLE",
+        locationId: { in: allProfiles.map(p => p.id) },
+      },
+    });
+
     // Sort all reviews date-wise (newest first)
     combinedReviews.sort((a, b) => {
       const timeA = new Date(a.createTime || 0).getTime();
@@ -256,6 +278,7 @@ export async function GET(req: NextRequest) {
       profiles: profileSummaries,
       pendingCount: totalPendingCount,
       totalCount: totalAllCount,
+      deletedCount: totalDeletedCount,
       profilePendingCounts,
       errors: errors.length > 0 ? errors : undefined,
       lastSynced: new Date().toISOString(),
