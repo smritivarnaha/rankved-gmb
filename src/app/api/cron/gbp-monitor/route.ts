@@ -219,6 +219,71 @@ async function checkReviews({ location, locationPath, accessToken, settings, ale
     console.log(`[GBP Monitor] New review alert sent for ${location.name}`);
   }
 
+  // ── Auto Review Replier Logic (if enabled) ───────────────────────────
+  if (location.autoReplyEnabled) {
+    const unreplied = reviews.filter((r: any) => !r.reviewReply?.comment);
+    for (const rev of unreplied) {
+      try {
+        const starRating = rev.starRating || "FIVE";
+        const starNumber = { ONE: 1, TWO: 2, THREE: 3, FOUR: 4, FIVE: 5 }[starRating as string] ?? 5;
+
+        // Check if hold negative reviews is enabled
+        if (location.autoReplyHoldNegative && starNumber <= 2) {
+          console.log(`[Auto-Reply] Holding negative review (${starNumber}★) by ${rev.reviewer?.displayName} on ${location.name} for human review.`);
+          continue;
+        }
+
+        const reviewName = rev.name;
+        if (!reviewName) continue;
+
+        // Check if already in queue or published
+        const existing = await prisma.scheduledReviewReply.findFirst({
+          where: { reviewName },
+        });
+        if (existing) continue;
+
+        // Generate AI reply
+        const { generateSmartReviewReply } = await import("@/lib/ai-review-reply");
+        const aiResult = await generateSmartReviewReply({
+          locationId: location.id,
+          reviewText: rev.comment,
+          reviewerName: rev.reviewer?.displayName,
+          rating: starNumber,
+          userId: location.client?.userId,
+        });
+
+        if (aiResult?.reply) {
+          // Calculate randomized human delay (between min and max minutes)
+          const minDelay = location.autoReplyMinDelayMinutes || 60;
+          const maxDelay = location.autoReplyMaxDelayMinutes || 240;
+          const randomMinutes = Math.floor(Math.random() * (maxDelay - minDelay + 1)) + minDelay;
+          const scheduledFor = new Date(Date.now() + randomMinutes * 60 * 1000);
+
+          await prisma.scheduledReviewReply.create({
+            data: {
+              id: `auto-${location.id}-${reviewName.replace(/[^a-zA-Z0-9]/g, "_")}-${Date.now()}`,
+              locationId: location.id,
+              userId: location.client?.userId || "system",
+              reviewName,
+              reviewId: rev.reviewId || reviewName.split("/").pop(),
+              reviewerName: rev.reviewer?.displayName || "Customer",
+              rating: starNumber,
+              reviewComment: rev.comment || null,
+              reviewCreateTime: rev.createTime ? new Date(rev.createTime) : null,
+              replyComment: aiResult.reply,
+              scheduledFor,
+              status: "SCHEDULED",
+            },
+          });
+
+          console.log(`[Auto-Reply] ✅ Queued AI reply for ${location.name} review by ${rev.reviewer?.displayName} (Posting in ${randomMinutes} mins at ${scheduledFor.toLocaleTimeString()})`);
+        }
+      } catch (autoErr) {
+        console.error(`[Auto-Reply] Failed to auto-reply for review on ${location.name}:`, autoErr);
+      }
+    }
+  }
+
   // Detect rating change (up or down)
   if (snapshot.totalReviewCount > 0 && Math.abs(avgRating - snapshot.averageRating) >= 0.1) {
     const direction = avgRating > snapshot.averageRating ? "📈 improved" : "📉 dropped";

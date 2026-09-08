@@ -167,6 +167,14 @@ model Location {
   logoUrl                String?   // GBP profile/logo photo URL (fetched during sync)
   googleEmail            String?   // The email of the connected Google account
   
+  // AI Auto-Reply Configuration
+  autoReplyEnabled         Boolean   @default(false)
+  autoReplyMinDelayMinutes Int       @default(60)
+  autoReplyMaxDelayMinutes Int       @default(240)
+  autoReplyInstructions    String?   @db.Text
+  autoReplyIncludeKeywords Boolean   @default(true)
+  autoReplyHoldNegative    Boolean   @default(false)
+  
   // Cached Performance Stats
   cachedSearchViews      Int       @default(0)
   cachedInteractions     Int       @default(0)

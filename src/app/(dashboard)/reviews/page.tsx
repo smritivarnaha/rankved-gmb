@@ -558,6 +558,316 @@ function ImportModal({
   );
 }
 
+// ── Auto-Reply Settings Modal ─────────────────────────────────────────────
+function AutoReplySettingsModal({
+  onClose,
+  profiles,
+  selectedTab,
+}: {
+  onClose: () => void;
+  profiles: any[];
+  selectedTab: string;
+}) {
+  const [targetProfileId, setTargetProfileId] = useState<string>(() => {
+    return selectedTab !== "all" && profiles.some(p => p.id === selectedTab)
+      ? selectedTab
+      : profiles[0]?.id || "";
+  });
+
+  const [isLoadingSettings, setIsLoadingSettings] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+  const [feedback, setFeedback] = useState<string | null>(null);
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
+
+  const [autoReplyEnabled, setAutoReplyEnabled] = useState(false);
+  const [minDelay, setMinDelay] = useState(60);
+  const [maxDelay, setMaxDelay] = useState(240);
+  const [instructions, setInstructions] = useState("");
+  const [includeKeywords, setIncludeKeywords] = useState(true);
+  const [holdNegative, setHoldNegative] = useState(false);
+  const [profileKeywords, setProfileKeywords] = useState("");
+
+  useEffect(() => {
+    if (!targetProfileId) return;
+    setIsLoadingSettings(true);
+    setErrorMsg(null);
+    setFeedback(null);
+
+    fetch(`/api/profiles/${targetProfileId}/auto-reply-settings`)
+      .then(res => res.json())
+      .then(data => {
+        if (data) {
+          setAutoReplyEnabled(Boolean(data.autoReplyEnabled));
+          setMinDelay(data.autoReplyMinDelayMinutes || 60);
+          setMaxDelay(data.autoReplyMaxDelayMinutes || 240);
+          setInstructions(data.autoReplyInstructions || "");
+          setIncludeKeywords(data.autoReplyIncludeKeywords ?? true);
+          setHoldNegative(data.autoReplyHoldNegative ?? false);
+          setProfileKeywords(data.aiKeywords || "");
+        }
+      })
+      .catch(() => setErrorMsg("Failed to load profile auto-reply settings."))
+      .finally(() => setIsLoadingSettings(false));
+  }, [targetProfileId]);
+
+  const handleSave = async () => {
+    if (!targetProfileId) return;
+    setIsSaving(true);
+    setErrorMsg(null);
+    setFeedback(null);
+
+    try {
+      const res = await fetch(`/api/profiles/${targetProfileId}/auto-reply-settings`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          autoReplyEnabled,
+          autoReplyMinDelayMinutes: minDelay,
+          autoReplyMaxDelayMinutes: maxDelay,
+          autoReplyInstructions: instructions,
+          autoReplyIncludeKeywords: includeKeywords,
+          autoReplyHoldNegative: holdNegative,
+        }),
+      });
+
+      const data = await res.json();
+      if (res.ok && data.success) {
+        setFeedback("✓ Auto-reply settings saved successfully!");
+        setTimeout(() => {
+          onClose();
+        }, 1200);
+      } else {
+        setErrorMsg(data.error || "Failed to save settings.");
+      }
+    } catch {
+      setErrorMsg("Network error saving settings.");
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  return (
+    <div style={{ position: "fixed", inset: 0, background: "rgba(15,23,42,0.6)", zIndex: 1000, display: "flex", alignItems: "center", justifyContent: "center", padding: 20 }}>
+      <div style={{ background: "#ffffff", borderRadius: 16, width: "100%", maxWidth: 580, maxHeight: "90vh", padding: 24, boxShadow: "0 20px 25px -5px rgba(0,0,0,0.1)", display: "flex", flexDirection: "column", gap: 16, overflowY: "auto" }}>
+        {/* Header */}
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+            <div style={{ width: 36, height: 36, borderRadius: 10, background: "#eff6ff", display: "flex", alignItems: "center", justifyContent: "center", color: "#2563eb" }}>
+              <Sparkles size={18} />
+            </div>
+            <div>
+              <h3 style={{ margin: 0, fontSize: 16, fontWeight: 700, color: "#0f172a" }}>AI Auto-Reply Settings</h3>
+              <p style={{ margin: "2px 0 0", fontSize: 12, color: "#64748b" }}>Automate smart review replies with randomized human delay</p>
+            </div>
+          </div>
+          <button onClick={onClose} style={{ background: "none", border: "none", color: "#94a3b8", cursor: "pointer" }}>
+            <X size={20} />
+          </button>
+        </div>
+
+        {/* Profile Selector */}
+        <div>
+          <label style={{ display: "block", fontSize: 12, fontWeight: 700, color: "#334155", marginBottom: 6 }}>
+            Select Business Profile
+          </label>
+          <select
+            value={targetProfileId}
+            onChange={e => setTargetProfileId(e.target.value)}
+            style={{ width: "100%", height: 38, padding: "0 12px", border: "1px solid #cbd5e1", borderRadius: 8, fontSize: 13, background: "#ffffff", color: "#0f172a", outline: "none" }}
+          >
+            {profiles.map(p => (
+              <option key={p.id} value={p.id}>
+                {p.name}
+              </option>
+            ))}
+          </select>
+        </div>
+
+        {isLoadingSettings ? (
+          <div style={{ padding: 30, textAlign: "center", color: "#64748b" }}>
+            <Loader2 size={24} className="animate-spin" color="#2563eb" style={{ margin: "0 auto 8px" }} />
+            <p style={{ fontSize: 13, margin: 0 }}>Loading profile auto-reply settings...</p>
+          </div>
+        ) : (
+          <>
+            {/* Master Toggle (Default OFF) */}
+            <div style={{ background: autoReplyEnabled ? "#f0fdf4" : "#f8fafc", border: `1px solid ${autoReplyEnabled ? "#bbf7d0" : "#e2e8f0"}`, borderRadius: 10, padding: "14px 16px", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+              <div>
+                <span style={{ fontSize: 13, fontWeight: 700, color: autoReplyEnabled ? "#15803d" : "#334155", display: "block" }}>
+                  AI Auto-Reply is {autoReplyEnabled ? "ENABLED (ON)" : "DISABLED (OFF)"}
+                </span>
+                <span style={{ fontSize: 11, color: "#64748b" }}>
+                  {autoReplyEnabled ? "Automatically replies to new reviews with human delay" : "Auto-replier is off by default for safety"}
+                </span>
+              </div>
+              <button
+                type="button"
+                onClick={() => setAutoReplyEnabled(!autoReplyEnabled)}
+                style={{
+                  width: 48,
+                  height: 26,
+                  borderRadius: 20,
+                  background: autoReplyEnabled ? "#16a34a" : "#cbd5e1",
+                  border: "none",
+                  cursor: "pointer",
+                  position: "relative",
+                  transition: "background 0.2s ease",
+                }}
+              >
+                <div
+                  style={{
+                    width: 20,
+                    height: 20,
+                    borderRadius: "50%",
+                    background: "#ffffff",
+                    position: "absolute",
+                    top: 3,
+                    left: autoReplyEnabled ? 25 : 3,
+                    transition: "left 0.2s ease",
+                    boxShadow: "0 1px 3px rgba(0,0,0,0.2)",
+                  }}
+                />
+              </button>
+            </div>
+
+            {/* Delay Range Window */}
+            <div>
+              <label style={{ display: "block", fontSize: 12, fontWeight: 700, color: "#334155", marginBottom: 6 }}>
+                🕒 Randomized Delay Window (Anti-Bot Pattern Guard)
+              </label>
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+                <div>
+                  <span style={{ fontSize: 11, color: "#64748b", display: "block", marginBottom: 4 }}>Minimum Delay (Minutes)</span>
+                  <input
+                    type="number"
+                    min={15}
+                    max={minDelay ? maxDelay : 300}
+                    value={minDelay}
+                    onChange={e => setMinDelay(Math.max(15, parseInt(e.target.value, 10) || 60))}
+                    style={{ width: "100%", height: 36, padding: "0 10px", border: "1px solid #cbd5e1", borderRadius: 8, fontSize: 13, boxSizing: "border-box" }}
+                  />
+                  <span style={{ fontSize: 10, color: "#94a3b8" }}>{Math.round(minDelay / 60 * 10) / 10} hours</span>
+                </div>
+                <div>
+                  <span style={{ fontSize: 11, color: "#64748b", display: "block", marginBottom: 4 }}>Maximum Delay (Minutes)</span>
+                  <input
+                    type="number"
+                    min={minDelay}
+                    max={720}
+                    value={maxDelay}
+                    onChange={e => setMaxDelay(Math.max(minDelay, parseInt(e.target.value, 10) || 240))}
+                    style={{ width: "100%", height: 36, padding: "0 10px", border: "1px solid #cbd5e1", borderRadius: 8, fontSize: 13, boxSizing: "border-box" }}
+                  />
+                  <span style={{ fontSize: 10, color: "#94a3b8" }}>{Math.round(maxDelay / 60 * 10) / 10} hours</span>
+                </div>
+              </div>
+              <p style={{ margin: "4px 0 0", fontSize: 11, color: "#64748b" }}>
+                Every auto-reply will be scheduled at a random time between {minDelay}m and {maxDelay}m after review is posted.
+              </p>
+            </div>
+
+            {/* Keyword Infusion & Safety Checkboxes */}
+            <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+              <label style={{ display: "flex", alignItems: "flex-start", gap: 10, cursor: "pointer" }}>
+                <input
+                  type="checkbox"
+                  checked={includeKeywords}
+                  onChange={e => setIncludeKeywords(e.target.checked)}
+                  style={{ marginTop: 2 }}
+                />
+                <div>
+                  <span style={{ fontSize: 12, fontWeight: 700, color: "#1e293b", display: "block" }}>
+                    Weave Local SEO Keywords into Positive Replies
+                  </span>
+                  <span style={{ fontSize: 11, color: "#64748b" }}>
+                    Naturally embeds 1 top performance keyword from your profile's keywords ({profileKeywords ? profileKeywords.substring(0, 45) + "…" : "aiKeywords"}).
+                  </span>
+                </div>
+              </label>
+
+              <label style={{ display: "flex", alignItems: "flex-start", gap: 10, cursor: "pointer" }}>
+                <input
+                  type="checkbox"
+                  checked={holdNegative}
+                  onChange={e => setHoldNegative(e.target.checked)}
+                  style={{ marginTop: 2 }}
+                />
+                <div>
+                  <span style={{ fontSize: 12, fontWeight: 700, color: "#1e293b", display: "block" }}>
+                    Hold 1–2 Star Negative Reviews in Pending Queue
+                  </span>
+                  <span style={{ fontSize: 11, color: "#64748b" }}>
+                    Automatically holds critical or low-star reviews so your team can manually review and approve the reply before posting.
+                  </span>
+                </div>
+              </label>
+            </div>
+
+            {/* Knowledge Base & Custom Instructions */}
+            <div>
+              <label style={{ display: "block", fontSize: 12, fontWeight: 700, color: "#334155", marginBottom: 4 }}>
+                Business Knowledge Base & Escalation Instructions
+              </label>
+              <textarea
+                value={instructions}
+                onChange={e => setInstructions(e.target.value)}
+                placeholder="e.g. For complaints, ask customer to contact manager Dr. Sharma at support@clinic.com or 9876543210. Highlight our friendly staff and emergency care services..."
+                rows={3}
+                style={{ width: "100%", padding: "10px 12px", border: "1px solid #cbd5e1", borderRadius: 8, fontSize: 12, lineHeight: 1.5, boxSizing: "border-box", outline: "none" }}
+              />
+              <span style={{ fontSize: 10, color: "#94a3b8" }}>
+                The AI will reference these rules and contact details for both positive and negative replies.
+              </span>
+            </div>
+
+            {/* Status alerts */}
+            {errorMsg && (
+              <div style={{ padding: "8px 12px", background: "#fef2f2", border: "1px solid #fecaca", borderRadius: 8, color: "#dc2626", fontSize: 12, display: "flex", alignItems: "center", gap: 6 }}>
+                <AlertCircle size={14} /> {errorMsg}
+              </div>
+            )}
+            {feedback && (
+              <div style={{ padding: "8px 12px", background: "#f0fdf4", border: "1px solid #bbf7d0", borderRadius: 8, color: "#16a34a", fontSize: 12, display: "flex", alignItems: "center", gap: 6 }}>
+                <CheckCircle2 size={14} /> {feedback}
+              </div>
+            )}
+
+            {/* Actions */}
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "flex-end", gap: 10, marginTop: 6 }}>
+              <button
+                onClick={onClose}
+                style={{ padding: "8px 16px", background: "#f1f5f9", border: "none", borderRadius: 8, fontSize: 13, fontWeight: 600, color: "#475569", cursor: "pointer" }}
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleSave}
+                disabled={isSaving}
+                style={{
+                  padding: "8px 20px",
+                  background: "#2563eb",
+                  border: "none",
+                  borderRadius: 8,
+                  fontSize: 13,
+                  fontWeight: 600,
+                  color: "#ffffff",
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 8,
+                  cursor: isSaving ? "not-allowed" : "pointer",
+                }}
+              >
+                {isSaving ? <Loader2 size={14} className="animate-spin" /> : <Check size={14} />}
+                Save Settings
+              </button>
+            </div>
+          </>
+        )}
+      </div>
+    </div>
+  );
+}
+
 // ── Review Card ───────────────────────────────────────────────────────────
 interface ReviewCardProps {
   review: any;
@@ -574,8 +884,47 @@ function ReviewCard({ review, onRepliedSuccess }: ReviewCardProps) {
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [feedbackMsg, setFeedbackMsg] = useState<string | null>(null);
 
+  // AI Auto-Reply State
+  const [isGeneratingAi, setIsGeneratingAi] = useState(false);
+  const [aiResult, setAiResult] = useState<any>(null);
+  const [activeTone, setActiveTone] = useState<"WARM" | "SHORT" | "SEO_FOCUSED">("WARM");
+
   const rating = getRating(review);
   const dateFormatted = formatRelativeTime(review.createTime);
+
+  const handleGenerateAiReply = async (preferredTone: "WARM" | "SHORT" | "SEO_FOCUSED" = "WARM") => {
+    setIsGeneratingAi(true);
+    setErrorMsg(null);
+    setFeedbackMsg(null);
+    setActiveTone(preferredTone);
+
+    try {
+      const res = await fetch("/api/reviews/generate-reply", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          profileId: review.profileId,
+          reviewText: review.comment,
+          reviewerName: review.reviewer?.displayName,
+          rating,
+          preferredTone,
+        }),
+      });
+
+      const data = await res.json();
+      if (res.ok && data.success && data.reply) {
+        setReplyText(data.reply);
+        setAiResult(data);
+        setIsEditing(true);
+      } else {
+        setErrorMsg(data.error || "Failed to generate AI reply. Check your AI keys in Settings.");
+      }
+    } catch {
+      setErrorMsg("Error contacting AI server.");
+    } finally {
+      setIsGeneratingAi(false);
+    }
+  };
 
   const handlePostReply = async (isOverride = false, explicitDate?: string) => {
     if (!replyText.trim()) return;
@@ -734,10 +1083,34 @@ function ReviewCard({ review, onRepliedSuccess }: ReviewCardProps) {
       {/* Reply Input Box */}
       {isEditing && (
         <div style={{ display: "flex", flexDirection: "column", gap: 8, marginTop: 2 }}>
-          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-            <label style={{ fontSize: 11, fontWeight: 700, color: "#475569", textTransform: "uppercase", letterSpacing: "0.04em" }}>
-              {review.isReplied ? "Edit Your Reply" : "Write Reply"}
-            </label>
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: 8 }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+              <label style={{ fontSize: 11, fontWeight: 700, color: "#475569", textTransform: "uppercase", letterSpacing: "0.04em" }}>
+                {review.isReplied ? "Edit Your Reply" : "Write Reply"}
+              </label>
+              <button
+                type="button"
+                onClick={() => handleGenerateAiReply(activeTone)}
+                disabled={isGeneratingAi}
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 5,
+                  padding: "3px 10px",
+                  borderRadius: 20,
+                  background: isGeneratingAi ? "#f1f5f9" : "linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%)",
+                  border: "1px solid #bfdbfe",
+                  color: "#1d4ed8",
+                  fontSize: 11,
+                  fontWeight: 700,
+                  cursor: isGeneratingAi ? "not-allowed" : "pointer",
+                  transition: "all 0.15s ease",
+                }}
+              >
+                {isGeneratingAi ? <Loader2 size={12} className="animate-spin" /> : <Sparkles size={12} color="#2563eb" />}
+                {isGeneratingAi ? "Generating AI Reply..." : "✨ Auto Generate Reply (AI)"}
+              </button>
+            </div>
             <span style={{ fontSize: 11, color: replyText.length > 1400 ? "#ea580c" : "#94a3b8" }}>
               {replyText.length} / 1500
             </span>
@@ -767,6 +1140,81 @@ function ReviewCard({ review, onRepliedSuccess }: ReviewCardProps) {
             onFocus={e => e.target.style.borderColor = "#2563eb"}
             onBlur={e => e.target.style.borderColor = "#cbd5e1"}
           />
+
+          {/* AI Sentiment & Tone Switcher */}
+          {aiResult && (
+            <div style={{ background: "#f8fafc", border: "1px solid #e2e8f0", borderRadius: 8, padding: "8px 12px", display: "flex", flexDirection: "column", gap: 6 }}>
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: 6 }}>
+                <span style={{ fontSize: 11, fontWeight: 700, color: aiResult.sentiment === "NEGATIVE" ? "#dc2626" : "#059669", display: "flex", alignItems: "center", gap: 4 }}>
+                  {aiResult.sentiment === "NEGATIVE"
+                    ? "🛡️ Empathic De-escalation & Resolution Tone"
+                    : `✨ SEO Keyword Weaved: "${aiResult.keywordUsed || "Local Care"}"`}
+                </span>
+                <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (aiResult.options?.warm) setReplyText(aiResult.options.warm);
+                      setActiveTone("WARM");
+                    }}
+                    style={{
+                      padding: "2px 8px",
+                      fontSize: 10,
+                      fontWeight: 700,
+                      borderRadius: 6,
+                      border: "1px solid",
+                      borderColor: activeTone === "WARM" ? "#2563eb" : "#cbd5e1",
+                      background: activeTone === "WARM" ? "#eff6ff" : "#ffffff",
+                      color: activeTone === "WARM" ? "#1d4ed8" : "#475569",
+                      cursor: "pointer",
+                    }}
+                  >
+                    Warm
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (aiResult.options?.short) setReplyText(aiResult.options.short);
+                      setActiveTone("SHORT");
+                    }}
+                    style={{
+                      padding: "2px 8px",
+                      fontSize: 10,
+                      fontWeight: 700,
+                      borderRadius: 6,
+                      border: "1px solid",
+                      borderColor: activeTone === "SHORT" ? "#2563eb" : "#cbd5e1",
+                      background: activeTone === "SHORT" ? "#eff6ff" : "#ffffff",
+                      color: activeTone === "SHORT" ? "#1d4ed8" : "#475569",
+                      cursor: "pointer",
+                    }}
+                  >
+                    Short
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (aiResult.options?.seoFocused) setReplyText(aiResult.options.seoFocused);
+                      setActiveTone("SEO_FOCUSED");
+                    }}
+                    style={{
+                      padding: "2px 8px",
+                      fontSize: 10,
+                      fontWeight: 700,
+                      borderRadius: 6,
+                      border: "1px solid",
+                      borderColor: activeTone === "SEO_FOCUSED" ? "#2563eb" : "#cbd5e1",
+                      background: activeTone === "SEO_FOCUSED" ? "#eff6ff" : "#ffffff",
+                      color: activeTone === "SEO_FOCUSED" ? "#1d4ed8" : "#475569",
+                      cursor: "pointer",
+                    }}
+                  >
+                    SEO Focused
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
 
           {/* Custom Date Picker row if opened */}
           {showDatePicker && (
@@ -1213,6 +1661,7 @@ export default function ReviewsPage() {
   const [lastSyncTime, setLastSyncTime] = useState<Date>(new Date());
   const [showExportModal, setShowExportModal] = useState(false);
   const [showImportModal, setShowImportModal] = useState(false);
+  const [showAutoReplyModal, setShowAutoReplyModal] = useState(false);
   const [showErrors, setShowErrors] = useState(false);
 
   // Local optimistic state of reviews
@@ -1433,8 +1882,27 @@ export default function ReviewsPage() {
           </div>
         </div>
 
-        {/* Action Buttons: Export, Import, Live Sync */}
+        {/* Action Buttons: Auto-Reply Settings, Export, Import, Live Sync */}
         <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
+          <button
+            onClick={() => setShowAutoReplyModal(true)}
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: 6,
+              padding: "8px 14px",
+              background: "#ffffff",
+              border: "1px solid #cbd5e1",
+              borderRadius: 8,
+              fontSize: 12,
+              fontWeight: 600,
+              color: "#334155",
+              cursor: "pointer",
+            }}
+          >
+            <Sparkles size={14} color="#8b5cf6" /> Auto-Reply Settings
+          </button>
+
           <button
             onClick={() => setShowExportModal(true)}
             style={{
@@ -1767,6 +2235,14 @@ export default function ReviewsPage() {
             mutate();
             setStatusFilter("queue");
           }}
+        />
+      )}
+
+      {showAutoReplyModal && (
+        <AutoReplySettingsModal
+          onClose={() => setShowAutoReplyModal(false)}
+          profiles={profilesList}
+          selectedTab={selectedTab}
         />
       )}
     </div>
