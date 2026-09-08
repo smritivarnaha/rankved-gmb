@@ -23,6 +23,7 @@ export function ReviewManager({ profileId }: { profileId: string }) {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
+          profileId,
           reviewText: review.comment,
           reviewerName: review.reviewer.displayName,
           rating: review.starRating === "FIVE" ? 5 : 4, // Mapping Google stars

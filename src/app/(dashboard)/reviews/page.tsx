@@ -1145,11 +1145,16 @@ function ReviewCard({ review, onRepliedSuccess }: ReviewCardProps) {
           {aiResult && (
             <div style={{ background: "#f8fafc", border: "1px solid #e2e8f0", borderRadius: 8, padding: "8px 12px", display: "flex", flexDirection: "column", gap: 6 }}>
               <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: 6 }}>
-                <span style={{ fontSize: 11, fontWeight: 700, color: aiResult.sentiment === "NEGATIVE" ? "#dc2626" : "#059669", display: "flex", alignItems: "center", gap: 4 }}>
-                  {aiResult.sentiment === "NEGATIVE"
-                    ? "🛡️ Empathic De-escalation & Resolution Tone"
-                    : `✨ SEO Keyword Weaved: "${aiResult.keywordUsed || "Local Care"}"`}
-                </span>
+                <div style={{ display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap" }}>
+                  <span style={{ fontSize: 11, fontWeight: 700, color: aiResult.sentiment === "NEGATIVE" ? "#dc2626" : "#059669", display: "flex", alignItems: "center", gap: 4 }}>
+                    {aiResult.sentiment === "NEGATIVE"
+                      ? "🛡️ De-escalation & Resolution"
+                      : `📈 Performance Keyword: "${aiResult.keywordUsed || "Local Clinic"}"`}
+                  </span>
+                  <span style={{ fontSize: 10, fontWeight: 600, color: "#64748b", background: "#f1f5f9", padding: "1px 6px", borderRadius: 4, border: "1px solid #e2e8f0" }}>
+                    {replyText.trim().split(/\s+/).filter(Boolean).length} words (30-80 target)
+                  </span>
+                </div>
                 <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
                   <button
                     type="button"
@@ -1189,7 +1194,7 @@ function ReviewCard({ review, onRepliedSuccess }: ReviewCardProps) {
                       cursor: "pointer",
                     }}
                   >
-                    Short
+                    Short (30+ w)
                   </button>
                   <button
                     type="button"
