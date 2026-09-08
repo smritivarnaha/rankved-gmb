@@ -127,15 +127,15 @@ export async function resolveUserAiSettings(userId?: string): Promise<UserAISett
  * Executes prompt across the available AI provider
  */
 async function callLLM(prompt: string, settings: UserAISettings): Promise<string> {
-  // 1. Anthropic Claude (Preferred for humanized nuance)
+  // 1. Anthropic Claude (Preferred for grounded professional nuance)
   if (settings.anthropicApiKey || process.env.ANTHROPIC_API_KEY) {
     const key = settings.anthropicApiKey || process.env.ANTHROPIC_API_KEY!;
     const anthropic = new Anthropic({ apiKey: key });
     const model = settings.anthropicModel || "claude-3-5-sonnet-20241022";
     const resp = await anthropic.messages.create({
       model,
-      max_tokens: 600,
-      temperature: 0.7,
+      max_tokens: 700,
+      temperature: 0.65,
       messages: [{ role: "user", content: prompt }],
     });
     const block = resp.content[0];
@@ -150,8 +150,8 @@ async function callLLM(prompt: string, settings: UserAISettings): Promise<string
     const resp = await openai.chat.completions.create({
       model,
       messages: [{ role: "user", content: prompt }],
-      temperature: 0.7,
-      max_tokens: 600,
+      temperature: 0.65,
+      max_tokens: 700,
     });
     return resp.choices[0]?.message?.content || "";
   }
@@ -179,8 +179,8 @@ async function callLLM(prompt: string, settings: UserAISettings): Promise<string
       body: JSON.stringify({
         model,
         messages: [{ role: "user", content: prompt }],
-        temperature: 0.7,
-        max_tokens: 600,
+        temperature: 0.65,
+        max_tokens: 700,
       }),
     });
     const data = await res.json();
@@ -191,15 +191,40 @@ async function callLLM(prompt: string, settings: UserAISettings): Promise<string
 }
 
 /**
- * Sanitizes and cleans the generated reply against bot patterns and em dashes
+ * Sanitizes and cleans the generated reply against bot patterns, first-person singular, and em dashes
  */
 function cleanReplyText(text: string): string {
-  return text
+  let cleaned = text
     .replace(/["“”]/g, "")           // strip surrounding quotes
     .replace(/[—–]/g, ", ")          // STRICT RULE: No em dashes or en dashes
+    .replace(/\b(I am|I'm)\b/gi, "We are")
+    .replace(/\bI have\b/gi, "We have")
+    .replace(/\bI look forward\b/gi, "We look forward")
+    .replace(/\bI appreciate\b/gi, "We appreciate")
+    .replace(/\bmy team\b/gi, "our team")
+    .replace(/\bmy clinic\b/gi, "our clinic")
+    .replace(/\bmy practice\b/gi, "our practice")
+    .replace(/\bthrilled\b/gi, "very pleased")
+    .replace(/\bsuper excited\b/gi, "glad")
+    .replace(/\becstatic\b/gi, "happy")
     .replace(/\s{2,}/g, " ")         // normalize spaces
     .replace(/\n{2,}/g, "\n")
     .trim();
+
+  return cleaned;
+}
+
+/**
+ * Extracts a concise city or locality from an address string
+ */
+function extractCityOrArea(address?: string | null): string {
+  if (!address) return "";
+  const parts = address.split(",").map(p => p.trim()).filter(Boolean);
+  if (parts.length >= 2) {
+    // Return second to last or last part (usually City or Area)
+    return parts[parts.length - 2] || parts[parts.length - 1];
+  }
+  return parts[0] || "";
 }
 
 /**
@@ -217,16 +242,27 @@ export async function generateSmartReviewReply(params: GenerateReviewReplyParams
 
   const settings = await resolveUserAiSettings(userId || location.client?.userId);
 
-  // Parse keywords
-  const keywordsList = (location.aiKeywords || "")
+  // Parse keywords and local context
+  const rawKeywords = (location.aiKeywords || "")
     .split(/[,;\n]/)
     .map(k => k.trim())
     .filter(Boolean);
 
+  const cityOrArea = extractCityOrArea(location.address);
+  const categoryName = location.client?.name || "Professional Healthcare & Services";
+
+  // Build target keywords pool
+  const candidateKeywords: string[] = [];
+  if (rawKeywords.length > 0) candidateKeywords.push(...rawKeywords);
+  if (cityOrArea) {
+    candidateKeywords.push(`${categoryName} in ${cityOrArea}`);
+    if (location.name) candidateKeywords.push(`${location.name} in ${cityOrArea}`);
+  }
+
   // Pick 1 relevant keyword
-  const targetKeyword = keywordsList.length > 0
-    ? keywordsList[Math.floor(Math.random() * keywordsList.length)]
-    : undefined;
+  const targetKeyword = candidateKeywords.length > 0
+    ? candidateKeywords[Math.floor(Math.random() * candidateKeywords.length)]
+    : `${categoryName}${cityOrArea ? ` in ${cityOrArea}` : ""}`;
 
   const isNegative = rating !== null && rating !== undefined ? rating <= 2 : false;
   const isNeutral = rating === 3;
@@ -239,59 +275,69 @@ export async function generateSmartReviewReply(params: GenerateReviewReplyParams
   const customerName = reviewerName?.trim() || "Customer";
   const contactPhone = location.aiPhone || location.phone || "";
   const contactEmail = location.googleEmail || "";
-  const knowledgeBase = [location.autoReplyInstructions, location.aiInstructions].filter(Boolean).join("\n");
+  const knowledgeBase = [location.autoReplyInstructions, location.aiInstructions, location.aiCompetitorData].filter(Boolean).join("\n");
 
   const prompt = `
-You are the business manager/owner of "${businessName}" responding personally to a customer Google review.
+You are the management and clinical team of "${businessName}" (${categoryName}) writing an official Google Review reply.
 
 CUSTOMER REVIEW DETAILS:
 - Reviewer Name: ${customerName}
 - Star Rating: ${rating || 5} out of 5 Stars
-- Customer Review Comment: "${reviewText || "(No written text, only star rating provided)"}"
+- Customer Review Comment: "${reviewText || "(Customer left a 5-star rating without written comment)"}"
 
-BUSINESS INFORMATION & KNOWLEDGE BASE:
-- Business Name: ${businessName}
-- Category: ${location.client.name}
-- Contact Phone: ${contactPhone || "our clinic/office"}
-- Contact Email: ${contactEmail || "our support team"}
-- Knowledge Base & Specific Handling Rules:
-${knowledgeBase || "Provide friendly, attentive service."}
+BUSINESS & LOCATION CONTEXT:
+- Business Profile Name: ${businessName}
+- Category: ${categoryName}
+- Location / City: ${cityOrArea || "our center"}
+- Address: ${location.address || ""}
+- Contact Phone: ${contactPhone || ""}
+- Contact Email: ${contactEmail || ""}
+- Knowledge Base / Special Rules:
+${knowledgeBase || "Provide attentive, respectful, and high-quality patient care."}
 
-TARGET SEO KEYWORD TO WEAVE IN NATURALLY (IF REVIEW IS POSITIVE):
-"${targetKeyword || ""}"
+MANDATORY LOCAL SEO KEYWORD TO WEAVE IN NATURALLY:
+"${targetKeyword}"
 
 ============================================================
 CRITICAL WRITING INSTRUCTIONS (STRICT COMPLIANCE REQUIRED):
 ============================================================
-1. NO EM DASHES OR EN DASHES (— or –): Absolutely NEVER use em-dashes. Use regular commas, periods, or simple hyphens.
-2. NO CLICHES OR ROBOTIC FILLER: Never say "We strive for excellence", "Your feedback is valuable to us", "In today's fast-paced world", "At our establishment", or "Thank you for taking the time".
-3. HUMAN LENGTH: Keep it short, crisp, and conversational (1 to 3 sentences maximum, between 30 and 60 words).
-4. SENTIMENT HANDLING:
+1. MANDATORY PRONOUN: Always write as a cohesive team using "WE", "OUR TEAM", "OUR CLINIC", or "OUR PRACTICE". NEVER write in the singular first person ("I", "my", "I am", "I'm").
+2. HIGH PROFESSIONALISM & CALM DIGNITY:
+   - Speak with calm, grounded, clinical/professional authority and warmth.
+   - ABSOLUTELY NEVER use over-excited marketing words like "thrilled", "super excited", "overjoyed", "ecstatic", or spammy exclamation marks.
+3. EXPAND NATURALLY ON THE REVIEW'S BASIS:
+   - Do NOT give a 1-sentence robotic generic reply.
+   - Expand meaningfully (2 to 3 well-written sentences, around 45 to 75 words).
+   - Thoughtfully reference what the customer specifically noted (e.g. if they mentioned consultation, guidance, diagnosis, treatment, doctor's explanation, staff care, or prompt service, elaborate on our commitment to clear guidance and thorough care).
+4. MANDATORY KEYWORD INCLUSION:
+   - For positive/neutral reviews, organically integrate the local SEO keyword ("${targetKeyword}") or service reference into the body sentence so it reads completely natural to a human.
+5. NO EM DASHES OR EN DASHES (— or –): Absolutely NEVER use em dashes. Use standard commas or periods.
+6. NO ROBOTIC CLICHES: Never say "We strive for excellence", "Your feedback is valuable to us", "In today's fast-paced world", or "At our establishment".
+7. SENTIMENT HANDLING:
    ${isNegative ? `
-   - THIS IS A NEGATIVE / DISSATISFIED REVIEW (${rating}★):
-   - Acknowledge the customer's frustration with genuine empathy and humility.
-   - Apologize sincerely that their experience fell short of expectations.
-   - Do NOT be defensive or argue.
-   - Invite them to reach out directly to ${contactPhone ? `our phone (${contactPhone})` : contactEmail ? `our email (${contactEmail})` : "our team"} so you can resolve this privately.
+   - NEGATIVE / DISSATISFIED REVIEW (${rating}★):
+   - Acknowledge their concern with genuine empathy, calm responsibility, and humility.
+   - Apologize sincerely that their experience fell short of our standards.
+   - Do NOT argue, make excuses, or sound defensive.
+   - Invite them to reach out directly to our team ${contactPhone ? `at ${contactPhone}` : contactEmail ? `at ${contactEmail}` : ""} so we can review their case and assist them personally.
    ` : isNeutral ? `
-   - THIS IS A NEUTRAL REVIEW (${rating}★):
-   - Thank them for their balanced feedback.
-   - Acknowledge their specific point and reaffirm your commitment to continuous care.
+   - NEUTRAL REVIEW (${rating}★):
+   - Thank ${customerName} for their constructive feedback.
+   - Reaffirm our dedication to continuous improvement and attentive care.
+   - Naturally weave in our service and "${targetKeyword}".
    ` : `
-   - THIS IS A POSITIVE REVIEW (${rating}★):
-   - Thank ${customerName} warmly and personally.
-   - If they mentioned specific details, reference it naturally.
-   - Naturally mention the SEO keyword "${targetKeyword || ''}" once organically without keyword stuffing.
+   - POSITIVE REVIEW (${rating}★):
+   - Thank ${customerName} warmly and respectfully for sharing their experience with ${businessName}.
+   - Expand on the consultation/treatment they received, emphasizing our team's focus on clear guidance, patient comfort, and dedicated ${targetKeyword}.
+   - Wish them continued good health and well-being.
    `}
-5. DYNAMIC GREETINGS & VARIETY:
-   - Vary greeting naturally: ("Hi ${customerName},", "Hello ${customerName},", "Dear ${customerName},", or direct opening).
 
 Respond in EXACTLY this JSON format (no markdown code blocks, just raw JSON):
 {
-  "warm": "Warm, personalized 2-3 sentence response",
-  "short": "Short, direct 1-2 sentence response",
-  "seoFocused": "Response naturally incorporating the SEO keyword",
-  "keywordUsed": "${targetKeyword || ''}",
+  "warm": "Warm, professional, expanded 2-3 sentence response with keyword",
+  "short": "Slightly more concise 2-sentence response with keyword",
+  "seoFocused": "Expanded response placing prominent emphasis on the local SEO keyword and service quality",
+  "keywordUsed": "${targetKeyword}",
   "sentiment": "${sentiment}"
 }
 `.trim();
