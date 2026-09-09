@@ -582,6 +582,9 @@ function AutoReplySettingsModal({
   const [autoReplyEnabled, setAutoReplyEnabled] = useState(false);
   const [minDelay, setMinDelay] = useState(60);
   const [maxDelay, setMaxDelay] = useState(240);
+  const [brandName, setBrandName] = useState("");
+  const [customKeywords, setCustomKeywords] = useState("");
+  const [strictKeywords, setStrictKeywords] = useState(false);
   const [instructions, setInstructions] = useState("");
   const [includeKeywords, setIncludeKeywords] = useState(true);
   const [holdNegative, setHoldNegative] = useState(false);
@@ -600,6 +603,9 @@ function AutoReplySettingsModal({
           setAutoReplyEnabled(Boolean(data.autoReplyEnabled));
           setMinDelay(data.autoReplyMinDelayMinutes || 60);
           setMaxDelay(data.autoReplyMaxDelayMinutes || 240);
+          setBrandName(data.autoReplyBrandName || "");
+          setCustomKeywords(data.autoReplyKeywords || "");
+          setStrictKeywords(Boolean(data.autoReplyStrictKeywords));
           setInstructions(data.autoReplyInstructions || "");
           setIncludeKeywords(data.autoReplyIncludeKeywords ?? true);
           setHoldNegative(data.autoReplyHoldNegative ?? false);
@@ -624,6 +630,9 @@ function AutoReplySettingsModal({
           autoReplyEnabled,
           autoReplyMinDelayMinutes: minDelay,
           autoReplyMaxDelayMinutes: maxDelay,
+          autoReplyBrandName: brandName,
+          autoReplyKeywords: customKeywords,
+          autoReplyStrictKeywords: strictKeywords,
           autoReplyInstructions: instructions,
           autoReplyIncludeKeywords: includeKeywords,
           autoReplyHoldNegative: holdNegative,
@@ -730,6 +739,51 @@ function AutoReplySettingsModal({
               </button>
             </div>
 
+            {/* Brand / Practice Name to Use in Replies */}
+            <div>
+              <label style={{ display: "block", fontSize: 12, fontWeight: 700, color: "#334155", marginBottom: 4 }}>
+                🏢 Brand / Practice Name to Use in Replies
+              </label>
+              <input
+                type="text"
+                value={brandName}
+                onChange={e => setBrandName(e.target.value)}
+                placeholder="e.g. Dr Prince Arthro Care or RankVed Ortho Clinic"
+                style={{ width: "100%", height: 38, padding: "0 12px", border: "1px solid #cbd5e1", borderRadius: 8, fontSize: 13, boxSizing: "border-box", outline: "none" }}
+              />
+              <span style={{ fontSize: 11, color: "#64748b", marginTop: 3, display: "block" }}>
+                The exact business or brand name the AI will mention in replies (defaults to GBP title if empty).
+              </span>
+            </div>
+
+            {/* Approved Keywords Whitelist */}
+            <div>
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 4 }}>
+                <label style={{ fontSize: 12, fontWeight: 700, color: "#334155" }}>
+                  🎯 Approved Keywords List for Replies
+                </label>
+                <span style={{ fontSize: 10, color: "#2563eb", fontWeight: 600 }}>Comma or line separated</span>
+              </div>
+              <textarea
+                value={customKeywords}
+                onChange={e => setCustomKeywords(e.target.value)}
+                placeholder="e.g. orthopedic doctor in pune, knee replacement in baner, joint pain clinic, arthroscopy specialist"
+                rows={2}
+                style={{ width: "100%", padding: "8px 12px", border: "1px solid #cbd5e1", borderRadius: 8, fontSize: 12, lineHeight: 1.5, boxSizing: "border-box", outline: "none" }}
+              />
+              
+              <label style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 6, cursor: "pointer" }}>
+                <input
+                  type="checkbox"
+                  checked={strictKeywords}
+                  onChange={e => setStrictKeywords(e.target.checked)}
+                />
+                <span style={{ fontSize: 11, fontWeight: 600, color: strictKeywords ? "#dc2626" : "#475569" }}>
+                  🔒 Strict Whitelist: Use ONLY these keywords in replies (ignore all other search queries)
+                </span>
+              </label>
+            </div>
+
             {/* Delay Range Window */}
             <div>
               <label style={{ display: "block", fontSize: 12, fontWeight: 700, color: "#334155", marginBottom: 6 }}>
@@ -777,10 +831,10 @@ function AutoReplySettingsModal({
                 />
                 <div>
                   <span style={{ fontSize: 12, fontWeight: 700, color: "#1e293b", display: "block" }}>
-                    Weave Local SEO Keywords into Positive Replies
+                    Weave SEO Keywords into Positive Replies
                   </span>
                   <span style={{ fontSize: 11, color: "#64748b" }}>
-                    Naturally embeds 1 top performance keyword from your profile's keywords ({profileKeywords ? profileKeywords.substring(0, 45) + "…" : "aiKeywords"}).
+                    Naturally embeds 1 top performance keyword or approved keyword into the reply.
                   </span>
                 </div>
               </label>

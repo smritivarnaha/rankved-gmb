@@ -217,6 +217,22 @@ export async function fetchLocationPerformanceKeywords(
   const keywords: string[] = [];
   const cityOrArea = extractCityOrArea(location.address);
 
+  // 0. Check for custom configured Auto-Reply Keywords list
+  const customConfiguredKeywords = (location.autoReplyKeywords || "")
+    .split(/[,;\n]/)
+    .map((k: string) => k.trim())
+    .filter((k: string) => k.length > 1);
+
+  // If strict keywords mode is ON and keywords are provided, return ONLY these keywords
+  if (location.autoReplyStrictKeywords && customConfiguredKeywords.length > 0) {
+    return customConfiguredKeywords;
+  }
+
+  // Prepend custom configured keywords at top priority if available
+  for (const kw of customConfiguredKeywords) {
+    if (!keywords.includes(kw)) keywords.push(kw);
+  }
+
   // 1. Fetch live Google Business Profile Performance search keywords
   try {
     const targetUserId = userId || location.client?.userId;
@@ -504,8 +520,8 @@ export async function generateSmartReviewReply(params: GenerateReviewReplyParams
   const firstName = fullName ? fullName.split(/\s+/)[0] : "";
   const hasValidName = fullName.length > 1 && !fullName.toLowerCase().includes("google user") && !fullName.toLowerCase().includes("anonymous");
 
-  // Business Context
-  const businessName = location.name;
+  // Business Brand Name Override
+  const businessName = location.autoReplyBrandName?.trim() || location.name;
   const contactPhone = location.aiPhone || location.phone || "";
   const contactEmail = location.googleEmail || "";
   const knowledgeBase = [location.autoReplyInstructions, location.aiInstructions, location.aiCompetitorData].filter(Boolean).join("\n");
@@ -519,15 +535,16 @@ CUSTOMER REVIEW DETAILS:
 - Star Rating: ${rating || 5} out of 5 Stars
 - Customer Review Text: "${reviewText || "(The customer left a rating without written comment)"}"
 
-BUSINESS CONTEXT & LOCAL METRICS:
-- Business Profile Name: ${businessName}
+BUSINESS CONTEXT & BRAND IDENTITY:
+- Exact Business Brand Name to Use: "${businessName}"
 - Specialty / Category: ${categoryName}
 - City / Area: ${cityOrArea || "our center"}
 - Address: ${location.address || ""}
 - Phone: ${contactPhone || ""}
 - Email: ${contactEmail || ""}
-- Top Google Performance Search Queries for this profile: ${topKeywordsList || targetKeyword}
-- Primary Search Query to naturally blend in: "${targetKeyword}"
+- Approved Keyword Pool: ${topKeywordsList || targetKeyword}
+- Primary Search Keyword to naturally blend in: "${targetKeyword}"
+${location.autoReplyStrictKeywords ? "- STRICT RULE: You MUST ONLY use one of the approved keywords above and NO other keywords." : ""}
 - Knowledge Base / Special Instructions:
 ${knowledgeBase || "Maintain dignified, patient-first care, clear explanations, and respectful communication."}
 

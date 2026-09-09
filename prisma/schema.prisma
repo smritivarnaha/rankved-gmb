@@ -171,6 +171,9 @@ model Location {
   autoReplyEnabled         Boolean   @default(false)
   autoReplyMinDelayMinutes Int       @default(60)
   autoReplyMaxDelayMinutes Int       @default(240)
+  autoReplyBrandName       String?   // Custom brand/practice name to use in review replies
+  autoReplyKeywords        String?   @db.Text // Specific list of keywords to use in replies (comma or line separated)
+  autoReplyStrictKeywords  Boolean   @default(false) // If true, strictly use ONLY these keywords and no others
   autoReplyInstructions    String?   @db.Text
   autoReplyIncludeKeywords Boolean   @default(true)
   autoReplyHoldNegative    Boolean   @default(false)
