@@ -43,6 +43,7 @@ export function MonthlyReportModal({
   const [includeDate, setIncludeDate] = useState(false);
   const [includeReviews, setIncludeReviews] = useState(false);
   const [includePerformance, setIncludePerformance] = useState(false);
+  const [onlyAppPosts, setOnlyAppPosts] = useState(true);
   const [columns, setColumns] = useState<number>(2); // 2 or 3, default to 2
 
   const months = [
@@ -110,6 +111,43 @@ export function MonthlyReportModal({
     return `${window.location.origin}/api/proxy/media?url=${encodeURIComponent(targetUrl)}&profileId=${profileId}`;
   }
 
+  function isPostMatchingAppDatabase(googlePost: any, appPosts: any[]): boolean {
+    if (!appPosts || appPosts.length === 0) return false;
+
+    const gpName = (googlePost.name || "").trim();
+    const gpId = gpName ? gpName.split("/").pop() : "";
+    const gpSummary = (googlePost.summary || "").trim().toLowerCase().replace(/[^a-z0-9]/g, "");
+    const gpMediaUrl = googlePost.media?.[0]?.googleUrl || "";
+
+    for (const appPost of appPosts) {
+      // 1. Direct gbpPostName match
+      if (appPost.gbpPostName && gpName && appPost.gbpPostName === gpName) {
+        return true;
+      }
+      // 2. Extracted GBP ID match
+      const appId = appPost.gbpPostName ? appPost.gbpPostName.split("/").pop() : (appPost.gbpPostId || "");
+      if (gpId && appId && (gpId === appId || gpName.includes(appId))) {
+        return true;
+      }
+      // 3. Normalized summary content match
+      const appSummary = (appPost.summary || "").trim().toLowerCase().replace(/[^a-z0-9]/g, "");
+      if (gpSummary && appSummary) {
+        if (gpSummary === appSummary) return true;
+        if (gpSummary.length >= 20 && appSummary.length >= 20) {
+          if (gpSummary.includes(appSummary.slice(0, 30)) || appSummary.includes(gpSummary.slice(0, 30))) {
+            return true;
+          }
+        }
+      }
+      // 4. Media match
+      if (appPost.imageUrl && gpMediaUrl && appPost.imageUrl === gpMediaUrl) {
+        return true;
+      }
+    }
+
+    return false;
+  }
+
   const handleDownload = async () => {
     setLoading(true);
     setError(null);
@@ -137,14 +175,51 @@ export function MonthlyReportModal({
 
     let posts: any[] = [];
     let fetchedFromGoogle = false;
+    let localAppPosts: any[] = [];
+
+    // Always fetch local app DB posts to verify authorship
+    try {
+      const localRes = await fetch(`/api/posts?profileId=${profileId}&t=${Date.now()}`, { cache: "no-store" });
+      if (localRes.ok) {
+        const localData = await localRes.json();
+        localAppPosts = (localData.data || []).filter((p: any) => p.status === "PUBLISHED");
+      }
+    } catch (e) {
+      console.warn("Could not fetch local app posts:", e);
+    }
 
     // 1. Try fetching from Google Live API
     try {
       const res = await fetch(`/api/profiles/${profileId}/google-posts?pageSize=100&t=${Date.now()}`, { cache: "no-store" });
       if (res.ok) {
         const data = await res.json();
-        posts = data.data || [];
+        const googlePosts = data.data || [];
         fetchedFromGoogle = true;
+
+        if (onlyAppPosts) {
+          // Filter ONLY Google posts that match our app's database records
+          posts = googlePosts.filter((gp: any) => isPostMatchingAppDatabase(gp, localAppPosts));
+
+          // Also include any localAppPosts that might not have been returned by Google live feed
+          for (const ap of localAppPosts) {
+            const alreadyIn = posts.some((p: any) => isPostMatchingAppDatabase(p, [ap]));
+            if (!alreadyIn) {
+              posts.push({
+                name: ap.gbpPostName || ap.id,
+                summary: ap.summary,
+                createTime: ap.publishedAt || ap.createdAt,
+                publishedAt: ap.publishedAt,
+                media: ap.imageUrl ? [{ googleUrl: ap.imageUrl }] : [],
+                imageUrl: ap.imageUrl,
+                callToAction: ap.ctaType && ap.ctaType !== "NONE" ? { actionType: ap.ctaType, url: ap.ctaUrl } : null,
+                state: "LIVE",
+                status: "PUBLISHED"
+              });
+            }
+          }
+        } else {
+          posts = googlePosts;
+        }
       } else {
         console.warn("Google Live Feed fetch failed, attempting local DB fallback...");
       }
@@ -152,22 +227,22 @@ export function MonthlyReportModal({
       console.warn("Network error fetching Google Live Feed, attempting local DB fallback...", e);
     }
 
-    // 2. Fall back to local DB if Google fetch failed or returned nothing
-    if (!fetchedFromGoogle) {
-      try {
-        const res = await fetch(`/api/posts?profileId=${profileId}`);
-        if (res.ok) {
-          const data = await res.json();
-          const localPosts = data.data || [];
-          // Filter to only PUBLISHED posts from local DB
-          posts = localPosts.filter((p: any) => p.status === "PUBLISHED");
-        } else {
-          setError("Failed to load posts from Google and Local Database.");
-          setLoading(false);
-          return;
-        }
-      } catch (e) {
-        setError("Network error. Please try again.");
+    // 2. Fall back to local DB if Google fetch failed
+    if (!fetchedFromGoogle || posts.length === 0) {
+      if (localAppPosts.length > 0) {
+        posts = localAppPosts.map((ap: any) => ({
+          name: ap.gbpPostName || ap.id,
+          summary: ap.summary,
+          createTime: ap.publishedAt || ap.createdAt,
+          publishedAt: ap.publishedAt,
+          media: ap.imageUrl ? [{ googleUrl: ap.imageUrl }] : [],
+          imageUrl: ap.imageUrl,
+          callToAction: ap.ctaType && ap.ctaType !== "NONE" ? { actionType: ap.ctaType, url: ap.ctaUrl } : null,
+          state: "LIVE",
+          status: "PUBLISHED"
+        }));
+      } else if (!fetchedFromGoogle) {
+        setError("Failed to load posts from Google and Local Database.");
         setLoading(false);
         return;
       }
@@ -1523,6 +1598,46 @@ export function MonthlyReportModal({
               <span style={{ fontSize: 12.5, color: "#334155", fontWeight: 600 }}>
                 Include Performance & Search Insights
               </span>
+            </label>
+
+            {/* Custom Checkbox for App Only Posts Filter */}
+            <label 
+              style={{ display: "flex", alignItems: "flex-start", gap: 8, cursor: "pointer", userSelect: "none" }}
+            >
+              <input
+                type="checkbox"
+                checked={onlyAppPosts}
+                onChange={e => setOnlyAppPosts(e.target.checked)}
+                style={{ position: "absolute", opacity: 0, width: 0, height: 0, pointerEvents: "none" }}
+              />
+              <div style={{
+                width: 18,
+                height: 18,
+                marginTop: 2,
+                borderRadius: 5,
+                border: "2px solid",
+                borderColor: onlyAppPosts ? "#2563eb" : "#cbd5e1",
+                backgroundColor: onlyAppPosts ? "#2563eb" : "#fff",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                transition: "all 0.15s",
+                flexShrink: 0
+              }}>
+                {onlyAppPosts && (
+                  <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round">
+                    <polyline points="20 6 9 17 4 12" />
+                  </svg>
+                )}
+              </div>
+              <div>
+                <span style={{ fontSize: 12.5, color: "#334155", fontWeight: 600, display: "block" }}>
+                  Only Include Posts Published by RankVed / Our App
+                </span>
+                <span style={{ fontSize: 11, color: "#64748b", display: "block", marginTop: 1 }}>
+                  Filters out posts uploaded directly by the client outside the app.
+                </span>
+              </div>
             </label>
           </div>
 
