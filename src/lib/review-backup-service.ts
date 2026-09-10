@@ -1,5 +1,6 @@
 import prisma from "@/lib/prisma";
-import { notifyAdmin, templates } from "@/lib/notifications";
+import { notifyAdmin } from "@/lib/notifications";
+import { sendReviewDropWhatsAppAlert } from "@/lib/whatsapp-service";
 
 function getRating(r: any): number {
   const map: Record<string, number> = { FIVE: 5, FOUR: 4, THREE: 3, TWO: 2, ONE: 1 };
@@ -178,6 +179,17 @@ export async function syncAndBackupLocationReviews(
         subject: `⚠️ Alert: ${missingReviews.length} Review(s) Removed by Google - ${locationName}`,
         text: emailBody,
         html: emailBody.replace(/\n/g, "<br/>"),
+      });
+
+      // Instant WhatsApp Proactive Alert to Client!
+      await sendReviewDropWhatsAppAlert({
+        locationId,
+        droppedCount: missingReviews.length,
+        droppedReviews: missingReviews.map(r => ({
+          reviewerName: r.reviewerName,
+          rating: r.rating || 5,
+          comment: r.comment,
+        })),
       });
     } catch (notifErr) {
       console.error("[Review Drop] Notification dispatch failed:", notifErr);

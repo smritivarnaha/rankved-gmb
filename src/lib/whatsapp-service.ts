@@ -376,6 +376,92 @@ export async function sendReviewReplyAlert(params: {
   }
 }
 
+/**
+ * Proactive Review Drop Alert sent to WhatsApp when Google filters or deletes reviews
+ */
+export async function sendReviewDropWhatsAppAlert(params: {
+  locationId: string;
+  droppedCount: number;
+  droppedReviews: Array<{
+    reviewerName?: string | null;
+    rating: number;
+    comment?: string | null;
+  }>;
+}): Promise<void> {
+  try {
+    const loc = await prisma.location.findUnique({
+      where: { id: params.locationId },
+      include: { client: true },
+    });
+
+    if (!loc || !loc.whatsappEnabled || !loc.whatsappRecipientPhone) {
+      return;
+    }
+
+    const recipientName = loc.whatsappRecipientName || loc.client?.contactPerson || loc.name;
+    const isHi = loc.whatsappLanguage === "hi";
+    const isHinglish = loc.whatsappLanguage === "hinglish";
+
+    let message = "";
+    if (isHinglish) {
+      message = [
+        `🛡️ *Google Algorithm Update: Review Drop Protection Alert*`,
+        ``,
+        `Namaste *${recipientName}*! Google ke automated spam/content filter ne *${loc.name}* se *${params.droppedCount} customer review(s)* temporary drop/hide kiye hain.`,
+        ``,
+        `📋 *Dropped Review Details:* `,
+        ...params.droppedReviews.slice(0, 3).map((r, i) => `• ${r.reviewerName || "Customer"} (${r.rating}⭐): "${r.comment ? r.comment.slice(0, 70) + "..." : "Rating only"}"`),
+        ``,
+        `✅ *Aapko Chinta Karne Ki Zaroorat Nahi Hai:* `,
+        `Humare RankVed system ne is review ka pura record, timestamp aur 1-click Google Support Appeal Evidence Review Centre mein safely backup kar liya hai.`,
+        ``,
+        `_Managed by RankVed GMB Manager_`,
+      ].join("\n");
+    } else if (isHi) {
+      message = [
+        `🛡️ *Google समीक्षा अपडेट: सुरक्षा चेतावनी*`,
+        ``,
+        `नमस्ते *${recipientName}*! Google के ऑटोमेटेड सिस्टम ने *${loc.name}* से *${params.droppedCount} समीक्षा(एँ)* हटाई हैं।`,
+        ``,
+        `📋 *हटाई गई समीक्षा विवरण:* `,
+        ...params.droppedReviews.slice(0, 3).map((r, i) => `• ${r.reviewerName || "ग्राहक"} (${r.rating}⭐): "${r.comment ? r.comment.slice(0, 70) + "..." : "रेटिंग"}"`),
+        ``,
+        `✅ हमने इस समीक्षा का पूरा बैकअप और गूगल सपोर्ट अपील प्रमाण सुरक्षित रख लिया है।`,
+        ``,
+        `_RankVed GMB Manager द्वारा प्रबंधित_`,
+      ].join("\n");
+    } else {
+      message = [
+        `🛡️ *Google Algorithm Update: Review Drop Notification*`,
+        ``,
+        `Hello *${recipientName}*, Google's automated spam detection algorithm has filtered *${params.droppedCount} customer review(s)* from *${loc.name}*.`,
+        ``,
+        `📋 *Filtered Review(s):* `,
+        ...params.droppedReviews.slice(0, 3).map((r, i) => `• ${r.reviewerName || "Customer"} (${r.rating}⭐): "${r.comment ? r.comment.slice(0, 70) + "..." : "Rating only"}"`),
+        ``,
+        `✅ *Protected by RankVed Backup:* `,
+        `Our Review Vault has saved the complete review text, timestamps, and 1-click appeal evidence in your Review Centre.`,
+        ``,
+        `_Managed by RankVed GMB Manager_`,
+      ].join("\n");
+    }
+
+    await sendWhatsAppMessage({
+      to: loc.whatsappRecipientPhone,
+      text: message,
+      locationId: loc.id,
+      messageType: "REVIEW_ALERT",
+      buttons: [
+        { id: "MENU_REVIEWS", title: "⭐ Active Reviews" },
+        { id: "MENU_PERF", title: "📊 Performance" },
+        { id: "MENU_MAIN", title: "📋 Main Menu" },
+      ],
+    });
+  } catch (err) {
+    console.error("[WhatsApp Alert] Failed to send review drop alert:", err);
+  }
+}
+
 export async function sendTestWhatsAppAlert(locationId: string, recipientPhone: string): Promise<SendWhatsAppResult> {
   const loc = await prisma.location.findUnique({
     where: { id: locationId },
@@ -388,7 +474,7 @@ export async function sendTestWhatsAppAlert(locationId: string, recipientPhone: 
     `Hello! This is a verification alert from your *RankVed GMB AI Account Manager*.`,
     ``,
     `🏢 *Connected Profile:* ${profileName}`,
-    `📊 *Active Features:* Scheduled Digests, Real-time Post & Review Alerts, Interactive Menu & AI Q&A.`,
+    `📊 *Active Features:* Scheduled Digests, Real-time Post & Review Alerts, Review Drop Protection, Interactive Menu & AI Q&A.`,
     ``,
     `👇 *Try tapping an option below or reply "Menu" anytime:* `,
   ].join("\n");

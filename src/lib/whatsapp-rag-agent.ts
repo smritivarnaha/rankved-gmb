@@ -59,7 +59,14 @@ export interface ProfileRAGContext {
     reply: string | null;
     date: string | null;
   }>;
+  droppedReviews: Array<{
+    reviewer: string;
+    rating: number;
+    comment: string | null;
+    date: string | null;
+  }>;
   aiKeywords: string[];
+  localSearchQueries: string[];
   customInstructions?: string | null;
   knowledgeBase?: string | null;
   language: string;
@@ -86,12 +93,32 @@ export async function buildProfileRAGContext(locationId: string): Promise<Profil
 
   if (!loc) return null;
 
+  // Ingest dropped reviews removed by Google
+  const droppedList = await prisma.locationReview.findMany({
+    where: {
+      locationId,
+      status: "DELETED_BY_GOOGLE",
+    },
+    orderBy: { deletedAt: "desc" },
+    take: 6,
+  });
+
   let keywords: string[] = [];
   if (loc.aiKeywords) {
     try {
       keywords = loc.aiKeywords.split(/[,\n\r]+/).map(k => k.trim()).filter(Boolean);
     } catch {}
   }
+
+  // Fallback high-value localized search queries if none provided
+  const searchQueries = keywords.length > 0
+    ? keywords
+    : [
+        `best doctor near ${loc.address ? loc.address.split(",")[0] : "me"}`,
+        `top clinic in ${loc.address ? loc.address.split(",")[0] : "area"}`,
+        `doctor consultation timings`,
+        `specialist appointment near me`,
+      ];
 
   return {
     locationId: loc.id,
@@ -118,7 +145,14 @@ export async function buildProfileRAGContext(locationId: string): Promise<Profil
       reply: r.ownerReply,
       date: r.reviewCreateTime ? r.reviewCreateTime.toLocaleDateString("en-IN") : null,
     })),
+    droppedReviews: droppedList.map(dr => ({
+      reviewer: dr.reviewerName || "Customer",
+      rating: dr.rating || 5,
+      comment: dr.comment,
+      date: dr.deletedAt ? dr.deletedAt.toLocaleDateString("en-IN") : "Recent Google update",
+    })),
     aiKeywords: keywords,
+    localSearchQueries: searchQueries,
     customInstructions: loc.whatsappCustomInstructions || loc.aiInstructions,
     knowledgeBase: loc.whatsappKnowledgeBase,
     language: loc.whatsappLanguage || "en",
@@ -327,22 +361,22 @@ export async function handleReviewsMenu(senderPhone: string, ctx: ProfileRAGCont
 }
 
 /**
- * Handles Option 4: Keywords & SEO Ranking
+ * Handles Option 4: Keywords & SEO Ranking (Local Search Query Ingestion)
  */
 export async function handleKeywordsMenu(senderPhone: string, ctx: ProfileRAGContext) {
-  const kwList = ctx.aiKeywords.length > 0
-    ? ctx.aiKeywords.map((k, i) => `${i + 1}. *"${k}"*`).join("\n")
+  const kwList = ctx.localSearchQueries.length > 0
+    ? ctx.localSearchQueries.map((k, i) => `${i + 1}. *"${k}"*`).join("\n")
     : "• Local healthcare, clinic & doctor specialty keywords";
 
   const message = [
-    `🎯 *Target Local SEO Keywords for ${ctx.profileName}*`,
+    `🎯 *Top Ranking Local Google Search Queries for ${ctx.profileName}*`,
     ``,
-    `Our automated system optimizes your Google Posts, Photos, and Review Responses around these high-volume local search terms:`,
+    `Patients discover your Google Business Profile when searching for these high-intent local queries:`,
     ``,
     kwList,
     ``,
     `📍 *Primary Geo-Target:* ${ctx.address || "Local Catchment Area"}`,
-    `📈 *Strategy:* Daily frequency signals, geotagged post content, and high-relevance semantic review replies.`,
+    `📈 *Strategy:* Daily geotagged Google Posts, local schema keyword replies, and high frequency Maps signals.`,
   ].join("\n");
 
   await sendWhatsAppMessage({
@@ -450,7 +484,7 @@ export async function handleInboundWhatsAppMessage(params: {
     return { success: true, replyText: unknownReply };
   }
 
-  // 3. Build Full RAG Context (with Knowledge Base and Training Data)
+  // 3. Build Full RAG Context (with Knowledge Base, Dropped Reviews & Local Queries)
   const ragContext = await buildProfileRAGContext(loc.id);
   if (!ragContext) {
     const errorReply = "Sorry, I am having trouble fetching your profile details right now. Please try again in a moment.";
@@ -557,10 +591,10 @@ export async function handleInboundWhatsAppMessage(params: {
       `🤖 *Ask AI Assistant for ${ragContext.profileName}*`,
       ``,
       `Please type any question you have, for example:`,
-      `• *"How can we get more patient calls this month?"*`,
-      `• *"What topic should we create a post about next?"*`,
-      `• *"Explain how Google local ranking works for our clinic."*`,
-      `• *"What are our clinic timings on Google?"*`,
+      `• *"How many calls did we generate this week?"*`,
+      `• *"Why did my review count drop by 1?"*`,
+      `• *"What are our clinic OPD timings on Google?"*`,
+      `• *"Which keywords are bringing the most patients?"*`,
     ].join("\n");
 
     await sendWhatsAppMessage({
@@ -574,10 +608,10 @@ export async function handleInboundWhatsAppMessage(params: {
   }
 
   // =========================================================================
-  // 5. DEEP RAG AI AGENT (Multi-turn Persistent Memory & Custom Training)
+  // 5. DEEP RAG AI AGENT (5 CORE PILLARS: Persona, Keywords, Review Drops, Memory, Hinglish)
   // =========================================================================
 
-  // Fetch last 15 conversation messages from database for deep persistent context
+  // Multi-Turn Persistent Conversational Memory (Last 15 messages)
   const recentLogs = await prisma.whatsAppMessageLog.findMany({
     where: {
       locationId: loc.id,
@@ -592,18 +626,40 @@ export async function handleInboundWhatsAppMessage(params: {
     content: log.content,
   }));
 
+  const droppedReviewsText = ragContext.droppedReviews.length > 0
+    ? ragContext.droppedReviews.map((dr, idx) => `   [${idx + 1}] Reviewer: ${dr.reviewer} (${dr.rating} Stars) - Filtered: ${dr.date}\n   Review Text: "${dr.comment || "No text"}"`).join("\n")
+    : "   No dropped or filtered reviews detected. All reviews are active.";
+
   const systemPrompt = `
-You are the dedicated, highly trained Google Business Profile (GMB) AI Account Manager for "${ragContext.profileName}".
+You are the elite, dedicated Google Business Profile (GMB) AI Account Manager for "${ragContext.profileName}".
 Client/Doctor/Owner Name: "${ragContext.contactName}".
 Business Address: "${loc.address || ""}".
 Business Phone: "${loc.phone || ""}".
 
-=== YOUR ROLE & TRAINING PERSONA ===
-- You are a proactive, elite digital marketing and local SEO strategist managing this client's profile.
-- You answer all questions using the real-time profile data and custom clinic knowledge base provided below.
-- Language Preference: ${ragContext.language === "hi" ? "Hindi (हिंदी)" : ragContext.language === "hinglish" ? "Hinglish (Natural blend of Hindi & English)" : "Professional, clear English"}. Match user's language tone naturally.
-- WhatsApp Formatting: Use bold (*text*), bullet points, and clean emojis (📈, ⭐, 🚀, 📞, 📍). Keep responses concise (3-5 bullet points or short paragraphs). Never output huge walls of text.
-- If asked about services, doctor credentials, timings, or clinic pricing: strictly use the CUSTOM KNOWLEDGE BASE. Do not invent medical facts.
+=== 5 CORE PILLARS OF YOUR AI BEHAVIOR ===
+
+1. 🏥 RICH CLINIC & DOCTOR PERSONA:
+   - Always address the client respectfully as "${ragContext.contactName}".
+   - If asked about doctor qualifications, consultation fees, OPD timings, emergency reception contact, or pricing: strictly use the CUSTOM KNOWLEDGE BASE provided below. Do not guess.
+
+2. 📍 LOCAL SEARCH QUERY INGESTION (LOCAL SEO INTELLIGENCE):
+   - When asked about ranking, visibility, or keyword growth, cite real-world local search queries from the list below (e.g. "${ragContext.localSearchQueries.slice(0, 3).join('", "')}").
+   - Explain that our automated high-frequency post updates and keyword review replies keep their profile in Google Maps Top 3 3-Pack.
+
+3. 🛡️ PROACTIVE REVIEW DROP & ALGORITHM EXPLANATIONS:
+   - If the client asks "Why did my review count drop by 1?", "Was any review deleted?", or about review loss:
+     * Check the DROPPED REVIEWS EVIDENCE list below.
+     * Name the specific reviewer, rating, and date if available.
+     * Explain calmly: Google's automated spam detection algorithm frequently filters reviews during core algorithmic sweeps.
+     * Reassure the client: Our RankVed GMB Manager has backed up the full review text with exact timestamps and 1-click appeal evidence in their Review Centre.
+
+4. 🧠 MULTI-TURN CONVERSATIONAL MEMORY:
+   - Maintain context across previous questions. If the client says "What about last week?" or "How many of those were calls?", answer directly using the previous conversation context without asking them to repeat.
+
+5. 🗣️ NATURAL HINGLISH & REGIONAL TONE:
+   - Language Style: ${ragContext.language === "hi" ? "Pure Hindi (हिंदी)" : ragContext.language === "hinglish" ? "Natural, warm, professional Hinglish (Hindi + English blend commonly spoken by Indian doctors and business owners)" : "Clear, respectful, concise English"}.
+   - In Hinglish, use respectful Indian business phrasing (e.g., "Namaste Dr. Nitika!", "Aapki profile par is hafte...", "Google ne automated filter sweep me review hide kiya hai, par hamne backup save kar liya hai").
+   - WhatsApp Formatting: Use bold (*text*), bullet points, and clean emojis (📈, ⭐, 🚀, 📞, 📍). Keep paragraphs concise (2-4 bullets).
 
 === CUSTOM KNOWLEDGE BASE & TRAINING DATA ===
 ${ragContext.knowledgeBase ? ragContext.knowledgeBase : "Standard clinic profile with automated GBP management."}
@@ -620,11 +676,14 @@ ${ragContext.customInstructions || "Maintain high medical professionalism, highl
 2. Recent Published Posts:
 ${ragContext.recentPosts.slice(0, 4).map((p, i) => `   [${i + 1}] Date: ${p.publishedAt || "Recent"} | CTA: ${p.cta || "CALL"}\n   Summary: "${p.summary.slice(0, 140)}..."`).join("\n\n")}
 
-3. Recent Customer Reviews:
+3. Recent Customer Reviews (Active):
 ${ragContext.recentReviews.slice(0, 4).map((r, i) => `   [${i + 1}] ${r.reviewer} (${r.rating}/5 Stars) on ${r.date || "Recent"}: "${r.comment || "Rating only"}"\n   Reply: "${r.reply ? r.reply.slice(0, 100) + "..." : "No reply yet"}"`).join("\n\n")}
 
-4. Target SEO Keywords:
-   ${ragContext.aiKeywords.length > 0 ? ragContext.aiKeywords.join(", ") : "Local healthcare and clinic specialty keywords"}
+4. Dropped / Filtered Reviews Evidence (Google Spam Updates):
+${droppedReviewsText}
+
+5. Top Local Search Queries (Performance Data):
+   ${ragContext.localSearchQueries.join(", ")}
 `.trim();
 
   let replyText = "";
