@@ -177,6 +177,22 @@ model Location {
   autoReplyInstructions    String?   @db.Text
   autoReplyIncludeKeywords Boolean   @default(true)
   autoReplyHoldNegative    Boolean   @default(false)
+
+  // WhatsApp AI Agent Configuration
+  whatsappEnabled             Boolean   @default(false)
+  whatsappRecipientPhone      String?   // e.g. "+919876543210"
+  whatsappRecipientName       String?   // e.g. "Dr. Nitika Mahajan"
+  whatsappReportingSchedule   String    @default("WEEKLY") // DAILY, ALTERNATE_DAYS, WEEKLY, CUSTOM, OFF
+  whatsappCustomDays          String?   // e.g. "MON,WED,FRI" or "3" (every 3 days)
+  whatsappReportTime          String    @default("09:00") // 24-hour HH:MM
+  whatsappLastReportSentAt    DateTime?
+  whatsappNotifyPost          Boolean   @default(true) // Instant WhatsApp alert on post published
+  whatsappNotifyReview        Boolean   @default(true) // Instant WhatsApp alert on new review
+  whatsappNotifyReply         Boolean   @default(true) // Instant WhatsApp alert on review reply sent
+  whatsappNotifyPerformance   Boolean   @default(true) // Include performance summary in digests
+  whatsappLanguage            String    @default("en") // "en", "hi", "hinglish"
+  whatsappCustomInstructions  String?   @db.Text // Persona & custom instructions for WhatsApp AI agent
+  whatsappLogs                WhatsAppMessageLog[]
   
   // Cached Performance Stats
   cachedSearchViews      Int       @default(0)
@@ -302,6 +318,15 @@ model GlobalSetting {
   serpApiKey                String?
   dataforseoUsername        String?
   dataforseoPassword        String?
+
+  // Global WhatsApp Provider Settings (Meta Cloud API / Gateway)
+  whatsappProvider          String  @default("META_CLOUD") // META_CLOUD, GENERIC_WEBHOOK, TWILIO
+  whatsappPhoneNumberId     String? // Meta WhatsApp Phone Number ID
+  whatsappAccessToken       String? // Meta WhatsApp Cloud API Token
+  whatsappBusinessAccountId String? // Meta WABA ID
+  whatsappWebhookVerifyToken String? // Secret token for verifying incoming Meta webhooks
+  whatsappGatewayUrl        String? // Custom Gateway URL
+  whatsappAiModel           String  @default("gpt-4o") // AI model for WhatsApp conversations
 
   updatedAt        DateTime @updatedAt
 }
@@ -565,6 +590,28 @@ model ReviewDropIncident {
   createdAt         DateTime  @default(now())
 
   @@index([locationId])
+  @@index([createdAt])
+}
+
+// ─── WhatsApp AI Agent Message Logs & Conversation History ─
+model WhatsAppMessageLog {
+  id              String    @id @default(cuid())
+  locationId      String?
+  location        Location? @relation(fields: [locationId], references: [id], onDelete: Cascade)
+  direction       String    // "INBOUND" (from client) | "OUTBOUND" (from system/AI agent)
+  senderPhone     String
+  recipientPhone  String
+  messageType     String    // "POST_ALERT" | "REVIEW_ALERT" | "REPLY_ALERT" | "SCHEDULED_REPORT" | "CHAT_QUERY" | "CHAT_RESPONSE" | "TEST_ALERT"
+  content         String    @db.Text
+  mediaUrl        String?   @db.Text
+  status          String    @default("SENT") // "SENT" | "DELIVERED" | "READ" | "FAILED" | "RECEIVED"
+  errorMessage    String?
+  rawPayload      Json?
+  createdAt       DateTime  @default(now())
+
+  @@index([locationId])
+  @@index([senderPhone])
+  @@index([recipientPhone])
   @@index([createdAt])
 }
 

@@ -64,6 +64,7 @@ export async function GET() {
     ...settings,
     serpApiKey: settings.serpApiKey ? "••••••••••••••••" : null,
     dataforseoPassword: settings.dataforseoPassword ? "••••••••••••••••" : null,
+    whatsappAccessToken: settings.whatsappAccessToken ? "••••••••••••••••" : null,
   });
 }
 
@@ -104,6 +105,15 @@ export async function POST(req: NextRequest) {
     const dataforseoUsername = formData.get("dataforseoUsername") as string;
     const dataforseoPassword = formData.get("dataforseoPassword") as string;
 
+    // WhatsApp Settings
+    const whatsappProvider = formData.get("whatsappProvider") as string;
+    const whatsappPhoneNumberId = formData.get("whatsappPhoneNumberId") as string;
+    const whatsappAccessToken = formData.get("whatsappAccessToken") as string;
+    const whatsappBusinessAccountId = formData.get("whatsappBusinessAccountId") as string;
+    const whatsappWebhookVerifyToken = formData.get("whatsappWebhookVerifyToken") as string;
+    const whatsappGatewayUrl = formData.get("whatsappGatewayUrl") as string;
+    const whatsappAiModel = formData.get("whatsappAiModel") as string;
+
     const updateData: any = {};
     if (heading) updateData.loginHeading = heading;
     if (description) updateData.loginDescription = description;
@@ -133,6 +143,16 @@ export async function POST(req: NextRequest) {
     if (dataforseoPassword !== null && dataforseoPassword !== "" && dataforseoPassword !== "••••••••••••••••") {
       updateData.dataforseoPassword = dataforseoPassword;
     }
+
+    if (whatsappProvider !== null) updateData.whatsappProvider = whatsappProvider;
+    if (whatsappPhoneNumberId !== null) updateData.whatsappPhoneNumberId = whatsappPhoneNumberId.trim();
+    if (whatsappAccessToken !== null && whatsappAccessToken !== "" && !whatsappAccessToken.includes("••••")) {
+      updateData.whatsappAccessToken = whatsappAccessToken.trim();
+    }
+    if (whatsappBusinessAccountId !== null) updateData.whatsappBusinessAccountId = whatsappBusinessAccountId.trim();
+    if (whatsappWebhookVerifyToken !== null) updateData.whatsappWebhookVerifyToken = whatsappWebhookVerifyToken.trim();
+    if (whatsappGatewayUrl !== null) updateData.whatsappGatewayUrl = whatsappGatewayUrl.trim();
+    if (whatsappAiModel !== null) updateData.whatsappAiModel = whatsappAiModel.trim();
 
     // GBP Intelligence Monitoring
     const monitoringEnabled = formData.get("monitoringEnabled") as string;

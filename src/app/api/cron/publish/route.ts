@@ -139,6 +139,21 @@ export async function GET(req: NextRequest) {
       results.push({ id: dbPost.id, status: "PUBLISHED" });
       const template = await getTemplate("SUCCESS", post);
       await notifyAdmin(template);
+
+      // Trigger instant WhatsApp Post Alert to Client
+      try {
+        const { sendPostPublishedAlert } = await import("@/lib/whatsapp-service");
+        await sendPostPublishedAlert({
+          locationId: dbPost.locationId,
+          summary: dbPost.summary,
+          mediaUrl: dbPost.mediaUrl,
+          ctaType: dbPost.ctaType,
+          ctaUrl: dbPost.ctaUrl,
+          gbpPostName: result.gbpPostName,
+        });
+      } catch (waErr) {
+        console.error("[CRON] WhatsApp post alert error:", waErr);
+      }
     } else {
       results.push({ id: dbPost.id, status: "FAILED", error: result.error });
       await prisma.post.update({
@@ -253,6 +268,19 @@ export async function GET(req: NextRequest) {
               data: { status: "PUBLISHED", publishedAt: new Date(), errorMessage: null },
             });
             console.log(`[CRON] ✅ Published review reply for ${rep.location.name} (Review: ${rep.reviewId || rep.id})`);
+
+            // Trigger instant WhatsApp Auto-Reply Alert to Client
+            try {
+              const { sendReviewReplyAlert } = await import("@/lib/whatsapp-service");
+              await sendReviewReplyAlert({
+                locationId: rep.locationId,
+                reviewerName: rep.reviewerName || "Customer",
+                rating: rep.rating || 5,
+                replyText: rep.replyComment,
+              });
+            } catch (waErr) {
+              console.error("[CRON] WhatsApp review reply alert error:", waErr);
+            }
           } else {
             const errText = await replyRes.text();
             await prisma.scheduledReviewReply.update({

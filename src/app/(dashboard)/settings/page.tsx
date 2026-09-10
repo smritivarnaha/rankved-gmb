@@ -6,7 +6,8 @@ import {
   Loader2, CheckCircle2, RefreshCw, MapPin, 
   AlertCircle, User, Trash2, Image as ImageIcon, Upload, Save,
   Mail, Bookmark, Palette, Eye, Send, Code, Copy, Users, Globe,
-  Bell, Star, Phone, BarChart2, ToggleLeft, ToggleRight, TrendingUp
+  Bell, Star, Phone, BarChart2, ToggleLeft, ToggleRight, TrendingUp,
+  MessageSquare
 } from "lucide-react";
 import { useGlobalSettings } from "@/hooks/useGlobalSettings";
 
@@ -34,7 +35,7 @@ export default function SettingsPage() {
   const [savingSettings, setSavingSettings] = useState(false);
   const [selectedLogo, setSelectedLogo] = useState<File | null>(null);
   
-  const [activeTab, setActiveTab] = useState<"accounts" | "notifications" | "profiles" | "branding" | "alerts" | "serp">("accounts");
+  const [activeTab, setActiveTab] = useState<"accounts" | "notifications" | "profiles" | "branding" | "alerts" | "serp" | "whatsapp">("accounts");
 
   useEffect(() => {
     if (settings) {
@@ -219,6 +220,7 @@ export default function SettingsPage() {
     { id: "accounts", label: "Google Accounts", icon: GoogleIcon },
     { id: "notifications", label: "Email Notifications", icon: Mail },
     { id: "alerts", label: "GBP Alerts", icon: Bell },
+    { id: "whatsapp", label: "WhatsApp AI API", icon: MessageSquare },
     { id: "profiles", label: "Saved Profiles", icon: Bookmark },
     ...(isSuperAdmin ? [
       { id: "branding", label: "Sidebar Branding", icon: Palette },
@@ -922,6 +924,161 @@ export default function SettingsPage() {
               >
                 {savingSettings ? <Loader2 className="anim-spin" style={{ width: 16, height: 16 }} /> : <Save size={16} />}
                 {savingSettings ? "Saving..." : "Save Configuration"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Tab: WhatsApp AI API Settings ───────────────────────────────────── */}
+      {activeTab === "whatsapp" && (
+        <div className="s-card">
+          <div className="s-card-header">
+            <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
+              <div className="icon-box" style={{ background: "#ecfdf5", color: "#047857" }}>
+                <MessageSquare size={22} />
+              </div>
+              <div>
+                <h2 style={{ fontSize: 16, fontWeight: 600, color: "#111827", margin: 0 }}>WhatsApp AI Cloud API & Webhook</h2>
+                <p style={{ fontSize: 13, color: "#64748b", margin: "4px 0 0" }}>Configure Meta WhatsApp Cloud API credentials and automated AI reporting</p>
+              </div>
+            </div>
+          </div>
+          
+          <div className="s-card-body" style={{ display: "flex", flexDirection: "column", gap: 20 }}>
+            {/* Provider Selection */}
+            <div>
+              <label style={{ display: "block", fontSize: 13, fontWeight: 600, color: "#374151", marginBottom: 6 }}>WhatsApp Provider</label>
+              <select
+                value={localSettings?.whatsappProvider || "META_CLOUD"}
+                onChange={e => updateSettings({ whatsappProvider: e.target.value })}
+                style={{ width: "100%", padding: "10px 14px", background: "#fff", border: "1px solid #eaeaea", borderRadius: 8, fontSize: 14 }}
+              >
+                <option value="META_CLOUD">Meta WhatsApp Cloud API (Official Graph API — Recommended)</option>
+                <option value="GENERIC_WEBHOOK">Custom Gateway / Webhook URL</option>
+              </select>
+            </div>
+
+            {/* Meta Cloud Fields */}
+            {(localSettings?.whatsappProvider || "META_CLOUD") === "META_CLOUD" && (
+              <>
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
+                  <div>
+                    <label style={{ display: "block", fontSize: 13, fontWeight: 600, color: "#374151", marginBottom: 6 }}>
+                      Phone Number ID
+                    </label>
+                    <input
+                      type="text"
+                      placeholder="e.g. 104829104819028"
+                      value={localSettings?.whatsappPhoneNumberId || ""}
+                      onChange={e => updateSettings({ whatsappPhoneNumberId: e.target.value })}
+                      style={{ width: "100%", padding: "10px 14px", background: "#fff", border: "1px solid #eaeaea", borderRadius: 8, fontSize: 14 }}
+                    />
+                  </div>
+                  <div>
+                    <label style={{ display: "block", fontSize: 13, fontWeight: 600, color: "#374151", marginBottom: 6 }}>
+                      WhatsApp Business Account ID (WABA)
+                    </label>
+                    <input
+                      type="text"
+                      placeholder="e.g. 192840192840192"
+                      value={localSettings?.whatsappBusinessAccountId || ""}
+                      onChange={e => updateSettings({ whatsappBusinessAccountId: e.target.value })}
+                      style={{ width: "100%", padding: "10px 14px", background: "#fff", border: "1px solid #eaeaea", borderRadius: 8, fontSize: 14 }}
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label style={{ display: "block", fontSize: 13, fontWeight: 600, color: "#374151", marginBottom: 6 }}>
+                    Permanent System User Access Token
+                  </label>
+                  <input
+                    type="password"
+                    placeholder={localSettings?.whatsappAccessToken ? "••••••••••••••••" : "EAAG..."}
+                    value={localSettings?.whatsappAccessToken || ""}
+                    onChange={e => updateSettings({ whatsappAccessToken: e.target.value })}
+                    style={{ width: "100%", padding: "10px 14px", background: "#fff", border: "1px solid #eaeaea", borderRadius: 8, fontSize: 14 }}
+                  />
+                  <span style={{ fontSize: 11, color: "#94a3b8", marginTop: 4, display: "block" }}>
+                    From Meta Business Manager &gt; System Users &gt; Generate Token (with whatsapp_business_messaging permissions).
+                  </span>
+                </div>
+
+                {/* Webhook Info Box */}
+                <div style={{ background: "#f8fafc", border: "1px solid #e2e8f0", borderRadius: 10, padding: 16 }}>
+                  <h4 style={{ margin: "0 0 8px", fontSize: 13, fontWeight: 700, color: "#1e293b" }}>Meta Webhook Setup URL</h4>
+                  <p style={{ margin: "0 0 10px", fontSize: 12, color: "#64748b" }}>
+                    Copy this Webhook Callback URL and paste it in your Meta Developer App &gt; WhatsApp &gt; Configuration:
+                  </p>
+                  <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                    <input
+                      type="text"
+                      readOnly
+                      value="https://gmb.rankved.com/api/whatsapp/webhook"
+                      style={{ flex: 1, padding: "8px 12px", background: "#fff", border: "1px solid #cbd5e1", borderRadius: 6, fontSize: 12, fontFamily: "monospace" }}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => copyVariable("https://gmb.rankved.com/api/whatsapp/webhook")}
+                      style={{ padding: "8px 12px", background: "#fff", border: "1px solid #cbd5e1", borderRadius: 6, fontSize: 12, fontWeight: 600, color: "#2563eb", cursor: "pointer", display: "flex", alignItems: "center", gap: 4 }}
+                    >
+                      <Copy size={12} /> {copiedVar === "https://gmb.rankved.com/api/whatsapp/webhook" ? "Copied!" : "Copy"}
+                    </button>
+                  </div>
+                  
+                  <div style={{ marginTop: 12 }}>
+                    <label style={{ display: "block", fontSize: 12, fontWeight: 600, color: "#475569", marginBottom: 4 }}>
+                      Webhook Verify Token
+                    </label>
+                    <input
+                      type="text"
+                      value={localSettings?.whatsappWebhookVerifyToken || "rankved_wa_verify_token"}
+                      onChange={e => updateSettings({ whatsappWebhookVerifyToken: e.target.value })}
+                      style={{ width: "100%", padding: "8px 12px", background: "#fff", border: "1px solid #cbd5e1", borderRadius: 6, fontSize: 12 }}
+                    />
+                  </div>
+                </div>
+              </>
+            )}
+
+            {/* Custom Gateway URL */}
+            {localSettings?.whatsappProvider === "GENERIC_WEBHOOK" && (
+              <div>
+                <label style={{ display: "block", fontSize: 13, fontWeight: 600, color: "#374151", marginBottom: 6 }}>Custom Gateway Webhook URL</label>
+                <input
+                  type="text"
+                  placeholder="https://your-custom-whatsapp-gateway.com/send"
+                  value={localSettings?.whatsappGatewayUrl || ""}
+                  onChange={e => updateSettings({ whatsappGatewayUrl: e.target.value })}
+                  style={{ width: "100%", padding: "10px 14px", background: "#fff", border: "1px solid #eaeaea", borderRadius: 8, fontSize: 14 }}
+                />
+              </div>
+            )}
+
+            {/* AI Model Selection for WhatsApp Agent */}
+            <div>
+              <label style={{ display: "block", fontSize: 13, fontWeight: 600, color: "#374151", marginBottom: 6 }}>AI Model for WhatsApp Agent Conversations</label>
+              <select
+                value={localSettings?.whatsappAiModel || "gpt-4o"}
+                onChange={e => updateSettings({ whatsappAiModel: e.target.value })}
+                style={{ width: "100%", padding: "10px 14px", background: "#fff", border: "1px solid #eaeaea", borderRadius: 8, fontSize: 14 }}
+              >
+                <option value="gpt-4o">OpenAI GPT-4o (Recommended — Fast & Highly Intelligent)</option>
+                <option value="claude-3-5-sonnet-20241022">Anthropic Claude 3.5 Sonnet (Nuanced & High Quality)</option>
+                <option value="gemini-1.5-flash">Google Gemini 1.5 Flash (Super Fast)</option>
+              </select>
+            </div>
+
+            <div style={{ display: "flex", borderTop: "1px solid #eaeaea", paddingTop: 20, marginTop: 8 }}>
+              <button
+                onClick={handleSaveSettings}
+                disabled={savingSettings}
+                className="btn btn-primary"
+                style={{ fontSize: 14, padding: "10px 20px", marginLeft: "auto", display: "flex", alignItems: "center", gap: 8, background: "#047857", borderColor: "#047857" }}
+              >
+                {savingSettings ? <Loader2 className="anim-spin" style={{ width: 16, height: 16 }} /> : <Save size={16} />}
+                {savingSettings ? "Saving..." : "Save WhatsApp Settings"}
               </button>
             </div>
           </div>

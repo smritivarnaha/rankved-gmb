@@ -217,6 +217,19 @@ async function checkReviews({ location, locationPath, accessToken, settings, ale
 
     alertsSent.push(`New review on ${location.name} from ${reviewer} (${starNumber}★)`);
     console.log(`[GBP Monitor] New review alert sent for ${location.name}`);
+
+    // Trigger instant WhatsApp Alert to Client
+    try {
+      const { sendNewReviewAlert } = await import("@/lib/whatsapp-service");
+      await sendNewReviewAlert({
+        locationId: location.id,
+        reviewerName: reviewer,
+        rating: starNumber,
+        comment: comment !== "(No text left)" ? comment : null,
+      });
+    } catch (waErr) {
+      console.error("[GBP Monitor] WhatsApp review alert error:", waErr);
+    }
   }
 
   // ── Auto Review Replier Logic (if enabled) ───────────────────────────

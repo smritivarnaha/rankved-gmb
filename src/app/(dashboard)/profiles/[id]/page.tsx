@@ -20,6 +20,8 @@ import { checkProhibitedContent } from "@/lib/content-validation";
 import { MonthlyReportModal } from "@/components/profiles/MonthlyReportModal";
 import { BulkImportModal } from "@/components/posts/BulkImportModal";
 import RankTracker from "@/components/profiles/RankTracker";
+import { WhatsAppAgentTab } from "@/components/profiles/WhatsAppAgentTab";
+import { MessageSquare } from "lucide-react";
 
 const fetcher = (url: string) => fetch(url).then(r => r.json());
 
@@ -400,7 +402,7 @@ export default function ProfileDetailPage() {
   const [statusFilter, setStatusFilter] = useState("ALL");
   const searchParamsHook = useSearchParams();
   const initialTab = searchParamsHook.get("tab") === "ai" ? "AI_SETTINGS" : "POSTS";
-  const [activeTab, setActiveTab] = useState<"POSTS" | "AI_SETTINGS" | "EDIT_PROFILE" | "REVIEWS" | "RANK_TRACKER">(initialTab as any);
+  const [activeTab, setActiveTab] = useState<"POSTS" | "AI_SETTINGS" | "EDIT_PROFILE" | "REVIEWS" | "RANK_TRACKER" | "WHATSAPP">(initialTab as any);
   const [isAiModalOpen, setIsAiModalOpen] = useState(false);
   const [isBulkAiModalOpen, setIsBulkAiModalOpen] = useState(false);
   const [isReportModalOpen, setIsReportModalOpen] = useState(false);
@@ -711,6 +713,21 @@ export default function ProfileDetailPage() {
           >
             Reviews
           </button>
+          <button 
+            onClick={() => setActiveTab("WHATSAPP")}
+            style={{ 
+              padding: "10px 4px", fontSize: 14, fontWeight: 600, border: "none", background: "none", cursor: "pointer",
+              color: activeTab === "WHATSAPP" ? "#047857" : "#94a3b8",
+              borderBottom: activeTab === "WHATSAPP" ? "2px solid #047857" : "2px solid transparent",
+              display: "flex",
+              alignItems: "center",
+              gap: 6,
+              transition: "all 0.2s"
+            }}
+          >
+            <MessageSquare size={16} />
+            WhatsApp Agent
+          </button>
         </div>
       </div>
 
@@ -718,6 +735,8 @@ export default function ProfileDetailPage() {
         <div style={{ background: "#fff", border: "1px solid #e2e8f0", borderRadius: 12, overflow: "hidden" }}>
           <AiSettingsTab locationId={profile.id} profileName={profile.name} />
         </div>
+      ) : activeTab === "WHATSAPP" ? (
+        <WhatsAppAgentTab profileId={profile.id} profileName={profile.name} />
       ) : activeTab === "REVIEWS" ? (
         <ReviewManager profileId={profile.id} />
       ) : (
