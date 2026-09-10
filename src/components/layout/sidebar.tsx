@@ -19,6 +19,7 @@ import { X } from "lucide-react";
       label: "OVERVIEW",
       items: [
         { name: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
+        { name: "WhatsApp AI Agent", href: "/whatsapp", icon: MessageSquare },
         { name: "Command Center", href: "/command-center", icon: Zap },
         { name: "Performance", href: "/performance", icon: BarChart3 },
         { name: "Profiles", href: "/profiles", icon: MapPin },
