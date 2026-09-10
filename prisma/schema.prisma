@@ -192,6 +192,8 @@ model Location {
   whatsappNotifyPerformance   Boolean   @default(true) // Include performance summary in digests
   whatsappLanguage            String    @default("en") // "en", "hi", "hinglish"
   whatsappCustomInstructions  String?   @db.Text // Persona & custom instructions for WhatsApp AI agent
+  whatsappKnowledgeBase       String?   @db.Text // FAQs, Services, Pricing, Doctor bio, Timings
+  whatsappInteractiveMenu     Boolean   @default(true) // Enable interactive WhatsApp chained menu
   whatsappLogs                WhatsAppMessageLog[]
   
   // Cached Performance Stats

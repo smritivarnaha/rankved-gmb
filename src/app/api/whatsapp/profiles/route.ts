@@ -31,6 +31,8 @@ export async function GET(req: NextRequest) {
         whatsappNotifyPerformance: true,
         whatsappLanguage: true,
         whatsappCustomInstructions: true,
+        whatsappKnowledgeBase: true,
+        whatsappInteractiveMenu: true,
         cachedSearchViews: true,
         cachedInteractions: true,
         cachedEngagements: true,
@@ -80,6 +82,8 @@ export async function PUT(req: NextRequest) {
         whatsappNotifyPerformance: data.whatsappNotifyPerformance !== undefined ? Boolean(data.whatsappNotifyPerformance) : undefined,
         whatsappLanguage: data.whatsappLanguage || undefined,
         whatsappCustomInstructions: data.whatsappCustomInstructions !== undefined ? data.whatsappCustomInstructions : undefined,
+        whatsappKnowledgeBase: data.whatsappKnowledgeBase !== undefined ? data.whatsappKnowledgeBase : undefined,
+        whatsappInteractiveMenu: data.whatsappInteractiveMenu !== undefined ? Boolean(data.whatsappInteractiveMenu) : undefined,
       },
     });
 

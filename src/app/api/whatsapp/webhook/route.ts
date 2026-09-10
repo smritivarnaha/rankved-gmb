@@ -36,9 +36,14 @@ export async function POST(req: NextRequest) {
       if (message.type === "text") {
         messageText = message.text?.body || "";
       } else if (message.type === "interactive") {
-        messageText = message.interactive?.button_reply?.title || message.interactive?.list_reply?.title || "";
+        messageText =
+          message.interactive?.button_reply?.id ||
+          message.interactive?.button_reply?.title ||
+          message.interactive?.list_reply?.id ||
+          message.interactive?.list_reply?.title ||
+          "";
       } else if (message.type === "button") {
-        messageText = message.button?.text || "";
+        messageText = message.button?.payload || message.button?.text || "";
       }
 
       if (senderPhone && messageText) {

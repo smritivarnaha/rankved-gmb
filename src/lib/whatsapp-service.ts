@@ -35,12 +35,33 @@ export function formatPhoneNumber(phone: string): string {
   return cleaned;
 }
 
+export interface InteractiveButton {
+  id: string;
+  title: string; // Max 20 chars for Meta buttons
+}
+
+export interface InteractiveListRow {
+  id: string;
+  title: string; // Max 24 chars
+  description?: string; // Max 72 chars
+}
+
+export interface InteractiveListSection {
+  title: string;
+  rows: InteractiveListRow[];
+}
+
 export interface SendWhatsAppOptions {
   to: string;
   text: string;
   mediaUrl?: string | null;
   locationId?: string | null;
-  messageType: "POST_ALERT" | "REVIEW_ALERT" | "REPLY_ALERT" | "SCHEDULED_REPORT" | "CHAT_QUERY" | "CHAT_RESPONSE" | "TEST_ALERT";
+  messageType: "POST_ALERT" | "REVIEW_ALERT" | "REPLY_ALERT" | "SCHEDULED_REPORT" | "CHAT_QUERY" | "CHAT_RESPONSE" | "TEST_ALERT" | "MENU_INTERACTIVE";
+  buttons?: InteractiveButton[]; // Up to 3 buttons for Meta Cloud
+  listSections?: InteractiveListSection[]; // Up to 10 list options
+  listButtonText?: string;
+  headerText?: string;
+  footerText?: string;
 }
 
 export interface SendWhatsAppResult {
@@ -50,7 +71,7 @@ export interface SendWhatsAppResult {
 }
 
 export async function sendWhatsAppMessage(opts: SendWhatsAppOptions): Promise<SendWhatsAppResult> {
-  const { to, text, mediaUrl, locationId, messageType } = opts;
+  const { to, text, mediaUrl, locationId, messageType, buttons, listSections, listButtonText, headerText, footerText } = opts;
   const cleanRecipient = formatPhoneNumber(to);
 
   if (!cleanRecipient) {
@@ -97,7 +118,53 @@ export async function sendWhatsAppMessage(opts: SendWhatsAppOptions): Promise<Se
           to: cleanRecipient,
         };
 
-        if (mediaUrl && (mediaUrl.startsWith("http://") || mediaUrl.startsWith("https://"))) {
+        if (buttons && buttons.length > 0 && buttons.length <= 3) {
+          // Meta Interactive Quick-Reply Buttons
+          payload.type = "interactive";
+          payload.interactive = {
+            type: "button",
+            body: { text },
+            action: {
+              buttons: buttons.map(b => ({
+                type: "reply",
+                reply: {
+                  id: b.id,
+                  title: b.title.slice(0, 20),
+                },
+              })),
+            },
+          };
+          if (headerText) {
+            payload.interactive.header = { type: "text", text: headerText };
+          }
+          if (footerText) {
+            payload.interactive.footer = { text: footerText };
+          }
+        } else if (listSections && listSections.length > 0) {
+          // Meta Interactive List
+          payload.type = "interactive";
+          payload.interactive = {
+            type: "list",
+            body: { text },
+            action: {
+              button: (listButtonText || "View Menu Options").slice(0, 20),
+              sections: listSections.map(sec => ({
+                title: sec.title.slice(0, 24),
+                rows: sec.rows.map(r => ({
+                  id: r.id,
+                  title: r.title.slice(0, 24),
+                  description: r.description ? r.description.slice(0, 72) : undefined,
+                })),
+              })),
+            },
+          };
+          if (headerText) {
+            payload.interactive.header = { type: "text", text: headerText };
+          }
+          if (footerText) {
+            payload.interactive.footer = { text: footerText };
+          }
+        } else if (mediaUrl && (mediaUrl.startsWith("http://") || mediaUrl.startsWith("https://"))) {
           payload.type = "image";
           payload.image = {
             link: mediaUrl,
@@ -186,8 +253,7 @@ export async function sendPostPublishedAlert(params: {
       ``,
       `Hello *${recipientName}*, your scheduled post is now *LIVE* on Google for *${loc.name}*.`,
       ``,
-      `📝 *Post Content:*`,
-      `"${params.summary}"`,
+      `📝 *Post Content:*\n"${params.summary}"`,
       ctaLabel ? `\n${ctaLabel}` : ``,
       `✅ *Status:* Published & Live on Google Maps & Search`,
       `⏱️ *Time:* ${new Date().toLocaleString("en-IN", { timeZone: "Asia/Kolkata", dateStyle: "medium", timeStyle: "short" })}`,
@@ -201,6 +267,11 @@ export async function sendPostPublishedAlert(params: {
       mediaUrl: params.mediaUrl,
       locationId: loc.id,
       messageType: "POST_ALERT",
+      buttons: [
+        { id: "MENU_POSTS", title: "📸 View All Posts" },
+        { id: "MENU_PERF", title: "📊 Performance" },
+        { id: "MENU_MAIN", title: "📋 Main Menu" },
+      ],
     });
   } catch (err) {
     console.error("[WhatsApp Alert] Failed to send post alert:", err);
@@ -249,6 +320,11 @@ export async function sendNewReviewAlert(params: {
       text: message,
       locationId: loc.id,
       messageType: "REVIEW_ALERT",
+      buttons: [
+        { id: "MENU_REVIEWS", title: "⭐ Recent Reviews" },
+        { id: "MENU_PERF", title: "📊 Performance" },
+        { id: "MENU_MAIN", title: "📋 Main Menu" },
+      ],
     });
   } catch (err) {
     console.error("[WhatsApp Alert] Failed to send review alert:", err);
@@ -279,8 +355,7 @@ export async function sendReviewReplyAlert(params: {
       ``,
       `Hello *${recipientName}*, we have officially posted a response to *${params.reviewerName}*'s ${stars} review for *${loc.name}*.`,
       ``,
-      `📩 *Our Official Response:*`,
-      `"${params.replyText}"`,
+      `📩 *Our Official Response:*\n"${params.replyText}"`,
       ``,
       `✅ *Status:* Live on Google Business Profile`,
       `_Managed by RankVed GMB Manager_`,
@@ -291,6 +366,10 @@ export async function sendReviewReplyAlert(params: {
       text: message,
       locationId: loc.id,
       messageType: "REPLY_ALERT",
+      buttons: [
+        { id: "MENU_REVIEWS", title: "⭐ All Reviews" },
+        { id: "MENU_MAIN", title: "📋 Main Menu" },
+      ],
     });
   } catch (err) {
     console.error("[WhatsApp Alert] Failed to send reply alert:", err);
@@ -306,17 +385,12 @@ export async function sendTestWhatsAppAlert(locationId: string, recipientPhone: 
   const testMessage = [
     `✅ *WhatsApp AI Agent Connected Successfully!*`,
     ``,
-    `Hello! This is a test alert from your *RankVed GMB AI Account Manager*.`,
+    `Hello! This is a verification alert from your *RankVed GMB AI Account Manager*.`,
     ``,
     `🏢 *Connected Profile:* ${profileName}`,
-    `📊 *Features Active:*`,
-    `• Instant Post Publication Updates (with images & links)`,
-    `• Real-time Review Alerts & Ratings Summaries`,
-    `• Automated Review Reply Notifications`,
-    `• Scheduled GMB Performance & Call Reports`,
-    `• 24/7 Interactive AI Q&A for your Profile`,
+    `📊 *Active Features:* Scheduled Digests, Real-time Post & Review Alerts, Interactive Menu & AI Q&A.`,
     ``,
-    `💬 *Try asking:* "How is my profile performing this week?" or "What was our last post about?"`,
+    `👇 *Try tapping an option below or reply "Menu" anytime:* `,
   ].join("\n");
 
   return await sendWhatsAppMessage({
@@ -324,5 +398,10 @@ export async function sendTestWhatsAppAlert(locationId: string, recipientPhone: 
     text: testMessage,
     locationId,
     messageType: "TEST_ALERT",
+    buttons: [
+      { id: "MENU_PERF", title: "📊 Performance" },
+      { id: "MENU_POSTS", title: "📸 Latest Posts" },
+      { id: "MENU_MAIN", title: "📋 Main Menu" },
+    ],
   });
 }
