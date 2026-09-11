@@ -4,6 +4,7 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { sendTestWhatsAppAlert } from "@/lib/whatsapp-service";
 import { sendScheduledWhatsAppReport } from "@/lib/whatsapp-reporter";
+import { handleInboundWhatsAppMessage } from "@/lib/whatsapp-rag-agent";
 
 export async function GET(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const session = await getServerSession(authOptions);
@@ -30,9 +31,11 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
       whatsappNotifyPerformance: true,
       whatsappLanguage: true,
       whatsappCustomInstructions: true,
+      whatsappKnowledgeBase: true,
+      whatsappInteractiveMenu: true,
       whatsappLogs: {
         orderBy: { createdAt: "desc" },
-        take: 20,
+        take: 30,
       },
     },
   });
@@ -68,6 +71,8 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
       whatsappNotifyPerformance: body.whatsappNotifyPerformance !== undefined ? Boolean(body.whatsappNotifyPerformance) : undefined,
       whatsappLanguage: body.whatsappLanguage || undefined,
       whatsappCustomInstructions: body.whatsappCustomInstructions !== undefined ? body.whatsappCustomInstructions : undefined,
+      whatsappKnowledgeBase: body.whatsappKnowledgeBase !== undefined ? body.whatsappKnowledgeBase : undefined,
+      whatsappInteractiveMenu: body.whatsappInteractiveMenu !== undefined ? Boolean(body.whatsappInteractiveMenu) : undefined,
     },
   });
 
@@ -89,12 +94,12 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
     return NextResponse.json({ error: "Profile not found" }, { status: 404 });
   }
 
-  const phone = body.phone || loc.whatsappRecipientPhone;
-  if (!phone) {
-    return NextResponse.json({ error: "No recipient phone number specified." }, { status: 400 });
-  }
+  const phone = body.phone || loc.whatsappRecipientPhone || "919999999999";
 
   if (action === "test_alert") {
+    if (!loc.whatsappRecipientPhone && !body.phone) {
+      return NextResponse.json({ error: "No recipient phone number specified." }, { status: 400 });
+    }
     const result = await sendTestWhatsAppAlert(locationId, phone);
     if (!result.success) {
       return NextResponse.json({ success: false, error: result.error || "Failed to send test alert" }, { status: 400 });
@@ -103,11 +108,24 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
   }
 
   if (action === "send_report_now") {
+    if (!loc.whatsappRecipientPhone && !body.phone) {
+      return NextResponse.json({ error: "No recipient phone number specified." }, { status: 400 });
+    }
     const result = await sendScheduledWhatsAppReport(locationId);
     if (!result.success) {
       return NextResponse.json({ success: false, error: result.error || "Failed to send performance report" }, { status: 400 });
     }
     return NextResponse.json({ success: true, message: "Live performance report dispatched to WhatsApp successfully!" });
+  }
+
+  if (action === "simulate_chat") {
+    const messageText = body.messageText || "Menu";
+    const result = await handleInboundWhatsAppMessage({
+      senderPhone: phone,
+      messageText,
+      locationId,
+    });
+    return NextResponse.json({ success: true, replyText: result.replyText });
   }
 
   return NextResponse.json({ error: "Invalid action" }, { status: 400 });

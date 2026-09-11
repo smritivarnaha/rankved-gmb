@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import {
   MessageSquare,
   Sparkles,
@@ -31,14 +31,22 @@ import {
   Bot,
   Layers,
   ChevronRight,
+  CheckCheck,
+  Smartphone,
+  ShieldAlert,
+  Sliders,
+  Play,
+  RotateCcw,
+  User,
 } from "lucide-react";
 
 export default function WhatsAppAgentCenterPage() {
-  const [activeTab, setActiveTab] = useState<"profiles" | "inbox" | "api" | "menu_preview" | "smart_tips">("profiles");
+  const [activeTab, setActiveTab] = useState<"profiles" | "simulator" | "inbox" | "api" | "training_guide">("profiles");
   const [loading, setLoading] = useState(true);
   const [profiles, setProfiles] = useState<any[]>([]);
   const [logs, setLogs] = useState<any[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
+  const [statusFilter, setStatusFilter] = useState<"ALL" | "ACTIVE" | "INACTIVE">("ALL");
   const [selectedProfile, setSelectedProfile] = useState<any | null>(null);
   const [editDrawerOpen, setEditDrawerOpen] = useState(false);
   const [statusMsg, setStatusMsg] = useState<{ type: "success" | "error"; text: string } | null>(null);
@@ -53,6 +61,13 @@ export default function WhatsAppAgentCenterPage() {
   const [savingDrawer, setSavingDrawer] = useState(false);
   const [actionLoading, setActionLoading] = useState<string | null>(null);
 
+  // WhatsApp Simulator state
+  const [simProfileId, setSimProfileId] = useState<string>("");
+  const [simMessages, setSimMessages] = useState<Array<{ sender: "user" | "bot"; text: string; time: string; buttons?: string[] }>>([]);
+  const [simInput, setSimInput] = useState("");
+  const [simLoading, setSimLoading] = useState(false);
+  const chatBottomRef = useRef<HTMLDivElement>(null);
+
   const fetchAllData = async () => {
     setLoading(true);
     try {
@@ -64,7 +79,11 @@ export default function WhatsAppAgentCenterPage() {
 
       if (pRes.ok) {
         const pj = await pRes.json();
-        setProfiles(pj.data || []);
+        const pList = pj.data || [];
+        setProfiles(pList);
+        if (pList.length > 0 && !simProfileId) {
+          setSimProfileId(pList[0].id);
+        }
       }
       if (lRes.ok) {
         const lj = await lRes.json();
@@ -84,6 +103,28 @@ export default function WhatsAppAgentCenterPage() {
   useEffect(() => {
     fetchAllData();
   }, []);
+
+  // Initialize simulator greeting when simulator profile changes
+  useEffect(() => {
+    if (simProfileId && profiles.length > 0) {
+      const p = profiles.find(pr => pr.id === simProfileId);
+      if (p) {
+        const docName = p.whatsappRecipientName || "Doctor";
+        setSimMessages([
+          {
+            sender: "bot",
+            text: `Namaste *${docName}*! 🙏\n\nWelcome to your *RankVed GMB AI Account Manager* for *${p.name}*.\n\nChoose an option below or type any question:\n\n1️⃣ *Performance Report* 📊\n2️⃣ *Latest Google Posts* 📸\n3️⃣ *Recent Reviews & Auto-Replies* ⭐\n4️⃣ *Target Keywords & SEO* 🎯\n5️⃣ *Clinic FAQs & Doctor Info* 🏥\n6️⃣ *Ask AI Assistant* 🤖`,
+            time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+            buttons: ["1. Performance Report", "2. Latest Posts", "3. Reviews & Replies", "5. Clinic FAQs"],
+          },
+        ]);
+      }
+    }
+  }, [simProfileId, profiles]);
+
+  useEffect(() => {
+    chatBottomRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [simMessages]);
 
   const openDrawer = (profile: any) => {
     setSelectedProfile(profile);
@@ -134,9 +175,29 @@ export default function WhatsAppAgentCenterPage() {
     }
   };
 
+  const handleToggleProfileActive = async (profile: any, e: React.MouseEvent) => {
+    e.stopPropagation();
+    const newStatus = !profile.whatsappEnabled;
+    try {
+      const res = await fetch("/api/whatsapp/profiles", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          locationId: profile.id,
+          whatsappEnabled: newStatus,
+        }),
+      });
+      if (res.ok) {
+        setProfiles(profiles.map(p => p.id === profile.id ? { ...p, whatsappEnabled: newStatus } : p));
+      }
+    } catch (err) {
+      console.error("Toggle error:", err);
+    }
+  };
+
   const handleTestAlert = async (profileId: string, phone: string) => {
     if (!phone) {
-      alert("Please configure a client phone number in Edit Agent first.");
+      alert("Please configure a client phone number in Train & Configure first.");
       return;
     }
     setActionLoading("test_" + profileId);
@@ -148,7 +209,7 @@ export default function WhatsAppAgentCenterPage() {
       });
       const data = await res.json();
       if (res.ok && data.success) {
-        alert("✅ Test alert with interactive menu buttons sent to WhatsApp successfully!");
+        alert("✅ Test WhatsApp alert dispatched successfully!");
         fetchAllData();
       } else {
         alert("❌ Error: " + (data.error || "Failed to send test alert"));
@@ -170,7 +231,7 @@ export default function WhatsAppAgentCenterPage() {
       });
       const data = await res.json();
       if (res.ok && data.success) {
-        alert("✅ Live performance report dispatched to client WhatsApp!");
+        alert("✅ Live performance digest dispatched to WhatsApp successfully!");
         fetchAllData();
       } else {
         alert("❌ Error: " + (data.error || "Failed to send report"));
@@ -179,6 +240,57 @@ export default function WhatsAppAgentCenterPage() {
       alert("Error: " + e.message);
     } finally {
       setActionLoading(null);
+    }
+  };
+
+  const handleSendSimulatorMessage = async (textToSend?: string) => {
+    const query = textToSend || simInput;
+    if (!query.trim() || !simProfileId) return;
+
+    const timeNow = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    const newMsgList = [...simMessages, { sender: "user" as const, text: query, time: timeNow }];
+    setSimMessages(newMsgList);
+    setSimInput("");
+    setSimLoading(true);
+
+    try {
+      const res = await fetch(`/api/profiles/${simProfileId}/whatsapp`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "simulate_chat", messageText: query }),
+      });
+      const data = await res.json();
+      if (res.ok && data.success) {
+        setSimMessages([
+          ...newMsgList,
+          {
+            sender: "bot",
+            text: data.replyText,
+            time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+            buttons: ["1. Performance Report", "2. Latest Posts", "3. Reviews", "Main Menu"],
+          },
+        ]);
+      } else {
+        setSimMessages([
+          ...newMsgList,
+          {
+            sender: "bot",
+            text: "⚠️ " + (data.error || "Error processing request."),
+            time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+          },
+        ]);
+      }
+    } catch (e: any) {
+      setSimMessages([
+        ...newMsgList,
+        {
+          sender: "bot",
+          text: "⚠️ Network error: " + e.message,
+          time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+        },
+      ]);
+    } finally {
+      setSimLoading(false);
     }
   };
 
@@ -210,139 +322,110 @@ export default function WhatsAppAgentCenterPage() {
     setTimeout(() => setCopiedUrl(false), 2000);
   };
 
-  const filteredProfiles = profiles.filter(p =>
-    p.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    (p.whatsappRecipientPhone && p.whatsappRecipientPhone.includes(searchQuery))
-  );
+  const filteredProfiles = profiles.filter(p => {
+    const matchesSearch =
+      p.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      (p.whatsappRecipientPhone && p.whatsappRecipientPhone.includes(searchQuery)) ||
+      (p.whatsappRecipientName && p.whatsappRecipientName.toLowerCase().includes(searchQuery.toLowerCase()));
+
+    if (!matchesSearch) return false;
+    if (statusFilter === "ACTIVE") return p.whatsappEnabled;
+    if (statusFilter === "INACTIVE") return !p.whatsappEnabled;
+    return true;
+  });
 
   const activeCount = profiles.filter(p => p.whatsappEnabled).length;
   const outboundLogsCount = logs.filter(l => l.direction === "OUTBOUND").length;
   const inboundLogsCount = logs.filter(l => l.direction === "INBOUND").length;
+  const currentSimProfile = profiles.find(p => p.id === simProfileId);
 
   return (
-    <div style={{ maxWidth: 1200, margin: "0 auto", paddingBottom: 60, display: "flex", flexDirection: "column", gap: 20 }}>
-      {/* ── Header Banner ──────────────────────────────────────────────── */}
-      <div style={{
-        background: "linear-gradient(135deg, #064e3b 0%, #047857 50%, #059669 100%)",
-        borderRadius: 16,
-        padding: "24px 28px",
-        color: "#fff",
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "space-between",
-        flexWrap: "wrap",
-        gap: 20,
-        boxShadow: "0 10px 25px -5px rgba(4, 120, 87, 0.25)"
-      }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
-          <div style={{
-            width: 52,
-            height: 52,
-            borderRadius: 14,
-            background: "rgba(255,255,255,0.18)",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            backdropFilter: "blur(8px)",
-            border: "1px solid rgba(255,255,255,0.25)"
-          }}>
-            <MessageSquare size={28} color="#fff" />
+    <div className="space-y-4 max-w-7xl mx-auto pb-16 px-1 sm:px-2">
+      {/* ── Top Header Banner (Compact & Sleek) ────────────────────────── */}
+      <div className="bg-gradient-to-r from-emerald-900 via-emerald-800 to-teal-800 rounded-xl p-4 sm:p-5 text-white shadow-sm flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+        <div className="flex items-center gap-3.5">
+          <div className="w-11 h-11 rounded-lg bg-emerald-500/20 border border-emerald-400/30 flex items-center justify-center shrink-0 backdrop-blur-sm">
+            <MessageSquare className="w-6 h-6 text-emerald-300" />
           </div>
           <div>
-            <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-              <h1 style={{ margin: 0, fontSize: 22, fontWeight: 800, letterSpacing: "-0.02em" }}>
+            <div className="flex items-center gap-2 flex-wrap">
+              <h1 className="text-lg sm:text-xl font-bold tracking-tight text-white m-0">
                 WhatsApp AI Agent & Option Chains
               </h1>
-              <span style={{
-                fontSize: 11,
-                padding: "3px 10px",
-                borderRadius: 20,
-                background: "#10b981",
-                fontWeight: 700,
-                letterSpacing: "0.04em",
-                color: "#fff"
-              }}>
-                INTERACTIVE CHAINS & RAG MEMORY
+              <span className="text-[10px] uppercase font-bold tracking-wider px-2 py-0.5 rounded-full bg-emerald-500/30 text-emerald-200 border border-emerald-400/30">
+                RAG Memory + 6-Option Chain
               </span>
             </div>
-            <p style={{ margin: "6px 0 0", fontSize: 13.5, color: "rgba(255,255,255,0.88)", maxWidth: 680, lineHeight: 1.4 }}>
-              Interactive WhatsApp chained menus (1-click instant reports without manual typing), custom clinic knowledge base training, and persistent multi-turn conversational memory.
+            <p className="text-xs sm:text-sm text-emerald-100/80 mt-0.5 leading-snug max-w-2xl">
+              Automated client updates on WhatsApp: scheduled performance digests, instant post & review alerts, review drop protection, and interactive 1-click option menus.
             </p>
           </div>
         </div>
 
-        <button
-          onClick={fetchAllData}
-          style={{
-            display: "flex",
-            alignItems: "center",
-            gap: 8,
-            background: "rgba(255,255,255,0.15)",
-            border: "1px solid rgba(255,255,255,0.3)",
-            color: "#fff",
-            padding: "8px 16px",
-            borderRadius: 10,
-            fontSize: 13,
-            fontWeight: 600,
-            cursor: "pointer",
-            backdropFilter: "blur(6px)"
-          }}
-        >
-          <RefreshCw size={14} className={loading ? "animate-spin" : ""} /> Refresh Status
-        </button>
+        <div className="flex items-center gap-2 self-end md:self-auto shrink-0">
+          <button
+            onClick={fetchAllData}
+            className="flex items-center gap-1.5 bg-white/10 hover:bg-white/20 transition-colors border border-white/20 text-white text-xs font-medium px-3 py-1.5 rounded-lg backdrop-blur-sm cursor-pointer"
+          >
+            <RefreshCw className={`w-3.5 h-3.5 ${loading ? "animate-spin" : ""}`} />
+            <span>Refresh Data</span>
+          </button>
+        </div>
       </div>
 
-      {/* ── Stat Counters ──────────────────────────────────────────────── */}
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: 16 }}>
-        <div style={{ background: "#fff", border: "1px solid #e2e8f0", borderRadius: 12, padding: 18, display: "flex", alignItems: "center", gap: 14 }}>
-          <div style={{ width: 44, height: 44, borderRadius: 10, background: "#ecfdf5", color: "#047857", display: "flex", alignItems: "center", justifyContent: "center" }}>
-            <Phone size={22} />
+      {/* ── Compact Stat Cards (4 Grid) ────────────────────────────────── */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+        <div className="bg-white border border-slate-200/90 rounded-lg p-3.5 flex items-center gap-3 shadow-xs">
+          <div className="w-9 h-9 rounded-lg bg-emerald-50 text-emerald-700 flex items-center justify-center shrink-0 border border-emerald-100">
+            <Phone className="w-4 h-4" />
           </div>
-          <div>
-            <p style={{ margin: 0, fontSize: 11.5, color: "#64748b", fontWeight: 600, textTransform: "uppercase" }}>Active Agents</p>
-            <p style={{ margin: "2px 0 0", fontSize: 22, fontWeight: 800, color: "#0f172a" }}>{activeCount} <span style={{ fontSize: 12, fontWeight: 500, color: "#94a3b8" }}>/ {profiles.length} Profiles</span></p>
-          </div>
-        </div>
-
-        <div style={{ background: "#fff", border: "1px solid #e2e8f0", borderRadius: 12, padding: 18, display: "flex", alignItems: "center", gap: 14 }}>
-          <div style={{ width: 44, height: 44, borderRadius: 10, background: "#eff6ff", color: "#2563eb", display: "flex", alignItems: "center", justifyContent: "center" }}>
-            <Send size={22} />
-          </div>
-          <div>
-            <p style={{ margin: 0, fontSize: 11.5, color: "#64748b", fontWeight: 600, textTransform: "uppercase" }}>Dispatched Messages</p>
-            <p style={{ margin: "2px 0 0", fontSize: 22, fontWeight: 800, color: "#0f172a" }}>{outboundLogsCount}</p>
+          <div className="min-w-0">
+            <p className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider truncate m-0">Active Agents</p>
+            <p className="text-base font-bold text-slate-900 mt-0.5 truncate m-0">
+              {activeCount} <span className="text-xs font-normal text-slate-400">/ {profiles.length} Profiles</span>
+            </p>
           </div>
         </div>
 
-        <div style={{ background: "#fff", border: "1px solid #e2e8f0", borderRadius: 12, padding: 18, display: "flex", alignItems: "center", gap: 14 }}>
-          <div style={{ width: 44, height: 44, borderRadius: 10, background: "#fdf2f8", color: "#db2777", display: "flex", alignItems: "center", justifyContent: "center" }}>
-            <MessageSquare size={22} />
+        <div className="bg-white border border-slate-200/90 rounded-lg p-3.5 flex items-center gap-3 shadow-xs">
+          <div className="w-9 h-9 rounded-lg bg-blue-50 text-blue-700 flex items-center justify-center shrink-0 border border-blue-100">
+            <Send className="w-4 h-4" />
           </div>
-          <div>
-            <p style={{ margin: 0, fontSize: 11.5, color: "#64748b", fontWeight: 600, textTransform: "uppercase" }}>Client Queries Handled</p>
-            <p style={{ margin: "2px 0 0", fontSize: 22, fontWeight: 800, color: "#0f172a" }}>{inboundLogsCount}</p>
+          <div className="min-w-0">
+            <p className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider truncate m-0">Outbound Alerts</p>
+            <p className="text-base font-bold text-slate-900 mt-0.5 truncate m-0">{outboundLogsCount}</p>
           </div>
         </div>
 
-        <div style={{ background: "#fff", border: "1px solid #e2e8f0", borderRadius: 12, padding: 18, display: "flex", alignItems: "center", gap: 14 }}>
-          <div style={{ width: 44, height: 44, borderRadius: 10, background: "#fef3c7", color: "#d97706", display: "flex", alignItems: "center", justifyContent: "center" }}>
-            <ListOrdered size={22} />
+        <div className="bg-white border border-slate-200/90 rounded-lg p-3.5 flex items-center gap-3 shadow-xs">
+          <div className="w-9 h-9 rounded-lg bg-purple-50 text-purple-700 flex items-center justify-center shrink-0 border border-purple-100">
+            <MessageSquare className="w-4 h-4" />
           </div>
-          <div>
-            <p style={{ margin: 0, fontSize: 11.5, color: "#64748b", fontWeight: 600, textTransform: "uppercase" }}>Chained Menu Options</p>
-            <p style={{ margin: "2px 0 0", fontSize: 16, fontWeight: 800, color: "#0f172a" }}>6 Automated Branches</p>
+          <div className="min-w-0">
+            <p className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider truncate m-0">Client Q&A Answered</p>
+            <p className="text-base font-bold text-slate-900 mt-0.5 truncate m-0">{inboundLogsCount}</p>
+          </div>
+        </div>
+
+        <div className="bg-white border border-slate-200/90 rounded-lg p-3.5 flex items-center gap-3 shadow-xs">
+          <div className="w-9 h-9 rounded-lg bg-amber-50 text-amber-700 flex items-center justify-center shrink-0 border border-amber-100">
+            <Sparkles className="w-4 h-4" />
+          </div>
+          <div className="min-w-0">
+            <p className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider truncate m-0">RAG Engine Active</p>
+            <p className="text-base font-bold text-slate-900 mt-0.5 truncate m-0">{globalSettings?.whatsappAiModel || "GPT-4o"}</p>
           </div>
         </div>
       </div>
 
-      {/* ── Main Tab Navigation ────────────────────────────────────────── */}
-      <div style={{ background: "#fff", border: "1px solid #e2e8f0", borderRadius: 12, padding: "6px 10px", display: "flex", gap: 8, overflowX: "auto" }}>
+      {/* ── Main Tab Navigation Bar ────────────────────────────────────── */}
+      <div className="bg-white border border-slate-200 rounded-lg p-1.5 flex gap-1.5 overflow-x-auto shadow-xs">
         {[
           { id: "profiles", label: "Client Profiles & Schedules", icon: Phone, count: profiles.length },
-          { id: "menu_preview", label: "📱 Interactive Menu Chain Flow", icon: ListOrdered },
-          { id: "inbox", label: "Live WhatsApp Chat & Activity Logs", icon: History, count: logs.length },
-          { id: "api", label: "WhatsApp Cloud API & Webhook", icon: SettingsIcon },
-          { id: "smart_tips", label: "⚡ Training & Knowledge Guide", icon: Sparkles },
+          { id: "simulator", label: "📱 Interactive WhatsApp Simulator", icon: Smartphone },
+          { id: "inbox", label: "Live Activity & Chat Logs", icon: History, count: logs.length },
+          { id: "api", label: "Cloud API & Webhook", icon: SettingsIcon },
+          { id: "training_guide", label: "5-Pillars Intelligence Guide", icon: Sparkles },
         ].map(tab => {
           const Icon = tab.icon;
           const active = activeTab === tab.id;
@@ -350,33 +433,18 @@ export default function WhatsAppAgentCenterPage() {
             <button
               key={tab.id}
               onClick={() => setActiveTab(tab.id as any)}
-              style={{
-                display: "flex",
-                alignItems: "center",
-                gap: 8,
-                padding: "10px 18px",
-                borderRadius: 8,
-                fontSize: 13,
-                fontWeight: 600,
-                border: "none",
-                background: active ? "#ecfdf5" : "transparent",
-                color: active ? "#047857" : "#64748b",
-                cursor: "pointer",
-                transition: "all 0.15s",
-                whiteSpace: "nowrap"
-              }}
+              className={`flex items-center gap-2 px-3.5 py-2 rounded-md text-xs font-semibold transition-all whitespace-nowrap cursor-pointer border ${
+                active
+                  ? "bg-emerald-50 text-emerald-800 border-emerald-200 shadow-2xs font-bold"
+                  : "bg-transparent text-slate-600 border-transparent hover:bg-slate-50 hover:text-slate-900"
+              }`}
             >
-              <Icon size={16} />
+              <Icon className="w-4 h-4" />
               <span>{tab.label}</span>
               {tab.count !== undefined && (
-                <span style={{
-                  fontSize: 10,
-                  padding: "1px 6px",
-                  borderRadius: 10,
-                  background: active ? "#047857" : "#e2e8f0",
-                  color: active ? "#fff" : "#475569",
-                  fontWeight: 700
-                }}>
+                <span className={`text-[10px] font-bold px-1.5 py-0.2 rounded-full ${
+                  active ? "bg-emerald-700 text-white" : "bg-slate-200 text-slate-700"
+                }`}>
                   {tab.count}
                 </span>
               )}
@@ -385,139 +453,147 @@ export default function WhatsAppAgentCenterPage() {
         })}
       </div>
 
-      {/* ── TAB 1: Profiles & Schedules ────────────────────────────────── */}
+      {/* ── TAB 1: Profiles & Schedules Table ──────────────────────────── */}
       {activeTab === "profiles" && (
-        <div style={{ background: "#fff", border: "1px solid #e2e8f0", borderRadius: 12, overflow: "hidden" }}>
-          <div style={{ padding: "16px 20px", borderBottom: "1px solid #f1f5f9", display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: 12 }}>
-            <div style={{ display: "flex", alignItems: "center", gap: 8, flex: 1, maxWidth: 360, background: "#f8fafc", border: "1px solid #cbd5e1", borderRadius: 8, padding: "0 12px" }}>
-              <Search size={16} color="#94a3b8" />
-              <input
-                type="text"
-                placeholder="Search profiles or phone numbers..."
-                value={searchQuery}
-                onChange={e => setSearchQuery(e.target.value)}
-                style={{ width: "100%", height: 36, border: "none", background: "transparent", fontSize: 13, outline: "none" }}
-              />
+        <div className="bg-white border border-slate-200 rounded-lg overflow-hidden shadow-xs">
+          {/* Table Header Filter Bar */}
+          <div className="p-3 border-b border-slate-100 flex flex-col sm:flex-row items-center justify-between gap-3 bg-slate-50/50">
+            <div className="flex items-center gap-2 w-full sm:w-auto">
+              <div className="flex items-center gap-2 bg-white border border-slate-200 rounded-md px-2.5 py-1.5 w-full sm:w-80 shadow-2xs">
+                <Search className="w-3.5 h-3.5 text-slate-400" />
+                <input
+                  type="text"
+                  placeholder="Search profiles, doctor, or phone..."
+                  value={searchQuery}
+                  onChange={e => setSearchQuery(e.target.value)}
+                  className="w-full text-xs bg-transparent border-none outline-none text-slate-800 placeholder:text-slate-400"
+                />
+              </div>
+
+              <select
+                value={statusFilter}
+                onChange={e => setStatusFilter(e.target.value as any)}
+                className="text-xs bg-white border border-slate-200 rounded-md px-2.5 py-1.5 text-slate-700 outline-none shadow-2xs"
+              >
+                <option value="ALL">All Statuses</option>
+                <option value="ACTIVE">Active Only</option>
+                <option value="INACTIVE">Inactive Only</option>
+              </select>
             </div>
-            <span style={{ fontSize: 12, color: "#64748b" }}>Showing {filteredProfiles.length} profiles</span>
+
+            <span className="text-xs text-slate-500 font-medium">
+              Showing <b className="text-slate-700">{filteredProfiles.length}</b> profiles
+            </span>
           </div>
 
-          <div style={{ overflowX: "auto" }}>
-            <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13, textAlign: "left" }}>
+          {/* Compact Table */}
+          <div className="overflow-x-auto">
+            <table className="w-full border-collapse text-left text-xs">
               <thead>
-                <tr style={{ background: "#f8fafc", borderBottom: "1px solid #e2e8f0", color: "#475569", fontWeight: 600, fontSize: 12 }}>
-                  <th style={{ padding: "12px 16px" }}>Profile Name</th>
-                  <th style={{ padding: "12px 16px" }}>Status</th>
-                  <th style={{ padding: "12px 16px" }}>Client WhatsApp Phone</th>
-                  <th style={{ padding: "12px 16px" }}>Schedule & Time</th>
-                  <th style={{ padding: "12px 16px" }}>Trained Knowledge</th>
-                  <th style={{ padding: "12px 16px", textAlign: "right" }}>Actions</th>
+                <tr className="bg-slate-50/80 border-b border-slate-200 text-slate-600 font-semibold uppercase tracking-wider text-[11px]">
+                  <th className="py-2.5 px-3.5">Profile & Doctor</th>
+                  <th className="py-2.5 px-3">Agent Status</th>
+                  <th className="py-2.5 px-3">Client WhatsApp</th>
+                  <th className="py-2.5 px-3">Schedule & Time</th>
+                  <th className="py-2.5 px-3">Trained Knowledge</th>
+                  <th className="py-2.5 px-3">Alert Triggers</th>
+                  <th className="py-2.5 px-3 text-right">Actions</th>
                 </tr>
               </thead>
-              <tbody>
+              <tbody className="divide-y divide-slate-100">
                 {filteredProfiles.length === 0 ? (
                   <tr>
-                    <td colSpan={6} style={{ padding: 40, textAlign: "center", color: "#94a3b8" }}>
-                      No profiles matching search.
+                    <td colSpan={7} className="py-12 text-center text-slate-400">
+                      No profiles matching your criteria.
                     </td>
                   </tr>
                 ) : (
                   filteredProfiles.map((p, idx) => (
-                    <tr key={p.id} style={{ borderBottom: "1px solid #f1f5f9", background: idx % 2 === 0 ? "#fff" : "#fafafa" }}>
-                      <td style={{ padding: "14px 16px", fontWeight: 600, color: "#0f172a" }}>
-                        <div style={{ display: "flex", flexDirection: "column" }}>
-                          <span>{p.name}</span>
-                          {p.whatsappRecipientName && (
-                            <span style={{ fontSize: 11, color: "#64748b", fontWeight: 400 }}>Contact: {p.whatsappRecipientName}</span>
-                          )}
+                    <tr key={p.id} className="hover:bg-slate-50/70 transition-colors">
+                      <td className="py-3 px-3.5">
+                        <div className="flex flex-col">
+                          <span className="font-semibold text-slate-900 text-xs">{p.name}</span>
+                          <span className="text-[11px] text-slate-500 font-normal">
+                            {p.whatsappRecipientName ? `Doctor: ${p.whatsappRecipientName}` : (p.address?.split(",")[0] || "No contact set")}
+                          </span>
                         </div>
                       </td>
-                      <td style={{ padding: "14px 16px" }}>
-                        <span style={{
-                          padding: "3px 8px",
-                          borderRadius: 20,
-                          fontSize: 11,
-                          fontWeight: 700,
-                          background: p.whatsappEnabled ? "#ecfdf5" : "#f1f5f9",
-                          color: p.whatsappEnabled ? "#047857" : "#94a3b8"
-                        }}>
-                          {p.whatsappEnabled ? "● ACTIVE" : "OFF"}
-                        </span>
+
+                      <td className="py-3 px-3">
+                        <button
+                          onClick={e => handleToggleProfileActive(p, e)}
+                          className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[10px] font-bold tracking-wide transition-all border cursor-pointer ${
+                            p.whatsappEnabled
+                              ? "bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-100"
+                              : "bg-slate-100 text-slate-500 border-slate-200 hover:bg-slate-200"
+                          }`}
+                        >
+                          <span className={`w-1.5 h-1.5 rounded-full ${p.whatsappEnabled ? "bg-emerald-600" : "bg-slate-400"}`} />
+                          {p.whatsappEnabled ? "ACTIVE" : "PAUSED"}
+                        </button>
                       </td>
-                      <td style={{ padding: "14px 16px", color: "#334155", fontFamily: "monospace" }}>
+
+                      <td className="py-3 px-3 font-mono text-[11.5px] text-slate-700">
                         {p.whatsappRecipientPhone ? (
-                          <span>{p.whatsappRecipientPhone}</span>
+                          <div className="flex items-center gap-1.5">
+                            <Phone className="w-3 h-3 text-emerald-600 shrink-0" />
+                            <span>{p.whatsappRecipientPhone}</span>
+                          </div>
                         ) : (
-                          <span style={{ color: "#cbd5e1", fontStyle: "italic", fontFamily: "sans-serif" }}>Not set</span>
+                          <span className="text-slate-300 italic font-sans text-xs">Not added</span>
                         )}
                       </td>
-                      <td style={{ padding: "14px 16px", color: "#475569" }}>
-                        <span style={{ fontWeight: 600 }}>{p.whatsappReportingSchedule || "WEEKLY"}</span>
-                        <span style={{ fontSize: 11, color: "#94a3b8", display: "block" }}>at {p.whatsappReportTime || "09:00"}</span>
+
+                      <td className="py-3 px-3 text-slate-600">
+                        <div className="flex flex-col">
+                          <span className="font-semibold text-slate-800 text-xs">{p.whatsappReportingSchedule || "WEEKLY"}</span>
+                          <span className="text-[11px] text-slate-400">at {p.whatsappReportTime || "09:00"}</span>
+                        </div>
                       </td>
-                      <td style={{ padding: "14px 16px", color: "#475569" }}>
+
+                      <td className="py-3 px-3">
                         {p.whatsappKnowledgeBase ? (
-                          <span style={{ fontSize: 11, padding: "2px 8px", borderRadius: 4, background: "#ecfdf5", color: "#047857", fontWeight: 700 }}>
-                            ✓ Knowledge Base Ingested
+                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-emerald-50 text-emerald-700 border border-emerald-200 font-semibold text-[10.5px]">
+                            <Check className="w-3 h-3 text-emerald-600" /> Ingested
                           </span>
                         ) : (
-                          <span style={{ fontSize: 11, padding: "2px 8px", borderRadius: 4, background: "#f8fafc", color: "#94a3b8", border: "1px solid #e2e8f0" }}>
-                            Standard GBP Data
+                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-slate-50 text-slate-400 border border-slate-200 text-[10.5px]">
+                            Standard GBP
                           </span>
                         )}
                       </td>
-                      <td style={{ padding: "14px 16px", textAlign: "right" }}>
-                        <div style={{ display: "flex", alignItems: "center", justifyContent: "flex-end", gap: 6 }}>
+
+                      <td className="py-3 px-3">
+                        <div className="flex items-center gap-1 text-[11px] text-slate-500" title="Active real-time alert triggers">
+                          <span className={`px-1.5 py-0.5 rounded text-[10px] font-semibold ${p.whatsappNotifyPost !== false ? "bg-blue-50 text-blue-700 border border-blue-100" : "bg-slate-50 text-slate-300"}`}>Post</span>
+                          <span className={`px-1.5 py-0.5 rounded text-[10px] font-semibold ${p.whatsappNotifyReview !== false ? "bg-amber-50 text-amber-700 border border-amber-100" : "bg-slate-50 text-slate-300"}`}>Review</span>
+                          <span className={`px-1.5 py-0.5 rounded text-[10px] font-semibold ${p.whatsappNotifyPerformance !== false ? "bg-purple-50 text-purple-700 border border-purple-100" : "bg-slate-50 text-slate-300"}`}>Digest</span>
+                        </div>
+                      </td>
+
+                      <td className="py-3 px-3 text-right">
+                        <div className="flex items-center justify-end gap-1.5">
                           <button
                             onClick={() => handleTestAlert(p.id, p.whatsappRecipientPhone)}
                             disabled={!p.whatsappRecipientPhone || actionLoading === "test_" + p.id}
-                            title="Send test WhatsApp alert"
-                            style={{
-                              padding: "6px 10px",
-                              borderRadius: 6,
-                              border: "1px solid #cbd5e1",
-                              background: "#fff",
-                              color: "#334155",
-                              fontSize: 11,
-                              fontWeight: 600,
-                              cursor: p.whatsappRecipientPhone ? "pointer" : "not-allowed",
-                              opacity: p.whatsappRecipientPhone ? 1 : 0.5
-                            }}
+                            title="Send verification test WhatsApp message"
+                            className="px-2.5 py-1 rounded text-xs font-semibold bg-slate-50 hover:bg-slate-100 text-slate-700 border border-slate-200 transition-colors disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
                           >
-                            {actionLoading === "test_" + p.id ? <Loader2 size={12} className="animate-spin" /> : "Test Alert"}
+                            {actionLoading === "test_" + p.id ? <Loader2 className="w-3 h-3 animate-spin" /> : "Test"}
                           </button>
 
                           <button
                             onClick={() => handleSendReportNow(p.id)}
                             disabled={!p.whatsappRecipientPhone || actionLoading === "report_" + p.id}
-                            title="Send instant performance report to client"
-                            style={{
-                              padding: "6px 10px",
-                              borderRadius: 6,
-                              border: "1px solid #bfdbfe",
-                              background: "#eff6ff",
-                              color: "#1d4ed8",
-                              fontSize: 11,
-                              fontWeight: 600,
-                              cursor: p.whatsappRecipientPhone ? "pointer" : "not-allowed",
-                              opacity: p.whatsappRecipientPhone ? 1 : 0.5
-                            }}
+                            title="Send instant live performance digest"
+                            className="px-2.5 py-1 rounded text-xs font-semibold bg-blue-50 hover:bg-blue-100 text-blue-700 border border-blue-200 transition-colors disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
                           >
-                            {actionLoading === "report_" + p.id ? <Loader2 size={12} className="animate-spin" /> : "Send Report"}
+                            {actionLoading === "report_" + p.id ? <Loader2 className="w-3 h-3 animate-spin" /> : "Send Digest"}
                           </button>
 
                           <button
                             onClick={() => openDrawer(p)}
-                            style={{
-                              padding: "6px 12px",
-                              borderRadius: 6,
-                              border: "none",
-                              background: "#047857",
-                              color: "#fff",
-                              fontSize: 11,
-                              fontWeight: 700,
-                              cursor: "pointer"
-                            }}
+                            className="px-3 py-1 rounded text-xs font-bold bg-emerald-700 hover:bg-emerald-800 text-white transition-colors cursor-pointer"
                           >
                             Train & Configure
                           </button>
@@ -532,149 +608,248 @@ export default function WhatsAppAgentCenterPage() {
         </div>
       )}
 
-      {/* ── TAB 2: Interactive Menu Chain Simulator / Flow ───────────── */}
-      {activeTab === "menu_preview" && (
-        <div style={{ background: "#fff", border: "1px solid #e2e8f0", borderRadius: 12, padding: 24, display: "flex", flexDirection: "column", gap: 20 }}>
-          <div>
-            <h3 style={{ margin: 0, fontSize: 17, fontWeight: 700, color: "#0f172a" }}>WhatsApp Chained Menu & Option Flow</h3>
-            <p style={{ margin: "4px 0 0", fontSize: 13, color: "#64748b" }}>
-              Clients can navigate their entire Google Business profile instantly by replying with simple numbers or tapping interactive WhatsApp buttons without any manual typing.
-            </p>
+      {/* ── TAB 2: Official WhatsApp Interactive Simulator ─────────────── */}
+      {activeTab === "simulator" && (
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-5">
+          {/* Simulator Phone Frame (Left 7 Cols) */}
+          <div className="lg:col-span-7 bg-white border border-slate-200 rounded-xl overflow-hidden shadow-xs flex flex-col h-[650px]">
+            {/* Top Selector Bar */}
+            <div className="p-3 bg-slate-50 border-b border-slate-200 flex items-center justify-between gap-3">
+              <div className="flex items-center gap-2">
+                <span className="text-xs font-semibold text-slate-600">Simulate Profile:</span>
+                <select
+                  value={simProfileId}
+                  onChange={e => setSimProfileId(e.target.value)}
+                  className="text-xs font-semibold bg-white border border-slate-300 rounded px-2 py-1 text-slate-800 outline-none"
+                >
+                  {profiles.map(p => (
+                    <option key={p.id} value={p.id}>{p.name} ({p.whatsappRecipientName || "Doctor"})</option>
+                  ))}
+                </select>
+              </div>
+
+              <button
+                onClick={() => {
+                  const p = profiles.find(pr => pr.id === simProfileId);
+                  if (p) {
+                    setSimMessages([
+                      {
+                        sender: "bot",
+                        text: `Namaste *${p.whatsappRecipientName || "Doctor"}*! 🙏\n\nWelcome to your *RankVed GMB AI Account Manager* for *${p.name}*.\n\nChoose an option below or type any question:\n\n1️⃣ *Performance Report* 📊\n2️⃣ *Latest Google Posts* 📸\n3️⃣ *Recent Reviews & Auto-Replies* ⭐\n4️⃣ *Target Keywords & SEO* 🎯\n5️⃣ *Clinic FAQs & Doctor Info* 🏥\n6️⃣ *Ask AI Assistant* 🤖`,
+                        time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+                        buttons: ["1. Performance Report", "2. Latest Posts", "3. Reviews", "5. Clinic FAQs"],
+                      },
+                    ]);
+                  }
+                }}
+                className="text-xs text-slate-500 hover:text-slate-800 flex items-center gap-1 cursor-pointer"
+              >
+                <RotateCcw className="w-3 h-3" /> Reset Chat
+              </button>
+            </div>
+
+            {/* Official WhatsApp Shell Header */}
+            <div className="bg-[#075e54] text-white px-4 py-3 flex items-center justify-between shadow-xs">
+              <div className="flex items-center gap-3">
+                <div className="w-9 h-9 rounded-full bg-emerald-700 border border-emerald-400/40 flex items-center justify-center font-bold text-xs text-white">
+                  {currentSimProfile?.name?.charAt(0) || "R"}
+                </div>
+                <div>
+                  <p className="text-sm font-bold m-0 leading-tight">
+                    {currentSimProfile?.name || "RankVed GMB Assistant"}
+                  </p>
+                  <p className="text-[11px] text-emerald-200 m-0 leading-tight">online • official business account</p>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-2">
+                <span className="text-[10px] bg-emerald-800/80 border border-emerald-600 px-2 py-0.5 rounded text-emerald-100 font-semibold">
+                  LIVE RAG MEMORY
+                </span>
+              </div>
+            </div>
+
+            {/* Official WhatsApp Chat Pattern Body */}
+            <div
+              className="flex-1 p-4 overflow-y-auto space-y-3 bg-[#efeae2]"
+              style={{ backgroundImage: "radial-gradient(#d1d7db 1px, transparent 1px)", backgroundSize: "16px 16px" }}
+            >
+              {simMessages.map((msg, i) => (
+                <div key={i} className={`flex flex-col ${msg.sender === "user" ? "items-end" : "items-start"}`}>
+                  <div
+                    className={`max-w-[85%] rounded-lg p-3 text-xs leading-relaxed shadow-xs relative ${
+                      msg.sender === "user"
+                        ? "bg-[#dcf8c6] text-slate-900 rounded-tr-none"
+                        : "bg-white text-slate-900 rounded-tl-none border border-slate-100"
+                    }`}
+                  >
+                    <div className="whitespace-pre-wrap font-sans break-words">{msg.text}</div>
+                    <div className="flex items-center justify-end gap-1 mt-1 text-[10px] text-slate-400">
+                      <span>{msg.time}</span>
+                      {msg.sender === "user" && <CheckCheck className="w-3.5 h-3.5 text-blue-500" />}
+                    </div>
+                  </div>
+
+                  {/* Interactive Buttons (Option Chains) */}
+                  {msg.buttons && msg.buttons.length > 0 && (
+                    <div className="flex flex-wrap gap-1.5 mt-1.5 max-w-[85%]">
+                      {msg.buttons.map((btn, bIdx) => (
+                        <button
+                          key={bIdx}
+                          onClick={() => handleSendSimulatorMessage(btn)}
+                          className="text-[11px] font-semibold bg-white hover:bg-emerald-50 text-emerald-800 border border-emerald-200 rounded-full px-2.5 py-1 shadow-2xs transition-colors cursor-pointer flex items-center gap-1"
+                        >
+                          <ChevronRight className="w-3 h-3 text-emerald-600" /> {btn}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              ))}
+
+              {simLoading && (
+                <div className="flex items-center gap-2 text-xs text-slate-500 bg-white/90 border border-slate-200 rounded-full px-3 py-1.5 w-fit shadow-2xs animate-pulse">
+                  <Bot className="w-3.5 h-3.5 text-emerald-600 animate-spin" />
+                  <span>AI Agent is typing...</span>
+                </div>
+              )}
+
+              <div ref={chatBottomRef} />
+            </div>
+
+            {/* Chat Input Bar */}
+            <div className="p-2.5 bg-slate-100 border-t border-slate-200 flex items-center gap-2">
+              <input
+                type="text"
+                placeholder="Type a message, ask about OPD hours, or enter 1-6..."
+                value={simInput}
+                onChange={e => setSimInput(e.target.value)}
+                onKeyDown={e => e.key === "Enter" && handleSendSimulatorMessage()}
+                className="flex-1 text-xs bg-white border border-slate-300 rounded-full px-4 py-2 outline-none focus:border-emerald-600 text-slate-800 shadow-2xs"
+              />
+              <button
+                onClick={() => handleSendSimulatorMessage()}
+                disabled={simLoading || !simInput.trim()}
+                className="w-9 h-9 rounded-full bg-emerald-700 hover:bg-emerald-800 text-white flex items-center justify-center shrink-0 disabled:opacity-50 transition-colors cursor-pointer shadow-2xs"
+              >
+                <Send className="w-4 h-4" />
+              </button>
+            </div>
           </div>
 
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(320px, 1fr))", gap: 16 }}>
-            {/* Level 0: Main Greeting & Menu */}
-            <div style={{ background: "#f0fdf4", border: "1px solid #bbf7d0", borderRadius: 12, padding: 16 }}>
-              <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 10 }}>
-                <span style={{ padding: "2px 8px", borderRadius: 4, background: "#047857", color: "#fff", fontSize: 11, fontWeight: 700 }}>LEVEL 0</span>
-                <span style={{ fontWeight: 700, fontSize: 13, color: "#065f46" }}>Main Menu (Triggered by "Hi", "Menu", "Help" or 0)</span>
-              </div>
-              <div style={{ background: "#fff", borderRadius: 8, padding: 14, fontSize: 12.5, lineHeight: 1.5, color: "#1e293b", border: "1px solid #dcfce7" }}>
-                <p style={{ margin: 0, fontWeight: 700 }}>Namaste Dr. Nitika! 🙏</p>
-                <p style={{ margin: "4px 0 8px", color: "#475569" }}>Welcome to your Google Business Profile AI Account Manager. Select an option:</p>
-                <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
-                  <span>1️⃣ *Performance Report* 📊 (Calls, Searches)</span>
-                  <span>2️⃣ *Latest Google Posts* 📸 (Live content & status)</span>
-                  <span>3️⃣ *Recent Reviews & Replies* ⭐ (Customer feedback)</span>
-                  <span>4️⃣ *Target Keywords & SEO* 🎯 (Ranking queries)</span>
-                  <span>5️⃣ *Clinic FAQs & Doctor Info* 🏥 (Timings, fees)</span>
-                  <span>6️⃣ *Ask AI Assistant* 🤖 (Free text Q&A)</span>
-                </div>
-              </div>
-            </div>
+          {/* Option Chain Architecture Guide (Right 5 Cols) */}
+          <div className="lg:col-span-5 space-y-4">
+            <div className="bg-white border border-slate-200 rounded-xl p-4 shadow-xs">
+              <h3 className="text-sm font-bold text-slate-900 m-0 flex items-center gap-2">
+                <ListOrdered className="w-4 h-4 text-emerald-700" />
+                <span>Automated Option Chain Menu</span>
+              </h3>
+              <p className="text-xs text-slate-500 mt-1 mb-3">
+                Clients do not have to type manually—they can tap quick buttons or reply numbers (1-6) for instant reports:
+              </p>
 
-            {/* Level 1: Option 1 Performance Branch */}
-            <div style={{ background: "#eff6ff", border: "1px solid #bfdbfe", borderRadius: 12, padding: 16 }}>
-              <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 10 }}>
-                <span style={{ padding: "2px 8px", borderRadius: 4, background: "#2563eb", color: "#fff", fontSize: 11, fontWeight: 700 }}>BRANCH 1</span>
-                <span style={{ fontWeight: 700, fontSize: 13, color: "#1e40af" }}>1️⃣ Performance Breakdown (Automated)</span>
-              </div>
-              <div style={{ background: "#fff", borderRadius: 8, padding: 14, fontSize: 12.5, lineHeight: 1.5, color: "#1e293b", border: "1px solid #dbeafe" }}>
-                <p style={{ margin: 0, fontWeight: 700 }}>📊 Performance Digest (Recent 7-14 Days)</p>
-                <p style={{ margin: "4px 0 6px", color: "#475569" }}>• 🔍 Search & Maps Views: <b>2,840</b></p>
-                <p style={{ margin: "2px 0", color: "#475569" }}>• 📞 Direct Phone Calls: <b>18 calls</b></p>
-                <p style={{ margin: "2px 0", color: "#475569" }}>• 🗺️ Direction Requests: <b>14 requests</b></p>
-                <div style={{ marginTop: 10, display: "flex", gap: 6, flexWrap: "wrap" }}>
-                  <span style={{ fontSize: 10.5, padding: "2px 8px", background: "#f1f5f9", borderRadius: 4, border: "1px solid #cbd5e1" }}>[📅 30 Days]</span>
-                  <span style={{ fontSize: 10.5, padding: "2px 8px", background: "#f1f5f9", borderRadius: 4, border: "1px solid #cbd5e1" }}>[📸 View Posts]</span>
-                  <span style={{ fontSize: 10.5, padding: "2px 8px", background: "#f1f5f9", borderRadius: 4, border: "1px solid #cbd5e1" }}>[📋 Main Menu]</span>
+              <div className="space-y-2 text-xs">
+                <div className="p-2.5 rounded-lg bg-emerald-50/60 border border-emerald-100 flex items-start gap-2.5">
+                  <span className="w-5 h-5 rounded-full bg-emerald-700 text-white text-[10px] font-bold flex items-center justify-center shrink-0 mt-0.5">1</span>
+                  <div>
+                    <span className="font-bold text-emerald-950">Performance & Call Stats</span>
+                    <p className="text-[11px] text-slate-600 m-0">Live views, direct phone calls, map directions, and website clicks with 30-day breakdown.</p>
+                  </div>
                 </div>
-              </div>
-            </div>
 
-            {/* Level 1: Option 2 Posts Branch */}
-            <div style={{ background: "#fdf4ff", border: "1px solid #f0abfc", borderRadius: 12, padding: 16 }}>
-              <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 10 }}>
-                <span style={{ padding: "2px 8px", borderRadius: 4, background: "#c026d3", color: "#fff", fontSize: 11, fontWeight: 700 }}>BRANCH 2</span>
-                <span style={{ fontWeight: 700, fontSize: 13, color: "#86198f" }}>2️⃣ Latest Published Post & Image</span>
-              </div>
-              <div style={{ background: "#fff", borderRadius: 8, padding: 14, fontSize: 12.5, lineHeight: 1.5, color: "#1e293b", border: "1px solid #fae8ff" }}>
-                <p style={{ margin: 0, fontWeight: 700 }}>🚀 Google Post Published: Migraine Treatment Tips</p>
-                <p style={{ margin: "4px 0 6px", color: "#475569" }}>"Experiencing frequent morning headaches? Dr. Nitika Mahajan explains key triggers..."</p>
-                <p style={{ margin: "2px 0", color: "#047857", fontWeight: 600 }}>✅ Status: Live with CALL button</p>
-                <div style={{ marginTop: 10, display: "flex", gap: 6, flexWrap: "wrap" }}>
-                  <span style={{ fontSize: 10.5, padding: "2px 8px", background: "#f1f5f9", borderRadius: 4, border: "1px solid #cbd5e1" }}>[📸 Previous Post]</span>
-                  <span style={{ fontSize: 10.5, padding: "2px 8px", background: "#f1f5f9", borderRadius: 4, border: "1px solid #cbd5e1" }}>[⭐ Reviews]</span>
-                  <span style={{ fontSize: 10.5, padding: "2px 8px", background: "#f1f5f9", borderRadius: 4, border: "1px solid #cbd5e1" }}>[📋 Main Menu]</span>
+                <div className="p-2.5 rounded-lg bg-blue-50/60 border border-blue-100 flex items-start gap-2.5">
+                  <span className="w-5 h-5 rounded-full bg-blue-700 text-white text-[10px] font-bold flex items-center justify-center shrink-0 mt-0.5">2</span>
+                  <div>
+                    <span className="font-bold text-blue-950">Latest Google Posts</span>
+                    <p className="text-[11px] text-slate-600 m-0">Dispatches the live post graphic, summary text, and live Maps CTA link.</p>
+                  </div>
                 </div>
-              </div>
-            </div>
 
-            {/* Level 1: Option 6 RAG AI Open Q&A */}
-            <div style={{ background: "#fffbeb", border: "1px solid #fde68a", borderRadius: 12, padding: 16 }}>
-              <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 10 }}>
-                <span style={{ padding: "2px 8px", borderRadius: 4, background: "#d97706", color: "#fff", fontSize: 11, fontWeight: 700 }}>BRANCH 6</span>
-                <span style={{ fontWeight: 700, fontSize: 13, color: "#92400e" }}>6️⃣ Deep RAG AI Q&A (Persistent Memory)</span>
-              </div>
-              <div style={{ background: "#fff", borderRadius: 8, padding: 14, fontSize: 12.5, lineHeight: 1.5, color: "#1e293b", border: "1px solid #fef3c7" }}>
-                <p style={{ margin: 0, color: "#2563eb", fontWeight: 600 }}>Client asks: "What are Dr. Nitika's OPD timings this Friday?"</p>
-                <p style={{ margin: "6px 0 0", color: "#1e293b" }}>
-                  <b>AI Agent:</b> "Dr. Nitika is available for consultations from <b>10:00 AM to 1:30 PM</b> and <b>5:00 PM to 7:30 PM</b>. For emergency appointment slots, patients can reach clinic reception at +91 9876543210."
-                </p>
+                <div className="p-2.5 rounded-lg bg-amber-50/60 border border-amber-100 flex items-start gap-2.5">
+                  <span className="w-5 h-5 rounded-full bg-amber-700 text-white text-[10px] font-bold flex items-center justify-center shrink-0 mt-0.5">3</span>
+                  <div>
+                    <span className="font-bold text-amber-950">Reviews & Official Replies</span>
+                    <p className="text-[11px] text-slate-600 m-0">Shows customer feedback ratings and automated AI responses published to Google.</p>
+                  </div>
+                </div>
+
+                <div className="p-2.5 rounded-lg bg-purple-50/60 border border-purple-100 flex items-start gap-2.5">
+                  <span className="w-5 h-5 rounded-full bg-purple-700 text-white text-[10px] font-bold flex items-center justify-center shrink-0 mt-0.5">4</span>
+                  <div>
+                    <span className="font-bold text-purple-950">Local Search Queries & SEO</span>
+                    <p className="text-[11px] text-slate-600 m-0">Pulls top ranking search queries from Google Performance API.</p>
+                  </div>
+                </div>
+
+                <div className="p-2.5 rounded-lg bg-teal-50/60 border border-teal-100 flex items-start gap-2.5">
+                  <span className="w-5 h-5 rounded-full bg-teal-700 text-white text-[10px] font-bold flex items-center justify-center shrink-0 mt-0.5">5</span>
+                  <div>
+                    <span className="font-bold text-teal-950">Clinic FAQs & Doctor Info</span>
+                    <p className="text-[11px] text-slate-600 m-0">Outputs OPD timings, doctor qualifications, consultation fees, and clinic reception phone.</p>
+                  </div>
+                </div>
+
+                <div className="p-2.5 rounded-lg bg-rose-50/60 border border-rose-100 flex items-start gap-2.5">
+                  <span className="w-5 h-5 rounded-full bg-rose-700 text-white text-[10px] font-bold flex items-center justify-center shrink-0 mt-0.5">6</span>
+                  <div>
+                    <span className="font-bold text-rose-950">Deep RAG AI Assistant</span>
+                    <p className="text-[11px] text-slate-600 m-0">Answers any custom question using 15-message persistent chat memory + custom clinic training.</p>
+                  </div>
+                </div>
               </div>
             </div>
           </div>
         </div>
       )}
 
-      {/* ── TAB 3: Inbox & Logs ────────────────────────────────────────── */}
+      {/* ── TAB 3: Activity Stream & Chat Logs ──────────────────────────── */}
       {activeTab === "inbox" && (
-        <div style={{ background: "#fff", border: "1px solid #e2e8f0", borderRadius: 12, padding: 20 }}>
-          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", borderBottom: "1px solid #f1f5f9", paddingBottom: 12, marginBottom: 16 }}>
+        <div className="bg-white border border-slate-200 rounded-lg p-4 shadow-xs space-y-3">
+          <div className="flex items-center justify-between border-b border-slate-100 pb-2.5">
             <div>
-              <h3 style={{ margin: 0, fontSize: 16, fontWeight: 700, color: "#0f172a" }}>Live WhatsApp Agent Message Stream</h3>
-              <p style={{ margin: "2px 0 0", fontSize: 12, color: "#64748b" }}>Real-time feed of alerts sent to clients, option chain responses, and RAG AI chats</p>
+              <h3 className="text-sm font-bold text-slate-900 m-0">Live WhatsApp Agent Activity Stream</h3>
+              <p className="text-xs text-slate-500 m-0">Real-time log of sent performance digests, post alerts, review notifications, and inbound AI conversations</p>
             </div>
-            <button onClick={fetchAllData} style={{ background: "none", border: "none", color: "#64748b", cursor: "pointer", display: "flex", alignItems: "center", gap: 4, fontSize: 12 }}>
-              <RefreshCw size={12} /> Refresh
+            <button onClick={fetchAllData} className="text-xs font-semibold text-slate-600 hover:text-slate-900 flex items-center gap-1 cursor-pointer">
+              <RefreshCw className="w-3 h-3" /> Refresh Logs
             </button>
           </div>
 
           {logs.length === 0 ? (
-            <div style={{ padding: 40, textAlign: "center", color: "#94a3b8" }}>
-              No messages logged yet. As posts publish or clients message your WhatsApp number, interactions appear here.
+            <div className="py-16 text-center text-xs text-slate-400">
+              No WhatsApp messages logged yet. As posts publish or clients message your WhatsApp number, entries appear here.
             </div>
           ) : (
-            <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+            <div className="space-y-2.5 max-h-[600px] overflow-y-auto pr-1">
               {logs.map(log => {
                 const isOutbound = log.direction === "OUTBOUND";
                 return (
                   <div
                     key={log.id}
-                    style={{
-                      padding: "12px 16px",
-                      borderRadius: 10,
-                      background: isOutbound ? "#f8fafc" : "#f0fdf4",
-                      border: `1px solid ${isOutbound ? "#e2e8f0" : "#bbf7d0"}`,
-                      display: "flex",
-                      flexDirection: "column",
-                      gap: 6
-                    }}
+                    className={`p-3 rounded-lg border text-xs leading-relaxed ${
+                      isOutbound ? "bg-slate-50/80 border-slate-200" : "bg-emerald-50/50 border-emerald-200"
+                    }`}
                   >
-                    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", fontSize: 11.5 }}>
-                      <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                        <span style={{
-                          padding: "2px 8px",
-                          borderRadius: 4,
-                          fontWeight: 700,
-                          fontSize: 10,
-                          background: isOutbound ? "#e2e8f0" : "#16a34a",
-                          color: isOutbound ? "#475569" : "#fff"
-                        }}>
+                    <div className="flex items-center justify-between gap-2 mb-1.5 flex-wrap">
+                      <div className="flex items-center gap-2">
+                        <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded ${
+                          isOutbound ? "bg-slate-200 text-slate-700" : "bg-emerald-700 text-white"
+                        }`}>
                           {log.direction}
                         </span>
-                        <span style={{ fontWeight: 700, color: "#0f172a" }}>
+                        <span className="font-bold text-slate-900 text-xs">
                           {log.location?.name || "System"}
                         </span>
-                        <span style={{ color: "#64748b" }}>
+                        <span className="text-[11px] text-slate-500">
                           • {log.messageType} • {log.recipientPhone || log.senderPhone}
                         </span>
                       </div>
-                      <span style={{ color: "#94a3b8" }}>
+                      <span className="text-[11px] text-slate-400">
                         {new Date(log.createdAt).toLocaleString("en-IN", { dateStyle: "medium", timeStyle: "short" })}
                       </span>
                     </div>
-                    <p style={{ margin: 0, fontSize: 13, color: "#1e293b", whiteSpace: "pre-wrap", lineHeight: 1.45 }}>
+
+                    <p className="text-slate-800 text-xs whitespace-pre-wrap font-sans m-0">
                       {log.content}
                     </p>
                   </div>
@@ -685,41 +860,41 @@ export default function WhatsAppAgentCenterPage() {
         </div>
       )}
 
-      {/* ── TAB 4: Global API Configuration ────────────────────────────── */}
+      {/* ── TAB 4: Meta WhatsApp Cloud API & Webhook ───────────────────── */}
       {activeTab === "api" && (
-        <div style={{ background: "#fff", border: "1px solid #e2e8f0", borderRadius: 12, padding: 24, display: "flex", flexDirection: "column", gap: 20 }}>
+        <div className="bg-white border border-slate-200 rounded-lg p-5 shadow-xs space-y-4 max-w-4xl">
           <div>
-            <h3 style={{ margin: 0, fontSize: 17, fontWeight: 700, color: "#0f172a" }}>Meta WhatsApp Cloud API Configuration</h3>
-            <p style={{ margin: "4px 0 0", fontSize: 13, color: "#64748b" }}>
-              Configure your Meta Developer credentials to send automated WhatsApp updates to clients worldwide.
+            <h3 className="text-sm font-bold text-slate-900 m-0">Meta WhatsApp Cloud API Configuration</h3>
+            <p className="text-xs text-slate-500 mt-0.5">
+              Enter your official Meta Developer credentials to send automated WhatsApp updates and receive client messages worldwide.
             </p>
           </div>
 
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
             <div>
-              <label style={{ display: "block", fontSize: 12.5, fontWeight: 600, color: "#475569", marginBottom: 6 }}>Phone Number ID</label>
+              <label className="block text-xs font-semibold text-slate-700 mb-1">Phone Number ID</label>
               <input
                 type="text"
                 placeholder="e.g. 104829104819028"
                 value={globalSettings.whatsappPhoneNumberId || ""}
                 onChange={e => setGlobalSettings({ ...globalSettings, whatsappPhoneNumberId: e.target.value })}
-                style={{ width: "100%", height: 38, padding: "0 12px", borderRadius: 8, border: "1px solid #cbd5e1", fontSize: 13, outline: "none" }}
+                className="w-full h-8 text-xs px-2.5 rounded-md border border-slate-300 outline-none focus:border-emerald-600 bg-white"
               />
             </div>
             <div>
-              <label style={{ display: "block", fontSize: 12.5, fontWeight: 600, color: "#475569", marginBottom: 6 }}>WhatsApp Business Account ID (WABA)</label>
+              <label className="block text-xs font-semibold text-slate-700 mb-1">WhatsApp Business Account ID (WABA)</label>
               <input
                 type="text"
                 placeholder="e.g. 192840192840192"
                 value={globalSettings.whatsappBusinessAccountId || ""}
                 onChange={e => setGlobalSettings({ ...globalSettings, whatsappBusinessAccountId: e.target.value })}
-                style={{ width: "100%", height: 38, padding: "0 12px", borderRadius: 8, border: "1px solid #cbd5e1", fontSize: 13, outline: "none" }}
+                className="w-full h-8 text-xs px-2.5 rounded-md border border-slate-300 outline-none focus:border-emerald-600 bg-white"
               />
             </div>
           </div>
 
           <div>
-            <label style={{ display: "block", fontSize: 12.5, fontWeight: 600, color: "#475569", marginBottom: 6 }}>
+            <label className="block text-xs font-semibold text-slate-700 mb-1">
               Permanent System User Access Token
             </label>
             <input
@@ -727,237 +902,218 @@ export default function WhatsAppAgentCenterPage() {
               placeholder={globalSettings.hasToken ? "••••••••••••••••" : "EAAG..."}
               value={globalSettings.whatsappAccessToken || ""}
               onChange={e => setGlobalSettings({ ...globalSettings, whatsappAccessToken: e.target.value })}
-              style={{ width: "100%", height: 38, padding: "0 12px", borderRadius: 8, border: "1px solid #cbd5e1", fontSize: 13, outline: "none" }}
+              className="w-full h-8 text-xs px-2.5 rounded-md border border-slate-300 outline-none focus:border-emerald-600 bg-white"
             />
-            <span style={{ fontSize: 11, color: "#94a3b8", marginTop: 4, display: "block" }}>
+            <span className="text-[11px] text-slate-400 mt-1 block">
               Generated in Meta Business Manager &gt; System Users (with whatsapp_business_messaging permissions).
             </span>
           </div>
 
-          {/* Webhook Box */}
-          <div style={{ background: "#f8fafc", border: "1px solid #e2e8f0", borderRadius: 10, padding: 16 }}>
-            <h4 style={{ margin: "0 0 8px", fontSize: 13, fontWeight: 700, color: "#1e293b" }}>Meta Webhook Callback URL</h4>
-            <p style={{ margin: "0 0 10px", fontSize: 12, color: "#64748b" }}>
-              Copy this URL and paste it into Meta Developer App &gt; WhatsApp &gt; Configuration &gt; Callback URL:
+          {/* Webhook Configuration Card */}
+          <div className="bg-slate-50 border border-slate-200 rounded-lg p-3.5 space-y-2.5">
+            <h4 className="text-xs font-bold text-slate-900 m-0">Meta Webhook Callback URL</h4>
+            <p className="text-[11.5px] text-slate-600 m-0">
+              Copy this URL and paste it in Meta Developer Portal &gt; WhatsApp &gt; Configuration &gt; Callback URL:
             </p>
-            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+            <div className="flex items-center gap-2">
               <input
                 type="text"
                 readOnly
                 value="https://gmb.rankved.com/api/whatsapp/webhook"
-                style={{ flex: 1, height: 36, padding: "0 12px", background: "#fff", border: "1px solid #cbd5e1", borderRadius: 6, fontSize: 12, fontFamily: "monospace" }}
+                className="flex-1 h-8 px-2.5 bg-white border border-slate-300 rounded text-xs font-mono text-slate-700"
               />
               <button
                 type="button"
                 onClick={copyWebhookUrl}
-                style={{ height: 36, padding: "0 14px", background: "#2563eb", border: "none", borderRadius: 6, color: "#fff", fontSize: 12, fontWeight: 600, cursor: "pointer", display: "flex", alignItems: "center", gap: 4 }}
+                className="h-8 px-3 bg-blue-600 hover:bg-blue-700 text-white rounded text-xs font-semibold flex items-center gap-1.5 transition-colors cursor-pointer shrink-0"
               >
-                <Copy size={12} /> {copiedUrl ? "Copied!" : "Copy URL"}
+                <Copy className="w-3.5 h-3.5" />
+                <span>{copiedUrl ? "Copied!" : "Copy URL"}</span>
               </button>
             </div>
             
-            <div style={{ marginTop: 12 }}>
-              <label style={{ display: "block", fontSize: 12, fontWeight: 600, color: "#475569", marginBottom: 4 }}>Verify Token</label>
+            <div className="pt-1">
+              <label className="block text-xs font-semibold text-slate-700 mb-1">Verify Token</label>
               <input
                 type="text"
                 value={globalSettings.whatsappWebhookVerifyToken || "rankved_wa_verify_token"}
                 onChange={e => setGlobalSettings({ ...globalSettings, whatsappWebhookVerifyToken: e.target.value })}
-                style={{ width: "100%", height: 36, padding: "0 12px", background: "#fff", border: "1px solid #cbd5e1", borderRadius: 6, fontSize: 12 }}
+                className="w-full h-8 px-2.5 bg-white border border-slate-300 rounded text-xs text-slate-800"
               />
             </div>
           </div>
 
           {/* AI Model Selection */}
           <div>
-            <label style={{ display: "block", fontSize: 12.5, fontWeight: 600, color: "#475569", marginBottom: 6 }}>AI Model for WhatsApp Agent</label>
+            <label className="block text-xs font-semibold text-slate-700 mb-1">AI Model for WhatsApp Agent</label>
             <select
               value={globalSettings.whatsappAiModel || "gpt-4o"}
               onChange={e => setGlobalSettings({ ...globalSettings, whatsappAiModel: e.target.value })}
-              style={{ width: "100%", height: 38, padding: "0 12px", background: "#fff", border: "1px solid #cbd5e1", borderRadius: 8, fontSize: 13 }}
+              className="w-full h-8 text-xs px-2 rounded-md border border-slate-300 bg-white text-slate-800"
             >
-              <option value="gpt-4o">OpenAI GPT-4o (Recommended — Fast & Highly Intelligent)</option>
+              <option value="gpt-4o">OpenAI GPT-4o (Recommended — Ultra Fast & Highly Intelligent)</option>
               <option value="claude-3-5-sonnet-20241022">Anthropic Claude 3.5 Sonnet (Nuanced & Professional)</option>
-              <option value="gemini-1.5-flash">Google Gemini 1.5 Flash (Ultra Fast)</option>
+              <option value="gemini-1.5-flash">Google Gemini 1.5 Flash (Super Fast)</option>
             </select>
           </div>
 
-          <div style={{ borderTop: "1px solid #f1f5f9", paddingTop: 16 }}>
+          <div className="pt-2 border-t border-slate-100">
             <button
               onClick={handleSaveGlobal}
               disabled={savingGlobal}
-              style={{
-                padding: "9px 24px",
-                borderRadius: 8,
-                background: "#047857",
-                border: "none",
-                color: "#fff",
-                fontSize: 13,
-                fontWeight: 700,
-                cursor: savingGlobal ? "default" : "pointer",
-                display: "flex",
-                alignItems: "center",
-                gap: 6
-              }}
+              className="px-4 py-2 rounded-md bg-emerald-700 hover:bg-emerald-800 text-white text-xs font-bold flex items-center gap-2 transition-colors cursor-pointer shadow-xs"
             >
-              {savingGlobal ? <Loader2 size={14} className="animate-spin" /> : <Save size={14} />}
+              {savingGlobal ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Save className="w-3.5 h-3.5" />}
               <span>{savingGlobal ? "Saving..." : "Save WhatsApp API Settings"}</span>
             </button>
           </div>
         </div>
       )}
 
-      {/* ── TAB 5: Smart Training Guide ──────────────────────────────── */}
-      {activeTab === "smart_tips" && (
-        <div style={{ background: "#fff", border: "1px solid #e2e8f0", borderRadius: 12, padding: 24, display: "flex", flexDirection: "column", gap: 16 }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-            <Sparkles size={22} color="#047857" />
-            <h3 style={{ margin: 0, fontSize: 17, fontWeight: 700, color: "#0f172a" }}>How to Train Your WhatsApp AI Agent with Custom Knowledge</h3>
+      {/* ── TAB 5: 5-Pillars Intelligence Guide ─────────────────────────── */}
+      {activeTab === "training_guide" && (
+        <div className="bg-white border border-slate-200 rounded-lg p-5 shadow-xs space-y-4 max-w-5xl">
+          <div className="flex items-center gap-2">
+            <Sparkles className="w-4 h-4 text-emerald-700" />
+            <h3 className="text-sm font-bold text-slate-900 m-0">5 Core Pillars of WhatsApp AI Agent Intelligence</h3>
           </div>
-          <p style={{ margin: 0, fontSize: 13.5, color: "#64748b", lineHeight: 1.5 }}>
+          <p className="text-xs text-slate-600 leading-relaxed m-0">
             Our RAG (Retrieval-Augmented Generation) engine connects directly to the profile's live Google Business database and your custom trained knowledge base:
           </p>
 
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))", gap: 16, marginTop: 6 }}>
-            <div style={{ background: "#f8fafc", border: "1px solid #e2e8f0", borderRadius: 10, padding: 18 }}>
-              <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8 }}>
-                <span style={{ width: 24, height: 24, borderRadius: "50%", background: "#ecfdf5", color: "#047857", fontWeight: 800, fontSize: 12, display: "flex", alignItems: "center", justifyContent: "center" }}>1</span>
-                <h4 style={{ margin: 0, fontSize: 14, fontWeight: 700, color: "#047857" }}>Custom Knowledge Base Training</h4>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3 pt-1">
+            <div className="bg-slate-50 border border-slate-200 rounded-lg p-3.5 space-y-1">
+              <div className="flex items-center gap-2 text-emerald-800 font-bold text-xs">
+                <span>1. 🏥 Rich Clinic & Doctor Persona</span>
               </div>
-              <p style={{ margin: 0, fontSize: 12.5, color: "#475569", lineHeight: 1.5 }}>
-                In each profile's <b>Train & Configure</b> drawer, paste doctor degrees, OPD timings, consultation fee, clinic address landmarks, insurance accepted, and FAQs. The agent will strictly answer from this source of truth.
+              <p className="text-[11.5px] text-slate-600 leading-normal m-0">
+                In each profile's <b>Train & Configure</b> drawer, specify doctor degrees (e.g. DM Neurology), OPD consultation hours, consultation fee (₹800), and emergency reception phone. The AI strictly answers with this ground truth.
               </p>
             </div>
 
-            <div style={{ background: "#f8fafc", border: "1px solid #e2e8f0", borderRadius: 10, padding: 18 }}>
-              <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8 }}>
-                <span style={{ width: 24, height: 24, borderRadius: "50%", background: "#ecfdf5", color: "#047857", fontWeight: 800, fontSize: 12, display: "flex", alignItems: "center", justifyContent: "center" }}>2</span>
-                <h4 style={{ margin: 0, fontSize: 14, fontWeight: 700, color: "#047857" }}>Persistent Multi-Turn Memory</h4>
+            <div className="bg-slate-50 border border-slate-200 rounded-lg p-3.5 space-y-1">
+              <div className="flex items-center gap-2 text-blue-800 font-bold text-xs">
+                <span>2. 📍 Local Search Query Ingestion</span>
               </div>
-              <p style={{ margin: 0, fontSize: 12.5, color: "#475569", lineHeight: 1.5 }}>
-                Every question and answer is saved in the database per client phone number. The last 15 conversation messages are fed into the LLM context window so clients can ask follow-ups naturally.
+              <p className="text-[11.5px] text-slate-600 leading-normal m-0">
+                The agent ingests your Google Performance API ranking queries (e.g. <i>"best neurologist in Model Town"</i>). When asked about visibility, it gives concrete proof of keyword growth.
               </p>
             </div>
 
-            <div style={{ background: "#f8fafc", border: "1px solid #e2e8f0", borderRadius: 10, padding: 18 }}>
-              <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8 }}>
-                <span style={{ width: 24, height: 24, borderRadius: "50%", background: "#ecfdf5", color: "#047857", fontWeight: 800, fontSize: 12, display: "flex", alignItems: "center", justifyContent: "center" }}>3</span>
-                <h4 style={{ margin: 0, fontSize: 14, fontWeight: 700, color: "#047857" }}>Zero-Typing Option Chains</h4>
+            <div className="bg-slate-50 border border-slate-200 rounded-lg p-3.5 space-y-1">
+              <div className="flex items-center gap-2 text-amber-800 font-bold text-xs">
+                <span>3. 🛡️ Review Drop & Algorithm Explanations</span>
               </div>
-              <p style={{ margin: 0, fontSize: 12.5, color: "#475569", lineHeight: 1.5 }}>
-                When clients send "Menu" or a number (1-6), the agent returns structured instant templates (calls, views, live post graphics, reviews) with 1-click button navigation.
+              <p className="text-[11.5px] text-slate-600 leading-normal m-0">
+                If Google removes or filters a customer review, the agent sends a proactive alert and explains Google's spam filter sweeps calmly with full backup evidence.
               </p>
             </div>
 
-            <div style={{ background: "#f8fafc", border: "1px solid #e2e8f0", borderRadius: 10, padding: 18 }}>
-              <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8 }}>
-                <span style={{ width: 24, height: 24, borderRadius: "50%", background: "#ecfdf5", color: "#047857", fontWeight: 800, fontSize: 12, display: "flex", alignItems: "center", justifyContent: "center" }}>4</span>
-                <h4 style={{ margin: 0, fontSize: 14, fontWeight: 700, color: "#047857" }}>Multilingual Hinglish Tone</h4>
+            <div className="bg-slate-50 border border-slate-200 rounded-lg p-3.5 space-y-1">
+              <div className="flex items-center gap-2 text-purple-800 font-bold text-xs">
+                <span>4. 🧠 Multi-Turn Conversational Memory</span>
               </div>
-              <p style={{ margin: 0, fontSize: 12.5, color: "#475569", lineHeight: 1.5 }}>
-                Set preferred language to English, Hinglish, or Hindi. The agent addresses clients with proper honorifics ("Dr. Nitika Mahajan", "Namaste 🙏") and maintains high medical professionalism.
+              <p className="text-[11.5px] text-slate-600 leading-normal m-0">
+                The last 15 conversation messages are fed into the LLM context window so clients can ask follow-ups naturally (e.g. <i>"What about last week?"</i>) without repeating details.
+              </p>
+            </div>
+
+            <div className="bg-slate-50 border border-slate-200 rounded-lg p-3.5 space-y-1 md:col-span-2">
+              <div className="flex items-center gap-2 text-teal-800 font-bold text-xs">
+                <span>5. 🗣️ Natural Hinglish & Regional Tone</span>
+              </div>
+              <p className="text-[11.5px] text-slate-600 leading-normal m-0">
+                By selecting <b>Hinglish</b>, the agent communicates warmly and professionally with Indian honorifics (<i>"Namaste Dr. Nitika! Aapki profile par is hafte 142 direct calls generate hui hain..."</i>).
               </p>
             </div>
           </div>
         </div>
       )}
 
-      {/* ── Edit Profile Agent Drawer Modal ────────────────────────────── */}
+      {/* ── Slide-in Drawer Modal: Train & Configure Profile ────────────── */}
       {editDrawerOpen && selectedProfile && (
-        <div style={{
-          position: "fixed",
-          inset: 0,
-          background: "rgba(0,0,0,0.5)",
-          zIndex: 999,
-          display: "flex",
-          justifyContent: "flex-end",
-          backdropFilter: "blur(2px)"
-        }}>
-          <div style={{
-            width: "100%",
-            maxWidth: 580,
-            background: "#fff",
-            height: "100%",
-            display: "flex",
-            flexDirection: "column",
-            boxShadow: "-10px 0 25px rgba(0,0,0,0.15)",
-          }}>
+        <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-xs z-50 flex justify-end transition-opacity">
+          <div className="w-full max-w-xl bg-white h-full shadow-2xl flex flex-col animate-in slide-in-from-right duration-200">
             {/* Drawer Header */}
-            <div style={{ padding: "20px 24px", borderBottom: "1px solid #f1f5f9", display: "flex", alignItems: "center", justifyContent: "space-between", background: "#f8fafc" }}>
+            <div className="px-5 py-4 border-b border-slate-200 bg-slate-50 flex items-center justify-between">
               <div>
-                <h3 style={{ margin: 0, fontSize: 17, fontWeight: 800, color: "#0f172a" }}>Train & Configure WhatsApp Agent</h3>
-                <p style={{ margin: "2px 0 0", fontSize: 12, color: "#64748b" }}>{selectedProfile.name}</p>
+                <h3 className="text-sm font-bold text-slate-900 m-0">Train & Configure WhatsApp Agent</h3>
+                <p className="text-xs text-slate-500 m-0 mt-0.5">{selectedProfile.name}</p>
               </div>
               <button
                 onClick={() => setEditDrawerOpen(false)}
-                style={{ background: "none", border: "none", fontSize: 18, color: "#94a3b8", cursor: "pointer" }}
+                className="w-7 h-7 rounded-full bg-slate-200/70 hover:bg-slate-300 text-slate-600 flex items-center justify-center text-xs font-bold transition-colors cursor-pointer"
               >
                 ✕
               </button>
             </div>
 
-            {/* Drawer Body */}
-            <div style={{ padding: "20px 24px", overflowY: "auto", flex: 1, display: "flex", flexDirection: "column", gap: 16 }}>
-              {/* Toggle Switch */}
-              <label style={{ display: "flex", alignItems: "center", justifyContent: "space-between", background: "#f8fafc", padding: "12px 16px", borderRadius: 8, border: "1px solid #e2e8f0", cursor: "pointer" }}>
-                <span style={{ fontSize: 13, fontWeight: 700, color: "#0f172a" }}>Enable WhatsApp AI Agent for this Profile</span>
+            {/* Drawer Scrollable Body */}
+            <div className="p-5 overflow-y-auto flex-1 space-y-4 text-xs">
+              {/* Active Toggle Switch */}
+              <label className="flex items-center justify-between bg-slate-50 p-3 rounded-lg border border-slate-200 cursor-pointer">
+                <div>
+                  <span className="font-bold text-slate-900 text-xs block">Enable WhatsApp Agent for this Profile</span>
+                  <span className="text-[11px] text-slate-500">Automate reports, instant alerts, and AI client responses</span>
+                </div>
                 <input
                   type="checkbox"
                   checked={drawerData.whatsappEnabled}
                   onChange={e => setDrawerData({ ...drawerData, whatsappEnabled: e.target.checked })}
-                  style={{ width: 18, height: 18, accentColor: "#047857", cursor: "pointer" }}
+                  className="w-4 h-4 accent-emerald-700 cursor-pointer"
                 />
               </label>
 
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+              {/* Basic Contact Info */}
+              <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label style={{ display: "block", fontSize: 12, fontWeight: 600, color: "#475569", marginBottom: 4 }}>Client WhatsApp Phone Number</label>
+                  <label className="block text-xs font-semibold text-slate-700 mb-1">Client WhatsApp Phone Number</label>
                   <input
                     type="text"
                     placeholder="e.g. +91 9876543210"
                     value={drawerData.whatsappRecipientPhone}
                     onChange={e => setDrawerData({ ...drawerData, whatsappRecipientPhone: e.target.value })}
-                    style={{ width: "100%", height: 38, padding: "0 12px", borderRadius: 8, border: "1px solid #cbd5e1", fontSize: 13 }}
+                    className="w-full h-8 px-2.5 rounded border border-slate-300 outline-none focus:border-emerald-600 text-xs bg-white"
                   />
                 </div>
 
                 <div>
-                  <label style={{ display: "block", fontSize: 12, fontWeight: 600, color: "#475569", marginBottom: 4 }}>Doctor / Contact Name</label>
+                  <label className="block text-xs font-semibold text-slate-700 mb-1">Doctor / Contact Name</label>
                   <input
                     type="text"
                     placeholder="e.g. Dr. Nitika Mahajan"
                     value={drawerData.whatsappRecipientName}
                     onChange={e => setDrawerData({ ...drawerData, whatsappRecipientName: e.target.value })}
-                    style={{ width: "100%", height: 38, padding: "0 12px", borderRadius: 8, border: "1px solid #cbd5e1", fontSize: 13 }}
+                    className="w-full h-8 px-2.5 rounded border border-slate-300 outline-none focus:border-emerald-600 text-xs bg-white"
                   />
                 </div>
               </div>
 
               {/* Training Knowledge Base Box */}
-              <div style={{ background: "#ecfdf5", padding: 14, borderRadius: 8, border: "1px solid #a7f3d0", display: "flex", flexDirection: "column", gap: 6 }}>
-                <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                  <BookOpen size={16} color="#047857" />
-                  <label style={{ fontSize: 12.5, fontWeight: 700, color: "#065f46" }}>
-                    Trained Knowledge Base (Source of Truth)
-                  </label>
+              <div className="bg-emerald-50/70 p-3.5 rounded-lg border border-emerald-200 space-y-2">
+                <div className="flex items-center gap-1.5 text-emerald-900 font-bold text-xs">
+                  <BookOpen className="w-3.5 h-3.5 text-emerald-700" />
+                  <span>Trained Knowledge Base (Source of Truth)</span>
                 </div>
-                <p style={{ margin: 0, fontSize: 11.5, color: "#047857" }}>
-                  Add Doctor bio/degrees, consultation fees, OPD timings, emergency clinic number, and FAQs. The AI answers all client questions using this exact data.
+                <p className="text-[11px] text-emerald-800 leading-normal m-0">
+                  Add doctor degrees, consultation fees, OPD timings, emergency clinic number, and FAQs. The AI answers all client questions using this exact data.
                 </p>
                 <textarea
                   rows={5}
                   placeholder={`• Doctor: Dr. Nitika Mahajan (DM Neurology, AIIMS)\n• OPD Timings: Mon-Sat 10:00 AM - 1:30 PM & 5:00 PM - 7:30 PM\n• Consultation Fee: ₹800\n• Emergency Reception: +91 9876543210\n• Treatments: Migraine, Epilepsy, Stroke rehab, Nerve disorders\n• Address Landmark: Near Metro Pillar 240, Model Town`}
                   value={drawerData.whatsappKnowledgeBase}
                   onChange={e => setDrawerData({ ...drawerData, whatsappKnowledgeBase: e.target.value })}
-                  style={{ width: "100%", padding: 10, borderRadius: 6, border: "1px solid #6ee7b7", fontSize: 12, fontFamily: "inherit", background: "#fff" }}
+                  className="w-full p-2 rounded border border-emerald-300 text-xs font-sans bg-white outline-none focus:border-emerald-700 text-slate-800"
                 />
               </div>
 
+              {/* Schedule Settings */}
               <div>
-                <label style={{ display: "block", fontSize: 12, fontWeight: 600, color: "#475569", marginBottom: 4 }}>Reporting Schedule</label>
+                <label className="block text-xs font-semibold text-slate-700 mb-1">Reporting Schedule</label>
                 <select
                   value={drawerData.whatsappReportingSchedule}
                   onChange={e => setDrawerData({ ...drawerData, whatsappReportingSchedule: e.target.value })}
-                  style={{ width: "100%", height: 38, padding: "0 10px", borderRadius: 8, border: "1px solid #cbd5e1", fontSize: 13, background: "#fff" }}
+                  className="w-full h-8 px-2 rounded border border-slate-300 bg-white text-xs text-slate-800"
                 >
                   <option value="DAILY">Daily (Every Morning)</option>
                   <option value="ALTERNATE_DAYS">Alternate Days</option>
@@ -969,35 +1125,35 @@ export default function WhatsAppAgentCenterPage() {
 
               {drawerData.whatsappReportingSchedule === "CUSTOM" && (
                 <div>
-                  <label style={{ display: "block", fontSize: 12, fontWeight: 600, color: "#475569", marginBottom: 4 }}>Custom Days (e.g. MON, WED, FRI)</label>
+                  <label className="block text-xs font-semibold text-slate-700 mb-1">Custom Days (e.g. MON, WED, FRI)</label>
                   <input
                     type="text"
                     value={drawerData.whatsappCustomDays}
                     onChange={e => setDrawerData({ ...drawerData, whatsappCustomDays: e.target.value })}
-                    style={{ width: "100%", height: 38, padding: "0 12px", borderRadius: 8, border: "1px solid #cbd5e1", fontSize: 13 }}
+                    className="w-full h-8 px-2.5 rounded border border-slate-300 text-xs bg-white"
                   />
                 </div>
               )}
 
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+              <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label style={{ display: "block", fontSize: 12, fontWeight: 600, color: "#475569", marginBottom: 4 }}>Preferred Delivery Time (24h)</label>
+                  <label className="block text-xs font-semibold text-slate-700 mb-1">Preferred Delivery Time (24h)</label>
                   <input
                     type="time"
                     value={drawerData.whatsappReportTime}
                     onChange={e => setDrawerData({ ...drawerData, whatsappReportTime: e.target.value })}
-                    style={{ width: "100%", height: 38, padding: "0 12px", borderRadius: 8, border: "1px solid #cbd5e1", fontSize: 13, background: "#fff" }}
+                    className="w-full h-8 px-2.5 rounded border border-slate-300 text-xs bg-white"
                   />
                 </div>
 
                 <div>
-                  <label style={{ display: "block", fontSize: 12, fontWeight: 600, color: "#475569", marginBottom: 4 }}>Preferred Language</label>
+                  <label className="block text-xs font-semibold text-slate-700 mb-1">Preferred Language</label>
                   <select
                     value={drawerData.whatsappLanguage}
                     onChange={e => setDrawerData({ ...drawerData, whatsappLanguage: e.target.value })}
-                    style={{ width: "100%", height: 38, padding: "0 10px", borderRadius: 8, border: "1px solid #cbd5e1", fontSize: 13, background: "#fff" }}
+                    className="w-full h-8 px-2 rounded border border-slate-300 bg-white text-xs text-slate-800"
                   >
-                    <option value="en">English</option>
+                    <option value="en">English (Professional)</option>
                     <option value="hinglish">Hinglish (Hindi + English blend)</option>
                     <option value="hi">Hindi (हिंदी)</option>
                   </select>
@@ -1005,52 +1161,53 @@ export default function WhatsAppAgentCenterPage() {
               </div>
 
               {/* Instant Alert Checkboxes */}
-              <div style={{ background: "#f8fafc", padding: 14, borderRadius: 8, border: "1px solid #e2e8f0", display: "flex", flexDirection: "column", gap: 10 }}>
-                <span style={{ fontSize: 12, fontWeight: 700, color: "#0f172a" }}>Real-time Instant Alerts:</span>
-                <label style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 12.5, color: "#334155", cursor: "pointer" }}>
-                  <input type="checkbox" checked={drawerData.whatsappNotifyPost} onChange={e => setDrawerData({ ...drawerData, whatsappNotifyPost: e.target.checked })} style={{ accentColor: "#047857" }} />
+              <div className="bg-slate-50 p-3 rounded-lg border border-slate-200 space-y-2">
+                <span className="font-bold text-slate-900 text-xs block">Real-time Instant Alerts:</span>
+                <label className="flex items-center gap-2 text-xs text-slate-700 cursor-pointer">
+                  <input type="checkbox" checked={drawerData.whatsappNotifyPost} onChange={e => setDrawerData({ ...drawerData, whatsappNotifyPost: e.target.checked })} className="accent-emerald-700" />
                   <span>Send Post Graphic & Link on Publish</span>
                 </label>
-                <label style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 12.5, color: "#334155", cursor: "pointer" }}>
-                  <input type="checkbox" checked={drawerData.whatsappNotifyReview} onChange={e => setDrawerData({ ...drawerData, whatsappNotifyReview: e.target.checked })} style={{ accentColor: "#047857" }} />
+                <label className="flex items-center gap-2 text-xs text-slate-700 cursor-pointer">
+                  <input type="checkbox" checked={drawerData.whatsappNotifyReview} onChange={e => setDrawerData({ ...drawerData, whatsappNotifyReview: e.target.checked })} className="accent-emerald-700" />
                   <span>Send New Review Star Rating Alerts</span>
                 </label>
-                <label style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 12.5, color: "#334155", cursor: "pointer" }}>
-                  <input type="checkbox" checked={drawerData.whatsappNotifyReply} onChange={e => setDrawerData({ ...drawerData, whatsappNotifyReply: e.target.checked })} style={{ accentColor: "#047857" }} />
+                <label className="flex items-center gap-2 text-xs text-slate-700 cursor-pointer">
+                  <input type="checkbox" checked={drawerData.whatsappNotifyReply} onChange={e => setDrawerData({ ...drawerData, whatsappNotifyReply: e.target.checked })} className="accent-emerald-700" />
                   <span>Send Auto-Reply Confirmations</span>
                 </label>
-                <label style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 12.5, color: "#334155", cursor: "pointer" }}>
-                  <input type="checkbox" checked={drawerData.whatsappNotifyPerformance} onChange={e => setDrawerData({ ...drawerData, whatsappNotifyPerformance: e.target.checked })} style={{ accentColor: "#047857" }} />
+                <label className="flex items-center gap-2 text-xs text-slate-700 cursor-pointer">
+                  <input type="checkbox" checked={drawerData.whatsappNotifyPerformance} onChange={e => setDrawerData({ ...drawerData, whatsappNotifyPerformance: e.target.checked })} className="accent-emerald-700" />
                   <span>Include Search Views & Call Metrics in Digests</span>
                 </label>
               </div>
 
               <div>
-                <label style={{ display: "block", fontSize: 12, fontWeight: 600, color: "#475569", marginBottom: 4 }}>Persona & Tone Rules</label>
+                <label className="block text-xs font-semibold text-slate-700 mb-1">Custom Persona & Tone Instructions</label>
                 <textarea
                   rows={2}
                   placeholder="e.g. Always address client respectfully as Dr. Nitika. Highlight patient trust and clinic appointments."
                   value={drawerData.whatsappCustomInstructions}
                   onChange={e => setDrawerData({ ...drawerData, whatsappCustomInstructions: e.target.value })}
-                  style={{ width: "100%", padding: 10, borderRadius: 8, border: "1px solid #cbd5e1", fontSize: 12.5, fontFamily: "inherit" }}
+                  className="w-full p-2 rounded border border-slate-300 text-xs font-sans outline-none focus:border-emerald-600 bg-white"
                 />
               </div>
             </div>
 
             {/* Drawer Footer */}
-            <div style={{ padding: "16px 24px", borderTop: "1px solid #f1f5f9", background: "#f8fafc", display: "flex", justifyContent: "flex-end", gap: 10 }}>
+            <div className="px-5 py-3.5 border-t border-slate-200 bg-slate-50 flex items-center justify-end gap-2">
               <button
                 onClick={() => setEditDrawerOpen(false)}
-                style={{ padding: "8px 16px", borderRadius: 8, border: "1px solid #cbd5e1", background: "#fff", fontSize: 13, fontWeight: 600, color: "#64748b", cursor: "pointer" }}
+                className="px-3.5 py-1.5 rounded text-xs font-semibold text-slate-600 hover:bg-slate-200 bg-slate-100 transition-colors cursor-pointer"
               >
                 Cancel
               </button>
               <button
                 onClick={handleSaveDrawer}
                 disabled={savingDrawer}
-                style={{ padding: "8px 20px", borderRadius: 8, border: "none", background: "#047857", fontSize: 13, fontWeight: 700, color: "#fff", cursor: savingDrawer ? "default" : "pointer" }}
+                className="px-4 py-1.5 rounded text-xs font-bold bg-emerald-700 hover:bg-emerald-800 text-white transition-colors cursor-pointer shadow-xs flex items-center gap-1.5"
               >
-                {savingDrawer ? "Saving..." : "Save Settings & Training"}
+                {savingDrawer ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Save className="w-3.5 h-3.5" />}
+                <span>{savingDrawer ? "Saving..." : "Save Settings & Training"}</span>
               </button>
             </div>
           </div>
