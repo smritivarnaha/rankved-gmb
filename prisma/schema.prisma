@@ -617,3 +617,30 @@ model WhatsAppMessageLog {
   @@index([createdAt])
 }
 
+// ─── WhatsApp Official Message Templates & Chain of Flows (AiSensy/Wati Style) ─
+model WhatsAppTemplate {
+  id               String   @id @default(cuid())
+  name             String   @unique // lowercase name e.g. "gbp_post_published_alert"
+  title            String?  // Human friendly title e.g. "Post Published Alert"
+  category         String   @default("UTILITY") // "UTILITY" | "MARKETING" | "AUTHENTICATION"
+  language         String   @default("en_US") // "en_US", "hi", "en"
+  headerType       String   @default("NONE") // "NONE" | "TEXT" | "IMAGE" | "VIDEO" | "DOCUMENT"
+  headerContent    String?  // e.g. "🚀 New Post Live on Google!"
+  bodyText         String   @db.Text
+  footerText       String?  // e.g. "RankVed GMB Manager"
+  buttonsJson      String?  @db.Text // JSON of buttons
+  status           String   @default("APPROVED") // "APPROVED" | "PENDING" | "REJECTED" | "PAUSED" | "DRAFT"
+  metaTemplateId   String?  // Meta's template ID
+  rejectionReason  String?
+  sampleParams     String?  @db.Text // JSON array of sample parameter strings
+  isSystemDefault  Boolean  @default(false)
+  chainOrder       Int      @default(0)
+  nextTemplateName String?  // Chaining to next template
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  @@index([status])
+  @@index([category])
+  @@index([name])
+}
+

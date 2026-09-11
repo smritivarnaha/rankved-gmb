@@ -38,18 +38,49 @@ import {
   Play,
   RotateCcw,
   User,
+  Plus,
+  Eye,
+  Trash2,
+  Workflow,
+  CheckCircle,
+  HelpCircle,
+  ArrowRight,
+  Share2,
 } from "lucide-react";
 
 export default function WhatsAppAgentCenterPage() {
-  const [activeTab, setActiveTab] = useState<"profiles" | "simulator" | "inbox" | "api" | "training_guide">("profiles");
+  const [activeTab, setActiveTab] = useState<"profiles" | "templates" | "simulator" | "inbox" | "api" | "training_guide">("profiles");
   const [loading, setLoading] = useState(true);
   const [profiles, setProfiles] = useState<any[]>([]);
+  const [templates, setTemplates] = useState<any[]>([]);
   const [logs, setLogs] = useState<any[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<"ALL" | "ACTIVE" | "INACTIVE">("ALL");
   const [selectedProfile, setSelectedProfile] = useState<any | null>(null);
   const [editDrawerOpen, setEditDrawerOpen] = useState(false);
   const [statusMsg, setStatusMsg] = useState<{ type: "success" | "error"; text: string } | null>(null);
+
+  // Template Management state
+  const [templateModalOpen, setTemplateModalOpen] = useState(false);
+  const [syncingMeta, setSyncingMeta] = useState(false);
+  const [installingDefaults, setInstallingDefaults] = useState(false);
+  const [previewTemplate, setPreviewTemplate] = useState<any | null>(null);
+  const [templateForm, setTemplateForm] = useState<any>({
+    name: "",
+    title: "",
+    category: "UTILITY",
+    language: "en_US",
+    headerType: "NONE",
+    headerContent: "",
+    bodyText: "Hello {{1}}, here is an update for {{2}}.",
+    footerText: "RankVed GMB AI",
+    buttons: [
+      { type: "QUICK_REPLY", text: "📊 Performance", payload: "MENU_PERF" },
+      { type: "QUICK_REPLY", text: "📋 Main Menu", payload: "MENU_MAIN" },
+    ],
+    sampleParams: ["Dr. Nitika", "Apex Clinic"],
+    submitToMeta: true,
+  });
 
   // Global Settings state
   const [globalSettings, setGlobalSettings] = useState<any>({});
@@ -71,8 +102,9 @@ export default function WhatsAppAgentCenterPage() {
   const fetchAllData = async () => {
     setLoading(true);
     try {
-      const [pRes, lRes, sRes] = await Promise.all([
+      const [pRes, tRes, lRes, sRes] = await Promise.all([
         fetch("/api/whatsapp/profiles?t=" + Date.now()),
+        fetch("/api/whatsapp/templates?t=" + Date.now()),
         fetch("/api/whatsapp/logs?limit=100&t=" + Date.now()),
         fetch("/api/settings/whatsapp?t=" + Date.now()),
       ]);
@@ -84,6 +116,10 @@ export default function WhatsAppAgentCenterPage() {
         if (pList.length > 0 && !simProfileId) {
           setSimProfileId(pList[0].id);
         }
+      }
+      if (tRes.ok) {
+        const tj = await tRes.json();
+        setTemplates(tj.data || []);
       }
       if (lRes.ok) {
         const lj = await lRes.json();
@@ -243,6 +279,88 @@ export default function WhatsAppAgentCenterPage() {
     }
   };
 
+  const handleSyncMetaTemplates = async () => {
+    setSyncingMeta(true);
+    try {
+      const res = await fetch("/api/whatsapp/templates/sync", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+      });
+      const data = await res.json();
+      if (res.ok && data.success) {
+        alert(`✅ Synced ${data.syncedCount} template status(es) with Meta Cloud API!`);
+        fetchAllData();
+      } else {
+        alert("❌ Meta Sync Notice: " + (data.error || "Could not sync. Ensure WABA ID and Token are configured in API settings."));
+      }
+    } catch (e: any) {
+      alert("Error: " + e.message);
+    } finally {
+      setSyncingMeta(false);
+    }
+  };
+
+  const handleInstallDefaultTemplates = async () => {
+    setInstallingDefaults(true);
+    try {
+      const res = await fetch("/api/whatsapp/templates/install-defaults", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ submitToMeta: true }),
+      });
+      const data = await res.json();
+      if (res.ok && data.success) {
+        alert("✅ " + data.message);
+        fetchAllData();
+      } else {
+        alert("❌ Error installing templates: " + (data.error || "Failed"));
+      }
+    } catch (e: any) {
+      alert("Error: " + e.message);
+    } finally {
+      setInstallingDefaults(false);
+    }
+  };
+
+  const handleSaveCustomTemplate = async () => {
+    if (!templateForm.name || !templateForm.bodyText) {
+      alert("Please fill in template name and body text.");
+      return;
+    }
+    setActionLoading("save_template");
+    try {
+      const res = await fetch("/api/whatsapp/templates", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(templateForm),
+      });
+      const data = await res.json();
+      if (res.ok && data.success) {
+        alert("✅ Template saved & registered!");
+        setTemplateModalOpen(false);
+        fetchAllData();
+      } else {
+        alert("❌ Error: " + (data.error || "Failed to save template"));
+      }
+    } catch (e: any) {
+      alert("Error: " + e.message);
+    } finally {
+      setActionLoading(null);
+    }
+  };
+
+  const handleDeleteTemplate = async (id: string, name: string) => {
+    if (!confirm(`Are you sure you want to delete template "${name}"?`)) return;
+    try {
+      const res = await fetch(`/api/whatsapp/templates?id=${id}`, { method: "DELETE" });
+      if (res.ok) {
+        setTemplates(templates.filter(t => t.id !== id));
+      }
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
   const handleSendSimulatorMessage = async (textToSend?: string) => {
     const query = textToSend || simInput;
     if (!query.trim() || !simProfileId) return;
@@ -353,11 +471,11 @@ export default function WhatsAppAgentCenterPage() {
                 WhatsApp AI Agent & Option Chains
               </h1>
               <span className="text-[10px] uppercase font-bold tracking-wider px-2 py-0.5 rounded-full bg-emerald-500/30 text-emerald-200 border border-emerald-400/30">
-                RAG Memory + 6-Option Chain
+                AiSensy Grade Templates & RAG Flow
               </span>
             </div>
             <p className="text-xs sm:text-sm text-emerald-100/80 mt-0.5 leading-snug max-w-2xl">
-              Automated client updates on WhatsApp: scheduled performance digests, instant post & review alerts, review drop protection, and interactive 1-click option menus.
+              Automated client communication on WhatsApp: official Meta message templates, 1-click chained menus, post & review drop alerts, and live interactive AI Q&A.
             </p>
           </div>
         </div>
@@ -389,11 +507,13 @@ export default function WhatsAppAgentCenterPage() {
 
         <div className="bg-white border border-slate-200/90 rounded-lg p-3.5 flex items-center gap-3 shadow-xs">
           <div className="w-9 h-9 rounded-lg bg-blue-50 text-blue-700 flex items-center justify-center shrink-0 border border-blue-100">
-            <Send className="w-4 h-4" />
+            <FileText className="w-4 h-4" />
           </div>
           <div className="min-w-0">
-            <p className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider truncate m-0">Outbound Alerts</p>
-            <p className="text-base font-bold text-slate-900 mt-0.5 truncate m-0">{outboundLogsCount}</p>
+            <p className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider truncate m-0">Official Templates</p>
+            <p className="text-base font-bold text-slate-900 mt-0.5 truncate m-0">
+              {templates.length} <span className="text-xs font-normal text-slate-400">Meta Approved</span>
+            </p>
           </div>
         </div>
 
@@ -402,8 +522,8 @@ export default function WhatsAppAgentCenterPage() {
             <MessageSquare className="w-4 h-4" />
           </div>
           <div className="min-w-0">
-            <p className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider truncate m-0">Client Q&A Answered</p>
-            <p className="text-base font-bold text-slate-900 mt-0.5 truncate m-0">{inboundLogsCount}</p>
+            <p className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider truncate m-0">Dispatched Messages</p>
+            <p className="text-base font-bold text-slate-900 mt-0.5 truncate m-0">{outboundLogsCount}</p>
           </div>
         </div>
 
@@ -422,6 +542,7 @@ export default function WhatsAppAgentCenterPage() {
       <div className="bg-white border border-slate-200 rounded-lg p-1.5 flex gap-1.5 overflow-x-auto shadow-xs">
         {[
           { id: "profiles", label: "Client Profiles & Schedules", icon: Phone, count: profiles.length },
+          { id: "templates", label: "📋 Official Templates & Flow Chains (AiSensy Style)", icon: Workflow, count: templates.length },
           { id: "simulator", label: "📱 Interactive WhatsApp Simulator", icon: Smartphone },
           { id: "inbox", label: "Live Activity & Chat Logs", icon: History, count: logs.length },
           { id: "api", label: "Cloud API & Webhook", icon: SettingsIcon },
@@ -508,7 +629,7 @@ export default function WhatsAppAgentCenterPage() {
                     </td>
                   </tr>
                 ) : (
-                  filteredProfiles.map((p, idx) => (
+                  filteredProfiles.map((p) => (
                     <tr key={p.id} className="hover:bg-slate-50/70 transition-colors">
                       <td className="py-3 px-3.5">
                         <div className="flex flex-col">
@@ -608,7 +729,171 @@ export default function WhatsAppAgentCenterPage() {
         </div>
       )}
 
-      {/* ── TAB 2: Official WhatsApp Interactive Simulator ─────────────── */}
+      {/* ── TAB 2: Official Templates & Flow Chains (AiSensy/Wati Style) ── */}
+      {activeTab === "templates" && (
+        <div className="space-y-4">
+          {/* Action Bar */}
+          <div className="bg-white border border-slate-200 rounded-lg p-3.5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 shadow-xs">
+            <div>
+              <h3 className="text-sm font-bold text-slate-900 m-0 flex items-center gap-2">
+                <Workflow className="w-4 h-4 text-emerald-700" />
+                <span>Meta WhatsApp Message Templates & Flow Sequences</span>
+              </h3>
+              <p className="text-xs text-slate-500 m-0 mt-0.5">
+                Manage official Meta approved templates, interactive quick-reply buttons, and multi-step automated drip chains.
+              </p>
+            </div>
+
+            <div className="flex items-center gap-2 flex-wrap self-end sm:self-auto">
+              <button
+                onClick={handleSyncMetaTemplates}
+                disabled={syncingMeta}
+                className="px-3 py-1.5 rounded-md bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-300 text-xs font-semibold flex items-center gap-1.5 transition-colors cursor-pointer"
+              >
+                <RefreshCw className={`w-3.5 h-3.5 ${syncingMeta ? "animate-spin" : ""}`} />
+                <span>Sync with Meta</span>
+              </button>
+
+              <button
+                onClick={handleInstallDefaultTemplates}
+                disabled={installingDefaults}
+                className="px-3 py-1.5 rounded-md bg-blue-50 hover:bg-blue-100 text-blue-700 border border-blue-200 text-xs font-semibold flex items-center gap-1.5 transition-colors cursor-pointer"
+              >
+                {installingDefaults ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Sparkles className="w-3.5 h-3.5" />}
+                <span>Install 7 Pre-Built Templates</span>
+              </button>
+
+              <button
+                onClick={() => setTemplateModalOpen(true)}
+                className="px-3.5 py-1.5 rounded-md bg-emerald-700 hover:bg-emerald-800 text-white text-xs font-bold flex items-center gap-1.5 transition-colors cursor-pointer shadow-xs"
+              >
+                <Plus className="w-3.5 h-3.5" />
+                <span>Create Template</span>
+              </button>
+            </div>
+          </div>
+
+          {/* Visual Flow Chains Overview */}
+          <div className="bg-gradient-to-r from-slate-900 via-slate-800 to-emerald-950 rounded-xl p-4 text-white shadow-xs">
+            <h4 className="text-xs font-bold uppercase tracking-wider text-emerald-300 m-0 mb-2 flex items-center gap-1.5">
+              <Zap className="w-3.5 h-3.5" /> Automated GBP Event Flow Chains
+            </h4>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-3 text-xs">
+              <div className="bg-white/10 rounded-lg p-3 border border-white/15">
+                <span className="font-bold text-emerald-200 block text-xs">1. Post Published Flow</span>
+                <p className="text-[11px] text-slate-300 mt-1 m-0">
+                  Google Post Live ➔ `gbp_post_published_alert` ➔ Quick Button `[📊 Performance]` ➔ `gbp_weekly_performance_digest`
+                </p>
+              </div>
+
+              <div className="bg-white/10 rounded-lg p-3 border border-white/15">
+                <span className="font-bold text-emerald-200 block text-xs">2. Review & Auto-Reply Flow</span>
+                <p className="text-[11px] text-slate-300 mt-1 m-0">
+                  New 5-Star Review ➔ `gbp_new_review_alert` ➔ AI Auto-Reply Published ➔ `gbp_review_reply_alert`
+                </p>
+              </div>
+
+              <div className="bg-white/10 rounded-lg p-3 border border-white/15">
+                <span className="font-bold text-emerald-200 block text-xs">3. Review Drop Protection Flow</span>
+                <p className="text-[11px] text-slate-300 mt-1 m-0">
+                  Google Filter Detection ➔ `gbp_review_drop_alert` ➔ Quick Button `[📋 Main Menu]` ➔ RAG AI Support
+                </p>
+              </div>
+            </div>
+          </div>
+
+          {/* Templates Grid / Cards */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3.5">
+            {templates.map(tpl => {
+              let buttonsList = [];
+              try {
+                buttonsList = tpl.buttonsJson ? JSON.parse(tpl.buttonsJson) : [];
+              } catch {}
+
+              const isApproved = tpl.status === "APPROVED";
+              const isPending = tpl.status === "PENDING";
+              const isRejected = tpl.status === "REJECTED";
+
+              return (
+                <div key={tpl.id} className="bg-white border border-slate-200 rounded-lg p-3.5 flex flex-col justify-between shadow-xs hover:border-slate-300 transition-all">
+                  <div>
+                    {/* Header Row */}
+                    <div className="flex items-center justify-between gap-2 mb-2">
+                      <span className="font-mono text-[11px] font-bold text-slate-900 truncate" title={tpl.name}>
+                        {tpl.name}
+                      </span>
+                      <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${
+                        isApproved
+                          ? "bg-emerald-50 text-emerald-700 border-emerald-200"
+                          : isPending
+                          ? "bg-amber-50 text-amber-700 border-amber-200"
+                          : isRejected
+                          ? "bg-rose-50 text-rose-700 border-rose-200"
+                          : "bg-slate-100 text-slate-600 border-slate-200"
+                      }`}>
+                        {tpl.status}
+                      </span>
+                    </div>
+
+                    <div className="flex items-center gap-1.5 text-[10.5px] text-slate-500 mb-2">
+                      <span className="px-1.5 py-0.5 rounded bg-slate-100 font-semibold">{tpl.category}</span>
+                      <span className="px-1.5 py-0.5 rounded bg-slate-100">{tpl.language}</span>
+                      {tpl.headerType !== "NONE" && (
+                        <span className="px-1.5 py-0.5 rounded bg-blue-50 text-blue-700 font-semibold">{tpl.headerType}</span>
+                      )}
+                    </div>
+
+                    {/* Body Text Preview */}
+                    <div className="bg-slate-50 rounded p-2.5 text-xs text-slate-700 font-sans whitespace-pre-wrap leading-relaxed border border-slate-100 max-h-36 overflow-y-auto mb-2">
+                      {tpl.headerContent && <p className="font-bold text-slate-900 m-0 mb-1">{tpl.headerContent}</p>}
+                      <p className="m-0 text-slate-700">{tpl.bodyText}</p>
+                      {tpl.footerText && <p className="text-[10px] text-slate-400 m-0 mt-1.5">{tpl.footerText}</p>}
+                    </div>
+
+                    {/* Quick Reply Button Badges */}
+                    {buttonsList.length > 0 && (
+                      <div className="flex flex-wrap gap-1 mb-3">
+                        {buttonsList.map((b: any, bIdx: number) => (
+                          <span key={bIdx} className="text-[10px] font-semibold bg-emerald-50 text-emerald-800 border border-emerald-200 rounded px-2 py-0.5">
+                            {b.text}
+                          </span>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Actions */}
+                  <div className="pt-2 border-t border-slate-100 flex items-center justify-between gap-2">
+                    <span className="text-[10.5px] text-slate-400">
+                      {tpl.isSystemDefault ? "Pre-built System Flow" : "Custom Template"}
+                    </span>
+
+                    <div className="flex items-center gap-1.5">
+                      <button
+                        onClick={() => setPreviewTemplate(tpl)}
+                        className="px-2 py-1 rounded text-[11px] font-semibold bg-slate-100 hover:bg-slate-200 text-slate-700 transition-colors cursor-pointer"
+                      >
+                        Preview
+                      </button>
+
+                      {!tpl.isSystemDefault && (
+                        <button
+                          onClick={() => handleDeleteTemplate(tpl.id, tpl.name)}
+                          className="px-2 py-1 rounded text-[11px] font-semibold text-rose-600 hover:bg-rose-50 transition-colors cursor-pointer"
+                        >
+                          <Trash2 className="w-3 h-3" />
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
+      {/* ── TAB 3: Official WhatsApp Interactive Simulator ─────────────── */}
       {activeTab === "simulator" && (
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-5">
           {/* Simulator Phone Frame (Left 7 Cols) */}
@@ -802,7 +1087,7 @@ export default function WhatsAppAgentCenterPage() {
         </div>
       )}
 
-      {/* ── TAB 3: Activity Stream & Chat Logs ──────────────────────────── */}
+      {/* ── TAB 4: Activity Stream & Chat Logs ──────────────────────────── */}
       {activeTab === "inbox" && (
         <div className="bg-white border border-slate-200 rounded-lg p-4 shadow-xs space-y-3">
           <div className="flex items-center justify-between border-b border-slate-100 pb-2.5">
@@ -860,7 +1145,7 @@ export default function WhatsAppAgentCenterPage() {
         </div>
       )}
 
-      {/* ── TAB 4: Meta WhatsApp Cloud API & Webhook ───────────────────── */}
+      {/* ── TAB 5: Meta WhatsApp Cloud API & Webhook ───────────────────── */}
       {activeTab === "api" && (
         <div className="bg-white border border-slate-200 rounded-lg p-5 shadow-xs space-y-4 max-w-4xl">
           <div>
@@ -970,7 +1255,7 @@ export default function WhatsAppAgentCenterPage() {
         </div>
       )}
 
-      {/* ── TAB 5: 5-Pillars Intelligence Guide ─────────────────────────── */}
+      {/* ── TAB 6: 5-Pillars Intelligence Guide ─────────────────────────── */}
       {activeTab === "training_guide" && (
         <div className="bg-white border border-slate-200 rounded-lg p-5 shadow-xs space-y-4 max-w-5xl">
           <div className="flex items-center gap-2">
@@ -1208,6 +1493,223 @@ export default function WhatsAppAgentCenterPage() {
               >
                 {savingDrawer ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Save className="w-3.5 h-3.5" />}
                 <span>{savingDrawer ? "Saving..." : "Save Settings & Training"}</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Modal: Create New Meta WhatsApp Template ───────────────────── */}
+      {templateModalOpen && (
+        <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-xs z-50 flex items-center justify-center p-3 sm:p-4">
+          <div className="bg-white rounded-xl shadow-2xl w-full max-w-2xl overflow-hidden border border-slate-200 animate-in zoom-in-95 duration-150 flex flex-col max-h-[90vh]">
+            <div className="px-5 py-3.5 bg-slate-50 border-b border-slate-200 flex items-center justify-between">
+              <div>
+                <h3 className="text-sm font-bold text-slate-900 m-0">Create WhatsApp Message Template</h3>
+                <p className="text-xs text-slate-500 m-0">Submit new template to Meta Cloud API for instant approval</p>
+              </div>
+              <button
+                onClick={() => setTemplateModalOpen(false)}
+                className="w-7 h-7 rounded-full bg-slate-200/70 hover:bg-slate-300 text-slate-600 flex items-center justify-center text-xs font-bold transition-colors cursor-pointer"
+              >
+                ✕
+              </button>
+            </div>
+
+            <div className="p-5 overflow-y-auto space-y-3.5 text-xs">
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700 mb-1">Template Name (lowercase, no spaces)</label>
+                  <input
+                    type="text"
+                    placeholder="e.g. gbp_clinic_appointment_reminder"
+                    value={templateForm.name}
+                    onChange={e => setTemplateForm({ ...templateForm, name: e.target.value })}
+                    className="w-full h-8 px-2.5 rounded border border-slate-300 text-xs font-mono bg-white outline-none focus:border-emerald-600"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700 mb-1">Template Title</label>
+                  <input
+                    type="text"
+                    placeholder="e.g. Appointment Reminder Alert"
+                    value={templateForm.title}
+                    onChange={e => setTemplateForm({ ...templateForm, title: e.target.value })}
+                    className="w-full h-8 px-2.5 rounded border border-slate-300 text-xs bg-white outline-none focus:border-emerald-600"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-3 gap-3">
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700 mb-1">Category</label>
+                  <select
+                    value={templateForm.category}
+                    onChange={e => setTemplateForm({ ...templateForm, category: e.target.value })}
+                    className="w-full h-8 px-2 rounded border border-slate-300 bg-white text-xs text-slate-800"
+                  >
+                    <option value="UTILITY">UTILITY (Standard Reports/Alerts)</option>
+                    <option value="MARKETING">MARKETING (Promotions & Offers)</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700 mb-1">Language</label>
+                  <select
+                    value={templateForm.language}
+                    onChange={e => setTemplateForm({ ...templateForm, language: e.target.value })}
+                    className="w-full h-8 px-2 rounded border border-slate-300 bg-white text-xs text-slate-800"
+                  >
+                    <option value="en_US">English (US)</option>
+                    <option value="en">English (UK)</option>
+                    <option value="hi">Hindi (हिंदी)</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700 mb-1">Header Type</label>
+                  <select
+                    value={templateForm.headerType}
+                    onChange={e => setTemplateForm({ ...templateForm, headerType: e.target.value })}
+                    className="w-full h-8 px-2 rounded border border-slate-300 bg-white text-xs text-slate-800"
+                  >
+                    <option value="NONE">None</option>
+                    <option value="TEXT">Text Header</option>
+                    <option value="IMAGE">Image Header</option>
+                  </select>
+                </div>
+              </div>
+
+              {templateForm.headerType === "TEXT" && (
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700 mb-1">Header Text</label>
+                  <input
+                    type="text"
+                    placeholder="e.g. 📊 Weekly Google Business Report"
+                    value={templateForm.headerContent}
+                    onChange={e => setTemplateForm({ ...templateForm, headerContent: e.target.value })}
+                    className="w-full h-8 px-2.5 rounded border border-slate-300 text-xs bg-white outline-none"
+                  />
+                </div>
+              )}
+
+              <div>
+                <label className="block text-xs font-semibold text-slate-700 mb-1">
+                  Body Text (Use {"{{1}}"}, {"{{2}}"} for dynamic parameters)
+                </label>
+                <textarea
+                  rows={4}
+                  value={templateForm.bodyText}
+                  onChange={e => setTemplateForm({ ...templateForm, bodyText: e.target.value })}
+                  className="w-full p-2.5 rounded border border-slate-300 text-xs font-sans bg-white outline-none focus:border-emerald-600 text-slate-800"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-slate-700 mb-1">Footer Text (Optional)</label>
+                <input
+                  type="text"
+                  placeholder="e.g. RankVed GMB Manager"
+                  value={templateForm.footerText}
+                  onChange={e => setTemplateForm({ ...templateForm, footerText: e.target.value })}
+                  className="w-full h-8 px-2.5 rounded border border-slate-300 text-xs bg-white outline-none"
+                />
+              </div>
+
+              <label className="flex items-center gap-2 p-2.5 bg-emerald-50 rounded border border-emerald-200 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={templateForm.submitToMeta}
+                  onChange={e => setTemplateForm({ ...templateForm, submitToMeta: e.target.checked })}
+                  className="accent-emerald-700 w-4 h-4"
+                />
+                <span className="text-xs font-semibold text-emerald-900">
+                  Submit directly to Meta Cloud API for official approval
+                </span>
+              </label>
+            </div>
+
+            <div className="px-5 py-3 bg-slate-50 border-t border-slate-200 flex items-center justify-end gap-2">
+              <button
+                onClick={() => setTemplateModalOpen(false)}
+                className="px-3.5 py-1.5 rounded text-xs font-semibold text-slate-600 hover:bg-slate-200 bg-slate-100 transition-colors cursor-pointer"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleSaveCustomTemplate}
+                disabled={actionLoading === "save_template"}
+                className="px-4 py-1.5 rounded text-xs font-bold bg-emerald-700 hover:bg-emerald-800 text-white transition-colors cursor-pointer shadow-xs flex items-center gap-1.5"
+              >
+                {actionLoading === "save_template" ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Save className="w-3.5 h-3.5" />}
+                <span>Save & Submit Template</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Modal: Template Visual Preview ─────────────────────────────── */}
+      {previewTemplate && (
+        <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-xs z-50 flex items-center justify-center p-3 sm:p-4">
+          <div className="bg-white rounded-xl shadow-2xl w-full max-w-md overflow-hidden border border-slate-200 animate-in zoom-in-95 duration-150">
+            <div className="px-4 py-3 bg-[#075e54] text-white flex items-center justify-between">
+              <div>
+                <h3 className="text-xs font-bold m-0">{previewTemplate.title || previewTemplate.name}</h3>
+                <p className="text-[10px] text-emerald-200 m-0">WhatsApp Official Message Preview</p>
+              </div>
+              <button
+                onClick={() => setPreviewTemplate(null)}
+                className="text-white hover:text-emerald-200 text-sm font-bold cursor-pointer"
+              >
+                ✕
+              </button>
+            </div>
+
+            <div className="p-4 bg-[#efeae2]" style={{ backgroundImage: "radial-gradient(#d1d7db 1px, transparent 1px)", backgroundSize: "16px 16px" }}>
+              <div className="bg-white rounded-lg p-3 text-xs shadow-xs space-y-2 text-slate-900 border border-slate-100">
+                {previewTemplate.headerType === "IMAGE" && (
+                  <div className="w-full h-32 bg-slate-200 rounded flex items-center justify-center text-slate-500 font-semibold text-xs border border-slate-300">
+                    📸 Live Post Graphic / Report Image
+                  </div>
+                )}
+                {previewTemplate.headerContent && (
+                  <p className="font-bold text-slate-900 m-0 text-xs">{previewTemplate.headerContent}</p>
+                )}
+                <p className="whitespace-pre-wrap font-sans text-xs m-0 leading-relaxed text-slate-800">
+                  {previewTemplate.bodyText}
+                </p>
+                {previewTemplate.footerText && (
+                  <p className="text-[10px] text-slate-400 m-0 pt-1 border-t border-slate-100">{previewTemplate.footerText}</p>
+                )}
+              </div>
+
+              {/* Quick Action Button Pills */}
+              {(() => {
+                let buttons = [];
+                try {
+                  buttons = previewTemplate.buttonsJson ? JSON.parse(previewTemplate.buttonsJson) : [];
+                } catch {}
+                if (buttons.length === 0) return null;
+                return (
+                  <div className="space-y-1 mt-2">
+                    {buttons.map((b: any, bIdx: number) => (
+                      <div key={bIdx} className="bg-white hover:bg-slate-50 text-emerald-800 text-center py-1.5 rounded border border-slate-200 font-semibold text-xs shadow-2xs">
+                        {b.text}
+                      </div>
+                    ))}
+                  </div>
+                );
+              })()}
+            </div>
+
+            <div className="p-3 bg-slate-50 border-t border-slate-200 flex justify-end">
+              <button
+                onClick={() => setPreviewTemplate(null)}
+                className="px-4 py-1.5 rounded text-xs font-semibold bg-slate-200 hover:bg-slate-300 text-slate-700 cursor-pointer"
+              >
+                Close Preview
               </button>
             </div>
           </div>
