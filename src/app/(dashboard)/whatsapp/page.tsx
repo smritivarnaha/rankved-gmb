@@ -114,6 +114,17 @@ export default function WhatsAppAgentCenterPage() {
   const [savingDrawer, setSavingDrawer] = useState(false);
   const [actionLoading, setActionLoading] = useState<string | null>(null);
 
+  // Quick Test Dispatch Modal state
+  const [testModalOpen, setTestModalOpen] = useState(false);
+  const [testPhone, setTestPhone] = useState("+91");
+  const [testMsgType, setTestMsgType] = useState<"CUSTOM_TEXT" | "OFFICIAL_TEMPLATE">("CUSTOM_TEXT");
+  const [testCustomText, setTestCustomText] = useState("👋 *Namaste from RankVed GMB AI!*\n\nThis is a live test notification from your GMB WhatsApp Manager.\n\n✨ *Live Status:* Active & Ready\n📊 *Features:* Automated Post Alerts, Review Replies, and Local SEO Intelligence.");
+  const [testSelectedTemplate, setTestSelectedTemplate] = useState("gbp_post_published_alert");
+  const [testTemplateParam1, setTestTemplateParam1] = useState("Dr. Nitika");
+  const [testTemplateParam2, setTestTemplateParam2] = useState("Apex Medical Center");
+  const [sendingTest, setSendingTest] = useState(false);
+  const [testResult, setTestResult] = useState<{ success: boolean; message?: string; error?: string } | null>(null);
+
   // WhatsApp Simulator state
   const [simProfileId, setSimProfileId] = useState<string>("");
   const [simMessages, setSimMessages] = useState<Array<{ sender: "user" | "bot"; text: string; time: string; buttons?: string[] }>>([]);
@@ -252,29 +263,48 @@ export default function WhatsAppAgentCenterPage() {
     }
   };
 
-  const handleTestAlert = async (profileId: string, phone: string) => {
-    if (!phone) {
-      alert("Please configure a client phone number in Train & Configure first.");
+  const openTestModalForProfile = (phone: string) => {
+    if (phone) setTestPhone(phone);
+    setTestResult(null);
+    setTestModalOpen(true);
+  };
+
+  const handleDispatchLiveTest = async () => {
+    if (!testPhone || testPhone.trim().length < 8) {
+      alert("Please enter a valid WhatsApp phone number with country code (e.g. +919876543210).");
       return;
     }
-    setActionLoading("test_" + profileId);
+    setSendingTest(true);
+    setTestResult(null);
     try {
-      const res = await fetch(`/api/profiles/${profileId}/whatsapp`, {
+      const res = await fetch("/api/whatsapp/send-test", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ action: "test_alert", phone }),
+        body: JSON.stringify({
+          phone: testPhone,
+          type: testMsgType,
+          messageText: testCustomText,
+          templateName: testSelectedTemplate,
+          templateParams: [testTemplateParam1, testTemplateParam2],
+        }),
       });
       const data = await res.json();
       if (res.ok && data.success) {
-        alert("✅ Test WhatsApp alert dispatched successfully!");
+        setTestResult({
+          success: true,
+          message: data.message || `Message dispatched successfully to WhatsApp!`,
+        });
         fetchAllData();
       } else {
-        alert("❌ Error: " + (data.error || "Failed to send test alert"));
+        setTestResult({
+          success: false,
+          error: data.error || "Failed to dispatch message via Meta Cloud API.",
+        });
       }
-    } catch (e: any) {
-      alert("Error: " + e.message);
+    } catch (err: any) {
+      setTestResult({ success: false, error: err.message || "Network error" });
     } finally {
-      setActionLoading(null);
+      setSendingTest(false);
     }
   };
 
@@ -547,28 +577,56 @@ export default function WhatsAppAgentCenterPage() {
           </div>
         </div>
 
-        <button
-          onClick={fetchAllData}
-          disabled={loading}
-          style={{
-            display: "inline-flex",
-            alignItems: "center",
-            gap: 8,
-            background: "#ffffff",
-            border: "none",
-            color: "#075E54",
-            padding: "9px 16px",
-            borderRadius: 8,
-            fontSize: 12,
-            fontWeight: 700,
-            cursor: "pointer",
-            boxShadow: "0 2px 6px rgba(0,0,0,0.15)",
-            transition: "all 0.15s ease",
-          }}
-        >
-          <RefreshCw size={14} className={loading ? "animate-spin" : ""} color="#075E54" />
-          <span>Refresh Data</span>
-        </button>
+        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+          {/* 🔥 Direct Test WhatsApp Button in Banner */}
+          <button
+            onClick={() => {
+              setTestResult(null);
+              setTestModalOpen(true);
+            }}
+            style={{
+              display: "inline-flex",
+              alignItems: "center",
+              gap: 7,
+              background: "#F59E0B",
+              border: "none",
+              color: "#ffffff",
+              padding: "9px 16px",
+              borderRadius: 8,
+              fontSize: 12,
+              fontWeight: 800,
+              cursor: "pointer",
+              boxShadow: "0 2px 8px rgba(245, 158, 11, 0.4)",
+              transition: "all 0.15s ease",
+            }}
+          >
+            <Zap size={14} color="#ffffff" fill="#ffffff" />
+            <span>⚡ Test Send WhatsApp</span>
+          </button>
+
+          <button
+            onClick={fetchAllData}
+            disabled={loading}
+            style={{
+              display: "inline-flex",
+              alignItems: "center",
+              gap: 8,
+              background: "#ffffff",
+              border: "none",
+              color: "#075E54",
+              padding: "9px 16px",
+              borderRadius: 8,
+              fontSize: 12,
+              fontWeight: 700,
+              cursor: "pointer",
+              boxShadow: "0 2px 6px rgba(0,0,0,0.15)",
+              transition: "all 0.15s ease",
+            }}
+          >
+            <RefreshCw size={14} className={loading ? "animate-spin" : ""} color="#075E54" />
+            <span>Refresh Data</span>
+          </button>
+        </div>
       </div>
 
       {/* ── KPI Stat Cards with Vibrant Colored Left Borders & Badges ── */}
@@ -622,7 +680,7 @@ export default function WhatsAppAgentCenterPage() {
         </div>
       </div>
 
-      {/* ── Main Tab Navigation Bar (Wrapped & High-Contrast Pill Buttons) ── */}
+      {/* ── Main Tab Navigation Bar ── */}
       <div
         style={{
           background: "#ffffff",
@@ -914,9 +972,8 @@ export default function WhatsAppAgentCenterPage() {
                         <td style={{ padding: "12px 16px", verticalAlign: "middle", textAlign: "right", whiteSpace: "nowrap" }}>
                           <div style={{ display: "inline-flex", alignItems: "center", gap: 5 }}>
                             <button
-                              onClick={() => handleTestAlert(p.id, p.whatsappRecipientPhone)}
-                              disabled={actionLoading === "test_" + p.id}
-                              title="Send instant test alert"
+                              onClick={() => openTestModalForProfile(p.whatsappRecipientPhone)}
+                              title="Test message send to WhatsApp"
                               style={{
                                 display: "inline-flex",
                                 alignItems: "center",
@@ -931,7 +988,7 @@ export default function WhatsAppAgentCenterPage() {
                                 cursor: "pointer",
                               }}
                             >
-                              {actionLoading === "test_" + p.id ? <Loader2 size={11} className="animate-spin" /> : <Zap size={11} color="#D97706" />}
+                              <Zap size={11} color="#D97706" />
                               <span>Test</span>
                             </button>
 
@@ -1557,18 +1614,44 @@ export default function WhatsAppAgentCenterPage() {
           
           {/* 🌟 1-Click Official Meta Developer Portal Launchpad */}
           <div style={{ background: "#ffffff", border: "1px solid #E2E8F0", borderRadius: 12, padding: "20px 24px", boxShadow: "0 2px 6px rgba(0,0,0,0.02)" }}>
-            <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 14 }}>
-              <div style={{ width: 36, height: 36, borderRadius: 8, background: "#EFF6FF", border: "1px solid #BFDBFE", display: "flex", alignItems: "center", justifyContent: "center", color: "#2563EB" }}>
-                <Globe size={18} />
+            <div style={{ display: "flex", flexWrap: "wrap", alignItems: "center", justifyContent: "space-between", gap: 12, marginBottom: 14 }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                <div style={{ width: 36, height: 36, borderRadius: 8, background: "#EFF6FF", border: "1px solid #BFDBFE", display: "flex", alignItems: "center", justifyContent: "center", color: "#2563EB" }}>
+                  <Globe size={18} />
+                </div>
+                <div>
+                  <h3 style={{ fontSize: 15, fontWeight: 800, margin: 0, color: "#0F172A" }}>
+                    Official Meta Developer Portal & Setup Links
+                  </h3>
+                  <p style={{ fontSize: 12, color: "#64748B", margin: "2px 0 0" }}>
+                    Open these official Meta links in new tabs to create your WhatsApp Cloud App, get tokens, and subscribe to Webhooks.
+                  </p>
+                </div>
               </div>
-              <div>
-                <h3 style={{ fontSize: 15, fontWeight: 800, margin: 0, color: "#0F172A" }}>
-                  Official Meta Developer Portal & Setup Links
-                </h3>
-                <p style={{ fontSize: 12, color: "#64748B", margin: "2px 0 0" }}>
-                  Open these official Meta links in new tabs to create your WhatsApp Cloud App, get tokens, and subscribe to Webhooks.
-                </p>
-              </div>
+
+              <button
+                onClick={() => {
+                  setTestResult(null);
+                  setTestModalOpen(true);
+                }}
+                style={{
+                  display: "inline-flex",
+                  alignItems: "center",
+                  gap: 6,
+                  background: "#F59E0B",
+                  border: "none",
+                  color: "#ffffff",
+                  padding: "8px 14px",
+                  borderRadius: 6,
+                  fontSize: 12,
+                  fontWeight: 800,
+                  cursor: "pointer",
+                  boxShadow: "0 2px 6px rgba(245, 158, 11, 0.3)",
+                }}
+              >
+                <Zap size={13} color="#ffffff" fill="#ffffff" />
+                <span>Test Send WhatsApp</span>
+              </button>
             </div>
 
             <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))", gap: 12 }}>
@@ -2241,6 +2324,290 @@ export default function WhatsAppAgentCenterPage() {
               >
                 {actionLoading === "save_template" ? <Loader2 size={13} className="animate-spin" /> : <Save size={13} />}
                 <span>Save & Register Template</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── 🚀 Test WhatsApp Dispatch Modal ── */}
+      {testModalOpen && (
+        <div
+          style={{
+            position: "fixed",
+            inset: 0,
+            background: "rgba(15, 23, 42, 0.65)",
+            zIndex: 1000,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            padding: 20,
+          }}
+          onClick={() => setTestModalOpen(false)}
+        >
+          <div
+            style={{
+              background: "#ffffff",
+              borderRadius: 16,
+              width: "100%",
+              maxWidth: 580,
+              maxHeight: "92vh",
+              overflowY: "auto",
+              padding: 24,
+              boxShadow: "0 20px 30px -5px rgba(0,0,0,0.2)",
+              display: "flex",
+              flexDirection: "column",
+              gap: 16,
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Modal Header */}
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", borderBottom: "1px solid #F1F5F9", paddingBottom: 14 }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                <div style={{ width: 38, height: 38, borderRadius: 10, background: "#FEF3C7", border: "1px solid #FDE68A", display: "flex", alignItems: "center", justifyContent: "center", color: "#D97706" }}>
+                  <Zap size={20} />
+                </div>
+                <div>
+                  <h3 style={{ fontSize: 16, fontWeight: 800, margin: 0, color: "#0F172A" }}>
+                    Send Live WhatsApp Test Message
+                  </h3>
+                  <p style={{ fontSize: 12, color: "#64748B", margin: "2px 0 0" }}>
+                    Test your Meta Cloud API connection by sending an instant message to any WhatsApp number.
+                  </p>
+                </div>
+              </div>
+              <button onClick={() => setTestModalOpen(false)} style={{ background: "none", border: "none", color: "#94A3B8", cursor: "pointer" }}>
+                <X size={20} />
+              </button>
+            </div>
+
+            {/* Recipient Number Input */}
+            <div>
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 4 }}>
+                <label style={{ fontSize: 11, fontWeight: 800, color: "#475569" }}>
+                  Recipient WhatsApp Number (with Country Code)
+                </label>
+                {profiles.length > 0 && (
+                  <select
+                    onChange={(e) => {
+                      if (e.target.value) setTestPhone(e.target.value);
+                    }}
+                    style={{ fontSize: 11, color: "#2563EB", background: "none", border: "none", cursor: "pointer", fontWeight: 700 }}
+                  >
+                    <option value="">Prefill from Profile...</option>
+                    {profiles.filter(p => p.whatsappRecipientPhone).map(p => (
+                      <option key={p.id} value={p.whatsappRecipientPhone}>
+                        {p.name} ({p.whatsappRecipientPhone})
+                      </option>
+                    ))}
+                  </select>
+                )}
+              </div>
+              <input
+                type="text"
+                value={testPhone}
+                onChange={(e) => setTestPhone(e.target.value)}
+                placeholder="+919876543210"
+                style={{
+                  width: "100%",
+                  height: 40,
+                  padding: "0 12px",
+                  background: "#F8FAFC",
+                  border: "1.5px solid #CBD5E1",
+                  borderRadius: 8,
+                  fontSize: 13,
+                  fontWeight: 600,
+                  color: "#0F172A",
+                  outline: "none",
+                }}
+              />
+            </div>
+
+            {/* Message Type Selector */}
+            <div>
+              <label style={{ fontSize: 11, fontWeight: 800, color: "#475569", display: "block", marginBottom: 6 }}>
+                Message Dispatch Format
+              </label>
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+                <button
+                  type="button"
+                  onClick={() => setTestMsgType("CUSTOM_TEXT")}
+                  style={{
+                    padding: "10px",
+                    borderRadius: 8,
+                    fontSize: 12,
+                    fontWeight: testMsgType === "CUSTOM_TEXT" ? 800 : 600,
+                    border: testMsgType === "CUSTOM_TEXT" ? "2px solid #059669" : "1.5px solid #E2E8F0",
+                    background: testMsgType === "CUSTOM_TEXT" ? "#ECFDF5" : "#F8FAFC",
+                    color: testMsgType === "CUSTOM_TEXT" ? "#065F46" : "#475569",
+                    cursor: "pointer",
+                    textAlign: "center",
+                  }}
+                >
+                  💬 Direct Custom Message
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setTestMsgType("OFFICIAL_TEMPLATE")}
+                  style={{
+                    padding: "10px",
+                    borderRadius: 8,
+                    fontSize: 12,
+                    fontWeight: testMsgType === "OFFICIAL_TEMPLATE" ? 800 : 600,
+                    border: testMsgType === "OFFICIAL_TEMPLATE" ? "2px solid #2563EB" : "1.5px solid #E2E8F0",
+                    background: testMsgType === "OFFICIAL_TEMPLATE" ? "#EFF6FF" : "#F8FAFC",
+                    color: testMsgType === "OFFICIAL_TEMPLATE" ? "#1E40AF" : "#475569",
+                    cursor: "pointer",
+                    textAlign: "center",
+                  }}
+                >
+                  📋 Meta Official Template
+                </button>
+              </div>
+            </div>
+
+            {/* Option A: Custom Text */}
+            {testMsgType === "CUSTOM_TEXT" && (
+              <div>
+                <label style={{ fontSize: 11, fontWeight: 800, color: "#475569", display: "block", marginBottom: 4 }}>
+                  Message Text (supports WhatsApp markdown *bold*, _italics_)
+                </label>
+                <textarea
+                  rows={4}
+                  value={testCustomText}
+                  onChange={(e) => setTestCustomText(e.target.value)}
+                  style={{
+                    width: "100%",
+                    padding: 12,
+                    background: "#F8FAFC",
+                    border: "1.5px solid #CBD5E1",
+                    borderRadius: 8,
+                    fontSize: 12,
+                    color: "#0F172A",
+                    lineHeight: 1.4,
+                  }}
+                />
+              </div>
+            )}
+
+            {/* Option B: Official Template Selection */}
+            {testMsgType === "OFFICIAL_TEMPLATE" && (
+              <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+                <div>
+                  <label style={{ fontSize: 11, fontWeight: 800, color: "#475569", display: "block", marginBottom: 4 }}>
+                    Choose Meta Approved Template
+                  </label>
+                  <select
+                    value={testSelectedTemplate}
+                    onChange={(e) => setTestSelectedTemplate(e.target.value)}
+                    style={{
+                      width: "100%",
+                      height: 40,
+                      padding: "0 10px",
+                      background: "#F8FAFC",
+                      border: "1.5px solid #CBD5E1",
+                      borderRadius: 8,
+                      fontSize: 12,
+                      fontWeight: 600,
+                      color: "#0F172A",
+                    }}
+                  >
+                    {templates.map(t => (
+                      <option key={t.id} value={t.name}>
+                        {t.title || t.name} ({t.category} • {t.status})
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+                  <div>
+                    <label style={{ fontSize: 11, fontWeight: 700, color: "#475569", display: "block", marginBottom: 4 }}>
+                      {"Variable {{1}}"}
+                    </label>
+                    <input
+                      type="text"
+                      value={testTemplateParam1}
+                      onChange={(e) => setTestTemplateParam1(e.target.value)}
+                      placeholder="e.g. Dr. Nitika"
+                      style={{ width: "100%", height: 36, padding: "0 10px", background: "#F8FAFC", border: "1px solid #CBD5E1", borderRadius: 6, fontSize: 12 }}
+                    />
+                  </div>
+                  <div>
+                    <label style={{ fontSize: 11, fontWeight: 700, color: "#475569", display: "block", marginBottom: 4 }}>
+                      {"Variable {{2}}"}
+                    </label>
+                    <input
+                      type="text"
+                      value={testTemplateParam2}
+                      onChange={(e) => setTestTemplateParam2(e.target.value)}
+                      placeholder="e.g. Apex Clinic"
+                      style={{ width: "100%", height: 36, padding: "0 10px", background: "#F8FAFC", border: "1px solid #CBD5E1", borderRadius: 6, fontSize: 12 }}
+                    />
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Live Result / Error Callout */}
+            {testResult && (
+              <div
+                style={{
+                  padding: "12px 16px",
+                  borderRadius: 8,
+                  fontSize: 12,
+                  display: "flex",
+                  alignItems: "flex-start",
+                  gap: 8,
+                  background: testResult.success ? "#ECFDF5" : "#FEF2F2",
+                  border: testResult.success ? "1.5px solid #A7F3D0" : "1.5px solid #FECACA",
+                  color: testResult.success ? "#065F46" : "#991B1B",
+                }}
+              >
+                {testResult.success ? <CheckCircle size={16} color="#059669" /> : <AlertTriangle size={16} color="#DC2626" />}
+                <div style={{ flex: 1 }}>
+                  <div style={{ fontWeight: 800 }}>
+                    {testResult.success ? "✅ Message Dispatched Successfully!" : "❌ Dispatch Failed"}
+                  </div>
+                  <div style={{ fontSize: 11, marginTop: 2, wordBreak: "break-word" }}>
+                    {testResult.message || testResult.error}
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Modal Actions */}
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "flex-end", gap: 10, borderTop: "1px solid #F1F5F9", paddingTop: 14 }}>
+              <button
+                type="button"
+                onClick={() => setTestModalOpen(false)}
+                style={{ padding: "9px 16px", background: "#ffffff", border: "1px solid #CBD5E1", borderRadius: 8, fontSize: 12, fontWeight: 700, color: "#475569", cursor: "pointer" }}
+              >
+                Close
+              </button>
+
+              <button
+                type="button"
+                onClick={handleDispatchLiveTest}
+                disabled={sendingTest}
+                style={{
+                  display: "inline-flex",
+                  alignItems: "center",
+                  gap: 8,
+                  padding: "9px 22px",
+                  background: "linear-gradient(135deg, #075E54 0%, #128C7E 100%)",
+                  border: "none",
+                  borderRadius: 8,
+                  fontSize: 13,
+                  fontWeight: 800,
+                  color: "#ffffff",
+                  cursor: "pointer",
+                  boxShadow: "0 4px 12px rgba(7, 94, 84, 0.3)",
+                }}
+              >
+                {sendingTest ? <Loader2 size={15} className="animate-spin" /> : <Send size={15} />}
+                <span>{sendingTest ? "Dispatching via Meta..." : "🚀 Send Live Message to WhatsApp"}</span>
               </button>
             </div>
           </div>
