@@ -47,7 +47,11 @@ import {
   ArrowRight,
   Share2,
   X,
-  ChevronDown
+  ChevronDown,
+  Key,
+  Shield,
+  Building,
+  CheckSquare
 } from "lucide-react";
 
 // Helper for vibrant profile avatar colors
@@ -103,6 +107,7 @@ export default function WhatsAppAgentCenterPage() {
   const [globalSettings, setGlobalSettings] = useState<any>({});
   const [savingGlobal, setSavingGlobal] = useState(false);
   const [copiedUrl, setCopiedUrl] = useState(false);
+  const [copiedToken, setCopiedToken] = useState(false);
 
   // Drawer Form state
   const [drawerData, setDrawerData] = useState<any>({});
@@ -456,6 +461,12 @@ export default function WhatsAppAgentCenterPage() {
     setTimeout(() => setCopiedUrl(false), 2000);
   };
 
+  const copyVerifyToken = () => {
+    navigator.clipboard.writeText(globalSettings.whatsappWebhookSecret || "rankved_gmb_webhook_secure_token");
+    setCopiedToken(true);
+    setTimeout(() => setCopiedToken(false), 2000);
+  };
+
   const filteredProfiles = profiles.filter(p => {
     const matchesSearch =
       p.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -474,16 +485,16 @@ export default function WhatsAppAgentCenterPage() {
   const currentSimProfile = profiles.find(p => p.id === simProfileId);
 
   return (
-    <div style={{ fontFamily: "Inter, sans-serif", maxWidth: 1280, margin: "0 auto", paddingBottom: 64, color: "#0f172a" }}>
+    <div style={{ fontFamily: "Inter, sans-serif", maxWidth: "100%", margin: "0 auto", paddingBottom: 64, color: "#0f172a" }}>
       
       {/* ── Top Header Banner (Vibrant WhatsApp Deep Emerald Gradient) ── */}
       <div
         style={{
           background: "linear-gradient(135deg, #075E54 0%, #128C7E 50%, #25D366 100%)",
           borderRadius: 14,
-          padding: "20px 24px",
+          padding: "18px 22px",
           color: "#ffffff",
-          marginBottom: 20,
+          marginBottom: 18,
           display: "flex",
           flexWrap: "wrap",
           alignItems: "center",
@@ -492,12 +503,12 @@ export default function WhatsAppAgentCenterPage() {
           boxShadow: "0 10px 25px -5px rgba(18, 140, 126, 0.3), 0 8px 10px -6px rgba(18, 140, 126, 0.2)",
         }}
       >
-        <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
           <div
             style={{
-              width: 52,
-              height: 52,
-              borderRadius: 14,
+              width: 48,
+              height: 48,
+              borderRadius: 12,
               background: "rgba(255, 255, 255, 0.2)",
               border: "1.5px solid rgba(255, 255, 255, 0.35)",
               display: "flex",
@@ -507,11 +518,11 @@ export default function WhatsAppAgentCenterPage() {
               boxShadow: "0 4px 12px rgba(0,0,0,0.1)",
             }}
           >
-            <MessageSquare size={26} color="#ffffff" />
+            <MessageSquare size={24} color="#ffffff" />
           </div>
           <div>
-            <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
-              <h1 style={{ fontSize: 20, fontWeight: 800, margin: 0, color: "#ffffff", letterSpacing: "-0.02em" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+              <h1 style={{ fontSize: 19, fontWeight: 800, margin: 0, color: "#ffffff", letterSpacing: "-0.02em" }}>
                 WhatsApp AI Agent & Option Chains
               </h1>
               <span
@@ -561,11 +572,11 @@ export default function WhatsAppAgentCenterPage() {
       </div>
 
       {/* ── KPI Stat Cards with Vibrant Colored Left Borders & Badges ── */}
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))", gap: 14, marginBottom: 20 }}>
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: 14, marginBottom: 18 }}>
         {/* Card 1 - Active Agents (Emerald) */}
-        <div style={{ background: "#ffffff", border: "1px solid #e2e8f0", borderLeft: "5px solid #10B981", borderRadius: 12, padding: "16px 18px", display: "flex", alignItems: "center", gap: 14, boxShadow: "0 2px 4px rgba(0,0,0,0.03)" }}>
-          <div style={{ width: 44, height: 44, borderRadius: 10, background: "#ECFDF5", border: "1.5px solid #A7F3D0", display: "flex", alignItems: "center", justifyContent: "center", color: "#059669", flexShrink: 0 }}>
-            <Phone size={20} />
+        <div style={{ background: "#ffffff", border: "1px solid #e2e8f0", borderLeft: "5px solid #10B981", borderRadius: 12, padding: "14px 16px", display: "flex", alignItems: "center", gap: 12, boxShadow: "0 2px 4px rgba(0,0,0,0.03)" }}>
+          <div style={{ width: 42, height: 42, borderRadius: 10, background: "#ECFDF5", border: "1.5px solid #A7F3D0", display: "flex", alignItems: "center", justifyContent: "center", color: "#059669", flexShrink: 0 }}>
+            <Phone size={19} />
           </div>
           <div>
             <p style={{ fontSize: 11, fontWeight: 700, color: "#64748B", textTransform: "uppercase", letterSpacing: "0.06em", margin: 0 }}>Active WhatsApp Agents</p>
@@ -576,9 +587,9 @@ export default function WhatsAppAgentCenterPage() {
         </div>
 
         {/* Card 2 - Official Templates (Royal Blue) */}
-        <div style={{ background: "#ffffff", border: "1px solid #e2e8f0", borderLeft: "5px solid #2563EB", borderRadius: 12, padding: "16px 18px", display: "flex", alignItems: "center", gap: 14, boxShadow: "0 2px 4px rgba(0,0,0,0.03)" }}>
-          <div style={{ width: 44, height: 44, borderRadius: 10, background: "#EFF6FF", border: "1.5px solid #BFDBFE", display: "flex", alignItems: "center", justifyContent: "center", color: "#2563EB", flexShrink: 0 }}>
-            <FileText size={20} />
+        <div style={{ background: "#ffffff", border: "1px solid #e2e8f0", borderLeft: "5px solid #2563EB", borderRadius: 12, padding: "14px 16px", display: "flex", alignItems: "center", gap: 12, boxShadow: "0 2px 4px rgba(0,0,0,0.03)" }}>
+          <div style={{ width: 42, height: 42, borderRadius: 10, background: "#EFF6FF", border: "1.5px solid #BFDBFE", display: "flex", alignItems: "center", justifyContent: "center", color: "#2563EB", flexShrink: 0 }}>
+            <FileText size={19} />
           </div>
           <div>
             <p style={{ fontSize: 11, fontWeight: 700, color: "#64748B", textTransform: "uppercase", letterSpacing: "0.06em", margin: 0 }}>Official Templates</p>
@@ -589,9 +600,9 @@ export default function WhatsAppAgentCenterPage() {
         </div>
 
         {/* Card 3 - Dispatched Messages (Purple) */}
-        <div style={{ background: "#ffffff", border: "1px solid #e2e8f0", borderLeft: "5px solid #8B5CF6", borderRadius: 12, padding: "16px 18px", display: "flex", alignItems: "center", gap: 14, boxShadow: "0 2px 4px rgba(0,0,0,0.03)" }}>
-          <div style={{ width: 44, height: 44, borderRadius: 10, background: "#F5F3FF", border: "1.5px solid #DDD6FE", display: "flex", alignItems: "center", justifyContent: "center", color: "#7C3AED", flexShrink: 0 }}>
-            <MessageSquare size={20} />
+        <div style={{ background: "#ffffff", border: "1px solid #e2e8f0", borderLeft: "5px solid #8B5CF6", borderRadius: 12, padding: "14px 16px", display: "flex", alignItems: "center", gap: 12, boxShadow: "0 2px 4px rgba(0,0,0,0.03)" }}>
+          <div style={{ width: 42, height: 42, borderRadius: 10, background: "#F5F3FF", border: "1.5px solid #DDD6FE", display: "flex", alignItems: "center", justifyContent: "center", color: "#7C3AED", flexShrink: 0 }}>
+            <MessageSquare size={19} />
           </div>
           <div>
             <p style={{ fontSize: 11, fontWeight: 700, color: "#64748B", textTransform: "uppercase", letterSpacing: "0.06em", margin: 0 }}>Dispatched Messages</p>
@@ -600,27 +611,28 @@ export default function WhatsAppAgentCenterPage() {
         </div>
 
         {/* Card 4 - RAG Engine (Golden Amber) */}
-        <div style={{ background: "#ffffff", border: "1px solid #e2e8f0", borderLeft: "5px solid #F59E0B", borderRadius: 12, padding: "16px 18px", display: "flex", alignItems: "center", gap: 14, boxShadow: "0 2px 4px rgba(0,0,0,0.03)" }}>
-          <div style={{ width: 44, height: 44, borderRadius: 10, background: "#FFFBEB", border: "1.5px solid #FDE68A", display: "flex", alignItems: "center", justifyContent: "center", color: "#D97706", flexShrink: 0 }}>
-            <Sparkles size={20} />
+        <div style={{ background: "#ffffff", border: "1px solid #e2e8f0", borderLeft: "5px solid #F59E0B", borderRadius: 12, padding: "14px 16px", display: "flex", alignItems: "center", gap: 12, boxShadow: "0 2px 4px rgba(0,0,0,0.03)" }}>
+          <div style={{ width: 42, height: 42, borderRadius: 10, background: "#FFFBEB", border: "1.5px solid #FDE68A", display: "flex", alignItems: "center", justifyContent: "center", color: "#D97706", flexShrink: 0 }}>
+            <Sparkles size={19} />
           </div>
           <div>
             <p style={{ fontSize: 11, fontWeight: 700, color: "#64748B", textTransform: "uppercase", letterSpacing: "0.06em", margin: 0 }}>RAG Engine Active</p>
-            <p style={{ fontSize: 17, fontWeight: 800, color: "#0F172A", margin: "2px 0 0" }}>{globalSettings?.whatsappAiModel || "GPT-4o"}</p>
+            <p style={{ fontSize: 16, fontWeight: 800, color: "#0F172A", margin: "2px 0 0" }}>{globalSettings?.whatsappAiModel || "GPT-4o"}</p>
           </div>
         </div>
       </div>
 
-      {/* ── Main Tab Navigation Bar ── */}
+      {/* ── Main Tab Navigation Bar (Wrapped & High-Contrast Pill Buttons) ── */}
       <div
         style={{
           background: "#ffffff",
           border: "1px solid #E2E8F0",
           borderRadius: 12,
-          padding: "6px",
+          padding: "8px",
           display: "flex",
-          gap: 6,
-          overflowX: "auto",
+          flexWrap: "wrap",
+          alignItems: "center",
+          gap: 8,
           marginBottom: 18,
           boxShadow: "0 2px 4px rgba(0,0,0,0.02)",
         }}
@@ -630,7 +642,7 @@ export default function WhatsAppAgentCenterPage() {
           { id: "templates", label: "📋 Official Templates & Flow Chains (AiSensy Style)", icon: Workflow, count: templates.length },
           { id: "simulator", label: "📱 Interactive WhatsApp Simulator", icon: Smartphone },
           { id: "inbox", label: "Live Activity & Chat Logs", icon: History, count: logs.length },
-          { id: "api", label: "Cloud API & Webhook", icon: SettingsIcon },
+          { id: "api", label: "⚙️ Cloud API & Meta Setup", icon: SettingsIcon },
           { id: "training_guide", label: "5-Pillars Intelligence Guide", icon: Sparkles },
         ].map((tab) => {
           const Icon = tab.icon;
@@ -643,20 +655,26 @@ export default function WhatsAppAgentCenterPage() {
                 display: "inline-flex",
                 alignItems: "center",
                 gap: 8,
-                padding: "9px 16px",
+                padding: "8px 14px",
                 borderRadius: 8,
                 fontSize: 12,
                 fontWeight: active ? 800 : 600,
-                color: active ? "#ffffff" : "#475569",
-                background: active ? "#075E54" : "transparent",
-                border: "none",
+                color: active ? "#ffffff" : "#334155",
+                background: active ? "#075E54" : "#F8FAFC",
+                border: active ? "1px solid #075E54" : "1px solid #E2E8F0",
                 cursor: "pointer",
                 whiteSpace: "nowrap",
                 transition: "all 0.15s ease",
                 boxShadow: active ? "0 2px 6px rgba(7, 94, 84, 0.3)" : "none",
               }}
+              onMouseEnter={(e) => {
+                if (!active) e.currentTarget.style.background = "#F1F5F9";
+              }}
+              onMouseLeave={(e) => {
+                if (!active) e.currentTarget.style.background = "#F8FAFC";
+              }}
             >
-              <Icon size={16} color={active ? "#A7F3D0" : "#64748B"} />
+              <Icon size={15} color={active ? "#A7F3D0" : "#64748B"} />
               <span>{tab.label}</span>
               {tab.count !== undefined && (
                 <span
@@ -741,18 +759,18 @@ export default function WhatsAppAgentCenterPage() {
             </div>
           </div>
 
-          {/* Profiles Table */}
+          {/* Profiles Table with Fixed Layout and No Cut Off */}
           <div style={{ overflowX: "auto" }}>
-            <table style={{ width: "100%", borderCollapse: "collapse", textAlign: "left", fontSize: 12 }}>
+            <table style={{ width: "100%", minWidth: 1000, borderCollapse: "collapse", textAlign: "left", fontSize: 12 }}>
               <thead>
                 <tr style={{ background: "#F1F5F9", borderBottom: "1px solid #E2E8F0", color: "#475569", fontWeight: 700, fontSize: 11, textTransform: "uppercase", letterSpacing: "0.05em" }}>
-                  <th style={{ padding: "12px 18px" }}>Profile & Doctor</th>
-                  <th style={{ padding: "12px 14px" }}>Agent Status</th>
-                  <th style={{ padding: "12px 14px" }}>Client WhatsApp</th>
-                  <th style={{ padding: "12px 14px" }}>Schedule & Time</th>
-                  <th style={{ padding: "12px 14px" }}>Knowledge Persona</th>
-                  <th style={{ padding: "12px 14px" }}>Alert Triggers</th>
-                  <th style={{ padding: "12px 18px", textAlign: "right" }}>Actions</th>
+                  <th style={{ padding: "12px 16px", width: "32%" }}>Profile & Doctor</th>
+                  <th style={{ padding: "12px 12px", width: "11%" }}>Agent Status</th>
+                  <th style={{ padding: "12px 12px", width: "15%" }}>Client WhatsApp</th>
+                  <th style={{ padding: "12px 12px", width: "14%" }}>Schedule & Time</th>
+                  <th style={{ padding: "12px 12px", width: "12%" }}>Knowledge</th>
+                  <th style={{ padding: "12px 12px", width: "8%" }}>Triggers</th>
+                  <th style={{ padding: "12px 16px", width: "18%", textAlign: "right" }}>Actions</th>
                 </tr>
               </thead>
               <tbody>
@@ -775,12 +793,12 @@ export default function WhatsAppAgentCenterPage() {
                         onMouseEnter={(e) => (e.currentTarget.style.background = "#F8FAFC")}
                         onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
                       >
-                        <td style={{ padding: "14px 18px", verticalAlign: "middle" }}>
-                          <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+                        <td style={{ padding: "12px 16px", verticalAlign: "middle" }}>
+                          <div style={{ display: "flex", alignItems: "flex-start", gap: 10 }}>
                             <div
                               style={{
-                                width: 36,
-                                height: 36,
+                                width: 34,
+                                height: 34,
                                 borderRadius: "50%",
                                 background: avatar.bg,
                                 border: `1.5px solid ${avatar.border}`,
@@ -791,27 +809,38 @@ export default function WhatsAppAgentCenterPage() {
                                 fontWeight: 800,
                                 fontSize: 13,
                                 flexShrink: 0,
+                                marginTop: 2,
                               }}
                             >
                               {initials}
                             </div>
-                            <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
-                              <span style={{ fontWeight: 700, color: "#0F172A", fontSize: 13 }}>{p.name}</span>
-                              <span style={{ fontSize: 11, color: "#64748B" }}>
-                                {p.whatsappRecipientName ? `👤 ${p.whatsappRecipientName}` : (p.address?.split(",")[0] || "No contact set")}
+                            <div style={{ display: "flex", flexDirection: "column", gap: 2, minWidth: 0 }}>
+                              <span
+                                style={{
+                                  fontWeight: 700,
+                                  color: "#0F172A",
+                                  fontSize: 13,
+                                  lineHeight: 1.35,
+                                  wordBreak: "break-word",
+                                }}
+                              >
+                                {p.name}
+                              </span>
+                              <span style={{ fontSize: 11, color: "#64748B", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                                {p.whatsappRecipientName ? `👤 Doctor: ${p.whatsappRecipientName}` : (p.address?.split(",")[0] || "No contact set")}
                               </span>
                             </div>
                           </div>
                         </td>
 
-                        <td style={{ padding: "14px 14px", verticalAlign: "middle" }}>
+                        <td style={{ padding: "12px 12px", verticalAlign: "middle", whiteSpace: "nowrap" }}>
                           <button
                             onClick={(e) => handleToggleProfileActive(p, e)}
                             style={{
                               display: "inline-flex",
                               alignItems: "center",
                               gap: 6,
-                              padding: "4px 12px",
+                              padding: "4px 10px",
                               borderRadius: 20,
                               fontSize: 11,
                               fontWeight: 800,
@@ -822,68 +851,68 @@ export default function WhatsAppAgentCenterPage() {
                               boxShadow: isEnabled ? "0 1px 3px rgba(16, 185, 129, 0.15)" : "none",
                             }}
                           >
-                            <span style={{ width: 7, height: 7, borderRadius: "50%", background: isEnabled ? "#10B981" : "#94A3B8" }} />
+                            <span style={{ width: 6, height: 6, borderRadius: "50%", background: isEnabled ? "#10B981" : "#94A3B8" }} />
                             <span>{isEnabled ? "ACTIVE" : "PAUSED"}</span>
                           </button>
                         </td>
 
-                        <td style={{ padding: "14px 14px", verticalAlign: "middle" }}>
+                        <td style={{ padding: "12px 12px", verticalAlign: "middle", whiteSpace: "nowrap" }}>
                           {p.whatsappRecipientPhone ? (
-                            <div style={{ display: "inline-flex", alignItems: "center", gap: 6, background: "#F0FDF4", border: "1px solid #BBF7D0", padding: "3px 8px", borderRadius: 6 }}>
+                            <div style={{ display: "inline-flex", alignItems: "center", gap: 5, background: "#F0FDF4", border: "1px solid #BBF7D0", padding: "3px 8px", borderRadius: 6 }}>
                               <Phone size={11} color="#16A34A" />
-                              <span style={{ fontFamily: "monospace", fontSize: 12, fontWeight: 700, color: "#166534" }}>
+                              <span style={{ fontFamily: "monospace", fontSize: 11, fontWeight: 700, color: "#166534" }}>
                                 {p.whatsappRecipientPhone}
                               </span>
                             </div>
                           ) : (
-                            <span style={{ fontSize: 11, color: "#94A3B8", fontStyle: "italic" }}>Not configured</span>
+                            <span style={{ fontSize: 11, color: "#94A3B8", fontStyle: "italic" }}>Not set</span>
                           )}
                         </td>
 
-                        <td style={{ padding: "14px 14px", verticalAlign: "middle" }}>
+                        <td style={{ padding: "12px 12px", verticalAlign: "middle", whiteSpace: "nowrap" }}>
                           <div style={{ display: "inline-flex", alignItems: "center", gap: 5, color: "#1E40AF", background: "#EFF6FF", border: "1px solid #BFDBFE", padding: "3px 8px", borderRadius: 6, fontSize: 11, fontWeight: 600 }}>
-                            <Clock size={12} color="#2563EB" />
+                            <Clock size={11} color="#2563EB" />
                             <span>
                               {p.whatsappReportingSchedule || "WEEKLY"} @ {p.whatsappReportTime || "09:00"}
                             </span>
                           </div>
                         </td>
 
-                        <td style={{ padding: "14px 14px", verticalAlign: "middle" }}>
+                        <td style={{ padding: "12px 12px", verticalAlign: "middle", whiteSpace: "nowrap" }}>
                           {p.whatsappCustomInstructions || p.whatsappKnowledgeBase ? (
                             <span
                               style={{
                                 display: "inline-flex",
                                 alignItems: "center",
                                 gap: 4,
-                                padding: "3px 8px",
-                                borderRadius: 12,
+                                padding: "2px 7px",
+                                borderRadius: 10,
                                 background: "#F5F3FF",
                                 border: "1px solid #DDD6FE",
                                 color: "#6D28D9",
-                                fontSize: 11,
+                                fontSize: 10,
                                 fontWeight: 700,
                               }}
                             >
-                              <Sparkles size={11} color="#7C3AED" />
-                              Custom Trained
+                              <Sparkles size={10} color="#7C3AED" />
+                              Trained
                             </span>
                           ) : (
-                            <span style={{ fontSize: 11, color: "#94A3B8" }}>Default Persona</span>
+                            <span style={{ fontSize: 11, color: "#94A3B8" }}>Default</span>
                           )}
                         </td>
 
-                        <td style={{ padding: "14px 14px", verticalAlign: "middle" }}>
-                          <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                            <span title="Post Notifications" style={{ opacity: p.whatsappNotifyPost !== false ? 1 : 0.25, fontSize: 14 }}>📸</span>
-                            <span title="Review Notifications" style={{ opacity: p.whatsappNotifyReview !== false ? 1 : 0.25, fontSize: 14 }}>⭐</span>
-                            <span title="Auto-Reply Notifications" style={{ opacity: p.whatsappNotifyReply !== false ? 1 : 0.25, fontSize: 14 }}>💬</span>
-                            <span title="Performance Digest" style={{ opacity: p.whatsappNotifyPerformance !== false ? 1 : 0.25, fontSize: 14 }}>📊</span>
+                        <td style={{ padding: "12px 12px", verticalAlign: "middle", whiteSpace: "nowrap" }}>
+                          <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
+                            <span title="Post Notifications" style={{ opacity: p.whatsappNotifyPost !== false ? 1 : 0.25, fontSize: 13 }}>📸</span>
+                            <span title="Review Notifications" style={{ opacity: p.whatsappNotifyReview !== false ? 1 : 0.25, fontSize: 13 }}>⭐</span>
+                            <span title="Auto-Reply Notifications" style={{ opacity: p.whatsappNotifyReply !== false ? 1 : 0.25, fontSize: 13 }}>💬</span>
+                            <span title="Performance Digest" style={{ opacity: p.whatsappNotifyPerformance !== false ? 1 : 0.25, fontSize: 13 }}>📊</span>
                           </div>
                         </td>
 
-                        <td style={{ padding: "14px 18px", verticalAlign: "middle", textAlign: "right" }}>
-                          <div style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
+                        <td style={{ padding: "12px 16px", verticalAlign: "middle", textAlign: "right", whiteSpace: "nowrap" }}>
+                          <div style={{ display: "inline-flex", alignItems: "center", gap: 5 }}>
                             <button
                               onClick={() => handleTestAlert(p.id, p.whatsappRecipientPhone)}
                               disabled={actionLoading === "test_" + p.id}
@@ -891,18 +920,18 @@ export default function WhatsAppAgentCenterPage() {
                               style={{
                                 display: "inline-flex",
                                 alignItems: "center",
-                                gap: 4,
+                                gap: 3,
                                 background: "#FFFBEB",
                                 border: "1px solid #FDE68A",
                                 color: "#B45309",
-                                padding: "5px 10px",
+                                padding: "4px 8px",
                                 borderRadius: 6,
                                 fontSize: 11,
                                 fontWeight: 700,
                                 cursor: "pointer",
                               }}
                             >
-                              {actionLoading === "test_" + p.id ? <Loader2 size={12} className="animate-spin" /> : <Zap size={12} color="#D97706" />}
+                              {actionLoading === "test_" + p.id ? <Loader2 size={11} className="animate-spin" /> : <Zap size={11} color="#D97706" />}
                               <span>Test</span>
                             </button>
 
@@ -913,18 +942,18 @@ export default function WhatsAppAgentCenterPage() {
                               style={{
                                 display: "inline-flex",
                                 alignItems: "center",
-                                gap: 4,
+                                gap: 3,
                                 background: "#EFF6FF",
                                 border: "1px solid #BFDBFE",
                                 color: "#1D4ED8",
-                                padding: "5px 10px",
+                                padding: "4px 8px",
                                 borderRadius: 6,
                                 fontSize: 11,
                                 fontWeight: 700,
                                 cursor: "pointer",
                               }}
                             >
-                              {actionLoading === "report_" + p.id ? <Loader2 size={12} className="animate-spin" /> : <Send size={12} color="#2563EB" />}
+                              {actionLoading === "report_" + p.id ? <Loader2 size={11} className="animate-spin" /> : <Send size={11} color="#2563EB" />}
                               <span>Digest</span>
                             </button>
 
@@ -933,11 +962,11 @@ export default function WhatsAppAgentCenterPage() {
                               style={{
                                 display: "inline-flex",
                                 alignItems: "center",
-                                gap: 5,
+                                gap: 4,
                                 background: "#059669",
                                 border: "none",
                                 color: "#ffffff",
-                                padding: "5px 12px",
+                                padding: "4px 10px",
                                 borderRadius: 6,
                                 fontSize: 11,
                                 fontWeight: 700,
@@ -945,8 +974,8 @@ export default function WhatsAppAgentCenterPage() {
                                 boxShadow: "0 1px 3px rgba(5, 150, 105, 0.2)",
                               }}
                             >
-                              <Sliders size={12} />
-                              <span>Train & Config</span>
+                              <Sliders size={11} />
+                              <span>Config</span>
                             </button>
                           </div>
                         </td>
@@ -1460,7 +1489,7 @@ export default function WhatsAppAgentCenterPage() {
           </div>
 
           <div style={{ overflowX: "auto" }}>
-            <table style={{ width: "100%", borderCollapse: "collapse", textAlign: "left", fontSize: 12 }}>
+            <table style={{ width: "100%", minWidth: 900, borderCollapse: "collapse", textAlign: "left", fontSize: 12 }}>
               <thead>
                 <tr style={{ background: "#F1F5F9", borderBottom: "1px solid #E2E8F0", color: "#475569", fontWeight: 700, fontSize: 11, textTransform: "uppercase" }}>
                   <th style={{ padding: "12px 18px" }}>Timestamp</th>
@@ -1522,124 +1551,322 @@ export default function WhatsAppAgentCenterPage() {
         </div>
       )}
 
-      {/* ── TAB 5: Cloud API & Webhook ── */}
+      {/* ── TAB 5: Cloud API & Meta Setup (With Official Links & Copy Actions) ── */}
       {activeTab === "api" && (
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(340px, 1fr))", gap: 20 }}>
-          <div style={{ background: "#ffffff", border: "1px solid #E2E8F0", borderRadius: 12, padding: 22, display: "flex", flexDirection: "column", gap: 16, boxShadow: "0 2px 6px rgba(0,0,0,0.02)" }}>
-            <h3 style={{ fontSize: 15, fontWeight: 800, margin: 0, color: "#0F172A" }}>Meta Cloud API Credentials</h3>
-            <p style={{ fontSize: 12, color: "#64748B", margin: 0 }}>
-              Enter your official Meta WhatsApp Cloud API credentials to enable instant multi-location alerts.
-            </p>
-
-            <div>
-              <label style={{ fontSize: 11, fontWeight: 800, color: "#475569", display: "block", marginBottom: 4 }}>
-                WhatsApp Phone Number ID
-              </label>
-              <input
-                type="text"
-                value={globalSettings.whatsappPhoneNumberId || ""}
-                onChange={(e) => setGlobalSettings({ ...globalSettings, whatsappPhoneNumberId: e.target.value })}
-                placeholder="e.g. 104928374829102"
-                style={{ width: "100%", height: 38, padding: "0 12px", background: "#F8FAFC", border: "1px solid #CBD5E1", borderRadius: 6, fontSize: 12 }}
-              />
-            </div>
-
-            <div>
-              <label style={{ fontSize: 11, fontWeight: 800, color: "#475569", display: "block", marginBottom: 4 }}>
-                WhatsApp Business Account ID (WABA)
-              </label>
-              <input
-                type="text"
-                value={globalSettings.whatsappBusinessAccountId || ""}
-                onChange={(e) => setGlobalSettings({ ...globalSettings, whatsappBusinessAccountId: e.target.value })}
-                placeholder="e.g. 293847291029384"
-                style={{ width: "100%", height: 38, padding: "0 12px", background: "#F8FAFC", border: "1px solid #CBD5E1", borderRadius: 6, fontSize: 12 }}
-              />
-            </div>
-
-            <div>
-              <label style={{ fontSize: 11, fontWeight: 800, color: "#475569", display: "block", marginBottom: 4 }}>
-                Permanent System User Access Token
-              </label>
-              <input
-                type="password"
-                value={globalSettings.whatsappAccessToken || ""}
-                onChange={(e) => setGlobalSettings({ ...globalSettings, whatsappAccessToken: e.target.value })}
-                placeholder="EAAG..."
-                style={{ width: "100%", height: 38, padding: "0 12px", background: "#F8FAFC", border: "1px solid #CBD5E1", borderRadius: 6, fontSize: 12 }}
-              />
-            </div>
-
-            <button
-              onClick={handleSaveGlobal}
-              disabled={savingGlobal}
-              style={{
-                display: "inline-flex",
-                alignItems: "center",
-                justifyContent: "center",
-                gap: 6,
-                background: "#059669",
-                border: "none",
-                color: "#ffffff",
-                padding: "10px 18px",
-                borderRadius: 8,
-                fontSize: 12,
-                fontWeight: 800,
-                cursor: "pointer",
-                marginTop: 6,
-                boxShadow: "0 2px 4px rgba(5, 150, 105, 0.25)",
-              }}
-            >
-              {savingGlobal ? <Loader2 size={14} className="animate-spin" /> : <Save size={14} />}
-              <span>Save Meta Cloud Credentials</span>
-            </button>
-          </div>
-
-          <div style={{ background: "#ffffff", border: "1px solid #E2E8F0", borderRadius: 12, padding: 22, display: "flex", flexDirection: "column", gap: 16, boxShadow: "0 2px 6px rgba(0,0,0,0.02)" }}>
-            <h3 style={{ fontSize: 15, fontWeight: 800, margin: 0, color: "#0F172A" }}>Inbound Webhook Configuration</h3>
-            <p style={{ fontSize: 12, color: "#64748B", margin: 0 }}>
-              Set this Webhook URL in Meta Developer Dashboard to receive client replies and button clicks.
-            </p>
-
-            <div>
-              <label style={{ fontSize: 11, fontWeight: 800, color: "#475569", display: "block", marginBottom: 4 }}>
-                Webhook Callback URL
-              </label>
-              <div style={{ display: "flex", gap: 8 }}>
-                <input
-                  type="text"
-                  readOnly
-                  value="https://gmb.rankved.com/api/whatsapp/webhook"
-                  style={{ flex: 1, height: 38, padding: "0 12px", background: "#F1F5F9", border: "1px solid #CBD5E1", borderRadius: 6, fontSize: 11, color: "#334155", fontWeight: 600 }}
-                />
-                <button
-                  onClick={copyWebhookUrl}
-                  style={{
-                    padding: "0 14px",
-                    background: copiedUrl ? "#ECFDF5" : "#ffffff",
-                    border: "1px solid #CBD5E1",
-                    borderRadius: 6,
-                    fontSize: 11,
-                    fontWeight: 700,
-                    cursor: "pointer",
-                    color: copiedUrl ? "#059669" : "#334155",
-                  }}
-                >
-                  {copiedUrl ? "Copied!" : "Copy"}
-                </button>
+        <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
+          
+          {/* 🌟 1-Click Official Meta Developer Portal Launchpad */}
+          <div style={{ background: "#ffffff", border: "1px solid #E2E8F0", borderRadius: 12, padding: "20px 24px", boxShadow: "0 2px 6px rgba(0,0,0,0.02)" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 14 }}>
+              <div style={{ width: 36, height: 36, borderRadius: 8, background: "#EFF6FF", border: "1px solid #BFDBFE", display: "flex", alignItems: "center", justifyContent: "center", color: "#2563EB" }}>
+                <Globe size={18} />
+              </div>
+              <div>
+                <h3 style={{ fontSize: 15, fontWeight: 800, margin: 0, color: "#0F172A" }}>
+                  Official Meta Developer Portal & Setup Links
+                </h3>
+                <p style={{ fontSize: 12, color: "#64748B", margin: "2px 0 0" }}>
+                  Open these official Meta links in new tabs to create your WhatsApp Cloud App, get tokens, and subscribe to Webhooks.
+                </p>
               </div>
             </div>
 
-            <div>
-              <label style={{ fontSize: 11, fontWeight: 800, color: "#475569", display: "block", marginBottom: 4 }}>
-                Webhook Verification Token
-              </label>
-              <input
-                type="text"
-                value={globalSettings.whatsappWebhookSecret || "rankved_gmb_webhook_secure_token"}
-                onChange={(e) => setGlobalSettings({ ...globalSettings, whatsappWebhookSecret: e.target.value })}
-                style={{ width: "100%", height: 38, padding: "0 12px", background: "#F8FAFC", border: "1px solid #CBD5E1", borderRadius: 6, fontSize: 12 }}
-              />
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))", gap: 12 }}>
+              <a
+                href="https://developers.facebook.com/apps/"
+                target="_blank"
+                rel="noreferrer"
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "space-between",
+                  background: "#F8FAFC",
+                  border: "1.5px solid #E2E8F0",
+                  borderRadius: 10,
+                  padding: "12px 14px",
+                  textDecoration: "none",
+                  color: "#0F172A",
+                  transition: "all 0.15s ease",
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.borderColor = "#2563EB";
+                  e.currentTarget.style.background = "#EFF6FF";
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.borderColor = "#E2E8F0";
+                  e.currentTarget.style.background = "#F8FAFC";
+                }}
+              >
+                <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                  <Building size={16} color="#2563EB" />
+                  <div>
+                    <div style={{ fontSize: 12, fontWeight: 700, color: "#0F172A" }}>Meta Apps Dashboard</div>
+                    <div style={{ fontSize: 10, color: "#64748B" }}>Create & Manage WhatsApp App</div>
+                  </div>
+                </div>
+                <ExternalLink size={14} color="#64748B" />
+              </a>
+
+              <a
+                href="https://developers.facebook.com/docs/whatsapp/cloud-api/get-started"
+                target="_blank"
+                rel="noreferrer"
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "space-between",
+                  background: "#F8FAFC",
+                  border: "1.5px solid #E2E8F0",
+                  borderRadius: 10,
+                  padding: "12px 14px",
+                  textDecoration: "none",
+                  color: "#0F172A",
+                  transition: "all 0.15s ease",
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.borderColor = "#059669";
+                  e.currentTarget.style.background = "#ECFDF5";
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.borderColor = "#E2E8F0";
+                  e.currentTarget.style.background = "#F8FAFC";
+                }}
+              >
+                <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                  <Key size={16} color="#059669" />
+                  <div>
+                    <div style={{ fontSize: 12, fontWeight: 700, color: "#0F172A" }}>Cloud API Quickstart</div>
+                    <div style={{ fontSize: 10, color: "#64748B" }}>Get Phone Number ID & Test Token</div>
+                  </div>
+                </div>
+                <ExternalLink size={14} color="#64748B" />
+              </a>
+
+              <a
+                href="https://business.facebook.com/settings/whatsapp-business-accounts/"
+                target="_blank"
+                rel="noreferrer"
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "space-between",
+                  background: "#F8FAFC",
+                  border: "1.5px solid #E2E8F0",
+                  borderRadius: 10,
+                  padding: "12px 14px",
+                  textDecoration: "none",
+                  color: "#0F172A",
+                  transition: "all 0.15s ease",
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.borderColor = "#7C3AED";
+                  e.currentTarget.style.background = "#F5F3FF";
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.borderColor = "#E2E8F0";
+                  e.currentTarget.style.background = "#F8FAFC";
+                }}
+              >
+                <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                  <Shield size={16} color="#7C3AED" />
+                  <div>
+                    <div style={{ fontSize: 12, fontWeight: 700, color: "#0F172A" }}>Business Accounts (WABA)</div>
+                    <div style={{ fontSize: 10, color: "#64748B" }}>Find WhatsApp Account ID</div>
+                  </div>
+                </div>
+                <ExternalLink size={14} color="#64748B" />
+              </a>
+
+              <a
+                href="https://business.facebook.com/settings/system-users"
+                target="_blank"
+                rel="noreferrer"
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "space-between",
+                  background: "#F8FAFC",
+                  border: "1.5px solid #E2E8F0",
+                  borderRadius: 10,
+                  padding: "12px 14px",
+                  textDecoration: "none",
+                  color: "#0F172A",
+                  transition: "all 0.15s ease",
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.borderColor = "#D97706";
+                  e.currentTarget.style.background = "#FFFBEB";
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.borderColor = "#E2E8F0";
+                  e.currentTarget.style.background = "#F8FAFC";
+                }}
+              >
+                <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                  <User size={16} color="#D97706" />
+                  <div>
+                    <div style={{ fontSize: 12, fontWeight: 700, color: "#0F172A" }}>Permanent System Users</div>
+                    <div style={{ fontSize: 10, color: "#64748B" }}>Generate Never-Expiring Token</div>
+                  </div>
+                </div>
+                <ExternalLink size={14} color="#64748B" />
+              </a>
+            </div>
+          </div>
+
+          {/* Form & Webhook Settings Grid */}
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(340px, 1fr))", gap: 20 }}>
+            {/* Left Box: Meta Cloud Credentials */}
+            <div style={{ background: "#ffffff", border: "1px solid #E2E8F0", borderRadius: 12, padding: 22, display: "flex", flexDirection: "column", gap: 16, boxShadow: "0 2px 6px rgba(0,0,0,0.02)" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                <Key size={18} color="#059669" />
+                <h3 style={{ fontSize: 15, fontWeight: 800, margin: 0, color: "#0F172A" }}>Meta Cloud API Credentials</h3>
+              </div>
+              <p style={{ fontSize: 12, color: "#64748B", margin: 0 }}>
+                Enter your official Meta WhatsApp Cloud API credentials to enable instant multi-location alerts.
+              </p>
+
+              <div>
+                <label style={{ fontSize: 11, fontWeight: 800, color: "#475569", display: "block", marginBottom: 4 }}>
+                  WhatsApp Phone Number ID
+                </label>
+                <input
+                  type="text"
+                  value={globalSettings.whatsappPhoneNumberId || ""}
+                  onChange={(e) => setGlobalSettings({ ...globalSettings, whatsappPhoneNumberId: e.target.value })}
+                  placeholder="e.g. 104928374829102"
+                  style={{ width: "100%", height: 38, padding: "0 12px", background: "#F8FAFC", border: "1px solid #CBD5E1", borderRadius: 6, fontSize: 12 }}
+                />
+              </div>
+
+              <div>
+                <label style={{ fontSize: 11, fontWeight: 800, color: "#475569", display: "block", marginBottom: 4 }}>
+                  WhatsApp Business Account ID (WABA)
+                </label>
+                <input
+                  type="text"
+                  value={globalSettings.whatsappBusinessAccountId || ""}
+                  onChange={(e) => setGlobalSettings({ ...globalSettings, whatsappBusinessAccountId: e.target.value })}
+                  placeholder="e.g. 293847291029384"
+                  style={{ width: "100%", height: 38, padding: "0 12px", background: "#F8FAFC", border: "1px solid #CBD5E1", borderRadius: 6, fontSize: 12 }}
+                />
+              </div>
+
+              <div>
+                <label style={{ fontSize: 11, fontWeight: 800, color: "#475569", display: "block", marginBottom: 4 }}>
+                  Permanent System User Access Token
+                </label>
+                <input
+                  type="password"
+                  value={globalSettings.whatsappAccessToken || ""}
+                  onChange={(e) => setGlobalSettings({ ...globalSettings, whatsappAccessToken: e.target.value })}
+                  placeholder="EAAG..."
+                  style={{ width: "100%", height: 38, padding: "0 12px", background: "#F8FAFC", border: "1px solid #CBD5E1", borderRadius: 6, fontSize: 12 }}
+                />
+              </div>
+
+              <button
+                onClick={handleSaveGlobal}
+                disabled={savingGlobal}
+                style={{
+                  display: "inline-flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  gap: 6,
+                  background: "#059669",
+                  border: "none",
+                  color: "#ffffff",
+                  padding: "10px 18px",
+                  borderRadius: 8,
+                  fontSize: 12,
+                  fontWeight: 800,
+                  cursor: "pointer",
+                  marginTop: 6,
+                  boxShadow: "0 2px 4px rgba(5, 150, 105, 0.25)",
+                }}
+              >
+                {savingGlobal ? <Loader2 size={14} className="animate-spin" /> : <Save size={14} />}
+                <span>Save Meta Cloud Credentials</span>
+              </button>
+            </div>
+
+            {/* Right Box: Inbound Webhook Configuration */}
+            <div style={{ background: "#ffffff", border: "1px solid #E2E8F0", borderRadius: 12, padding: 22, display: "flex", flexDirection: "column", gap: 16, boxShadow: "0 2px 6px rgba(0,0,0,0.02)" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                <Workflow size={18} color="#2563EB" />
+                <h3 style={{ fontSize: 15, fontWeight: 800, margin: 0, color: "#0F172A" }}>Inbound Webhook Setup</h3>
+              </div>
+              <p style={{ fontSize: 12, color: "#64748B", margin: 0 }}>
+                Copy and paste these exact values into your Meta Developer Portal under <b>WhatsApp ➔ Configuration ➔ Webhook</b>.
+              </p>
+
+              <div>
+                <label style={{ fontSize: 11, fontWeight: 800, color: "#475569", display: "block", marginBottom: 4 }}>
+                  Callback URL (Paste in Meta Dashboard)
+                </label>
+                <div style={{ display: "flex", gap: 8 }}>
+                  <input
+                    type="text"
+                    readOnly
+                    value="https://gmb.rankved.com/api/whatsapp/webhook"
+                    style={{ flex: 1, height: 38, padding: "0 12px", background: "#F1F5F9", border: "1px solid #CBD5E1", borderRadius: 6, fontSize: 11, color: "#334155", fontWeight: 600 }}
+                  />
+                  <button
+                    onClick={copyWebhookUrl}
+                    style={{
+                      padding: "0 14px",
+                      background: copiedUrl ? "#ECFDF5" : "#ffffff",
+                      border: "1px solid #CBD5E1",
+                      borderRadius: 6,
+                      fontSize: 11,
+                      fontWeight: 700,
+                      cursor: "pointer",
+                      color: copiedUrl ? "#059669" : "#334155",
+                    }}
+                  >
+                    {copiedUrl ? "Copied!" : "Copy"}
+                  </button>
+                </div>
+              </div>
+
+              <div>
+                <label style={{ fontSize: 11, fontWeight: 800, color: "#475569", display: "block", marginBottom: 4 }}>
+                  Verify Token (Paste in Meta Dashboard)
+                </label>
+                <div style={{ display: "flex", gap: 8 }}>
+                  <input
+                    type="text"
+                    value={globalSettings.whatsappWebhookSecret || "rankved_gmb_webhook_secure_token"}
+                    onChange={(e) => setGlobalSettings({ ...globalSettings, whatsappWebhookSecret: e.target.value })}
+                    style={{ flex: 1, height: 38, padding: "0 12px", background: "#F8FAFC", border: "1px solid #CBD5E1", borderRadius: 6, fontSize: 12 }}
+                  />
+                  <button
+                    onClick={copyVerifyToken}
+                    style={{
+                      padding: "0 14px",
+                      background: copiedToken ? "#ECFDF5" : "#ffffff",
+                      border: "1px solid #CBD5E1",
+                      borderRadius: 6,
+                      fontSize: 11,
+                      fontWeight: 700,
+                      cursor: "pointer",
+                      color: copiedToken ? "#059669" : "#334155",
+                    }}
+                  >
+                    {copiedToken ? "Copied!" : "Copy"}
+                  </button>
+                </div>
+              </div>
+
+              <div style={{ background: "#EFF6FF", border: "1px solid #BFDBFE", borderRadius: 8, padding: "10px 12px" }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 11, fontWeight: 700, color: "#1D4ED8" }}>
+                  <CheckSquare size={13} color="#2563EB" />
+                  <span>Webhook Subscription Field:</span>
+                </div>
+                <p style={{ fontSize: 11, color: "#1E40AF", margin: "2px 0 0" }}>
+                  Subscribe to the <b>messages</b> field to receive real-time client WhatsApp replies and interactive button taps.
+                </p>
+              </div>
             </div>
           </div>
         </div>
