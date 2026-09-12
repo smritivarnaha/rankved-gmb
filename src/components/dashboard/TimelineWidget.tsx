@@ -195,12 +195,9 @@ export function TimelineWidget() {
                                 <Link href={`/posts/${topPost.id}`} title={`${topPost.status}: ${topPost.summary}`} style={{ 
                                   width: "100%", height: 24, borderRadius: 4, 
                                   background: getStatusColor(topPost.status),
-                                  opacity: 0.8, transition: "opacity 0.2s",
-                                  display: "flex", alignItems: "center", justifyContent: "center",
-                                  color: "#fff", fontSize: 10, fontWeight: 700
-                                }}>
-                                  {locNum}
-                                </Link>
+                                  opacity: 0.9, transition: "opacity 0.2s, transform 0.15s",
+                                  display: "block"
+                                }} />
                               ) : (
                                 <div style={{ width: "100%", height: 24, borderRadius: 4, background: "#f1f5f9" }} />
                               )}
