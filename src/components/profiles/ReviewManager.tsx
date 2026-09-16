@@ -2,9 +2,10 @@
 
 import { useState } from "react";
 import useSWR from "swr";
-import { Star, MessageSquare, Sparkles, Send, Loader2, CheckCircle2, User, BookOpen } from "lucide-react";
+import { Star, MessageSquare, Sparkles, Send, Loader2, CheckCircle2, User, BookOpen, Zap } from "lucide-react";
 import { useSession } from "next-auth/react";
 import { ReviewTemplatesModal } from "@/components/profiles/ReviewTemplatesModal";
+import { ReviewReplyTestModal } from "@/components/profiles/ReviewReplyTestModal";
 
 const fetcher = (url: string) => fetch(url).then(r => r.json());
 
@@ -22,8 +23,9 @@ export function ReviewManager({ profileId }: { profileId: string }) {
   const [replies, setReplies] = useState<Record<string, string>>({});
   const [posting, setPosting] = useState<string | null>(null);
 
-  // Modal state
+  // Modal states
   const [isTemplateModalOpen, setIsTemplateModalOpen] = useState(false);
+  const [isTestModalOpen, setIsTestModalOpen] = useState(false);
   const [targetReviewForTemplate, setTargetReviewForTemplate] = useState<any | null>(null);
 
   const isAdmin = (session as any)?.user?.role === "SUPER_ADMIN" || (session as any)?.user?.email?.toLowerCase() === "rankved.business@gmail.com";
@@ -90,6 +92,13 @@ export function ReviewManager({ profileId }: { profileId: string }) {
           <p className="text-slate-500 font-medium">Manage your reputation and auto-replies with dynamic templates.</p>
         </div>
         <div className="flex items-center gap-2">
+          <button
+            onClick={() => setIsTestModalOpen(true)}
+            className="bg-blue-50 text-blue-700 hover:bg-blue-100 px-4 py-2 rounded-full text-xs font-black uppercase tracking-wider border border-blue-200 flex items-center gap-2 transition-all shadow-sm"
+          >
+            <Zap className="w-3.5 h-3.5 text-blue-600" />
+            🧪 Test Reply
+          </button>
           <button
             onClick={() => handleOpenTemplateModal()}
             className="bg-indigo-50 text-indigo-700 hover:bg-indigo-100 px-4 py-2 rounded-full text-xs font-black uppercase tracking-wider border border-indigo-200 flex items-center gap-2 transition-all"
@@ -224,6 +233,10 @@ export function ReviewManager({ profileId }: { profileId: string }) {
         isOpen={isTemplateModalOpen}
         onClose={() => setIsTemplateModalOpen(false)}
         onSelectTemplate={handleSelectTemplate}
+        onOpenTestModal={() => {
+          setIsTemplateModalOpen(false);
+          setIsTestModalOpen(true);
+        }}
         currentProfile={profileInfo?.name ? {
           name: profileInfo.name,
           phone: profileInfo.phone,
@@ -231,6 +244,17 @@ export function ReviewManager({ profileId }: { profileId: string }) {
         } : undefined}
         reviewerName={targetReviewForTemplate?.reviewer?.displayName || "Patient"}
         targetRating={targetReviewForTemplate ? getStarCount(targetReviewForTemplate.starRating) : undefined}
+      />
+
+      {/* Review Reply Tester & Simulator Modal */}
+      <ReviewReplyTestModal
+        isOpen={isTestModalOpen}
+        onClose={() => setIsTestModalOpen(false)}
+        initialProfileId={profileId}
+        onOpenTemplatesModal={() => {
+          setIsTestModalOpen(false);
+          setIsTemplateModalOpen(true);
+        }}
       />
     </div>
   );

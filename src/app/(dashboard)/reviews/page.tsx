@@ -9,6 +9,7 @@ import {
 } from "lucide-react";
 import useSWR from "swr";
 import { ReviewTemplatesModal } from "@/components/profiles/ReviewTemplatesModal";
+import { ReviewReplyTestModal } from "@/components/profiles/ReviewReplyTestModal";
 
 const fetcher = (url: string) => fetch(url).then(r => r.json());
 
@@ -1723,6 +1724,7 @@ export default function ReviewsPage() {
   const [showImportModal, setShowImportModal] = useState(false);
   const [showAutoReplyModal, setShowAutoReplyModal] = useState(false);
   const [showTemplatesModal, setShowTemplatesModal] = useState(false);
+  const [showTestModal, setShowTestModal] = useState(false);
   const [showErrors, setShowErrors] = useState(false);
 
   // Local optimistic state of reviews
@@ -1943,8 +1945,28 @@ export default function ReviewsPage() {
           </div>
         </div>
 
-        {/* Action Buttons: Auto-Reply Settings, Templates, Export, Import, Live Sync */}
+        {/* Action Buttons: Auto-Reply Settings, Templates, Test Reply, Export, Import, Live Sync */}
         <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
+          <button
+            onClick={() => setShowTestModal(true)}
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: 6,
+              padding: "8px 14px",
+              background: "linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%)",
+              border: "1px solid #93c5fd",
+              borderRadius: 8,
+              fontSize: 12,
+              fontWeight: 800,
+              color: "#1e40af",
+              cursor: "pointer",
+              boxShadow: "0 2px 4px rgba(37, 99, 235, 0.1)",
+            }}
+          >
+            <Zap size={14} color="#2563eb" /> 🧪 Test Reply
+          </button>
+
           <button
             onClick={() => setShowTemplatesModal(true)}
             style={{
@@ -1952,16 +1974,16 @@ export default function ReviewsPage() {
               alignItems: "center",
               gap: 6,
               padding: "8px 14px",
-              background: "#eff6ff",
-              border: "1px solid #bfdbfe",
+              background: "#ffffff",
+              border: "1px solid #cbd5e1",
               borderRadius: 8,
               fontSize: 12,
               fontWeight: 700,
-              color: "#1d4ed8",
+              color: "#334155",
               cursor: "pointer",
             }}
           >
-            <BookOpen size={14} color="#2563eb" /> 15 Dynamic Templates
+            <BookOpen size={14} color="#2563eb" /> 15 Templates
           </button>
 
           <button
@@ -2330,6 +2352,21 @@ export default function ReviewsPage() {
         <ReviewTemplatesModal
           isOpen={showTemplatesModal}
           onClose={() => setShowTemplatesModal(false)}
+          onOpenTestModal={() => {
+            setShowTemplatesModal(false);
+            setShowTestModal(true);
+          }}
+        />
+      )}
+
+      {showTestModal && (
+        <ReviewReplyTestModal
+          isOpen={showTestModal}
+          onClose={() => setShowTestModal(false)}
+          onOpenTemplatesModal={() => {
+            setShowTestModal(false);
+            setShowTemplatesModal(true);
+          }}
         />
       )}
     </div>

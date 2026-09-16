@@ -11,6 +11,7 @@ interface ReviewTemplatesModalProps {
   isOpen: boolean;
   onClose: () => void;
   onSelectTemplate?: (renderedText: string) => void;
+  onOpenTestModal?: () => void;
   currentProfile?: {
     name: string;
     phone?: string;
@@ -25,6 +26,7 @@ export function ReviewTemplatesModal({
   isOpen,
   onClose,
   onSelectTemplate,
+  onOpenTestModal,
   currentProfile,
   reviewerName = "Patient",
   targetRating
@@ -121,12 +123,37 @@ export function ReviewTemplatesModal({
               </p>
             </div>
           </div>
-          <button
-            onClick={onClose}
-            style={{ background: "none", border: "none", cursor: "pointer", color: "#9ca3af", padding: 4 }}
-          >
-            <X size={20} />
-          </button>
+          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+            {onOpenTestModal && (
+              <button
+                onClick={() => {
+                  onClose();
+                  onOpenTestModal();
+                }}
+                style={{
+                  display: "inline-flex",
+                  alignItems: "center",
+                  gap: 5,
+                  padding: "6px 12px",
+                  borderRadius: 8,
+                  border: "1px solid #bfdbfe",
+                  background: "#eff6ff",
+                  color: "#1d4ed8",
+                  fontSize: 12,
+                  fontWeight: 700,
+                  cursor: "pointer"
+                }}
+              >
+                <Sparkles size={13} color="#2563eb" /> 🧪 Test Reply Simulator
+              </button>
+            )}
+            <button
+              onClick={onClose}
+              style={{ background: "none", border: "none", cursor: "pointer", color: "#9ca3af", padding: 4 }}
+            >
+              <X size={20} />
+            </button>
+          </div>
         </div>
 
         {/* Filter Tabs */}

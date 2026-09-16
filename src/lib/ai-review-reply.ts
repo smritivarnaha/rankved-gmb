@@ -130,7 +130,7 @@ export async function resolveUserAiSettings(userId?: string): Promise<UserAISett
 /**
  * Executes prompt across the available AI provider
  */
-async function callLLM(prompt: string, settings: UserAISettings): Promise<string> {
+export async function callLLM(prompt: string, settings: UserAISettings): Promise<string> {
   // 1. Anthropic Claude (Preferred for grounded professional nuance)
   if (settings.anthropicApiKey || process.env.ANTHROPIC_API_KEY) {
     const key = settings.anthropicApiKey || process.env.ANTHROPIC_API_KEY!;
@@ -403,7 +403,7 @@ function pickBestPerformanceKeyword(
 /**
  * Word count counter
  */
-function getWordCount(text: string): number {
+export function getWordCount(text: string): number {
   return text.trim().split(/\s+/).filter(Boolean).length;
 }
 
@@ -427,7 +427,7 @@ const NATURAL_EXPANSIONS_NEGATIVE = [
  * - Zero over-excited hype words ("thrilled", "super excited")
  * - Dignified professional clinical tone with natural English sentence flow
  */
-function sanitizeAndEnforceWordCount(text: string, isNegative = false): string {
+export function sanitizeAndEnforceWordCount(text: string, isNegative = false): string {
   let cleaned = text
     .replace(/["“”]/g, "")           // strip surrounding quotes
     .replace(/[—–]/g, ", ")          // STRICT RULE: No em dashes or en dashes
