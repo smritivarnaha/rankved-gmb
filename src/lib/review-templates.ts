@@ -284,11 +284,11 @@ export function selectSmartReviewTemplate(
 
   // Tier 2: 3 Stars (Neutral)
   if (rating === 3) {
+    if (text.includes("average") || text.includes("ok") || text.includes("okay") || text.includes("fair") || text.includes("moderate")) {
+      return REVIEW_TEMPLATES.find(t => t.id === "neutral_patient_experience") || REVIEW_TEMPLATES[6];
+    }
     if (text.includes("doctor") || text.includes("consult") || text.includes("treatment")) {
       return REVIEW_TEMPLATES.find(t => t.id === "neutral_consultation_focus") || REVIEW_TEMPLATES[8];
-    }
-    if (text.includes("good") || text.includes("ok") || text.includes("average")) {
-      return REVIEW_TEMPLATES.find(t => t.id === "neutral_patient_experience") || REVIEW_TEMPLATES[6];
     }
     if (text.length < 20) {
       return REVIEW_TEMPLATES.find(t => t.id === "neutral_concise_thanks") || REVIEW_TEMPLATES[7];
@@ -297,17 +297,17 @@ export function selectSmartReviewTemplate(
   }
 
   // Tier 3: 4-5 Stars (High)
-  if (text.includes("doctor") || text.includes("dr") || text.includes("explain") || text.includes("guid") || text.includes("knowledge")) {
-    return REVIEW_TEMPLATES.find(t => t.id === "high_warm_doctor_guidance") || REVIEW_TEMPLATES[9];
+  if (text.includes("family") || text.includes("mother") || text.includes("father") || text.includes("parent") || text.includes("recommend") || text.includes("relative")) {
+    return REVIEW_TEMPLATES.find(t => t.id === "high_family_trust") || REVIEW_TEMPLATES[14];
   }
-  if (text.includes("staff") || text.includes("nurse") || text.includes("clinic") || text.includes("hospital") || text.includes("clean") || text.includes("friendly")) {
-    return REVIEW_TEMPLATES.find(t => t.id === "high_staff_and_clinic") || REVIEW_TEMPLATES[10];
-  }
-  if (text.includes("recover") || text.includes("surgery") || text.includes("result") || text.includes("cure") || text.includes("relief") || text.includes("pain")) {
+  if (text.includes("recover") || text.includes("surgery") || text.includes("result") || text.includes("cure") || text.includes("relief") || text.includes("pain") || text.includes("healed")) {
     return REVIEW_TEMPLATES.find(t => t.id === "high_consultation_recovery") || REVIEW_TEMPLATES[13];
   }
-  if (text.includes("family") || text.includes("mother") || text.includes("father") || text.includes("recommend") || text.includes("best")) {
-    return REVIEW_TEMPLATES.find(t => t.id === "high_family_trust") || REVIEW_TEMPLATES[14];
+  if (text.includes("doctor") || text.includes("dr") || text.includes("explain") || text.includes("guid") || text.includes("knowledge") || text.includes("diagnos")) {
+    return REVIEW_TEMPLATES.find(t => t.id === "high_warm_doctor_guidance") || REVIEW_TEMPLATES[9];
+  }
+  if (text.includes("staff") || text.includes("nurse") || text.includes("team") || text.includes("clean") || text.includes("friendly") || text.includes("cooperat")) {
+    return REVIEW_TEMPLATES.find(t => t.id === "high_staff_and_clinic") || REVIEW_TEMPLATES[10];
   }
   if (text.length < 25) {
     return REVIEW_TEMPLATES.find(t => t.id === "high_short_direct") || REVIEW_TEMPLATES[11];

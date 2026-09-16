@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { 
   X, Star, Copy, Check, Sparkles, MessageSquare, 
   ShieldAlert, ThumbsUp, AlertCircle, HelpCircle, Filter
@@ -29,12 +29,21 @@ export function ReviewTemplatesModal({
   reviewerName = "Patient",
   targetRating
 }: ReviewTemplatesModalProps) {
-  const initialTier = targetRating 
-    ? (targetRating <= 2 ? "LOW" : targetRating === 3 ? "NEUTRAL" : "HIGH")
-    : "ALL";
+  const getInitialTier = (rating?: number): "ALL" | "LOW" | "NEUTRAL" | "HIGH" => {
+    if (!rating) return "ALL";
+    if (rating <= 2) return "LOW";
+    if (rating === 3) return "NEUTRAL";
+    return "HIGH";
+  };
 
-  const [activeTier, setActiveTier] = useState<"ALL" | "LOW" | "NEUTRAL" | "HIGH">(initialTier as any);
+  const [activeTier, setActiveTier] = useState<"ALL" | "LOW" | "NEUTRAL" | "HIGH">(getInitialTier(targetRating));
   const [copiedId, setCopiedId] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (isOpen) {
+      setActiveTier(getInitialTier(targetRating));
+    }
+  }, [isOpen, targetRating]);
 
   if (!isOpen) return null;
 
