@@ -4,6 +4,7 @@ import { Anthropic } from "@anthropic-ai/sdk";
 import OpenAI from "openai";
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import { getValidGoogleAccounts, getEmailFromIdToken } from "./google-accounts";
+import { selectSmartReviewTemplate, renderReviewTemplate, REVIEW_TEMPLATES } from "./review-templates";
 
 export interface ReviewReplyResult {
   reply: string;
@@ -614,7 +615,69 @@ Produce valid JSON with EXACTLY this structure (no surrounding markdown backtick
 }
 `.trim();
 
-  const rawJson = await callLLM(prompt, settings);
+  // 3. Smart Dynamic Template Selection & Fallback Preparation
+  const smartTemplate = selectSmartReviewTemplate(rating || 5, reviewText);
+  const fallbackParams = {
+    template: smartTemplate,
+    reviewerName,
+    businessName,
+    cityOrArea,
+    targetKeyword,
+    contactPhone,
+    contactEmail,
+  };
+
+  const dynamicWarm = renderReviewTemplate({
+    ...fallbackParams,
+    template: smartTemplate.template
+  });
+
+  const numericRating = rating ?? 5;
+  const shortTemplateMatch = numericRating <= 2 
+    ? REVIEW_TEMPLATES.find(t => t.id === "low_admin_service") || smartTemplate
+    : numericRating === 3 
+    ? REVIEW_TEMPLATES.find(t => t.id === "neutral_concise_thanks") || smartTemplate
+    : REVIEW_TEMPLATES.find(t => t.id === "high_short_direct") || smartTemplate;
+
+  const dynamicShort = renderReviewTemplate({
+    ...fallbackParams,
+    template: shortTemplateMatch.template
+  });
+
+  const seoTemplateMatch = numericRating <= 2
+    ? REVIEW_TEMPLATES.find(t => t.id === "low_resolution_direct") || smartTemplate
+    : numericRating === 3
+    ? REVIEW_TEMPLATES.find(t => t.id === "neutral_balanced_care") || smartTemplate
+    : REVIEW_TEMPLATES.find(t => t.id === "high_seo_authority") || smartTemplate;
+
+  const dynamicSeoFocused = renderReviewTemplate({
+    ...fallbackParams,
+    template: seoTemplateMatch.template
+  });
+
+  let rawJson = "";
+  try {
+    rawJson = await callLLM(prompt, settings);
+  } catch (llmErr) {
+    console.warn("[Review Replier] LLM call failed or no API keys, seamlessly using dynamic templates:", (llmErr as any)?.message);
+    let selectedFallback = dynamicWarm;
+    if (preferredTone === "SHORT") selectedFallback = dynamicShort;
+    if (preferredTone === "SEO_FOCUSED") selectedFallback = dynamicSeoFocused;
+
+    return {
+      reply: selectedFallback,
+      sentiment,
+      keywordUsed: targetKeyword,
+      performanceKeywordsFound: performanceKeywords.slice(0, 10),
+      wordCount: getWordCount(selectedFallback),
+      tone: preferredTone,
+      options: {
+        warm: dynamicWarm,
+        short: dynamicShort,
+        seoFocused: dynamicSeoFocused,
+      },
+    };
+  }
 
   let parsed: any = {};
   try {
@@ -622,16 +685,16 @@ Produce valid JSON with EXACTLY this structure (no surrounding markdown backtick
     parsed = JSON.parse(cleaned);
   } catch {
     parsed = {
-      warm: rawJson,
-      short: rawJson,
-      seoFocused: rawJson,
+      warm: dynamicWarm,
+      short: dynamicShort,
+      seoFocused: dynamicSeoFocused,
       sentiment,
     };
   }
 
-  const warm = sanitizeAndEnforceWordCount(parsed.warm || rawJson, isNegative);
-  const short = sanitizeAndEnforceWordCount(parsed.short || warm, isNegative);
-  const seoFocused = sanitizeAndEnforceWordCount(parsed.seoFocused || warm, isNegative);
+  const warm = sanitizeAndEnforceWordCount(parsed.warm || dynamicWarm, isNegative);
+  const short = sanitizeAndEnforceWordCount(parsed.short || dynamicShort, isNegative);
+  const seoFocused = sanitizeAndEnforceWordCount(parsed.seoFocused || dynamicSeoFocused, isNegative);
 
   let selectedReply = warm;
   if (preferredTone === "SHORT") selectedReply = short;

@@ -5,9 +5,10 @@ import {
   Star, MessageSquare, Search, RefreshCw, AlertCircle, CheckCircle2,
   ExternalLink, Building2, Clock, Loader2, Send, ChevronDown, Check,
   Sparkles, ArrowUpDown, Filter, Edit3, X, AlertTriangle, Download,
-  Upload, Calendar, Zap, Trash2, FileText
+  Upload, Calendar, Zap, Trash2, FileText, BookOpen
 } from "lucide-react";
 import useSWR from "swr";
+import { ReviewTemplatesModal } from "@/components/profiles/ReviewTemplatesModal";
 
 const fetcher = (url: string) => fetch(url).then(r => r.json());
 
@@ -1721,6 +1722,7 @@ export default function ReviewsPage() {
   const [showExportModal, setShowExportModal] = useState(false);
   const [showImportModal, setShowImportModal] = useState(false);
   const [showAutoReplyModal, setShowAutoReplyModal] = useState(false);
+  const [showTemplatesModal, setShowTemplatesModal] = useState(false);
   const [showErrors, setShowErrors] = useState(false);
 
   // Local optimistic state of reviews
@@ -1941,8 +1943,27 @@ export default function ReviewsPage() {
           </div>
         </div>
 
-        {/* Action Buttons: Auto-Reply Settings, Export, Import, Live Sync */}
+        {/* Action Buttons: Auto-Reply Settings, Templates, Export, Import, Live Sync */}
         <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
+          <button
+            onClick={() => setShowTemplatesModal(true)}
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: 6,
+              padding: "8px 14px",
+              background: "#eff6ff",
+              border: "1px solid #bfdbfe",
+              borderRadius: 8,
+              fontSize: 12,
+              fontWeight: 700,
+              color: "#1d4ed8",
+              cursor: "pointer",
+            }}
+          >
+            <BookOpen size={14} color="#2563eb" /> 15 Dynamic Templates
+          </button>
+
           <button
             onClick={() => setShowAutoReplyModal(true)}
             style={{
@@ -2302,6 +2323,13 @@ export default function ReviewsPage() {
           onClose={() => setShowAutoReplyModal(false)}
           profiles={profilesList}
           selectedTab={selectedTab}
+        />
+      )}
+
+      {showTemplatesModal && (
+        <ReviewTemplatesModal
+          isOpen={showTemplatesModal}
+          onClose={() => setShowTemplatesModal(false)}
         />
       )}
     </div>
