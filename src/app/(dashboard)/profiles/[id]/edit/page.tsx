@@ -6,7 +6,8 @@ import useSWR from "swr";
 import { 
   Loader2, ArrowLeft, Save, Building2, Phone, Globe, FileText, 
   CheckCircle2, Upload, Clock, Map, Tag, Info, AlertCircle, 
-  Plus, Trash2, MapPin, ExternalLink, Calendar, Search, X
+  Plus, Trash2, MapPin, ExternalLink, Calendar, Search, X,
+  ShieldAlert, Database
 } from "lucide-react";
 import Link from "next/link";
 import { GbpIcon } from "@/components/gbp-icon";
@@ -172,12 +173,34 @@ export default function EditProfilePage() {
     );
   }
 
+  const [isDeletingProfile, setIsDeletingProfile] = useState(false);
+
+  const handleDeleteProfile = async () => {
+    if (!confirm(`Are you sure you want to delete "${formData.title || "this profile"}"? All posts, reviews, and data will be permanently wiped.`)) return;
+    setIsDeletingProfile(true);
+    try {
+      const res = await fetch(`/api/profiles?id=${id}`, { method: "DELETE" });
+      if (res.ok) {
+        alert("Profile and all associated data purged successfully.");
+        router.push("/profiles");
+      } else {
+        const d = await res.json();
+        alert(d.error || "Failed to delete profile.");
+      }
+    } catch {
+      alert("Network error.");
+    } finally {
+      setIsDeletingProfile(false);
+    }
+  };
+
   const sections = [
     { id: "about", label: "About", icon: Info },
     { id: "contact", label: "Contact", icon: Phone },
     { id: "location", label: "Location", icon: MapPin },
     { id: "hours", label: "Hours", icon: Clock },
     { id: "more", label: "More", icon: Tag },
+    { id: "access", label: "Google Access & Removal", icon: ShieldAlert },
   ];
 
   return (
@@ -645,6 +668,97 @@ export default function EditProfilePage() {
                       <p style={{ margin: "4px 0 0", fontSize: 12, color: "#c2410c" }}>Some changes (like name, category, or address) may trigger a re-verification process from Google. Ensure your business information remains accurate.</p>
                     </div>
                   </div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Access & Danger Zone Section */}
+          {activeTab === "access" && (
+            <div className="card" style={{ background: "#fff", border: "1px solid #eaeaea", borderRadius: 12, padding: 0 }}>
+              <div style={{ padding: "16px 20px", borderBottom: "1px solid #f1f5f9", display: "flex", alignItems: "center", gap: 10 }}>
+                <ShieldAlert size={18} color="#dc2626" />
+                <h2 style={{ fontSize: 16, fontWeight: 700, margin: 0, color: "#111827" }}>Managing Access & Removal</h2>
+              </div>
+              <div style={{ padding: 24, display: "flex", flexDirection: "column", gap: 24 }}>
+                {/* Step 1: Remove Access on Google */}
+                <div style={{ padding: 20, background: "#eff6ff", border: "1px solid #bfdbfe", borderRadius: 10 }}>
+                  <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 12 }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                      <Building2 size={18} color="#2563eb" />
+                      <h3 style={{ margin: 0, fontSize: 15, fontWeight: 700, color: "#1e40af" }}>
+                        Step 1: Remove Managing Access on Google Business Profile
+                      </h3>
+                    </div>
+                    <a
+                      href="https://business.google.com/locations"
+                      target="_blank"
+                      rel="noreferrer"
+                      style={{
+                        display: "inline-flex",
+                        alignItems: "center",
+                        gap: 6,
+                        fontSize: 12,
+                        fontWeight: 700,
+                        color: "#2563eb",
+                        textDecoration: "none",
+                        background: "#fff",
+                        padding: "6px 14px",
+                        borderRadius: 8,
+                        border: "1px solid #93c5fd"
+                      }}
+                    >
+                      Open Google Business Manager <ExternalLink size={13} />
+                    </a>
+                  </div>
+                  <p style={{ margin: "0 0 10px", fontSize: 13, color: "#1e3a8a", lineHeight: 1.5 }}>
+                    To completely remove managing access from your Google Account for <strong>"{formData.title || "this clinic"}"</strong>:
+                  </p>
+                  <ol style={{ margin: 0, paddingLeft: 20, fontSize: 12, color: "#334155", lineHeight: 1.7 }}>
+                    <li>Go to <strong>business.google.com/locations</strong> in your browser.</li>
+                    <li>Search or check the checkbox next to <strong>"{formData.title || "this business"}"</strong>.</li>
+                    <li>Click the <strong>Actions</strong> menu in top-right corner &rarr; select <strong>"Remove business"</strong> or <strong>"Stop managing business"</strong>.</li>
+                    <li>Confirm removal. Once removed on Google, this location will no longer be attached to your Google account.</li>
+                  </ol>
+                </div>
+
+                {/* Step 2: Delete & Purge from Local System */}
+                <div style={{ padding: 20, background: "#fef2f2", border: "1px solid #fecaca", borderRadius: 10 }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8 }}>
+                    <Trash2 size={18} color="#dc2626" />
+                    <h3 style={{ margin: 0, fontSize: 15, fontWeight: 700, color: "#991b1b" }}>
+                      Step 2: Purge Profile & Free Up Database Storage
+                    </h3>
+                  </div>
+                  <p style={{ margin: "0 0 16px", fontSize: 13, color: "#7f1d1d", lineHeight: 1.5 }}>
+                    Permanently deletes all database records linked to this location, including:
+                  </p>
+                  <ul style={{ margin: "0 0 20px", paddingLeft: 20, fontSize: 12, color: "#991b1b", lineHeight: 1.7 }}>
+                    <li>All Draft, Scheduled & Published Posts</li>
+                    <li>All Backed-up Google Reviews & AI Reply History</li>
+                    <li>All WhatsApp Agent Message Logs & Conversation History</li>
+                    <li>All Local Rank Scan Grids & Competitor Tracking data</li>
+                  </ul>
+                  <button
+                    onClick={handleDeleteProfile}
+                    disabled={isDeletingProfile}
+                    style={{
+                      padding: "10px 20px",
+                      borderRadius: 8,
+                      border: "none",
+                      background: "#dc2626",
+                      color: "#fff",
+                      fontSize: 13,
+                      fontWeight: 700,
+                      cursor: isDeletingProfile ? "not-allowed" : "pointer",
+                      display: "inline-flex",
+                      alignItems: "center",
+                      gap: 8
+                    }}
+                  >
+                    {isDeletingProfile ? <Loader2 size={16} className="animate-spin" /> : <Trash2 size={16} />}
+                    {isDeletingProfile ? "Purging Profile & Data..." : "Delete Profile & Wipe All Data"}
+                  </button>
                 </div>
               </div>
             </div>

@@ -192,9 +192,15 @@ export async function saveProfiles(profiles: ProfileData[], userId: string, owne
 
 export async function deleteProfile(id: string): Promise<boolean> {
   try {
+    // 1. Clean up non-foreign-key snapshot and notification data
+    await prisma.reviewSnapshot.deleteMany({ where: { locationId: id } }).catch(() => {});
+    await prisma.notification.deleteMany({ where: { locationId: id } }).catch(() => {});
+    
+    // 2. Delete location (cascades to posts, reviews, replies, incidents, whatsapp logs, rank scans)
     await prisma.location.delete({ where: { id } });
     return true;
-  } catch {
+  } catch (err: any) {
+    console.error(`[deleteProfile] Failed to delete profile ${id}:`, err);
     return false;
   }
 }

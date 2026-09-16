@@ -1,15 +1,21 @@
 "use client";
 
 import Link from "next/link";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
-import { Loader2, X, AlertCircle, CheckCircle2, RefreshCw, Plus, Eye, Trash2, Wand2, Brain, FileDown, Upload, BarChart3, Edit2, Save, Users, FileText, CalendarDays, ArrowRight } from "lucide-react";
+import { 
+  Loader2, X, AlertCircle, CheckCircle2, RefreshCw, Plus, Eye, 
+  Trash2, Wand2, Brain, FileDown, Upload, BarChart3, Edit2, Save, 
+  Users, FileText, CalendarDays, ArrowRight, MoreVertical, ExternalLink,
+  ShieldAlert
+} from "lucide-react";
 import useSWR from "swr";
 import { AiGenerationModal } from "@/components/ai/ai-components";
 import { GbpIcon } from "@/components/gbp-icon";
 import { BulkImportModal } from "@/components/posts/BulkImportModal";
 import { useGlobalSettings } from "@/hooks/useGlobalSettings";
 import { MonthlyReportModal } from "@/components/profiles/MonthlyReportModal";
+import { DeleteProfileModal } from "@/components/profiles/DeleteProfileModal";
 
 interface Profile {
   id: string;
@@ -48,12 +54,10 @@ function proxyUrl(url?: string, profileId?: string) {
     targetUrl = url.replace("gbp:", "");
   }
   
-  // Classic & New Places API photos already have a public API key, no proxy needed
   if (targetUrl.includes("maps.googleapis.com") || targetUrl.includes("places.googleapis.com")) {
     return targetUrl;
   }
   
-  // For GBP Media API (lh3.googleusercontent.com) we MUST proxy to attach the OAuth token
   const suffix = profileId ? `&profileId=${profileId}` : "";
   return `/api/proxy/media?url=${encodeURIComponent(targetUrl)}${suffix}`;
 }
@@ -86,38 +90,35 @@ function SkeletonProfileCard() {
 }
 
 function ProfileCard({
-  profile, onDelete, onEdit, deleting, onAiCreate, onBulkImport, aiFeaturesEnabled, onDownloadReport, onHideToggle
+  profile, onDeleteClick, onEdit, onAiCreate, onBulkImport, aiFeaturesEnabled, onDownloadReport, onHideToggle
 }: {
   profile: Profile & { postCounts?: { drafts: number; scheduled: number; thisMonthPublished: number; published: number; pending: number; } };
-  onDelete: (id: string) => void;
+  onDeleteClick: (p: Profile) => void;
   onEdit: (p: Profile) => void;
-  deleting: boolean;
   onAiCreate: (id: string) => void;
   onBulkImport: (id: string) => void;
   aiFeaturesEnabled: boolean;
   onDownloadReport: (p: Profile) => void;
   onHideToggle?: (p: Profile) => void;
 }) {
-  const [isMobile, setIsMobile] = useState(false);
+  const [showMenu, setShowMenu] = useState(false);
+  const menuRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    const check = () => setIsMobile(window.innerWidth <= 768);
-    check();
-    window.addEventListener("resize", check);
-    return () => window.removeEventListener("resize", check);
+    function handleClickOutside(event: MouseEvent) {
+      if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
+        setShowMenu(false);
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
   const drafts = profile.postCounts?.drafts || 0;
   const scheduled = profile.postCounts?.scheduled || 0;
-  // The original component filtered published posts for the current month
   const published = profile.postCounts?.thisMonthPublished || 0;
 
   const theme = getTheme(profile.name);
-
-  // Use cached stats from DB if available, else 0
-  const searchViews = (profile as any).cachedSearchViews || 0;
-  const interactions = (profile as any).cachedInteractions || 0;
-  const engagements = (profile as any).cachedEngagements || 0;
 
   return (
     <div
@@ -125,7 +126,8 @@ function ProfileCard({
         background: "#ffffff",
         borderRadius: 14,
         boxShadow: "0 1px 4px rgba(0,0,0,0.07), 0 4px 16px rgba(0,0,0,0.04)",
-        overflow: "hidden",
+        overflow: "visible",
+        position: "relative",
         display: "flex",
         flexDirection: "column",
         transition: "box-shadow 0.2s, transform 0.15s",
@@ -134,26 +136,105 @@ function ProfileCard({
       className="profile-card-hover"
     >
       {/* Left accent + header */}
-      <div style={{ display: "flex", gap: 0 }}>
+      <div style={{ display: "flex", gap: 0, borderRadius: "14px 14px 0 0", overflow: "hidden" }}>
         <div style={{ width: 4, background: theme.border, flexShrink: 0 }} />
 
         <div style={{ flex: 1, padding: "16px 14px 14px", position: "relative" }}>
-          {/* 3-dot kebab menu and Hide button */}
-          <div style={{ position: "absolute", top: 12, right: 10, display: "flex", gap: 8 }}>
+          {/* Top-Right Menu & Hide Toggle */}
+          <div style={{ position: "absolute", top: 12, right: 10, display: "flex", gap: 6, zIndex: 20 }}>
             {onHideToggle && (
               <button 
                 onClick={(e) => { e.preventDefault(); onHideToggle(profile); }} 
                 title={profile.isHidden ? "Unhide Profile" : "Hide Profile"} 
-                style={{ background: "none", border: "none", cursor: "pointer", color: "#9ca3af", padding: 4, display: "flex", alignItems: "center", justifyContent: "center" }}
+                style={{ background: "#f8fafc", border: "1px solid #e2e8f0", borderRadius: 6, cursor: "pointer", color: "#64748b", padding: "4px 6px", display: "flex", alignItems: "center", justifyContent: "center" }}
               >
-                {profile.isHidden ? <Eye size={16} /> : <Eye className="opacity-50" size={16} />}
+                {profile.isHidden ? <Eye size={14} color="#2563eb" /> : <Eye className="opacity-50" size={14} />}
               </button>
             )}
-            <button onClick={() => onEdit(profile)} title="Options" style={{ background: "none", border: "none", cursor: "pointer", color: "#9ca3af", padding: 4, display: "flex", flexDirection: "column", gap: 2.5, alignItems: "center", justifyContent: "center", width: 20, height: 20 }}>
-              <div style={{ width: 3, height: 3, background: "#9ca3af", borderRadius: "50%" }} />
-              <div style={{ width: 3, height: 3, background: "#9ca3af", borderRadius: "50%" }} />
-              <div style={{ width: 3, height: 3, background: "#9ca3af", borderRadius: "50%" }} />
-            </button>
+            
+            {/* Options Dropdown Trigger */}
+            <div style={{ position: "relative" }} ref={menuRef}>
+              <button 
+                onClick={() => setShowMenu(!showMenu)} 
+                title="Profile Options" 
+                style={{ 
+                  background: showMenu ? "#eff6ff" : "#f8fafc", 
+                  border: `1px solid ${showMenu ? "#bfdbfe" : "#e2e8f0"}`, 
+                  borderRadius: 6, 
+                  cursor: "pointer", 
+                  color: showMenu ? "#2563eb" : "#64748b", 
+                  padding: "4px 6px", 
+                  display: "flex", 
+                  alignItems: "center", 
+                  justifyContent: "center" 
+                }}
+              >
+                <MoreVertical size={14} />
+              </button>
+
+              {/* Popup Dropdown Menu */}
+              {showMenu && (
+                <div style={{
+                  position: "absolute",
+                  top: "100%",
+                  right: 0,
+                  marginTop: 6,
+                  background: "#ffffff",
+                  borderRadius: 10,
+                  boxShadow: "0 10px 25px -5px rgba(0, 0, 0, 0.15), 0 8px 10px -6px rgba(0, 0, 0, 0.1)",
+                  border: "1px solid #e2e8f0",
+                  padding: 6,
+                  minWidth: 210,
+                  zIndex: 999
+                }}>
+                  <button
+                    onClick={() => { setShowMenu(false); onEdit(profile); }}
+                    style={{
+                      width: "100%", textAlign: "left", padding: "8px 10px",
+                      background: "none", border: "none", borderRadius: 6,
+                      fontSize: 12, fontWeight: 600, color: "#1e293b",
+                      display: "flex", alignItems: "center", gap: 8, cursor: "pointer"
+                    }}
+                    onMouseEnter={(e) => e.currentTarget.style.background = "#f1f5f9"}
+                    onMouseLeave={(e) => e.currentTarget.style.background = "none"}
+                  >
+                    <Edit2 size={13} color="#2563eb" /> Edit Details & Settings
+                  </button>
+
+                  <a
+                    href="https://business.google.com/locations"
+                    target="_blank"
+                    rel="noreferrer"
+                    style={{
+                      width: "100%", textAlign: "left", padding: "8px 10px",
+                      background: "none", border: "none", borderRadius: 6,
+                      fontSize: 12, fontWeight: 600, color: "#1e293b",
+                      display: "flex", alignItems: "center", gap: 8, textDecoration: "none", cursor: "pointer"
+                    }}
+                    onMouseEnter={(e) => e.currentTarget.style.background = "#eff6ff"}
+                    onMouseLeave={(e) => e.currentTarget.style.background = "none"}
+                  >
+                    <ExternalLink size={13} color="#2563eb" /> Manage Access on Google
+                  </a>
+
+                  <div style={{ height: 1, background: "#f1f5f9", margin: "4px 0" }} />
+
+                  <button
+                    onClick={() => { setShowMenu(false); onDeleteClick(profile); }}
+                    style={{
+                      width: "100%", textAlign: "left", padding: "8px 10px",
+                      background: "none", border: "none", borderRadius: 6,
+                      fontSize: 12, fontWeight: 600, color: "#dc2626",
+                      display: "flex", alignItems: "center", gap: 8, cursor: "pointer"
+                    }}
+                    onMouseEnter={(e) => e.currentTarget.style.background = "#fef2f2"}
+                    onMouseLeave={(e) => e.currentTarget.style.background = "none"}
+                  >
+                    <Trash2 size={13} color="#dc2626" /> Delete & Purge Data...
+                  </button>
+                </div>
+              )}
+            </div>
           </div>
 
           <div style={{ display: "flex", alignItems: "flex-start", gap: 12 }}>
@@ -182,7 +263,7 @@ function ProfileCard({
               )}
             </div>
 
-            <div style={{ minWidth: 0, flex: 1, paddingRight: 54 }}>
+            <div style={{ minWidth: 0, flex: 1, paddingRight: 64 }}>
               <Link href={`/profiles/${profile.id}/edit`} title={profile.name} style={{ fontSize: 14, fontWeight: 700, color: "#111827", display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical", overflow: "hidden", lineHeight: 1.3, textDecoration: "none" }}>
                 {profile.name}
               </Link>
@@ -195,7 +276,7 @@ function ProfileCard({
         </div>
       </div>
 
-      {/* Stats strip — grey, no icons */}
+      {/* Stats strip */}
       <div style={{ margin: "0 14px", padding: "14px 0", background: "#f9fafb", borderRadius: 8, display: "grid", gridTemplateColumns: "1fr 1fr 1fr", border: "1px solid #f1f5f9" }}>
         <div style={{ textAlign: "center", borderRight: "1px solid #e5e7eb" }}>
           <p style={{ fontSize: 18, fontWeight: 700, color: "#111827", lineHeight: 1, marginBottom: 3 }}>{drafts}</p>
@@ -211,7 +292,7 @@ function ProfileCard({
         </div>
       </div>
 
-      {/* Action Buttons — original 3-action row restored */}
+      {/* Action Buttons */}
       <div style={{ padding: "12px 14px 6px" }}>
         <Link href={`/profiles/${profile.id}`} style={{
           display: "flex", alignItems: "center", justifyContent: "space-between",
@@ -256,7 +337,7 @@ export default function ProfilesPage() {
   const aiFeaturesEnabled = settings?.aiFeaturesEnabled ?? false;
 
   const profiles = data?.data || [];
-  const [deleting, setDeleting] = useState<string | null>(null);
+  const [deleteTargetProfile, setDeleteTargetProfile] = useState<Profile | null>(null);
   const [message, setMessage] = useState<{ type: "success" | "error"; text: string } | null>(null);
   const [aiLocationId, setAiLocationId]   = useState<string | null>(null);
   const [bulkLocationId, setBulkLocationId] = useState<string | null>(null);
@@ -264,17 +345,6 @@ export default function ProfilesPage() {
   const [showHidden, setShowHidden] = useState(false);
 
   const visibleProfiles = profiles.filter((p: Profile) => showHidden ? p.isHidden : !p.isHidden);
-
-  async function handleDelete(id: string) {
-    if (!confirm("Delete this profile? Posts linked to it will lose their location reference.")) return;
-    setDeleting(id);
-    try {
-      const res = await fetch(`/api/profiles?id=${id}`, { method: "DELETE" });
-      if (res.ok) { setMessage({ type: "success", text: "Profile deleted." }); mutate(); }
-      else { const d = await res.json(); setMessage({ type: "error", text: d.error || "Failed." }); }
-    } catch { setMessage({ type: "error", text: "Network error." }); }
-    setDeleting(null);
-  }
 
   const [isSyncing, setIsSyncing] = useState(false);
 
@@ -449,9 +519,8 @@ export default function ProfilesPage() {
             <ProfileCard
               key={p.id}
               profile={p}
-              onDelete={handleDelete}
+              onDeleteClick={(target) => setDeleteTargetProfile(target)}
               onEdit={(prof) => router.push(`/profiles/${prof.id}/edit`)}
-              deleting={deleting === p.id}
               onAiCreate={setAiLocationId}
               onBulkImport={setBulkLocationId}
               aiFeaturesEnabled={aiFeaturesEnabled}
@@ -462,6 +531,17 @@ export default function ProfilesPage() {
         </div>
       )}
 
+      {/* Delete & Manage Access Modal */}
+      <DeleteProfileModal
+        isOpen={!!deleteTargetProfile}
+        profile={deleteTargetProfile}
+        onClose={() => setDeleteTargetProfile(null)}
+        onSuccess={() => {
+          mutate();
+          setMessage({ type: "success", text: "Profile and all associated data purged successfully." });
+        }}
+      />
+
       <AiGenerationModal
         locationId={aiLocationId || ""}
         isOpen={!!aiLocationId}
@@ -469,13 +549,13 @@ export default function ProfilesPage() {
         onGenerated={() => { mutate(); setAiLocationId(null); }}
       />
 
-      {/* Bulk Import Modal — opens directly from profile card */}
+      {/* Bulk Import Modal */}
       <BulkImportModal
         locationId={bulkLocationId || ""}
         isOpen={!!bulkLocationId}
         onClose={() => setBulkLocationId(null)}
         onSuccess={() => {
-          mutate(); // only refresh draft counts — do NOT close modal so success panel shows
+          mutate();
         }}
         viewDraftsHref={bulkLocationId ? `/profiles/${bulkLocationId}` : undefined}
       />
