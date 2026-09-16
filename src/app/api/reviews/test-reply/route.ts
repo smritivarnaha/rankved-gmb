@@ -166,7 +166,9 @@ Tone instructions:
 - Use team pronouns ("we", "our team").
 - Keep strictly between 30 and 70 words.
 - Do not use em dashes or double quotes.
-${isNegative ? "- Apologize with empathy, take responsibility, do not argue, invite direct call to " + contactPhone : ""}
+- Never output raw phone numbers or raw emails; direct to the contact number on our business profile.
+- Never use 'Patient' as a fallback name.
+${isNegative ? "- Apologize with empathy, take responsibility, do not argue, invite them to reach out using the contact number listed on our business profile" : ""}
 ${isNeutral ? "- Thank them for constructive feedback, emphasize continuous clinical standard and " + targetKeyword : ""}
 ${!isNegative && !isNeutral ? "- Warmly thank them, reference their consultation/treatment, and highlight our dedicated " + targetKeyword : ""}
 

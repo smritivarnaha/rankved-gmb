@@ -552,12 +552,14 @@ ${knowledgeBase || "Maintain dignified, patient-first care, clear explanations, 
 ============================================================
 CRITICAL REQUIREMENTS (STRICT COMPLIANCE MANDATORY):
 ============================================================
-1. GREETING & SALUTATION DIVERSITY (NEVER SAME FORMULA):
-   - DO NOT start every reply with the same "Hi [Full Name]," formula.
+1. GREETING & SALUTATION DIVERSITY (NEVER USE "PATIENT" OR "VALUED PATIENT"):
+   - DO NOT use generic placeholders like "Hello Patient" or "Dear Valued Patient" or "there".
+   - If a real customer name is provided, use it naturally (e.g. "Hello ${firstName},", "Dear ${firstName},", "Hi ${firstName},", "Thank you for your feedback, ${fullName}.").
+   - If no name is provided (or name is "Google User" / anonymous), open cleanly and politely (e.g. "Hello, thank you for reviewing ${businessName}." or "We appreciate you sharing your feedback with us.").
    - Vary the opening style across the three variants:
-     * Variant "warm": Use First Name if available (e.g., "Hello ${firstName || 'there'}," or "Dear ${firstName || 'Patient'},") or a warm opening.
-     * Variant "short": Start DIRECTLY with gratitude without name (e.g., "Thank you for taking the time to share your feedback with us." or "We truly appreciate you reviewing our clinic.").
-     * Variant "seoFocused": Use Full Name or an inline address (e.g., "Hi ${fullName || 'there'}," or "${firstName ? `${firstName}, thank you` : 'Thank you'} for your kind words regarding ${businessName}.").
+     * Variant "warm": Use friendly first-name greeting (e.g. "Hello ${firstName || ''},").
+     * Variant "short": Start with direct, professional gratitude.
+     * Variant "seoFocused": Use full name or inline address naturally.
 
 2. WORD COUNT CONSTRAINT (CRITICAL):
    - EVERY reply variant MUST be strictly between 30 words and 80 words (2 to 3 substantive sentences).
@@ -567,32 +569,36 @@ CRITICAL REQUIREMENTS (STRICT COMPLIANCE MANDATORY):
 3. NATURAL SENTENCE EXPANSION ON THE BASIS OF THE REVIEW:
    - Carefully read the customer's comment. If they mention consultation, guidance, doctor's explanation, friendly staff, treatment, or recovery, expand meaningfully on that exact aspect.
    - The expansion must read like a thoughtful, natural medical/clinical professional speaking, NOT robotic filler.
-   - Articulate our team's commitment to thorough patient consultations, attentive care, and clear explanations.
+   - Articulate our team's commitment to thorough consultations, attentive care, and clear explanations.
 
 4. SEAMLESS SPECIALTY + LOCATION KEYWORD INTEGRATION:
    - Seamlessly blend the specialty and location search query ("${targetKeyword}") into the natural English grammar of a sentence.
    - NEVER awkwardly stuff keywords. It must sound like an organic, natural statement of our clinical practice and expertise.
    - Example natural integration: "As a dedicated ${targetKeyword}, our team is committed to providing thorough diagnostic consultations and personalized care for every patient."
 
-5. TEAM PRONOUNS ONLY:
+5. CONTACT INSTRUCTIONS (NO RAW PHONE NUMBERS OR RAW EMAILS IN TEXT):
+   - NEVER print raw phone numbers (e.g. +91...) or raw email addresses in the reply text.
+   - Always phrase contact invitations naturally, such as: "Kindly call or connect with us on the contact number attached to our business profile so our management team can assist you directly."
+
+6. TEAM PRONOUNS ONLY:
    - Always write as a team using "WE", "OUR TEAM", "OUR CLINIC", or "OUR PRACTICE".
    - ABSOLUTELY NEVER write in first-person singular ("I", "my", "I am", "I'm", "I appreciate").
 
-6. DIGNIFIED, PROFESSIONAL CLINICAL TONE:
+7. DIGNIFIED, PROFESSIONAL CLINICAL TONE:
    - Use calm, grounded, clinical/professional authority and warmth.
    - ABSOLUTELY NEVER use over-excited marketing hype words like "thrilled", "super excited", "overjoyed", "ecstatic", or exclamation mark spam.
 
-7. PUNCTUATION & CLICHES:
+8. PUNCTUATION & CLICHES:
    - ABSOLUTELY ZERO em dashes (—) or en dashes (–). Use standard commas or periods.
    - Never use canned robotic lines like "We strive for excellence", "Your feedback is valuable to us", "In today's fast-paced world", or "At our establishment".
 
-8. SENTIMENT HANDLING:
+9. SENTIMENT HANDLING:
    ${isNegative ? `
    - NEGATIVE REVIEW (${rating}★):
    - Acknowledge their concern with genuine empathy, calm responsibility, and humility.
    - Apologize sincerely that their experience fell short of our high standards.
    - Do not make excuses or sound defensive.
-   - Invite them to reach out directly to our team ${contactPhone ? `at ${contactPhone}` : contactEmail ? `at ${contactEmail}` : ""} so we can review their case and assist them personally.
+   - Invite them to connect with our management team using the contact number provided on our business profile so we can review their case and resolve this with them directly.
    ` : isNeutral ? `
    - NEUTRAL REVIEW (${rating}★):
    - Thank them for sharing their constructive thoughts.
