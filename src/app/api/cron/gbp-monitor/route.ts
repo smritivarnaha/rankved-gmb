@@ -255,20 +255,41 @@ async function checkReviews({ location, locationPath, accessToken, settings, ale
         });
         if (existing) continue;
 
-        // Generate AI reply
-        const { generateSmartReviewReply } = await import("@/lib/ai-review-reply");
-        const aiResult = await generateSmartReviewReply({
-          locationId: location.id,
-          reviewText: rev.comment,
-          reviewerName: rev.reviewer?.displayName,
-          rating: starNumber,
-          userId: location.client?.userId,
-        });
+        // Generate Reply based on selected autoReplyMode
+        let replyComment = "";
+        const autoReplyMode = location.autoReplyMode || "TEMPLATES";
 
-        if (aiResult?.reply) {
+        if (autoReplyMode === "AI") {
+          const { generateSmartReviewReply } = await import("@/lib/ai-review-reply");
+          const aiResult = await generateSmartReviewReply({
+            locationId: location.id,
+            reviewText: rev.comment,
+            reviewerName: rev.reviewer?.displayName,
+            rating: starNumber,
+            userId: location.client?.userId,
+          });
+          replyComment = aiResult?.reply || "";
+        } else {
+          // Default: 15 Dynamic Templates Engine
+          const { selectSmartReviewTemplate, renderReviewTemplate } = await import("@/lib/review-templates");
+          const smartTemplate = selectSmartReviewTemplate(starNumber, rev.comment);
+          const businessName = location.autoReplyBrandName?.trim() || location.name;
+          const cityOrArea = location.address ? location.address.split(",")[0].trim() : "";
+
+          replyComment = renderReviewTemplate({
+            template: smartTemplate.template,
+            reviewerName: rev.reviewer?.displayName,
+            businessName,
+            cityOrArea,
+          });
+        }
+
+        if (replyComment) {
           // Calculate randomized human delay (between min and max minutes)
-          const minDelay = location.autoReplyMinDelayMinutes || 60;
-          const maxDelay = location.autoReplyMaxDelayMinutes || 240;
+          const rawMin = location.autoReplyMinDelayMinutes !== null && location.autoReplyMinDelayMinutes !== undefined ? location.autoReplyMinDelayMinutes : 2;
+          const rawMax = location.autoReplyMaxDelayMinutes !== null && location.autoReplyMaxDelayMinutes !== undefined ? location.autoReplyMaxDelayMinutes : 5;
+          const minDelay = Math.max(1, Math.min(rawMin, rawMax));
+          const maxDelay = Math.max(minDelay, rawMax);
           const randomMinutes = Math.floor(Math.random() * (maxDelay - minDelay + 1)) + minDelay;
           const scheduledFor = new Date(Date.now() + randomMinutes * 60 * 1000);
 
@@ -283,13 +304,13 @@ async function checkReviews({ location, locationPath, accessToken, settings, ale
               rating: starNumber,
               reviewComment: rev.comment || null,
               reviewCreateTime: rev.createTime ? new Date(rev.createTime) : null,
-              replyComment: aiResult.reply,
+              replyComment,
               scheduledFor,
               status: "SCHEDULED",
             },
           });
 
-          console.log(`[Auto-Reply] ✅ Queued AI reply for ${location.name} review by ${rev.reviewer?.displayName} (Posting in ${randomMinutes} mins at ${scheduledFor.toLocaleTimeString()})`);
+          console.log(`[Auto-Reply] ✅ Queued (${autoReplyMode}) reply for ${location.name} review by ${rev.reviewer?.displayName} (Posting in ${randomMinutes} mins at ${scheduledFor.toLocaleTimeString()})`);
         }
       } catch (autoErr) {
         console.error(`[Auto-Reply] Failed to auto-reply for review on ${location.name}:`, autoErr);

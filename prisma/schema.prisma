@@ -169,6 +169,7 @@ model Location {
   
   // AI Auto-Reply Configuration
   autoReplyEnabled         Boolean   @default(false)
+  autoReplyMode            String    @default("TEMPLATES") // "TEMPLATES" (15 Dynamic Templates) | "AI" (AI LLM Generated)
   autoReplyMinDelayMinutes Int       @default(60)
   autoReplyMaxDelayMinutes Int       @default(240)
   autoReplyBrandName       String?   // Custom brand/practice name to use in review replies

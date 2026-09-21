@@ -560,15 +560,29 @@ function ImportModal({
   );
 }
 
+const TIMING_PRESETS = [
+  { label: "⚡ 2 Mins", min: 1, max: 2, desc: "Instant (1–2m)" },
+  { label: "⚡ 5 Mins", min: 2, max: 5, desc: "Fast (2–5m)" },
+  { label: "⏱️ 15 Mins", min: 5, max: 15, desc: "Balanced (5–15m)" },
+  { label: "⏱️ 30 Mins", min: 15, max: 30, desc: "Natural (15–30m)" },
+  { label: "🕒 1 Hour", min: 30, max: 60, desc: "Within 1 hr" },
+  { label: "🕒 2 Hours", min: 60, max: 120, desc: "Within 2 hrs" },
+  { label: "🕒 4 Hours", min: 120, max: 240, desc: "Within 4 hrs" },
+];
+
 // ── Auto-Reply Settings Modal ─────────────────────────────────────────────
 function AutoReplySettingsModal({
   onClose,
   profiles,
   selectedTab,
+  onOpenTemplatesModal,
+  onOpenTestModal,
 }: {
   onClose: () => void;
   profiles: any[];
   selectedTab: string;
+  onOpenTemplatesModal?: () => void;
+  onOpenTestModal?: () => void;
 }) {
   const [targetProfileId, setTargetProfileId] = useState<string>(() => {
     return selectedTab !== "all" && profiles.some(p => p.id === selectedTab)
@@ -582,8 +596,9 @@ function AutoReplySettingsModal({
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
   const [autoReplyEnabled, setAutoReplyEnabled] = useState(false);
-  const [minDelay, setMinDelay] = useState(60);
-  const [maxDelay, setMaxDelay] = useState(240);
+  const [autoReplyMode, setAutoReplyMode] = useState<"TEMPLATES" | "AI">("TEMPLATES");
+  const [minDelay, setMinDelay] = useState(2);
+  const [maxDelay, setMaxDelay] = useState(5);
   const [brandName, setBrandName] = useState("");
   const [customKeywords, setCustomKeywords] = useState("");
   const [strictKeywords, setStrictKeywords] = useState(false);
@@ -603,8 +618,9 @@ function AutoReplySettingsModal({
       .then(data => {
         if (data) {
           setAutoReplyEnabled(Boolean(data.autoReplyEnabled));
-          setMinDelay(data.autoReplyMinDelayMinutes || 60);
-          setMaxDelay(data.autoReplyMaxDelayMinutes || 240);
+          setAutoReplyMode(data.autoReplyMode === "AI" ? "AI" : "TEMPLATES");
+          setMinDelay(data.autoReplyMinDelayMinutes !== undefined && data.autoReplyMinDelayMinutes !== null ? data.autoReplyMinDelayMinutes : 2);
+          setMaxDelay(data.autoReplyMaxDelayMinutes !== undefined && data.autoReplyMaxDelayMinutes !== null ? data.autoReplyMaxDelayMinutes : 5);
           setBrandName(data.autoReplyBrandName || "");
           setCustomKeywords(data.autoReplyKeywords || "");
           setStrictKeywords(Boolean(data.autoReplyStrictKeywords));
@@ -630,6 +646,7 @@ function AutoReplySettingsModal({
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           autoReplyEnabled,
+          autoReplyMode,
           autoReplyMinDelayMinutes: minDelay,
           autoReplyMaxDelayMinutes: maxDelay,
           autoReplyBrandName: brandName,
@@ -657,34 +674,36 @@ function AutoReplySettingsModal({
     }
   };
 
+  const isPresetActive = (p: typeof TIMING_PRESETS[0]) => minDelay === p.min && maxDelay === p.max;
+
   return (
-    <div style={{ position: "fixed", inset: 0, background: "rgba(15,23,42,0.6)", zIndex: 1000, display: "flex", alignItems: "center", justifyContent: "center", padding: 20 }}>
-      <div style={{ background: "#ffffff", borderRadius: 16, width: "100%", maxWidth: 580, maxHeight: "90vh", padding: 24, boxShadow: "0 20px 25px -5px rgba(0,0,0,0.1)", display: "flex", flexDirection: "column", gap: 16, overflowY: "auto" }}>
+    <div style={{ position: "fixed", inset: 0, background: "rgba(15,23,42,0.65)", backdropFilter: "blur(4px)", zIndex: 1000, display: "flex", alignItems: "center", justifyContent: "center", padding: 20 }}>
+      <div style={{ background: "#ffffff", borderRadius: 20, width: "100%", maxWidth: 640, maxHeight: "90vh", padding: 28, boxShadow: "0 25px 50px -12px rgba(0,0,0,0.25)", display: "flex", flexDirection: "column", gap: 20, overflowY: "auto", border: "1px solid #e2e8f0" }}>
         {/* Header */}
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-            <div style={{ width: 36, height: 36, borderRadius: 10, background: "#eff6ff", display: "flex", alignItems: "center", justifyContent: "center", color: "#2563eb" }}>
-              <Sparkles size={18} />
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", borderBottom: "1px solid #f1f5f9", paddingBottom: 16 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+            <div style={{ width: 42, height: 42, borderRadius: 12, background: "linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%)", display: "flex", alignItems: "center", justifyContent: "center", color: "#2563eb", border: "1px solid #bfdbfe" }}>
+              <Sparkles size={22} />
             </div>
             <div>
-              <h3 style={{ margin: 0, fontSize: 16, fontWeight: 700, color: "#0f172a" }}>AI Auto-Reply Settings</h3>
-              <p style={{ margin: "2px 0 0", fontSize: 12, color: "#64748b" }}>Automate smart review replies with randomized human delay</p>
+              <h3 style={{ margin: 0, fontSize: 18, fontWeight: 800, color: "#0f172a", letterSpacing: "-0.02em" }}>Review Auto-Reply Settings</h3>
+              <p style={{ margin: "2px 0 0", fontSize: 12, color: "#64748b", fontWeight: 500 }}>Configure 15 dynamic templates or AI engine with flexible delay timings</p>
             </div>
           </div>
-          <button onClick={onClose} style={{ background: "none", border: "none", color: "#94a3b8", cursor: "pointer" }}>
-            <X size={20} />
+          <button onClick={onClose} style={{ background: "#f8fafc", border: "1px solid #e2e8f0", borderRadius: 8, padding: 6, color: "#64748b", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}>
+            <X size={18} />
           </button>
         </div>
 
         {/* Profile Selector */}
         <div>
-          <label style={{ display: "block", fontSize: 12, fontWeight: 700, color: "#334155", marginBottom: 6 }}>
+          <label style={{ display: "block", fontSize: 12, fontWeight: 700, color: "#334155", marginBottom: 6, textTransform: "uppercase", letterSpacing: "0.05em" }}>
             Select Business Profile
           </label>
           <select
             value={targetProfileId}
             onChange={e => setTargetProfileId(e.target.value)}
-            style={{ width: "100%", height: 38, padding: "0 12px", border: "1px solid #cbd5e1", borderRadius: 8, fontSize: 13, background: "#ffffff", color: "#0f172a", outline: "none" }}
+            style={{ width: "100%", height: 42, padding: "0 14px", border: "1px solid #cbd5e1", borderRadius: 10, fontSize: 14, fontWeight: 600, background: "#ffffff", color: "#0f172a", outline: "none", boxShadow: "0 1px 2px rgba(0,0,0,0.05)" }}
           >
             {profiles.map(p => (
               <option key={p.id} value={p.id}>
@@ -695,56 +714,279 @@ function AutoReplySettingsModal({
         </div>
 
         {isLoadingSettings ? (
-          <div style={{ padding: 30, textAlign: "center", color: "#64748b" }}>
-            <Loader2 size={24} className="animate-spin" color="#2563eb" style={{ margin: "0 auto 8px" }} />
-            <p style={{ fontSize: 13, margin: 0 }}>Loading profile auto-reply settings...</p>
+          <div style={{ padding: 40, textAlign: "center", color: "#64748b" }}>
+            <Loader2 size={28} className="animate-spin" color="#2563eb" style={{ margin: "0 auto 12px" }} />
+            <p style={{ fontSize: 13, fontWeight: 600, margin: 0 }}>Loading profile auto-reply settings...</p>
           </div>
         ) : (
           <>
-            {/* Master Toggle (Default OFF) */}
-            <div style={{ background: autoReplyEnabled ? "#f0fdf4" : "#f8fafc", border: `1px solid ${autoReplyEnabled ? "#bbf7d0" : "#e2e8f0"}`, borderRadius: 10, padding: "14px 16px", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+            {/* Master Toggle */}
+            <div style={{ background: autoReplyEnabled ? "#f0fdf4" : "#f8fafc", border: `1.5px solid ${autoReplyEnabled ? "#86efac" : "#e2e8f0"}`, borderRadius: 14, padding: "16px 18px", display: "flex", alignItems: "center", justifyContent: "space-between", transition: "all 0.2s ease" }}>
               <div>
-                <span style={{ fontSize: 13, fontWeight: 700, color: autoReplyEnabled ? "#15803d" : "#334155", display: "block" }}>
-                  AI Auto-Reply is {autoReplyEnabled ? "ENABLED (ON)" : "DISABLED (OFF)"}
-                </span>
-                <span style={{ fontSize: 11, color: "#64748b" }}>
-                  {autoReplyEnabled ? "Automatically replies to new reviews with human delay" : "Auto-replier is off by default for safety"}
+                <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                  <span style={{ fontSize: 14, fontWeight: 800, color: autoReplyEnabled ? "#15803d" : "#334155" }}>
+                    Auto-Reply is {autoReplyEnabled ? "ENABLED (ACTIVE)" : "DISABLED (OFF)"}
+                  </span>
+                  {autoReplyEnabled && (
+                    <span style={{ fontSize: 10, fontWeight: 800, background: "#dcfce7", color: "#166534", padding: "2px 8px", borderRadius: 99, textTransform: "uppercase" }}>
+                      Active
+                    </span>
+                  )}
+                </div>
+                <span style={{ fontSize: 12, color: "#64748b", marginTop: 3, display: "block" }}>
+                  {autoReplyEnabled ? "Automatically replies to newly received reviews based on your chosen engine and delay" : "Auto-replier is paused for this profile"}
                 </span>
               </div>
               <button
                 type="button"
                 onClick={() => setAutoReplyEnabled(!autoReplyEnabled)}
                 style={{
-                  width: 48,
-                  height: 26,
+                  width: 52,
+                  height: 28,
                   borderRadius: 20,
                   background: autoReplyEnabled ? "#16a34a" : "#cbd5e1",
                   border: "none",
                   cursor: "pointer",
                   position: "relative",
                   transition: "background 0.2s ease",
+                  flexShrink: 0,
                 }}
               >
                 <div
                   style={{
-                    width: 20,
-                    height: 20,
+                    width: 22,
+                    height: 22,
                     borderRadius: "50%",
                     background: "#ffffff",
                     position: "absolute",
                     top: 3,
-                    left: autoReplyEnabled ? 25 : 3,
+                    left: autoReplyEnabled ? 27 : 3,
                     transition: "left 0.2s ease",
-                    boxShadow: "0 1px 3px rgba(0,0,0,0.2)",
+                    boxShadow: "0 2px 4px rgba(0,0,0,0.2)",
                   }}
                 />
               </button>
             </div>
 
+            {/* Auto-Reply Engine Selector */}
+            <div>
+              <label style={{ display: "block", fontSize: 12, fontWeight: 700, color: "#334155", marginBottom: 8, textTransform: "uppercase", letterSpacing: "0.05em" }}>
+                Select Auto-Reply Engine
+              </label>
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+                {/* Option 1: 15 Dynamic Templates (Recommended) */}
+                <div
+                  onClick={() => setAutoReplyMode("TEMPLATES")}
+                  style={{
+                    border: `2px solid ${autoReplyMode === "TEMPLATES" ? "#2563eb" : "#e2e8f0"}`,
+                    background: autoReplyMode === "TEMPLATES" ? "#eff6ff" : "#ffffff",
+                    borderRadius: 14,
+                    padding: "16px 14px",
+                    cursor: "pointer",
+                    transition: "all 0.2s ease",
+                    display: "flex",
+                    flexDirection: "column",
+                    justifyContent: "space-between",
+                    position: "relative",
+                  }}
+                >
+                  {autoReplyMode === "TEMPLATES" && (
+                    <div style={{ position: "absolute", top: 10, right: 10, width: 20, height: 20, borderRadius: "50%", background: "#2563eb", color: "#fff", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                      <Check size={12} strokeWidth={3} />
+                    </div>
+                  )}
+                  <div>
+                    <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 6 }}>
+                      <BookOpen size={16} color="#2563eb" />
+                      <span style={{ fontSize: 13, fontWeight: 800, color: "#0f172a" }}>15 Dynamic Templates</span>
+                    </div>
+                    <span style={{ display: "inline-block", background: "#dbeafe", color: "#1e40af", fontSize: 10, fontWeight: 800, padding: "2px 6px", borderRadius: 4, marginBottom: 8, textTransform: "uppercase" }}>
+                      Recommended • 100% Reliable
+                    </span>
+                    <p style={{ margin: 0, fontSize: 11, color: "#475569", lineHeight: 1.45 }}>
+                      Zero API failure, 100% accurate sentiment-tiered templates (1-2★, 3★, 4-5★), unique dynamic greetings, and safe contact routing.
+                    </p>
+                  </div>
+                </div>
+
+                {/* Option 2: AI Generated (LLM) */}
+                <div
+                  onClick={() => setAutoReplyMode("AI")}
+                  style={{
+                    border: `2px solid ${autoReplyMode === "AI" ? "#8b5cf6" : "#e2e8f0"}`,
+                    background: autoReplyMode === "AI" ? "#f5f3ff" : "#ffffff",
+                    borderRadius: 14,
+                    padding: "16px 14px",
+                    cursor: "pointer",
+                    transition: "all 0.2s ease",
+                    display: "flex",
+                    flexDirection: "column",
+                    justifyContent: "space-between",
+                    position: "relative",
+                  }}
+                >
+                  {autoReplyMode === "AI" && (
+                    <div style={{ position: "absolute", top: 10, right: 10, width: 20, height: 20, borderRadius: "50%", background: "#8b5cf6", color: "#fff", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                      <Check size={12} strokeWidth={3} />
+                    </div>
+                  )}
+                  <div>
+                    <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 6 }}>
+                      <Sparkles size={16} color="#8b5cf6" />
+                      <span style={{ fontSize: 13, fontWeight: 800, color: "#0f172a" }}>AI Generated (LLM)</span>
+                    </div>
+                    <span style={{ display: "inline-block", background: "#ede9fe", color: "#6d28d9", fontSize: 10, fontWeight: 800, padding: "2px 6px", borderRadius: 4, marginBottom: 8, textTransform: "uppercase" }}>
+                      Custom Prompts • LLM
+                    </span>
+                    <p style={{ margin: 0, fontSize: 11, color: "#475569", lineHeight: 1.45 }}>
+                      Uses OpenAI, Claude, or Gemini to craft customized replies from your keywords and custom instructions.
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Template shortcuts */}
+              {autoReplyMode === "TEMPLATES" && (
+                <div style={{ marginTop: 10, display: "flex", alignItems: "center", gap: 8 }}>
+                  {onOpenTemplatesModal && (
+                    <button
+                      type="button"
+                      onClick={onOpenTemplatesModal}
+                      style={{
+                        background: "#f1f5f9",
+                        border: "1px solid #cbd5e1",
+                        borderRadius: 8,
+                        padding: "6px 12px",
+                        fontSize: 11,
+                        fontWeight: 700,
+                        color: "#334155",
+                        cursor: "pointer",
+                        display: "flex",
+                        alignItems: "center",
+                        gap: 5,
+                      }}
+                    >
+                      <BookOpen size={13} color="#2563eb" /> View 15 Template Set
+                    </button>
+                  )}
+                  {onOpenTestModal && (
+                    <button
+                      type="button"
+                      onClick={onOpenTestModal}
+                      style={{
+                        background: "#eff6ff",
+                        border: "1px solid #bfdbfe",
+                        borderRadius: 8,
+                        padding: "6px 12px",
+                        fontSize: 11,
+                        fontWeight: 700,
+                        color: "#1d4ed8",
+                        cursor: "pointer",
+                        display: "flex",
+                        alignItems: "center",
+                        gap: 5,
+                      }}
+                    >
+                      <Zap size={13} color="#2563eb" /> Test Live Reply Simulator
+                    </button>
+                  )}
+                </div>
+              )}
+            </div>
+
+            {/* Response Timing / Delay Presets */}
+            <div style={{ background: "#f8fafc", border: "1px solid #e2e8f0", borderRadius: 14, padding: "16px 18px" }}>
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 10 }}>
+                <label style={{ fontSize: 12, fontWeight: 700, color: "#334155", textTransform: "uppercase", letterSpacing: "0.05em", margin: 0 }}>
+                  ⏱️ Response Timing / Delay
+                </label>
+                <span style={{ fontSize: 11, fontWeight: 700, color: "#2563eb" }}>
+                  {minDelay === maxDelay ? `Exact ${minDelay}m` : `Between ${minDelay}m and ${maxDelay}m`}
+                </span>
+              </div>
+
+              {/* Preset Buttons */}
+              <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginBottom: 12 }}>
+                {TIMING_PRESETS.map(p => {
+                  const active = isPresetActive(p);
+                  return (
+                    <button
+                      key={p.label}
+                      type="button"
+                      onClick={() => {
+                        setMinDelay(p.min);
+                        setMaxDelay(p.max);
+                      }}
+                      style={{
+                        padding: "6px 12px",
+                        borderRadius: 8,
+                        fontSize: 11,
+                        fontWeight: 700,
+                        border: `1.5px solid ${active ? "#2563eb" : "#cbd5e1"}`,
+                        background: active ? "#2563eb" : "#ffffff",
+                        color: active ? "#ffffff" : "#475569",
+                        cursor: "pointer",
+                        transition: "all 0.15s ease",
+                      }}
+                    >
+                      {p.label}
+                    </button>
+                  );
+                })}
+              </div>
+
+              {/* Custom Min/Max Inputs */}
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+                <div>
+                  <span style={{ fontSize: 11, color: "#64748b", fontWeight: 600, display: "block", marginBottom: 4 }}>
+                    Minimum Delay (Minutes)
+                  </span>
+                  <input
+                    type="number"
+                    min={1}
+                    max={maxDelay}
+                    value={minDelay}
+                    onChange={e => {
+                      const val = Math.max(1, parseInt(e.target.value, 10) || 1);
+                      setMinDelay(val);
+                      if (val > maxDelay) setMaxDelay(val);
+                    }}
+                    style={{ width: "100%", height: 38, padding: "0 10px", border: "1px solid #cbd5e1", borderRadius: 8, fontSize: 13, fontWeight: 600, boxSizing: "border-box", background: "#ffffff" }}
+                  />
+                  <span style={{ fontSize: 10, color: "#94a3b8", marginTop: 2, display: "block" }}>
+                    {minDelay < 60 ? `${minDelay} min` : `${Math.round(minDelay / 60 * 10) / 10} hours`}
+                  </span>
+                </div>
+                <div>
+                  <span style={{ fontSize: 11, color: "#64748b", fontWeight: 600, display: "block", marginBottom: 4 }}>
+                    Maximum Delay (Minutes)
+                  </span>
+                  <input
+                    type="number"
+                    min={minDelay}
+                    max={720}
+                    value={maxDelay}
+                    onChange={e => {
+                      const val = Math.max(minDelay, parseInt(e.target.value, 10) || minDelay);
+                      setMaxDelay(val);
+                    }}
+                    style={{ width: "100%", height: 38, padding: "0 10px", border: "1px solid #cbd5e1", borderRadius: 8, fontSize: 13, fontWeight: 600, boxSizing: "border-box", background: "#ffffff" }}
+                  />
+                  <span style={{ fontSize: 10, color: "#94a3b8", marginTop: 2, display: "block" }}>
+                    {maxDelay < 60 ? `${maxDelay} min` : `${Math.round(maxDelay / 60 * 10) / 10} hours`}
+                  </span>
+                </div>
+              </div>
+
+              <p style={{ margin: "8px 0 0", fontSize: 11, color: "#64748b", lineHeight: 1.4 }}>
+                💡 <strong>Natural Simulation:</strong> Every auto-reply will be scheduled at a random time between <strong>{minDelay}m</strong> and <strong>{maxDelay}m</strong> after review arrival to avoid automated bot patterns.
+              </p>
+            </div>
+
             {/* Brand / Practice Name to Use in Replies */}
             <div>
               <label style={{ display: "block", fontSize: 12, fontWeight: 700, color: "#334155", marginBottom: 4 }}>
-                🏢 Brand / Practice Name to Use in Replies
+                🏢 Brand / Doctor Name to Use in Replies
               </label>
               <input
                 type="text"
@@ -754,94 +996,13 @@ function AutoReplySettingsModal({
                 style={{ width: "100%", height: 38, padding: "0 12px", border: "1px solid #cbd5e1", borderRadius: 8, fontSize: 13, boxSizing: "border-box", outline: "none" }}
               />
               <span style={{ fontSize: 11, color: "#64748b", marginTop: 3, display: "block" }}>
-                The exact business or brand name the AI will mention in replies (defaults to GBP title if empty).
+                The exact business or brand name mentioned in replies (defaults to GBP title if empty).
               </span>
             </div>
 
-            {/* Approved Keywords Whitelist */}
+            {/* Safety & Moderation Controls */}
             <div>
-              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 4 }}>
-                <label style={{ fontSize: 12, fontWeight: 700, color: "#334155" }}>
-                  🎯 Approved Keywords List for Replies
-                </label>
-                <span style={{ fontSize: 10, color: "#2563eb", fontWeight: 600 }}>Comma or line separated</span>
-              </div>
-              <textarea
-                value={customKeywords}
-                onChange={e => setCustomKeywords(e.target.value)}
-                placeholder="e.g. orthopedic doctor in pune, knee replacement in baner, joint pain clinic, arthroscopy specialist"
-                rows={2}
-                style={{ width: "100%", padding: "8px 12px", border: "1px solid #cbd5e1", borderRadius: 8, fontSize: 12, lineHeight: 1.5, boxSizing: "border-box", outline: "none" }}
-              />
-              
-              <label style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 6, cursor: "pointer" }}>
-                <input
-                  type="checkbox"
-                  checked={strictKeywords}
-                  onChange={e => setStrictKeywords(e.target.checked)}
-                />
-                <span style={{ fontSize: 11, fontWeight: 600, color: strictKeywords ? "#dc2626" : "#475569" }}>
-                  🔒 Strict Whitelist: Use ONLY these keywords in replies (ignore all other search queries)
-                </span>
-              </label>
-            </div>
-
-            {/* Delay Range Window */}
-            <div>
-              <label style={{ display: "block", fontSize: 12, fontWeight: 700, color: "#334155", marginBottom: 6 }}>
-                🕒 Randomized Delay Window (Anti-Bot Pattern Guard)
-              </label>
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
-                <div>
-                  <span style={{ fontSize: 11, color: "#64748b", display: "block", marginBottom: 4 }}>Minimum Delay (Minutes)</span>
-                  <input
-                    type="number"
-                    min={15}
-                    max={minDelay ? maxDelay : 300}
-                    value={minDelay}
-                    onChange={e => setMinDelay(Math.max(15, parseInt(e.target.value, 10) || 60))}
-                    style={{ width: "100%", height: 36, padding: "0 10px", border: "1px solid #cbd5e1", borderRadius: 8, fontSize: 13, boxSizing: "border-box" }}
-                  />
-                  <span style={{ fontSize: 10, color: "#94a3b8" }}>{Math.round(minDelay / 60 * 10) / 10} hours</span>
-                </div>
-                <div>
-                  <span style={{ fontSize: 11, color: "#64748b", display: "block", marginBottom: 4 }}>Maximum Delay (Minutes)</span>
-                  <input
-                    type="number"
-                    min={minDelay}
-                    max={720}
-                    value={maxDelay}
-                    onChange={e => setMaxDelay(Math.max(minDelay, parseInt(e.target.value, 10) || 240))}
-                    style={{ width: "100%", height: 36, padding: "0 10px", border: "1px solid #cbd5e1", borderRadius: 8, fontSize: 13, boxSizing: "border-box" }}
-                  />
-                  <span style={{ fontSize: 10, color: "#94a3b8" }}>{Math.round(maxDelay / 60 * 10) / 10} hours</span>
-                </div>
-              </div>
-              <p style={{ margin: "4px 0 0", fontSize: 11, color: "#64748b" }}>
-                Every auto-reply will be scheduled at a random time between {minDelay}m and {maxDelay}m after review is posted.
-              </p>
-            </div>
-
-            {/* Keyword Infusion & Safety Checkboxes */}
-            <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-              <label style={{ display: "flex", alignItems: "flex-start", gap: 10, cursor: "pointer" }}>
-                <input
-                  type="checkbox"
-                  checked={includeKeywords}
-                  onChange={e => setIncludeKeywords(e.target.checked)}
-                  style={{ marginTop: 2 }}
-                />
-                <div>
-                  <span style={{ fontSize: 12, fontWeight: 700, color: "#1e293b", display: "block" }}>
-                    Weave SEO Keywords into Positive Replies
-                  </span>
-                  <span style={{ fontSize: 11, color: "#64748b" }}>
-                    Naturally embeds 1 top performance keyword or approved keyword into the reply.
-                  </span>
-                </div>
-              </label>
-
-              <label style={{ display: "flex", alignItems: "flex-start", gap: 10, cursor: "pointer" }}>
+              <label style={{ display: "flex", alignItems: "flex-start", gap: 10, cursor: "pointer", background: "#fef2f2", border: "1px solid #fecaca", padding: "12px 14px", borderRadius: 10 }}>
                 <input
                   type="checkbox"
                   checked={holdNegative}
@@ -849,50 +1010,102 @@ function AutoReplySettingsModal({
                   style={{ marginTop: 2 }}
                 />
                 <div>
-                  <span style={{ fontSize: 12, fontWeight: 700, color: "#1e293b", display: "block" }}>
-                    Hold 1–2 Star Negative Reviews in Pending Queue
+                  <span style={{ fontSize: 12, fontWeight: 700, color: "#991b1b", display: "block" }}>
+                    🛡️ Hold 1–2 Star Negative Reviews in Pending Queue
                   </span>
-                  <span style={{ fontSize: 11, color: "#64748b" }}>
-                    Automatically holds critical or low-star reviews so your team can manually review and approve the reply before posting.
+                  <span style={{ fontSize: 11, color: "#7f1d1d", marginTop: 2, display: "block" }}>
+                    Automatically holds critical or low-star reviews so your team can manually review and approve the reply before publishing.
                   </span>
                 </div>
               </label>
             </div>
 
-            {/* Knowledge Base & Custom Instructions */}
-            <div>
-              <label style={{ display: "block", fontSize: 12, fontWeight: 700, color: "#334155", marginBottom: 4 }}>
-                Business Knowledge Base & Escalation Instructions
-              </label>
-              <textarea
-                value={instructions}
-                onChange={e => setInstructions(e.target.value)}
-                placeholder="e.g. For complaints, ask customer to contact manager Dr. Sharma at support@clinic.com or 9876543210. Highlight our friendly staff and emergency care services..."
-                rows={3}
-                style={{ width: "100%", padding: "10px 12px", border: "1px solid #cbd5e1", borderRadius: 8, fontSize: 12, lineHeight: 1.5, boxSizing: "border-box", outline: "none" }}
-              />
-              <span style={{ fontSize: 10, color: "#94a3b8" }}>
-                The AI will reference these rules and contact details for both positive and negative replies.
-              </span>
-            </div>
+            {/* AI Engine Advanced Settings (Only shown when AI mode is active) */}
+            {autoReplyMode === "AI" && (
+              <div style={{ background: "#faf5ff", border: "1px solid #e9d5ff", borderRadius: 14, padding: "16px 18px", display: "flex", flexDirection: "column", gap: 14 }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                  <Sparkles size={16} color="#8b5cf6" />
+                  <span style={{ fontSize: 13, fontWeight: 800, color: "#581c87" }}>AI Prompt & Knowledge Configuration</span>
+                </div>
+
+                {/* Approved Keywords Whitelist */}
+                <div>
+                  <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 4 }}>
+                    <label style={{ fontSize: 12, fontWeight: 700, color: "#334155" }}>
+                      🎯 Approved Keywords Whitelist
+                    </label>
+                    <span style={{ fontSize: 10, color: "#7c3aed", fontWeight: 600 }}>Comma separated</span>
+                  </div>
+                  <textarea
+                    value={customKeywords}
+                    onChange={e => setCustomKeywords(e.target.value)}
+                    placeholder="e.g. orthopedic doctor in pune, knee replacement in baner, joint pain clinic, arthroscopy specialist"
+                    rows={2}
+                    style={{ width: "100%", padding: "8px 12px", border: "1px solid #cbd5e1", borderRadius: 8, fontSize: 12, lineHeight: 1.5, boxSizing: "border-box", outline: "none", background: "#ffffff" }}
+                  />
+                  
+                  <label style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 6, cursor: "pointer" }}>
+                    <input
+                      type="checkbox"
+                      checked={strictKeywords}
+                      onChange={e => setStrictKeywords(e.target.checked)}
+                    />
+                    <span style={{ fontSize: 11, fontWeight: 600, color: strictKeywords ? "#dc2626" : "#475569" }}>
+                      🔒 Strict Whitelist: Use ONLY these keywords in AI replies
+                    </span>
+                  </label>
+                </div>
+
+                <label style={{ display: "flex", alignItems: "flex-start", gap: 10, cursor: "pointer" }}>
+                  <input
+                    type="checkbox"
+                    checked={includeKeywords}
+                    onChange={e => setIncludeKeywords(e.target.checked)}
+                    style={{ marginTop: 2 }}
+                  />
+                  <div>
+                    <span style={{ fontSize: 12, fontWeight: 700, color: "#1e293b", display: "block" }}>
+                      Weave SEO Keywords into Positive Replies
+                    </span>
+                    <span style={{ fontSize: 11, color: "#64748b" }}>
+                      Naturally embeds top performance search queries into the generated text.
+                    </span>
+                  </div>
+                </label>
+
+                {/* Knowledge Base & Custom Instructions */}
+                <div>
+                  <label style={{ display: "block", fontSize: 12, fontWeight: 700, color: "#334155", marginBottom: 4 }}>
+                    Custom Instructions & Knowledge Base
+                  </label>
+                  <textarea
+                    value={instructions}
+                    onChange={e => setInstructions(e.target.value)}
+                    placeholder="e.g. Highlight our friendly staff and 24x7 emergency care. For low reviews, politely guide the patient to contact our manager."
+                    rows={3}
+                    style={{ width: "100%", padding: "10px 12px", border: "1px solid #cbd5e1", borderRadius: 8, fontSize: 12, lineHeight: 1.5, boxSizing: "border-box", outline: "none", background: "#ffffff" }}
+                  />
+                </div>
+              </div>
+            )}
 
             {/* Status alerts */}
             {errorMsg && (
-              <div style={{ padding: "8px 12px", background: "#fef2f2", border: "1px solid #fecaca", borderRadius: 8, color: "#dc2626", fontSize: 12, display: "flex", alignItems: "center", gap: 6 }}>
-                <AlertCircle size={14} /> {errorMsg}
+              <div style={{ padding: "10px 14px", background: "#fef2f2", border: "1px solid #fecaca", borderRadius: 8, color: "#dc2626", fontSize: 12, display: "flex", alignItems: "center", gap: 8 }}>
+                <AlertCircle size={16} /> {errorMsg}
               </div>
             )}
             {feedback && (
-              <div style={{ padding: "8px 12px", background: "#f0fdf4", border: "1px solid #bbf7d0", borderRadius: 8, color: "#16a34a", fontSize: 12, display: "flex", alignItems: "center", gap: 6 }}>
-                <CheckCircle2 size={14} /> {feedback}
+              <div style={{ padding: "10px 14px", background: "#f0fdf4", border: "1px solid #bbf7d0", borderRadius: 8, color: "#16a34a", fontSize: 12, display: "flex", alignItems: "center", gap: 8 }}>
+                <CheckCircle2 size={16} /> {feedback}
               </div>
             )}
 
             {/* Actions */}
-            <div style={{ display: "flex", alignItems: "center", justifyContent: "flex-end", gap: 10, marginTop: 6 }}>
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "flex-end", gap: 10, marginTop: 8, borderTop: "1px solid #f1f5f9", paddingTop: 16 }}>
               <button
                 onClick={onClose}
-                style={{ padding: "8px 16px", background: "#f1f5f9", border: "none", borderRadius: 8, fontSize: 13, fontWeight: 600, color: "#475569", cursor: "pointer" }}
+                style={{ padding: "9px 18px", background: "#f1f5f9", border: "none", borderRadius: 8, fontSize: 13, fontWeight: 700, color: "#475569", cursor: "pointer" }}
               >
                 Cancel
               </button>
@@ -900,20 +1113,21 @@ function AutoReplySettingsModal({
                 onClick={handleSave}
                 disabled={isSaving}
                 style={{
-                  padding: "8px 20px",
+                  padding: "9px 24px",
                   background: "#2563eb",
                   border: "none",
                   borderRadius: 8,
                   fontSize: 13,
-                  fontWeight: 600,
+                  fontWeight: 700,
                   color: "#ffffff",
                   display: "flex",
                   alignItems: "center",
                   gap: 8,
                   cursor: isSaving ? "not-allowed" : "pointer",
+                  boxShadow: "0 2px 4px rgba(37,99,235,0.2)",
                 }}
               >
-                {isSaving ? <Loader2 size={14} className="animate-spin" /> : <Check size={14} />}
+                {isSaving ? <Loader2 size={15} className="animate-spin" /> : <Check size={15} />}
                 Save Settings
               </button>
             </div>
@@ -2345,6 +2559,14 @@ export default function ReviewsPage() {
           onClose={() => setShowAutoReplyModal(false)}
           profiles={profilesList}
           selectedTab={selectedTab}
+          onOpenTemplatesModal={() => {
+            setShowAutoReplyModal(false);
+            setShowTemplatesModal(true);
+          }}
+          onOpenTestModal={() => {
+            setShowAutoReplyModal(false);
+            setShowTestModal(true);
+          }}
         />
       )}
 
