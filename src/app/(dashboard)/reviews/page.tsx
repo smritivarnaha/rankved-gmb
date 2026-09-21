@@ -660,10 +660,8 @@ function AutoReplySettingsModal({
 
       const data = await res.json();
       if (res.ok && data.success) {
-        setFeedback("✓ Auto-reply settings saved successfully!");
-        setTimeout(() => {
-          onClose();
-        }, 1200);
+        const profileName = profiles.find(p => p.id === targetProfileId)?.name || "profile";
+        setFeedback(`✓ Auto-reply settings saved successfully for ${profileName}!`);
       } else {
         setErrorMsg(data.error || "Failed to save settings.");
       }

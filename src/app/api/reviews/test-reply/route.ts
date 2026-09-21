@@ -30,9 +30,10 @@ export async function POST(req: NextRequest) {
     const {
       profileId,
       reviewText = "",
-      reviewerName = "Patient",
+      reviewerName = "Rahul Sharma",
       rating = 5,
       preferredTone = "WARM",
+      engineMode = "TEMPLATES", // "TEMPLATES" | "AI"
       customBusinessName,
       customCityOrArea,
       customTargetKeyword,
@@ -41,55 +42,38 @@ export async function POST(req: NextRequest) {
     } = body;
 
     const numericRating = typeof rating === "number" ? rating : parseInt(rating, 10) || 5;
+    const isNegative = numericRating <= 2;
+    const isNeutral = numericRating === 3;
+    const sentiment: "NEGATIVE" | "NEUTRAL" | "POSITIVE" = isNegative ? "NEGATIVE" : isNeutral ? "NEUTRAL" : "POSITIVE";
 
-    // 1. If real profileId is provided, run full smart generator
+    // 1. Resolve Profile Context (Real DB location or Simulated)
+    let location: any = null;
     if (profileId && profileId !== "mock-custom") {
-      const location = await prisma.location.findUnique({
+      location = await prisma.location.findUnique({
         where: { id: profileId },
         include: { client: true },
       });
-
-      if (location) {
-        const smartTemplate = selectSmartReviewTemplate(numericRating, reviewText);
-        const result = await generateSmartReviewReply({
-          locationId: profileId,
-          reviewText,
-          reviewerName,
-          rating: numericRating,
-          preferredTone,
-          userId,
-        });
-
-        return NextResponse.json({
-          success: true,
-          ...result,
-          smartTemplate,
-          allWordCounts: {
-            warm: getWordCount(result.options?.warm || result.reply),
-            short: getWordCount(result.options?.short || result.reply),
-            seoFocused: getWordCount(result.options?.seoFocused || result.reply),
-          },
-          clinicMeta: {
-            businessName: location.autoReplyBrandName?.trim() || location.name,
-            phone: location.aiPhone || location.phone || "",
-            email: location.googleEmail || "",
-            address: location.address || "",
-          },
-        });
-      }
     }
 
-    // 2. Custom or Simulated Profile Flow
-    const businessName = customBusinessName?.trim() || "LifeCare Neurology & Multispecialty Clinic";
-    const cityOrArea = customCityOrArea?.trim() || "Mohali";
-    const targetKeyword = customTargetKeyword?.trim() || "neurologist in Mohali";
-    const contactPhone = customPhone?.trim() || "+91 98765 43210";
-    const contactEmail = customEmail?.trim() || "care@lifecareclinic.com";
+    const businessName = location?.autoReplyBrandName?.trim() || location?.name || customBusinessName?.trim() || "LifeCare Neurology & Spine Clinic";
+    const cityOrArea = location?.address ? location.address.split(",")[0].trim() : customCityOrArea?.trim() || "Mohali";
+    
+    // Extract target keyword
+    let targetKeyword = customTargetKeyword?.trim();
+    if (!targetKeyword && location?.autoReplyKeywords) {
+      targetKeyword = location.autoReplyKeywords.split(/[,;\n]/)[0]?.trim();
+    }
+    if (!targetKeyword && location?.aiKeywords) {
+      targetKeyword = location.aiKeywords.split(/[,;\n]/)[0]?.trim();
+    }
+    if (!targetKeyword) {
+      targetKeyword = `${businessName.includes("Clinic") || businessName.includes("Doctor") ? "doctor" : "specialist"} in ${cityOrArea}`;
+    }
 
-    const isNegative = numericRating <= 2;
-    const isNeutral = numericRating === 3;
-    const sentiment = isNegative ? "NEGATIVE" : isNeutral ? "NEUTRAL" : "POSITIVE";
+    const contactPhone = location?.aiPhone || location?.phone || customPhone?.trim() || "+91 98765 43210";
+    const contactEmail = location?.googleEmail || customEmail?.trim() || "care@lifecareclinic.com";
 
+    // 2. Select Smart Matched Template from the 15 Templates Library
     const smartTemplate = selectSmartReviewTemplate(numericRating, reviewText);
     const fallbackParams = {
       reviewerName,
@@ -127,96 +111,70 @@ export async function POST(req: NextRequest) {
       template: seoTemplateMatch.template,
     });
 
-    let warmReply = dynamicWarm;
-    let shortReply = dynamicShort;
-    let seoReply = dynamicSeoFocused;
-    let source = "DYNAMIC_TEMPLATE";
+    // 3. Determine Execution Path based on engineMode
+    const effectiveEngineMode = engineMode === "AI" ? "AI" : "TEMPLATES";
 
-    // Attempt AI Generation if user has AI settings configured
-    if (userId) {
+    if (effectiveEngineMode === "AI") {
       try {
-        const settings = await resolveUserAiSettings(userId);
-        const hasKey = !!(
-          settings.anthropicApiKey || 
-          settings.openaiApiKey || 
-          settings.geminiApiKey || 
-          settings.openrouterApiKey || 
-          process.env.GEMINI_API_KEY || 
-          process.env.OPENAI_API_KEY || 
-          process.env.ANTHROPIC_API_KEY
-        );
+        if (location?.id) {
+          const aiResult = await generateSmartReviewReply({
+            locationId: location.id,
+            reviewText,
+            reviewerName,
+            rating: numericRating,
+            preferredTone,
+            userId,
+          });
 
-        if (hasKey) {
-          const prompt = `
-You are the management and clinical team of "${businessName}" writing an official Google Business Profile Review reply.
-
-CUSTOMER REVIEW:
-- Name: ${reviewerName}
-- Star Rating: ${numericRating} Stars
-- Review: "${reviewText || "(No written text provided)"}"
-
-BUSINESS:
-- Name: ${businessName}
-- City: ${cityOrArea}
-- Phone: ${contactPhone}
-- Email: ${contactEmail}
-- Target Keyword: "${targetKeyword}"
-
-Tone instructions:
-- Use team pronouns ("we", "our team").
-- Keep strictly between 30 and 70 words.
-- Do not use em dashes or double quotes.
-- Never output raw phone numbers or raw emails; direct to the contact number on our business profile.
-- Never use 'Patient' as a fallback name.
-${isNegative ? "- Apologize with empathy, take responsibility, do not argue, invite them to reach out using the contact number listed on our business profile" : ""}
-${isNeutral ? "- Thank them for constructive feedback, emphasize continuous clinical standard and " + targetKeyword : ""}
-${!isNegative && !isNeutral ? "- Warmly thank them, reference their consultation/treatment, and highlight our dedicated " + targetKeyword : ""}
-
-Return valid JSON with:
-{
-  "warm": "Warm, professional response (40-60 words)",
-  "short": "Short direct response (30-45 words)",
-  "seoFocused": "SEO focused response integrating '${targetKeyword}' (45-70 words)"
-}
-`.trim();
-
-          const raw = await callLLM(prompt, settings);
-          const cleaned = raw.replace(/```json/g, "").replace(/```/g, "").trim();
-          const parsed = JSON.parse(cleaned);
-          if (parsed.warm) {
-            warmReply = sanitizeAndEnforceWordCount(parsed.warm, isNegative);
-            shortReply = sanitizeAndEnforceWordCount(parsed.short || dynamicShort, isNegative);
-            seoReply = sanitizeAndEnforceWordCount(parsed.seoFocused || dynamicSeoFocused, isNegative);
-            source = "AI_ENGINE";
+          if (aiResult?.reply) {
+            return NextResponse.json({
+              success: true,
+              ...aiResult,
+              source: "AI_ENGINE",
+              smartTemplate,
+              allWordCounts: {
+                warm: getWordCount(aiResult.options?.warm || aiResult.reply),
+                short: getWordCount(aiResult.options?.short || aiResult.reply),
+                seoFocused: getWordCount(aiResult.options?.seoFocused || aiResult.reply),
+              },
+              clinicMeta: {
+                businessName,
+                phone: contactPhone,
+                email: contactEmail,
+                city: cityOrArea,
+                targetKeyword: aiResult.keywordUsed || targetKeyword,
+              },
+            });
           }
         }
       } catch (aiErr) {
-        // Safe fallback to dynamic templates
-        console.log("[Test Reply API] AI generation skipped/fallback used:", (aiErr as any)?.message);
+        console.warn("[Test Reply] AI generation threw error, falling back to 15 templates:", (aiErr as any)?.message);
       }
     }
 
-    let selectedReply = warmReply;
-    if (preferredTone === "SHORT") selectedReply = shortReply;
-    if (preferredTone === "SEO_FOCUSED") selectedReply = seoReply;
+    // Default & 15 Templates Execution (Instant, Deterministic, 100% Reliable)
+    let selectedReply = dynamicWarm;
+    if (preferredTone === "SHORT") selectedReply = dynamicShort;
+    if (preferredTone === "SEO_FOCUSED") selectedReply = dynamicSeoFocused;
 
     return NextResponse.json({
       success: true,
       reply: selectedReply,
       sentiment,
       keywordUsed: targetKeyword,
-      source,
+      source: effectiveEngineMode === "AI" ? "DYNAMIC_TEMPLATES (AI Fallback)" : "DYNAMIC_TEMPLATES",
       smartTemplate,
       wordCount: getWordCount(selectedReply),
+      tone: preferredTone,
       options: {
-        warm: warmReply,
-        short: shortReply,
-        seoFocused: seoReply,
+        warm: dynamicWarm,
+        short: dynamicShort,
+        seoFocused: dynamicSeoFocused,
       },
       allWordCounts: {
-        warm: getWordCount(warmReply),
-        short: getWordCount(shortReply),
-        seoFocused: getWordCount(seoReply),
+        warm: getWordCount(dynamicWarm),
+        short: getWordCount(dynamicShort),
+        seoFocused: getWordCount(dynamicSeoFocused),
       },
       clinicMeta: {
         businessName,

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import {
   X, Star, Sparkles, Send, Copy, Check, RefreshCw, MessageSquare,
   AlertCircle, ThumbsUp, ShieldAlert, BookOpen, User, Building2,
@@ -92,11 +92,15 @@ export function ReviewReplyTestModal({
   const [rating, setRating] = useState<number>(5);
   const [reviewText, setReviewText] = useState<string>("The doctor explained the root cause of my condition clearly and guided us step by step. Truly reassuring care!");
   const [preferredTone, setPreferredTone] = useState<"WARM" | "SHORT" | "SEO_FOCUSED">("WARM");
+  const [testEngineMode, setTestEngineMode] = useState<"TEMPLATES" | "AI">("TEMPLATES");
 
   const [loading, setLoading] = useState<boolean>(false);
   const [result, setResult] = useState<any | null>(null);
+  const [testError, setTestError] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<"WARM" | "SHORT" | "SEO_FOCUSED">("WARM");
   const [copiedTab, setCopiedTab] = useState<string | null>(null);
+
+  const resultsRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (initialProfileId) {
@@ -112,10 +116,12 @@ export function ReviewReplyTestModal({
     setRating(preset.rating);
     setReviewerName(preset.reviewer);
     setReviewText(preset.text);
+    setTestError(null);
   };
 
   const handleRunTest = async () => {
     setLoading(true);
+    setTestError(null);
     setResult(null);
 
     try {
@@ -129,6 +135,7 @@ export function ReviewReplyTestModal({
           reviewerName,
           rating,
           preferredTone,
+          engineMode: testEngineMode,
           customBusinessName: selectedLoc?.name || "LifeCare Neurology & Spine Clinic",
           customCityOrArea: selectedLoc?.address ? selectedLoc.address.split(",")[0] : "Mohali",
           customTargetKeyword: "neurologist in Mohali",
@@ -138,15 +145,18 @@ export function ReviewReplyTestModal({
       });
 
       const data = await res.json();
-      if (data.success) {
+      if (res.ok && data.success) {
         setResult(data);
         setActiveTab(preferredTone);
+        setTimeout(() => {
+          resultsRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+        }, 80);
       } else {
-        alert(data.error || "Failed to generate test reply");
+        setTestError(data.error || "Failed to generate test reply");
       }
     } catch (err: any) {
       console.error(err);
-      alert("Error generating test reply: " + (err.message || "Network error"));
+      setTestError("Error generating test reply: " + (err.message || "Network error"));
     } finally {
       setLoading(false);
     }
@@ -337,6 +347,56 @@ export function ReviewReplyTestModal({
             borderRadius: 14,
             border: "1px solid #e2e8f0"
           }}>
+            {/* Auto-Reply Engine Toggle */}
+            <div style={{ gridColumn: "1 / -1" }}>
+              <label style={{ display: "block", fontSize: 12, fontWeight: 700, color: "#334155", marginBottom: 6 }}>
+                ⚙️ Test Auto-Reply Engine Mode:
+              </label>
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+                <div
+                  onClick={() => setTestEngineMode("TEMPLATES")}
+                  style={{
+                    border: `2px solid ${testEngineMode === "TEMPLATES" ? "#2563eb" : "#e2e8f0"}`,
+                    background: testEngineMode === "TEMPLATES" ? "#eff6ff" : "#f8fafc",
+                    padding: "10px 14px",
+                    borderRadius: 10,
+                    cursor: "pointer",
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 10,
+                    transition: "all 0.15s ease",
+                  }}
+                >
+                  <BookOpen size={18} color="#2563eb" />
+                  <div>
+                    <div style={{ fontSize: 13, fontWeight: 800, color: "#0f172a" }}>15 Dynamic Templates (Recommended)</div>
+                    <div style={{ fontSize: 11, color: "#64748b" }}>Instant • 100% accurate sentiment tiered • No API limits</div>
+                  </div>
+                </div>
+
+                <div
+                  onClick={() => setTestEngineMode("AI")}
+                  style={{
+                    border: `2px solid ${testEngineMode === "AI" ? "#8b5cf6" : "#e2e8f0"}`,
+                    background: testEngineMode === "AI" ? "#f5f3ff" : "#f8fafc",
+                    padding: "10px 14px",
+                    borderRadius: 10,
+                    cursor: "pointer",
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 10,
+                    transition: "all 0.15s ease",
+                  }}
+                >
+                  <Sparkles size={18} color="#8b5cf6" />
+                  <div>
+                    <div style={{ fontSize: 13, fontWeight: 800, color: "#0f172a" }}>AI Generated (LLM)</div>
+                    <div style={{ fontSize: 11, color: "#64748b" }}>Gemini / OpenAI / Claude custom generation</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
             {/* Target Profile */}
             <div>
               <label style={{ display: "block", fontSize: 12, fontWeight: 700, color: "#334155", marginBottom: 6 }}>
@@ -513,7 +573,10 @@ export function ReviewReplyTestModal({
               }}
             />
 
-            <div style={{ marginTop: 14, display: "flex", justifyContent: "flex-end" }}>
+            <div style={{ marginTop: 14, display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: 10 }}>
+              <span style={{ fontSize: 12, color: "#64748b" }}>
+                Engine: <strong>{testEngineMode === "TEMPLATES" ? "📋 15 Dynamic Templates (Instant)" : "✨ AI Generated (LLM)"}</strong>
+              </span>
               <button
                 onClick={handleRunTest}
                 disabled={loading}
@@ -547,15 +610,38 @@ export function ReviewReplyTestModal({
             </div>
           </div>
 
+          {/* Test Error Banner */}
+          {testError && (
+            <div style={{
+              background: "#fef2f2",
+              border: "1px solid #fecaca",
+              borderRadius: 12,
+              padding: "12px 16px",
+              display: "flex",
+              alignItems: "center",
+              gap: 10,
+              color: "#dc2626",
+              fontSize: 13,
+              fontWeight: 600,
+            }}>
+              <AlertCircle size={18} />
+              <span>{testError}</span>
+            </div>
+          )}
+
           {/* Test Results Section */}
           {result && (
-            <div style={{
-              background: "#ffffff",
-              borderRadius: 16,
-              border: "1px solid #bfdbfe",
-              boxShadow: "0 10px 25px -5px rgba(59, 130, 246, 0.1)",
-              overflow: "hidden"
-            }}>
+            <div
+              ref={resultsRef}
+              style={{
+                background: "#ffffff",
+                borderRadius: 16,
+                border: "2px solid #3b82f6",
+                boxShadow: "0 10px 30px -5px rgba(59, 130, 246, 0.2)",
+                overflow: "hidden",
+                scrollMarginTop: "20px",
+              }}
+            >
               {/* Results Diagnostics Bar */}
               <div style={{
                 padding: "14px 20px",
