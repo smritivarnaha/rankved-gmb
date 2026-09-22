@@ -87,10 +87,8 @@ export async function GET(req: NextRequest) {
         continue;
       }
 
-      // ── 1. Review Monitoring ─────────────────────────────────────────────
-      if (settings.reviewAlertsEnabled) {
-        await checkReviews({ location, locationPath, accessToken, settings, alertsSent });
-      }
+      // ── 1. Review Monitoring & Auto-Replies ─────────────────────────────
+      await checkReviews({ location, locationPath, accessToken, settings, alertsSent });
 
       // ── 2. Performance Monitoring ────────────────────────────────────────
       if (settings.performanceAlertsEnabled) {
@@ -209,14 +207,16 @@ async function checkReviews({ location, locationPath, accessToken, settings, ale
       </div>
     `;
 
-    await notifyAdmin({
-      subject,
-      text: `New ${starNumber}-star review on ${location.name} from ${reviewer}:\n"${comment}"\n\nView & reply: ${profileUrl}`,
-      html,
-    });
+    if (settings.reviewAlertsEnabled) {
+      await notifyAdmin({
+        subject,
+        text: `New ${starNumber}-star review on ${location.name} from ${reviewer}:\n"${comment}"\n\nView & reply: ${profileUrl}`,
+        html,
+      });
 
-    alertsSent.push(`New review on ${location.name} from ${reviewer} (${starNumber}★)`);
-    console.log(`[GBP Monitor] New review alert sent for ${location.name}`);
+      alertsSent.push(`New review on ${location.name} from ${reviewer} (${starNumber}★)`);
+      console.log(`[GBP Monitor] New review alert sent for ${location.name}`);
+    }
 
     // Trigger instant WhatsApp Alert to Client
     try {
@@ -233,89 +233,11 @@ async function checkReviews({ location, locationPath, accessToken, settings, ale
   }
 
   // ── Auto Review Replier Logic (if enabled) ───────────────────────────
-  if (location.autoReplyEnabled) {
-    const unreplied = reviews.filter((r: any) => !r.reviewReply?.comment);
-    for (const rev of unreplied) {
-      try {
-        const starRating = rev.starRating || "FIVE";
-        const starNumber = { ONE: 1, TWO: 2, THREE: 3, FOUR: 4, FIVE: 5 }[starRating as string] ?? 5;
-
-        // Check if hold negative reviews is enabled
-        if (location.autoReplyHoldNegative && starNumber <= 2) {
-          console.log(`[Auto-Reply] Holding negative review (${starNumber}★) by ${rev.reviewer?.displayName} on ${location.name} for human review.`);
-          continue;
-        }
-
-        const reviewName = rev.name;
-        if (!reviewName) continue;
-
-        // Check if already in queue or published
-        const existing = await prisma.scheduledReviewReply.findFirst({
-          where: { reviewName },
-        });
-        if (existing) continue;
-
-        // Generate Reply based on selected autoReplyMode
-        let replyComment = "";
-        const autoReplyMode = location.autoReplyMode || "TEMPLATES";
-
-        if (autoReplyMode === "AI") {
-          const { generateSmartReviewReply } = await import("@/lib/ai-review-reply");
-          const aiResult = await generateSmartReviewReply({
-            locationId: location.id,
-            reviewText: rev.comment,
-            reviewerName: rev.reviewer?.displayName,
-            rating: starNumber,
-            userId: location.client?.userId,
-          });
-          replyComment = aiResult?.reply || "";
-        } else {
-          // Default: 15 Dynamic Templates Engine
-          const { selectSmartReviewTemplate, renderReviewTemplate } = await import("@/lib/review-templates");
-          const smartTemplate = selectSmartReviewTemplate(starNumber, rev.comment);
-          const businessName = location.autoReplyBrandName?.trim() || location.name;
-          const cityOrArea = location.address ? location.address.split(",")[0].trim() : "";
-
-          replyComment = renderReviewTemplate({
-            template: smartTemplate.template,
-            reviewerName: rev.reviewer?.displayName,
-            businessName,
-            cityOrArea,
-          });
-        }
-
-        if (replyComment) {
-          // Calculate randomized human delay (between min and max minutes)
-          const rawMin = location.autoReplyMinDelayMinutes !== null && location.autoReplyMinDelayMinutes !== undefined ? location.autoReplyMinDelayMinutes : 2;
-          const rawMax = location.autoReplyMaxDelayMinutes !== null && location.autoReplyMaxDelayMinutes !== undefined ? location.autoReplyMaxDelayMinutes : 5;
-          const minDelay = Math.max(1, Math.min(rawMin, rawMax));
-          const maxDelay = Math.max(minDelay, rawMax);
-          const randomMinutes = Math.floor(Math.random() * (maxDelay - minDelay + 1)) + minDelay;
-          const scheduledFor = new Date(Date.now() + randomMinutes * 60 * 1000);
-
-          await prisma.scheduledReviewReply.create({
-            data: {
-              id: `auto-${location.id}-${reviewName.replace(/[^a-zA-Z0-9]/g, "_")}-${Date.now()}`,
-              locationId: location.id,
-              userId: location.client?.userId || "system",
-              reviewName,
-              reviewId: rev.reviewId || reviewName.split("/").pop(),
-              reviewerName: rev.reviewer?.displayName || "Customer",
-              rating: starNumber,
-              reviewComment: rev.comment || null,
-              reviewCreateTime: rev.createTime ? new Date(rev.createTime) : null,
-              replyComment,
-              scheduledFor,
-              status: "SCHEDULED",
-            },
-          });
-
-          console.log(`[Auto-Reply] ✅ Queued (${autoReplyMode}) reply for ${location.name} review by ${rev.reviewer?.displayName} (Posting in ${randomMinutes} mins at ${scheduledFor.toLocaleTimeString()})`);
-        }
-      } catch (autoErr) {
-        console.error(`[Auto-Reply] Failed to auto-reply for review on ${location.name}:`, autoErr);
-      }
-    }
+  try {
+    const { queueAutoRepliesForLocation } = await import("@/lib/auto-reply-service");
+    await queueAutoRepliesForLocation(location.id, reviews);
+  } catch (autoErr) {
+    console.error(`[GBP Monitor] Auto-reply failed for ${location.name}:`, autoErr);
   }
 
   // Detect rating change (up or down)

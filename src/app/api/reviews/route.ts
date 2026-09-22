@@ -152,6 +152,14 @@ export async function GET(req: NextRequest) {
               console.error("[Review Backup] Sync error for location:", loc.name, backupErr);
             }
 
+            // Auto-process auto-replies if enabled for this profile
+            try {
+              const { queueAutoRepliesForLocation } = await import("@/lib/auto-reply-service");
+              await queueAutoRepliesForLocation(loc.id, mappedReviews);
+            } catch (autoErr) {
+              console.error("[Auto-Reply] Live sync queue error for location:", loc.name, autoErr);
+            }
+
             return { profile: loc, reviews: mappedReviews, error: null };
           }
         } catch (e: any) {

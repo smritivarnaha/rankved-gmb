@@ -95,6 +95,15 @@ export async function POST(
       },
     });
 
+    if (updated.autoReplyEnabled) {
+      try {
+        const { queueAutoRepliesForLocation } = await import("@/lib/auto-reply-service");
+        await queueAutoRepliesForLocation(id);
+      } catch (queueErr) {
+        console.error("[Auto-Reply Settings] Error queueing replies upon save:", queueErr);
+      }
+    }
+
     return NextResponse.json({ success: true, settings: updated });
   } catch (err: any) {
     console.error("[Auto-Reply Settings API] POST Error:", err);
