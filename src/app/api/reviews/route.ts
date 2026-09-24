@@ -147,7 +147,7 @@ export async function GET(req: NextRequest) {
             // Auto-backup reviews to database vault and check for Google spam drops
             try {
               const { syncAndBackupLocationReviews } = await import("@/lib/review-backup-service");
-              await syncAndBackupLocationReviews(loc.id, mappedReviews);
+              await syncAndBackupLocationReviews(loc.id, mappedReviews, undefined, undefined, { isFullSync: false });
             } catch (backupErr) {
               console.error("[Review Backup] Sync error for location:", loc.name, backupErr);
             }

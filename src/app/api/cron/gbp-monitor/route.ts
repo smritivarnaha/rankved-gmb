@@ -141,7 +141,7 @@ async function checkReviews({ location, locationPath, accessToken, settings, ale
   // Auto-backup to permanent database vault and detect dropped/deleted reviews
   try {
     const { syncAndBackupLocationReviews } = await import("@/lib/review-backup-service");
-    await syncAndBackupLocationReviews(location.id, reviews, totalCount, avgRating);
+    await syncAndBackupLocationReviews(location.id, reviews, totalCount, avgRating, { isFullSync: false });
   } catch (backupErr) {
     console.error(`[GBP Monitor] Review backup failed for ${location.name}:`, backupErr);
   }

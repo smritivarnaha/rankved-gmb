@@ -15,7 +15,8 @@ export async function syncAndBackupLocationReviews(
   locationId: string,
   liveReviews: any[],
   currentTotalCount?: number,
-  currentAverageRating?: number
+  currentAverageRating?: number,
+  options?: { isFullSync?: boolean }
 ): Promise<{
   savedCount: number;
   droppedCount: number;
@@ -94,7 +95,16 @@ export async function syncAndBackupLocationReviews(
   }
 
   // 2. Detect missing / deleted reviews
-  // Only detect deletions if we received a valid non-empty response or verified full list
+  // CRITICAL PROTECTION: Only run deletion detection if an exhaustive full sync was explicitly requested and performed.
+  // Partial syncs (e.g. gbp-monitor sampling 10 reviews) must NEVER flag older reviews as deleted!
+  if (!options?.isFullSync || liveReviews.length === 0) {
+    return {
+      savedCount: liveReviews.length,
+      droppedCount: 0,
+      droppedReviews: [],
+    };
+  }
+
   const previouslyActiveReviews = await prisma.locationReview.findMany({
     where: {
       locationId,
@@ -102,12 +112,32 @@ export async function syncAndBackupLocationReviews(
     },
   });
 
+  // If Google's reported total count has not decreased, no deletion has occurred!
+  if (currentTotalCount !== undefined && currentTotalCount >= previouslyActiveReviews.length) {
+    return {
+      savedCount: liveReviews.length,
+      droppedCount: 0,
+      droppedReviews: [],
+    };
+  }
+
   const missingReviews = previouslyActiveReviews.filter(
     existing => !liveReviewNames.has(existing.reviewName)
   );
 
-  // If reviews disappeared from Google
-  if (missingReviews.length > 0 && liveReviews.length >= 0) {
+  // Safety threshold: If more than 15 reviews appear "missing" at once, this is virtually always
+  // an API pagination truncation or token rate-limit cutoff, NOT genuine Google review removals.
+  if (missingReviews.length > 15) {
+    console.warn(`[Review Drop Safety] Detected ${missingReviews.length} missing reviews for ${locationId}, which exceeds safe threshold (15). Ignoring to prevent false alarm.`);
+    return {
+      savedCount: liveReviews.length,
+      droppedCount: 0,
+      droppedReviews: [],
+    };
+  }
+
+  // If a small number of verified reviews disappeared from Google during a verified full sync
+  if (missingReviews.length > 0 && liveReviews.length > 0) {
     console.warn(`[Review Drop Alert] Detected ${missingReviews.length} reviews REMOVED by Google for location ${locationId}!`);
 
     // Mark missing reviews as DELETED_BY_GOOGLE
