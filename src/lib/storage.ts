@@ -50,17 +50,24 @@ export async function resolveImageUrl(
       buffer = Buffer.from(parts[1], "base64");
     }
 
-    // 2. Scrub Metadata & Convert/Optimize via Sharp
-    // Sharp automatically removes all EXIF/metadata unless told otherwise.
+    // 2. Scrub Metadata, Auto-Orient, Resize & Optimize via Sharp
+    // Limits max dimension to 1800px to prevent server memory exhaustion while preserving crisp quality
     let cleanBuffer: Buffer;
     try {
+      const sharpInstance = sharp(buffer).rotate().resize({
+        width: 1800,
+        height: 1800,
+        fit: "inside",
+        withoutEnlargement: true,
+      });
+
       if (isPng) {
-        cleanBuffer = await sharp(buffer)
-          .png({ compressionLevel: 9 }) // lossless, crisp text/graphics
+        cleanBuffer = await sharpInstance
+          .png({ compressionLevel: 6, adaptiveFiltering: true })
           .toBuffer();
       } else {
-        cleanBuffer = await sharp(buffer)
-          .jpeg({ quality: 100, chromaSubsampling: '4:4:4' }) // crisp jpegs
+        cleanBuffer = await sharpInstance
+          .jpeg({ quality: 90, mozjpeg: true })
           .toBuffer();
       }
     } catch (err: any) {
@@ -69,15 +76,18 @@ export async function resolveImageUrl(
       cleanBuffer = buffer;
     }
 
-    // 3. Upload cleaned image to Supabase
+    // 3. Upload cleaned image to Supabase with guaranteed UNIQUE filename
+    // Including a unique timestamp + random token prevents posts with identical focus keywords
+    // from overwriting each other's graphics or duplicating across drafts.
     const extension = isPng ? "png" : "jpg";
-    let filename = `${Date.now()}-${Math.floor(Math.random() * 1000)}.${extension}`;
+    const uniqueToken = `${Date.now()}-${Math.random().toString(36).substring(2, 7)}`;
+    let filename = `${uniqueToken}.${extension}`;
     if (desiredFilename) {
       const slug = desiredFilename
         .toLowerCase()
         .replace(/[^a-z0-9]+/g, '-')
         .replace(/^-|-$/g, '');
-      if (slug) filename = `${slug}.${extension}`;
+      if (slug) filename = `${slug}-${uniqueToken}.${extension}`;
     }
     const uploadUrl = `${cleanUrl}/storage/v1/object/post-images/${filename}`;
     

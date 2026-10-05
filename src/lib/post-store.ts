@@ -138,7 +138,14 @@ export async function createPost(
   let mediaUrl = data.imageUrl;
   if (mediaUrl) {
     const upload = await resolveImageUrl(mediaUrl, data.focusKeyword || undefined);
-    if (upload.success) mediaUrl = upload.url || null;
+    if (upload.success) {
+      mediaUrl = upload.url || null;
+    } else {
+      console.error("[PostStore] resolveImageUrl failed in createPost:", upload.error);
+      if (mediaUrl.startsWith("data:")) {
+        throw new Error(upload.error || "Image upload failed");
+      }
+    }
   }
 
   const post = await prisma.post.create({
@@ -173,7 +180,14 @@ export async function updatePost(id: string, data: Partial<PostData>): Promise<P
     let mediaUrl = data.imageUrl;
     if (mediaUrl) {
       const upload = await resolveImageUrl(mediaUrl, focusKeyword || undefined);
-      if (upload.success) mediaUrl = upload.url || null;
+      if (upload.success) {
+        mediaUrl = upload.url || null;
+      } else {
+        console.error(`[PostStore] resolveImageUrl failed for post ${id}:`, upload.error);
+        if (mediaUrl.startsWith("data:")) {
+          throw new Error(upload.error || "Image upload failed");
+        }
+      }
     }
 
     const post = await prisma.post.update({
@@ -198,8 +212,9 @@ export async function updatePost(id: string, data: Partial<PostData>): Promise<P
       include: { location: { include: { client: true } }, user: true },
     });
     return mapPost(post);
-  } catch {
-    return null;
+  } catch (err: any) {
+    console.error(`[PostStore] updatePost failed for post ${id}:`, err);
+    throw err;
   }
 }
 

@@ -1134,6 +1134,7 @@ export default function ProfileDetailPage() {
             </div>
             <div style={{ flex: 1, overflowY: "auto" }}>
               <PostEditor 
+                key={editingPost.id}
                 initialData={editingPost} 
                 lockedProfileId={profile.id}
                 onSaveSuccess={() => {

@@ -220,57 +220,76 @@ export function PostEditor({
 
   const [converting, setConverting] = useState(false);
 
+  const optimizeImage = (file: File): Promise<{ dataUrl: string; file: File }> => {
+    return new Promise((resolve, reject) => {
+      const img = new Image();
+      const objectUrl = URL.createObjectURL(file);
+      img.onload = () => {
+        URL.revokeObjectURL(objectUrl);
+        const MAX_DIM = 1600;
+        let { width, height } = img;
+        if (width > MAX_DIM || height > MAX_DIM) {
+          if (width > height) {
+            height = Math.round((height * MAX_DIM) / width);
+            width = MAX_DIM;
+          } else {
+            width = Math.round((width * MAX_DIM) / height);
+            height = MAX_DIM;
+          }
+        }
+
+        const canvas = document.createElement("canvas");
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext("2d");
+        if (!ctx) return reject(new Error("Canvas context failed"));
+
+        const isPng = file.type === "image/png";
+        if (!isPng) {
+          ctx.fillStyle = "#ffffff";
+          ctx.fillRect(0, 0, width, height);
+        }
+        ctx.drawImage(img, 0, 0, width, height);
+
+        const mimeType = isPng ? "image/png" : "image/jpeg";
+        const quality = isPng ? undefined : 0.90;
+        const dataUrl = canvas.toDataURL(mimeType, quality);
+
+        canvas.toBlob(
+          (blob) => {
+            if (!blob) return resolve({ dataUrl, file });
+            const optimizedFile = new File([blob], file.name.replace(/\.[^.]+$/, isPng ? ".png" : ".jpg"), { type: mimeType });
+            resolve({ dataUrl, file: optimizedFile });
+          },
+          mimeType,
+          quality
+        );
+      };
+      img.onerror = () => {
+        URL.revokeObjectURL(objectUrl);
+        reject(new Error("Could not load image"));
+      };
+      img.src = objectUrl;
+    });
+  };
+
   const handleImageSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
     if (!file.type.startsWith("image/")) return alert("Please select an image file.");
-    if (file.size > 10 * 1024 * 1024) return alert("Image must be under 10MB.");
+    if (file.size > 25 * 1024 * 1024) return alert("Image must be under 25MB.");
 
-    // If already JPEG or PNG, use directly (Google accepts both formats natively)
-    if (file.type === "image/jpeg" || file.type === "image/png") {
-      setImageFile(file);
-      const reader = new FileReader();
-      reader.onload = () => setImagePreview(reader.result as string);
-      reader.readAsDataURL(file);
-      return;
-    }
-
-    // Convert other formats (WebP, BMP, TIFF, GIF, AVIF, etc.) to transparent PNG to preserve quality
     setConverting(true);
     try {
-      const pngFile = await convertToPng(file);
-      setImageFile(pngFile);
-      const reader = new FileReader();
-      reader.onload = () => setImagePreview(reader.result as string);
-      reader.readAsDataURL(pngFile);
-    } catch {
-      alert("Failed to convert image. Try a different file.");
+      const { dataUrl, file: optFile } = await optimizeImage(file);
+      setImageFile(optFile);
+      setImagePreview(dataUrl);
+    } catch (err: any) {
+      console.error("Failed to process image:", err);
+      alert("Failed to process image. Try a different file.");
+    } finally {
+      setConverting(false);
     }
-    setConverting(false);
-  };
-
-  const convertToPng = (file: File): Promise<File> => {
-    return new Promise((resolve, reject) => {
-      const img = new Image();
-      img.onload = () => {
-        const canvas = document.createElement("canvas");
-        canvas.width = img.width;
-        canvas.height = img.height;
-        const ctx = canvas.getContext("2d")!;
-        ctx.clearRect(0, 0, canvas.width, canvas.height);
-        ctx.drawImage(img, 0, 0);
-        canvas.toBlob(
-          (blob) => {
-            if (!blob) return reject(new Error("Conversion failed"));
-            const newName = file.name.replace(/\.[^.]+$/, ".png");
-            resolve(new File([blob], newName, { type: "image/png" }));
-          },
-          "image/png"
-        );
-      };
-      img.onerror = () => reject(new Error("Could not load image"));
-      img.src = URL.createObjectURL(file);
-    });
   };
 
   const removeImage = () => {
