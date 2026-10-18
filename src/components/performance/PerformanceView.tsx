@@ -363,7 +363,7 @@ export function PerformanceView({ profile, onBack }: { profile: any; onBack?: ()
     fetcher
   );
   const { data: kwData, isLoading: kwLoading } = useSWR(
-    profile ? `/api/profiles/${profile.id}/keywords?months=${months}` : null,
+    profile && viewMode === "discovery" ? `/api/profiles/${profile.id}/keywords?months=${months}` : null,
     fetcher
   );
 

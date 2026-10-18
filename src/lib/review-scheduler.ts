@@ -17,29 +17,45 @@ export async function getNextAvailableReplySlot(locationId: string, baseDate = n
     candidateDate = new Date(now.getFullYear(), now.getMonth(), now.getDate());
   }
 
-  // Look ahead up to 60 days
-  for (let d = 0; d < 60; d++) {
-    const dayStart = new Date(candidateDate);
-    dayStart.setHours(0, 0, 0, 0);
-    const dayEnd = new Date(candidateDate);
-    dayEnd.setHours(23, 59, 59, 999);
+  // Fetch all scheduled replies for the entire 60-day window in ONE query
+  const windowStart = new Date(candidateDate);
+  windowStart.setHours(0, 0, 0, 0);
+  const windowEnd = new Date(candidateDate);
+  windowEnd.setDate(windowEnd.getDate() + 60);
+  windowEnd.setHours(23, 59, 59, 999);
 
-    // Fetch existing scheduled replies on this day for this profile
-    const scheduledOnDay = await prisma.scheduledReviewReply.findMany({
-      where: {
-        locationId,
-        status: "SCHEDULED",
-        scheduledFor: {
-          gte: dayStart,
-          lte: dayEnd,
-        },
+  const scheduledInWindow = await prisma.scheduledReviewReply.findMany({
+    where: {
+      locationId,
+      status: "SCHEDULED",
+      scheduledFor: {
+        gte: windowStart,
+        lte: windowEnd,
       },
-      select: { scheduledFor: true },
-    });
+    },
+    select: { scheduledFor: true },
+  });
+
+  // Group booked hours by date key (YYYY-MM-DD) in memory
+  const bookedHoursByDate = new Map<string, Set<number>>();
+  for (const item of scheduledInWindow) {
+    const dt = new Date(item.scheduledFor);
+    const key = `${dt.getFullYear()}-${dt.getMonth()}-${dt.getDate()}`;
+    let set = bookedHoursByDate.get(key);
+    if (!set) {
+      set = new Set<number>();
+      bookedHoursByDate.set(key, set);
+    }
+    set.add(dt.getHours());
+  }
+
+  // Look ahead up to 60 days in memory
+  for (let d = 0; d < 60; d++) {
+    const key = `${candidateDate.getFullYear()}-${candidateDate.getMonth()}-${candidateDate.getDate()}`;
+    const bookedHours = bookedHoursByDate.get(key) || new Set<number>();
 
     const isToday = candidateDate.toDateString() === now.toDateString();
     const currentHour = now.getHours();
-    const bookedHours = new Set(scheduledOnDay.map(s => new Date(s.scheduledFor).getHours()));
 
     // Find the first slot hour not yet booked (and strictly in future if today)
     const availableHour = DEFAULT_POSTING_SLOT_HOURS.find(hour => {

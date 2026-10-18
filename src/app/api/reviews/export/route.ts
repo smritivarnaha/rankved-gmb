@@ -35,40 +35,28 @@ export async function GET(req: NextRequest) {
   const endDateParam = searchParams.get("endDate");
   const statusParam = (searchParams.get("status") || "all").toLowerCase();
 
+  const userId = (session as any).user?.id;
+  const role = (session as any).user?.role;
+  const ownerId = (session as any).user?.ownerId;
+
   try {
-    // 1. Fetch complete review stream (with all reviews un-filtered)
-    const origin = req.nextUrl.origin;
-    const cookie = req.headers.get("cookie") || "";
+    const prisma = (await import("@/lib/prisma")).default;
+    const { getAllProfiles } = await import("@/lib/profile-store");
 
-    const reviewsRes = await fetch(`${origin}/api/reviews?profileId=all&pendingOnly=false`, {
-      headers: { cookie },
-    });
+    const allProfiles = (await getAllProfiles(userId, role, ownerId)).filter(p => !p.isHidden);
+    const profileMap = new Map(allProfiles.map(p => [p.id, p]));
+    let allowedProfileIds = allProfiles.map(p => p.id);
 
-    if (!reviewsRes.ok) {
-      return NextResponse.json({ error: "Failed to fetch reviews for export." }, { status: reviewsRes.status });
-    }
-
-    const reviewsData = await reviewsRes.json();
-    let reviews: any[] = reviewsData.allReviews || reviewsData.data || [];
-
-    // 2. Filter by Profile(s)
+    // 1. Filter by Profile(s)
     const combinedProfileFilter = profileIdsParam || profileIdParam;
     if (combinedProfileFilter && combinedProfileFilter !== "all") {
       const selectedIdList = combinedProfileFilter.split(",").map(id => id.trim()).filter(Boolean);
       if (selectedIdList.length > 0) {
-        reviews = reviews.filter(r => selectedIdList.includes(r.profileId));
+        allowedProfileIds = allowedProfileIds.filter(id => selectedIdList.includes(id));
       }
     }
 
-    // 3. Filter by Status (Pending Only vs Replied vs All Reviews)
-    if (statusParam === "pending") {
-      reviews = reviews.filter(r => !r.isReplied);
-    } else if (statusParam === "replied") {
-      reviews = reviews.filter(r => r.isReplied);
-    }
-    // If statusParam === "all", keep all reviews without filtering out replied ones
-
-    // 4. Filter by Date Range
+    // 2. Date range filter
     const now = new Date();
     let minDate: Date | null = null;
     let maxDate: Date | null = null;
@@ -87,17 +75,31 @@ export async function GET(req: NextRequest) {
       }
     }
 
+    const whereClause: any = {
+      locationId: { in: allowedProfileIds },
+      status: "ACTIVE",
+    };
+
     if (minDate || maxDate) {
-      reviews = reviews.filter(r => {
-        if (!r.createTime) return true;
-        const reviewDate = new Date(r.createTime);
-        if (minDate && reviewDate < minDate) return false;
-        if (maxDate && reviewDate > maxDate) return false;
-        return true;
-      });
+      whereClause.reviewCreateTime = {};
+      if (minDate) whereClause.reviewCreateTime.gte = minDate;
+      if (maxDate) whereClause.reviewCreateTime.lte = maxDate;
     }
 
-    // 5. Build CSV string
+    const dbReviews = await prisma.locationReview.findMany({
+      where: whereClause,
+      orderBy: { reviewCreateTime: "desc" },
+    });
+
+    // 3. Filter by Status (Pending Only vs Replied vs All Reviews)
+    const filteredReviews = dbReviews.filter(r => {
+      const isReplied = !!(r.ownerReply && r.ownerReply.trim());
+      if (statusParam === "pending") return !isReplied;
+      if (statusParam === "replied") return isReplied;
+      return true;
+    });
+
+    // 4. Build CSV string
     const headers = [
       "Profile_ID",
       "Profile_Name",
@@ -114,22 +116,24 @@ export async function GET(req: NextRequest) {
     const rows: string[] = [];
     rows.push(headers.join(","));
 
-    for (const r of reviews) {
-      const receivedDateStr = r.createTime
-        ? new Date(r.createTime).toISOString().replace("T", " ").substring(0, 16)
+    for (const r of filteredReviews) {
+      const receivedDateStr = r.reviewCreateTime
+        ? new Date(r.reviewCreateTime).toISOString().replace("T", " ").substring(0, 16)
         : "";
+      const isReplied = !!(r.ownerReply && r.ownerReply.trim());
+      const profileName = profileMap.get(r.locationId)?.name || "";
 
       const row = [
-        escapeCsvCell(r.profileId || ""),
-        escapeCsvCell(r.profileName || ""),
-        escapeCsvCell(r.name || ""),
+        escapeCsvCell(r.locationId || ""),
+        escapeCsvCell(profileName),
+        escapeCsvCell(r.reviewName || ""),
         escapeCsvCell(r.reviewId || ""),
-        escapeCsvCell(r.reviewer?.displayName || "Anonymous"),
-        escapeCsvCell(getRating(r)),
+        escapeCsvCell(r.reviewerName || "Anonymous"),
+        escapeCsvCell(r.rating || getRating(r)),
         escapeCsvCell(receivedDateStr),
         escapeCsvCell(r.comment || ""),
-        escapeCsvCell(r.reviewReply?.comment || ""),
-        escapeCsvCell(r.isReplied ? "Replied" : "Pending"),
+        escapeCsvCell(r.ownerReply || ""),
+        escapeCsvCell(isReplied ? "Replied" : "Pending"),
       ];
       rows.push(row.join(","));
     }

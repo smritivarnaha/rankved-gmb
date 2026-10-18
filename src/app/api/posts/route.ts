@@ -85,7 +85,7 @@ export async function POST(req: NextRequest) {
           const result = await publishToGBP({
             post,
             accessToken,
-            imageDataUri: body.imageUrl || null,
+            imageDataUri: post.imageUrl || null,
           });
 
           if (result.success) {
@@ -97,16 +97,14 @@ export async function POST(req: NextRequest) {
                 gbpPostName: result.gbpPostName || null,
               },
             });
-            const template = await getTemplate("SUCCESS", updatedPost);
-            await notifyAdmin(template);
+            getTemplate("SUCCESS", updatedPost).then(t => notifyAdmin(t)).catch(console.error);
             return NextResponse.json({ data: updatedPost, message: "Published successfully" }, { status: 201 });
           } else {
             const updatedPost = await prisma.post.update({
               where: { id: post.id },
               data: { status: "FAILED", failureReason: result.error || "GBP publish failed" },
             });
-            const template = await getTemplate("FAILURE", { ...updatedPost, error: result.error });
-            await notifyAdmin(template);
+            getTemplate("FAILURE", { ...updatedPost, error: result.error }).then(t => notifyAdmin(t)).catch(console.error);
             return NextResponse.json({ data: updatedPost, message: "Publish failed: " + (result.error || "Unknown error") }, { status: 400 });
           }
         } catch (bgErr) {

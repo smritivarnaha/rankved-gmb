@@ -16,24 +16,27 @@ export async function POST(req: NextRequest) {
   // For all other roles, use their own account.
   const apiKeyHolderId = sessionOwnerId || sessionUserId;
 
-  // Fetch the user to get their stored API keys and defaults
-  const user = await prisma.user.findFirst({
-    where: apiKeyHolderId ? { id: apiKeyHolderId } : { email: sessionUser?.email || "" },
-    select: { 
-      anthropicApiKey: true, openaiApiKey: true, geminiApiKey: true, openrouterApiKey: true,
-      defaultAiContentProvider: true, defaultAiImageProvider: true,
-      anthropicModel: true, openaiContentModel: true, openaiImageModel: true,
-      geminiContentModel: true, geminiImageModel: true, openrouterModel: true
-    }
-  });
-
-  if (!user) return NextResponse.json({ error: "User not found" }, { status: 404 });
-
   try {
     const { locationId, mode, customKeyword, ctaType, action, generatedContent, generatedKeyword, generatedImagePrompt } = await req.json(); // action: "CONTENT", "PROMPT", "IMAGE"
     if (!locationId) return NextResponse.json({ error: "locationId is required" }, { status: 400 });
 
-    const location = await prisma.location.findUnique({ where: { id: locationId } });
+    const [user, location] = await Promise.all([
+      prisma.user.findFirst({
+        where: apiKeyHolderId ? { id: apiKeyHolderId } : { email: sessionUser?.email || "" },
+        select: { 
+          anthropicApiKey: true, openaiApiKey: true, geminiApiKey: true, openrouterApiKey: true,
+          defaultAiContentProvider: true, defaultAiImageProvider: true,
+          anthropicModel: true, openaiContentModel: true, openaiImageModel: true,
+          geminiContentModel: true, geminiImageModel: true, openrouterModel: true
+        }
+      }),
+      prisma.location.findUnique({
+        where: { id: locationId },
+        include: { client: true },
+      }),
+    ]);
+
+    if (!user) return NextResponse.json({ error: "User not found" }, { status: 404 });
     if (!location) return NextResponse.json({ error: "Location not found" }, { status: 404 });
 
     // Map nulls from Prisma to undefined for the engine
@@ -61,13 +64,13 @@ export async function POST(req: NextRequest) {
 
     // --- Granular Steps for Progressive UI ---
     if (action === "CONTENT") {
-      const postData = await generatePostContent(locationId, aiSettings, contentProvider, customKeyword, ctaType);
+      const postData = await generatePostContent(locationId, aiSettings, contentProvider, customKeyword, ctaType, location);
       return NextResponse.json({ ...postData, status: "DRAFT" });
     }
 
     if (action === "PROMPT") {
       if (!generatedContent) return NextResponse.json({ error: "generatedContent required for PROMPT" }, { status: 400 });
-      const imagePrompt = await generateImagePrompt(generatedContent, generatedKeyword || "", locationId, aiSettings, contentProvider);
+      const imagePrompt = await generateImagePrompt(generatedContent, generatedKeyword || "", locationId, aiSettings, contentProvider, location);
       return NextResponse.json({ imagePrompt });
     }
 
@@ -78,12 +81,12 @@ export async function POST(req: NextRequest) {
     }
 
     // --- Legacy / Complete Flow (if action is omitted) ---
-    const postData = await generatePostContent(locationId, aiSettings, contentProvider, customKeyword, ctaType);
+    const postData = await generatePostContent(locationId, aiSettings, contentProvider, customKeyword, ctaType, location);
     let imageUrl = null;
     const shouldGenImage = mode ? (mode === "BOTH" || mode === "IMAGE") : location.aiImageEnabled;
 
     if (shouldGenImage) {
-      const imagePrompt = await generateImagePrompt(postData.content, postData.keyword, locationId, aiSettings, contentProvider);
+      const imagePrompt = await generateImagePrompt(postData.content, postData.keyword, locationId, aiSettings, contentProvider, location);
       postData.imagePrompt = imagePrompt;
       imageUrl = await generatePostImage(imagePrompt, aiSettings, imageProvider);
     }

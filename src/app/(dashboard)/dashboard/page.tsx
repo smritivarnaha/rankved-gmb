@@ -27,21 +27,18 @@ export default async function DashboardPage() {
   const isAdmin = isSuperAdmin || isAgencyOwner;
 
   const targetUserId = user?.ownerId || user?.id;
-  const client = await prisma.client.findFirst({ where: { userId: targetUserId } });
 
-  const locationWhere = isSuperAdmin ? {} : client ? { clientId: client.id } : { id: "none" };
-  const postWhereBase = isSuperAdmin ? {} : client ? { location: { clientId: client.id } } : { id: "none" };
+  const locationWhere = isSuperAdmin ? {} : { client: { userId: targetUserId } };
+  const postWhereBase = isSuperAdmin ? {} : { location: { client: { userId: targetUserId } } };
 
   const teamMemberWhere = isSuperAdmin ? { role: "TEAM_MEMBER" } : { role: "TEAM_MEMBER", ownerId: user?.id };
   
-  const [stats, upcomingPosts, members, postStatusCounts] = await Promise.all([
-    prisma.$transaction(async (tx) => {
-      const locations = await tx.location.count({ where: locationWhere });
-      const scheduled = await tx.post.count({ where: { ...postWhereBase, status: "SCHEDULED" } });
-      const published = await tx.post.count({ where: { ...postWhereBase, status: "PUBLISHED" } });
-      const drafts = await tx.post.count({ where: { ...postWhereBase, status: "DRAFT" } });
-      const pending = await tx.post.count({ where: { ...postWhereBase, status: "PENDING_APPROVAL" } });
-      return { locations, scheduled, published, drafts, pending };
+  const [locationsCount, postCountsByStatus, upcomingPosts, members, postStatusCounts] = await Promise.all([
+    prisma.location.count({ where: locationWhere }),
+    prisma.post.groupBy({
+      by: ["status"],
+      where: postWhereBase,
+      _count: true,
     }),
     prisma.post.findMany({
       where: { ...postWhereBase, status: "SCHEDULED" },
@@ -64,6 +61,20 @@ export default async function DashboardPage() {
       _count: true,
     }) : Promise.resolve([])
   ]);
+
+  const stats = {
+    locations: locationsCount,
+    scheduled: 0,
+    published: 0,
+    drafts: 0,
+    pending: 0,
+  };
+  for (const row of postCountsByStatus) {
+    if (row.status === "SCHEDULED") stats.scheduled = row._count;
+    else if (row.status === "PUBLISHED") stats.published = row._count;
+    else if (row.status === "DRAFT") stats.drafts = row._count;
+    else if (row.status === "PENDING_APPROVAL") stats.pending = row._count;
+  }
 
   let teamMembers: any[] = [];
   if (isAdmin) {
@@ -277,7 +288,7 @@ export default async function DashboardPage() {
                     {teamMembers.length}
                   </span>
                 </div>
-                <Link href="/users" style={{ fontSize: 13, color: "#2563EB", fontWeight: 500, textDecoration: "none" }}>
+                <Link href="/team" style={{ fontSize: 13, color: "#2563EB", fontWeight: 500, textDecoration: "none" }}>
                   Manage team &rarr;
                 </Link>
               </div>

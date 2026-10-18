@@ -216,6 +216,18 @@ export async function GET(req: NextRequest) {
 
   // --- Auto-publish due Scheduled Review Replies ---
   try {
+    // Self-heal stuck PUBLISHING review replies older than 10 minutes
+    const tenMinsAgo = new Date(Date.now() - 10 * 60 * 1000);
+    await prisma.scheduledReviewReply.updateMany({
+      where: {
+        status: "PUBLISHING",
+        updatedAt: { lte: tenMinsAgo },
+      },
+      data: {
+        status: "SCHEDULED",
+      },
+    });
+
     const dueReplies = await prisma.scheduledReviewReply.findMany({
       where: {
         status: "SCHEDULED",
@@ -263,10 +275,17 @@ export async function GET(req: NextRequest) {
           });
 
           if (replyRes.ok) {
-            await prisma.scheduledReviewReply.update({
-              where: { id: rep.id },
-              data: { status: "PUBLISHED", publishedAt: new Date(), errorMessage: null },
-            });
+            const pubTime = new Date();
+            await Promise.all([
+              prisma.scheduledReviewReply.update({
+                where: { id: rep.id },
+                data: { status: "PUBLISHED", publishedAt: pubTime, errorMessage: null },
+              }),
+              prisma.locationReview.updateMany({
+                where: { locationId: rep.locationId, reviewName: rep.reviewName },
+                data: { ownerReply: rep.replyComment, ownerReplyTime: pubTime },
+              }),
+            ]);
             console.log(`[CRON] ✅ Published review reply for ${rep.location.name} (Review: ${rep.reviewId || rep.id})`);
 
             // Trigger instant WhatsApp Auto-Reply Alert to Client

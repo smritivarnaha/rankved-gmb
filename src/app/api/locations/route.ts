@@ -1,9 +1,7 @@
 import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth/next";
-import { PrismaClient } from "@prisma/client";
+import prisma from "@/lib/prisma";
 import { authOptions } from "@/lib/auth";
-
-const prisma = new PrismaClient();
 
 export async function GET(req: Request) {
   try {
@@ -25,7 +23,19 @@ export async function GET(req: Request) {
 
     const locations = await prisma.location.findMany({
       where: whereClause,
-      include: {
+      select: {
+        id: true,
+        name: true,
+        address: true,
+        phone: true,
+        website: true,
+        gbpAccountId: true,
+        gbpLocationId: true,
+        clientId: true,
+        logoUrl: true,
+        googleEmail: true,
+        isHidden: true,
+        createdAt: true,
         client: {
           select: { name: true }
         }

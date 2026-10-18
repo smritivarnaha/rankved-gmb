@@ -80,12 +80,33 @@ export async function getAllProfiles(userId: string, role: string, ownerId?: str
   // Use the ownerId if available to find the correct client context
   const targetUserId = ownerId || userId;
   
-  const client = await prisma.client.findFirst({ where: { userId: targetUserId } });
-  if (!client) return [];
-  
+  const whereClause =
+    role === "SUPER_ADMIN" && !ownerId
+      ? { client: { userId: targetUserId } }
+      : { client: { userId: targetUserId } };
+
   const locations = await prisma.location.findMany({
-    where: { clientId: client.id },
+    where: whereClause,
     orderBy: { createdAt: "desc" },
+    select: {
+      id: true,
+      name: true,
+      gbpAccountId: true,
+      gbpLocationId: true,
+      address: true,
+      phone: true,
+      website: true,
+      logoUrl: true,
+      googleEmail: true,
+      createdAt: true,
+      cachedSearchViews: true,
+      cachedInteractions: true,
+      cachedEngagements: true,
+      statsUpdatedAt: true,
+      isHidden: true,
+      sitemapUrl: true,
+      sitemapUpdatedAt: true,
+    },
   });
 
   if (locations.length === 0) return [];
@@ -134,59 +155,112 @@ export async function getAllProfiles(userId: string, role: string, ownerId?: str
   return locations.map(loc => locationToProfile({ ...loc, postCounts: countsByLocation[loc.id] }));
 }
 
-export async function getProfileById(id: string, userId: string, role: string): Promise<ProfileData | undefined> {
-  const loc = await prisma.location.findUnique({ 
-    where: { id },
-    include: { client: true, assignedUsers: true }
-  });
+export async function getProfileById(id: string, userId: string, role: string, ownerId?: string): Promise<ProfileData | undefined> {
+  const now = new Date();
+  const [loc, statusCounts, thisMonthCount] = await Promise.all([
+    prisma.location.findUnique({ 
+      where: { id },
+      include: {
+        client: { select: { userId: true } },
+        assignedUsers: { select: { id: true } },
+      }
+    }),
+    prisma.post.groupBy({
+      by: ['status'],
+      where: { locationId: id },
+      _count: true,
+    }),
+    prisma.post.count({
+      where: {
+        locationId: id,
+        status: "PUBLISHED",
+        publishedAt: {
+          gte: new Date(now.getFullYear(), now.getMonth(), 1),
+          lt: new Date(now.getFullYear(), now.getMonth() + 1, 1),
+        }
+      }
+    }),
+  ]);
   if (!loc) return undefined;
 
-  // Strict check: User must own the client or be assigned
-  if (loc.client.userId === userId) return locationToProfile(loc);
-  if (loc.assignedUsers.some(u => u.id === userId)) return locationToProfile(loc);
+  const targetUserId = ownerId || userId;
+  const hasAccess =
+    role === "SUPER_ADMIN" ||
+    loc.client.userId === userId ||
+    loc.client.userId === targetUserId ||
+    loc.assignedUsers.some(u => u.id === userId);
 
-  return undefined;
+  if (!hasAccess) return undefined;
+
+  const postCounts = { published: 0, scheduled: 0, drafts: 0, pending: 0, thisMonthPublished: thisMonthCount };
+  for (const row of statusCounts) {
+    if (row.status === 'PUBLISHED') postCounts.published = row._count;
+    else if (row.status === 'SCHEDULED') postCounts.scheduled = row._count;
+    else if (row.status === 'DRAFT') postCounts.drafts = row._count;
+    else if (row.status === 'PENDING_APPROVAL') postCounts.pending = row._count;
+  }
+
+  return locationToProfile({ ...loc, postCounts });
 }
 
 export async function saveProfiles(profiles: ProfileData[], userId: string, ownerId?: string): Promise<void> {
+  if (profiles.length === 0) return;
   const targetUserId = ownerId || userId;
   const clientId = await ensureDefaultClient(targetUserId);
 
-  for (const p of profiles) {
-    // Check if the location already exists and has a manual logo
-    const existing = await prisma.location.findUnique({
-      where: { gbpAccountId_gbpLocationId: { gbpAccountId: p.accountId, gbpLocationId: p.googleName } },
-      select: { logoUrl: true }
-    });
+  // Pre-fetch existing locations in 1 query instead of N sequential findUnique queries
+  const existingLocations = await prisma.location.findMany({
+    where: {
+      gbpLocationId: { in: profiles.map(p => p.googleName || p.id) },
+    },
+    select: {
+      gbpAccountId: true,
+      gbpLocationId: true,
+      logoUrl: true,
+    },
+  });
 
-    const isManualLogo = existing?.logoUrl?.startsWith("data:image/");
+  const existingLogoMap = new Map<string, string | null>();
+  for (const ex of existingLocations) {
+    existingLogoMap.set(`${ex.gbpAccountId}:${ex.gbpLocationId}`, ex.logoUrl);
+  }
 
-    // We update the clientId on EVERY sync to ensure the current user 
-    // actually "owns" the view of this profile in their dashboard.
-    await prisma.location.upsert({
-      where: { gbpAccountId_gbpLocationId: { gbpAccountId: p.accountId, gbpLocationId: p.googleName } },
-      update: {
-        name: p.name,
-        address: p.address || null,
-        phone: p.phone || null,
-        website: p.website || null,
-        logoUrl: isManualLogo ? existing?.logoUrl : (p.logoUrl || null),
-        googleEmail: p.googleEmail || null,
-        clientId: clientId,
-      },
-      create: {
-        id: p.id,
-        name: p.name,
-        address: p.address || null,
-        phone: p.phone || null,
-        website: p.website || null,
-        logoUrl: p.logoUrl || null,
-        googleEmail: p.googleEmail || null,
-        gbpAccountId: p.accountId,
-        gbpLocationId: p.googleName || p.id,
-        clientId,
-      },
-    });
+  // Execute upserts in parallel chunks of 10 to prevent PgBouncer pool saturation while running 10x faster
+  const chunkSize = 10;
+  for (let i = 0; i < profiles.length; i += chunkSize) {
+    const chunk = profiles.slice(i, i + chunkSize);
+    await Promise.all(
+      chunk.map((p) => {
+        const gbpLocId = p.googleName || p.id;
+        const existingLogo = existingLogoMap.get(`${p.accountId}:${gbpLocId}`);
+        const isManualLogo = existingLogo?.startsWith("data:image/");
+
+        return prisma.location.upsert({
+          where: { gbpAccountId_gbpLocationId: { gbpAccountId: p.accountId, gbpLocationId: gbpLocId } },
+          update: {
+            name: p.name,
+            address: p.address || null,
+            phone: p.phone || null,
+            website: p.website || null,
+            logoUrl: isManualLogo ? existingLogo : (p.logoUrl || existingLogo || null),
+            googleEmail: p.googleEmail || null,
+            clientId: clientId,
+          },
+          create: {
+            id: p.id,
+            name: p.name,
+            address: p.address || null,
+            phone: p.phone || null,
+            website: p.website || null,
+            logoUrl: p.logoUrl || null,
+            googleEmail: p.googleEmail || null,
+            gbpAccountId: p.accountId,
+            gbpLocationId: gbpLocId,
+            clientId,
+          },
+        });
+      })
+    );
   }
 }
 

@@ -17,19 +17,30 @@ export function TopProgressBar() {
   const searchParams = useSearchParams();
 
   useEffect(() => {
-    // When the component mounts, or when the pathname/searchParams change,
-    // it means a route transition just finished, so we complete the progress bar.
     NProgress.done();
-
-    // Since Next.js 13+ App Router doesn't natively expose router events yet,
-    // a common workaround is to intercept clicks on <Link> or just rely on 
-    // starting the progress bar on interaction, and finishing it here.
-    // However, for simplicity without complex interceptors, we can just ensure 
-    // it finishes whenever the route changes.
-    return () => {
-      NProgress.start();
-    };
   }, [pathname, searchParams]);
+
+  useEffect(() => {
+    const handleClick = (e: MouseEvent) => {
+      if (e.defaultPrevented || e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
+      const anchor = (e.target as HTMLElement)?.closest("a");
+      if (!anchor) return;
+      const href = anchor.getAttribute("href");
+      const target = anchor.getAttribute("target");
+      if (!href || target === "_blank" || href.startsWith("#") || href.startsWith("mailto:") || href.startsWith("tel:")) return;
+      try {
+        const url = new URL(href, window.location.origin);
+        if (url.origin === window.location.origin && (url.pathname !== window.location.pathname || url.search !== window.location.search)) {
+          NProgress.start();
+        }
+      } catch {
+        // Ignore invalid URLs
+      }
+    };
+    document.addEventListener("click", handleClick, true);
+    return () => document.removeEventListener("click", handleClick, true);
+  }, []);
 
   return null;
 }
+

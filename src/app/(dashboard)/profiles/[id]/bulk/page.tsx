@@ -47,13 +47,16 @@ export default function BulkManagementPage() {
 
   const handleDeleteSelected = async () => {
     if (!confirm(`Delete ${selectedIds.length} drafts?`)) return;
+    const idsToDelete = new Set(selectedIds);
     setDeleting(true);
+    mutatePosts({ ...postsData, data: posts.filter((p: any) => !idsToDelete.has(p.id)) }, false);
+    setSelectedIds([]);
     try {
-      await Promise.all(selectedIds.map(id => fetch(`/api/posts/${id}`, { method: "DELETE" })));
-      setSelectedIds([]);
+      await Promise.all([...idsToDelete].map(id => fetch(`/api/posts/${id}`, { method: "DELETE" })));
       mutatePosts();
     } catch (err) {
       console.error(err);
+      mutatePosts();
       alert("Failed to delete some drafts.");
     } finally {
       setDeleting(false);

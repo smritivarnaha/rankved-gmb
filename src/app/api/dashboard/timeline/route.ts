@@ -29,60 +29,51 @@ export async function GET(req: NextRequest) {
     const user = (session as any).user;
     const isSuperAdmin = user?.role === "SUPER_ADMIN";
     const targetUserId = user?.ownerId || user?.id;
-    const client = await prisma.client.findFirst({ where: { userId: targetUserId } });
 
-    const locationWhere: any = isSuperAdmin ? {} : client ? { clientId: client.id } : { id: "none" };
+    const locationWhere: any = isSuperAdmin ? {} : { client: { userId: targetUserId } };
     if (!showHidden) {
       locationWhere.isHidden = false;
     }
 
-    // Fetch locations
-    const locations = await prisma.location.findMany({
-      where: locationWhere,
-      select: {
-        id: true,
-        name: true,
-        isHidden: true,
-      },
-      orderBy: { name: "asc" },
-    });
-
-    if (locations.length === 0) {
-      return NextResponse.json({ locations: [], posts: [] });
-    }
-
-    const locationIds = locations.map((l) => l.id);
-
-    // Fetch posts for these locations within the month
-    // We check scheduledAt for SCHEDULED, and publishedAt (or scheduledAt fallback) for PUBLISHED
-    // DRAFTS could have a scheduledAt, or just not show up if they don't.
-    const posts = await prisma.post.findMany({
-      where: {
-        locationId: { in: locationIds },
-        OR: [
-          {
-            scheduledAt: {
-              gte: startDate,
-              lt: endDate,
+    // Fetch locations and posts for the month in parallel
+    const [locations, posts] = await Promise.all([
+      prisma.location.findMany({
+        where: locationWhere,
+        select: {
+          id: true,
+          name: true,
+          isHidden: true,
+        },
+        orderBy: { name: "asc" },
+      }),
+      prisma.post.findMany({
+        where: {
+          location: locationWhere,
+          OR: [
+            {
+              scheduledAt: {
+                gte: startDate,
+                lt: endDate,
+              },
             },
-          },
-          {
-            publishedAt: {
-              gte: startDate,
-              lt: endDate,
+            {
+              publishedAt: {
+                gte: startDate,
+                lt: endDate,
+              },
             },
-          },
-        ],
-      },
-      select: {
-        id: true,
-        locationId: true,
-        status: true,
-        scheduledAt: true,
-        publishedAt: true,
-        summary: true,
-      },
-    });
+          ],
+        },
+        select: {
+          id: true,
+          locationId: true,
+          status: true,
+          scheduledAt: true,
+          publishedAt: true,
+          summary: true,
+        },
+      }),
+    ]);
 
     return NextResponse.json({ locations, posts });
   } catch (error: any) {

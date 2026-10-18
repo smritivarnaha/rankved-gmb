@@ -28,15 +28,23 @@ export function Topbar() {
   const email = session?.user?.email || "";
   const initials = name.split(" ").map((n: string) => n[0]).join("").toUpperCase().slice(0, 2);
 
-  // Derive title from pathname, or default to "site"
-  let pageTitle = "site";
+  // Derive title from pathname, or default to "Dashboard"
+  let pageTitle = "Dashboard";
   if (pathname.includes("/admin")) pageTitle = "Admin Setup";
   else if (pathname.includes("/command-center")) pageTitle = "Command Center";
   else if (pathname.includes("/performance")) pageTitle = "Performance";
   else if (pathname.includes("/profiles")) pageTitle = "Profiles";
   else if (pathname.includes("/reviews")) pageTitle = "Review Centre";
   else if (pathname.includes("/rank-tracker")) pageTitle = "Rank Tracker";
+  else if (pathname.includes("/google-posts")) pageTitle = "Live Posts Feed";
+  else if (pathname.includes("/posts")) pageTitle = "Posts";
+  else if (pathname.includes("/whatsapp")) pageTitle = "WhatsApp AI Agent";
+  else if (pathname.includes("/smm")) pageTitle = "Social Media (SMM)";
   else if (pathname.includes("/calendar")) pageTitle = "Calendar";
+  else if (pathname.includes("/team")) pageTitle = "Team";
+  else if (pathname.includes("/api-keys")) pageTitle = "API Keys";
+  else if (pathname.includes("/prompts")) pageTitle = "Prompts";
+  else if (pathname.includes("/settings")) pageTitle = "Settings";
 
   return (
     <header style={{ display: "flex", flexDirection: "column", borderBottom: "1px solid #eaeaea", background: "#fff", fontFamily: "Inter, sans-serif" }}>

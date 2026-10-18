@@ -38,16 +38,17 @@ export async function generatePostContent(
   settings: UserAISettings,
   provider: string = "CLAUDE",
   customKeyword?: string,
-  customCtaType?: string
+  customCtaType?: string,
+  preloadedLocation?: any
 ): Promise<GeneratedPost> {
-  const location = await prisma.location.findUnique({
+  const location = preloadedLocation || await prisma.location.findUnique({
     where: { id: locationId },
     include: { client: true },
   });
 
   if (!location) throw new Error("Location not found");
 
-  const keyword = customKeyword || await consumeNextKeyword(locationId);
+  const keyword = customKeyword || await consumeNextKeyword(locationId, location);
   const trainingContext = [location.aiInstructions, location.aiCompetitorData].filter(Boolean).join("\n");
 
   // Determine CTA
@@ -57,7 +58,7 @@ export async function generatePostContent(
 
   const systemPrompt = `
     You are an expert Google Business Profile content creator for "${location.name}".
-    Business Category: ${location.client.name}
+    Business Category: ${location.client?.name || ""}
     Tone: ${location.aiTone || "Calm, reassuring, and trust-building"}
 
     Business Context & Training Data:
@@ -87,7 +88,7 @@ export async function generatePostContent(
       "content": "The main post body (max 1500 chars, following the specific doctor-to-patient style and frequency rules above)",
       "topicType": "STANDARD",
       "ctaType": "${ctaToUse}",
-      "ctaUrl": "${ctaToUse === 'CALL' || ctaToUse === '' ? '' : (location.aiWebsite || location.client.website || '')}"
+      "ctaUrl": "${ctaToUse === 'CALL' || ctaToUse === '' ? '' : (location.aiWebsite || location.client?.website || '')}"
     }
     NOTE: If "ctaType" is "CALL", the "ctaUrl" should be an empty string "" as Google uses the profile's phone number automatically.
   `;
@@ -102,9 +103,10 @@ export async function generateImagePrompt(
   keyword: string | undefined,
   locationId: string,
   settings: UserAISettings,
-  provider: string = "CLAUDE"
+  provider: string = "CLAUDE",
+  preloadedLocation?: any
 ): Promise<string> {
-  const location = await prisma.location.findUnique({
+  const location = preloadedLocation || await prisma.location.findUnique({
     where: { id: locationId },
     include: { client: true },
   });
@@ -292,19 +294,35 @@ function parseJson(text: string): GeneratedPost {
   }
 }
 
-async function consumeNextKeyword(locationId: string): Promise<string | null> {
-  const location = await prisma.location.findUnique({
+async function consumeNextKeyword(locationId: string, preloadedLocation?: any): Promise<string | null> {
+  const location = preloadedLocation || await prisma.location.findUnique({
     where: { id: locationId },
     select: { aiKeywordSequence: true, aiCurrentSequenceIndex: true },
   });
   if (!location?.aiKeywordSequence) return null;
-  const sequence = location.aiKeywordSequence.split(",").map(s => s.trim()).filter(s => s.length > 0);
+
+  const rawSeq = String(location.aiKeywordSequence).trim();
+  let sequence: string[] = [];
+  if (rawSeq.startsWith("[")) {
+    try {
+      const parsed = JSON.parse(rawSeq);
+      if (Array.isArray(parsed)) {
+        sequence = parsed.map(s => String(s).trim()).filter(Boolean);
+      }
+    } catch {
+      sequence = rawSeq.split(",").map(s => s.trim()).filter(Boolean);
+    }
+  } else {
+    sequence = rawSeq.split(",").map(s => s.trim()).filter(Boolean);
+  }
+
   if (sequence.length === 0) return null;
-  const index = location.aiCurrentSequenceIndex % sequence.length;
+  const currentIdx = location.aiCurrentSequenceIndex || 0;
+  const index = currentIdx % sequence.length;
   const keyword = sequence[index];
   await prisma.location.update({
     where: { id: locationId },
-    data: { aiCurrentSequenceIndex: location.aiCurrentSequenceIndex + 1 },
+    data: { aiCurrentSequenceIndex: currentIdx + 1 },
   });
   return keyword;
 }

@@ -60,6 +60,17 @@ export async function POST(req: NextRequest) {
   }
 
   try {
+    const prisma = (await import("@/lib/prisma")).default;
+    const ownerId = (session as any)?.user?.ownerId;
+    const existingLocs = await prisma.location.findMany({
+      where: { client: { userId: ownerId || userId } },
+      select: { gbpLocationId: true, logoUrl: true },
+    });
+    const existingLogoByLocName = new Map<string, string>();
+    for (const el of existingLocs) {
+      if (el.logoUrl) existingLogoByLocName.set(el.gbpLocationId, el.logoUrl);
+    }
+
     const fetchedProfiles: ProfileData[] = [];
 
     // Iterate over each connected Google account
@@ -84,7 +95,7 @@ export async function POST(req: NextRequest) {
         const accountName = account.name;
         const accountDisplayName = account.accountName || account.name;
 
-        if (i > 0 || fetchedProfiles.length > 0) await delay(200);
+        if (i > 0 || fetchedProfiles.length > 0) await delay(100);
 
         try {
           let pageToken: string | undefined = undefined;
@@ -106,8 +117,6 @@ export async function POST(req: NextRequest) {
               pageToken = locData.nextPageToken;
 
               for (const loc of locations) {
-                await delay(100);
-
                 const addressParts = loc.storefrontAddress || {};
                 const addressLines = [
                   ...(addressParts.addressLines || []),
@@ -116,8 +125,12 @@ export async function POST(req: NextRequest) {
                   addressParts.postalCode || "",
                 ].filter(Boolean);
 
-                let logoUrl: string | undefined;
+                let logoUrl: string | undefined = existingLogoByLocName.get(loc.name || "");
                 const placeId = loc.metadata?.placeId;
+
+                if (!logoUrl) {
+                  await delay(50);
+                }
 
                 try {
                   const mapsKey = (process.env.GOOGLE_MAPS_API_KEY || "").replace(/["\s\\]/g, "");
@@ -255,7 +268,6 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "No profiles found across any connected Google accounts." }, { status: 404 });
     }
 
-    const ownerId = (session as any)?.user?.ownerId;
     await saveProfiles(fetchedProfiles, userId, ownerId);
 
     return NextResponse.json({ data: fetchedProfiles, message: `${fetchedProfiles.length} profiles fetched from Google.` });

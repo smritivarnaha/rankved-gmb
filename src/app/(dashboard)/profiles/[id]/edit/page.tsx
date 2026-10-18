@@ -69,11 +69,13 @@ export default function EditProfilePage() {
   const [searchingCatsAdditional, setSearchingCatsAdditional] = useState(false);
   const [activeTab, setActiveTab] = useState("about");
   const [apiError, setApiError] = useState<string | null>(null);
+  const initializedForIdRef = useRef<string | null>(null);
 
   useEffect(() => {
-    if (profileData?.data) {
+    if (profileData?.data && initializedForIdRef.current !== id) {
       const gbp = profileData.data;
       if (gbp.error) { setApiError(gbp.error); return; }
+      initializedForIdRef.current = id;
       setApiError(null);
       setFormData({
         title: gbp.title || "",
@@ -93,7 +95,7 @@ export default function EditProfilePage() {
       });
     }
     if (profileData?.error) setApiError(profileData.error);
-  }, [profileData]);
+  }, [profileData, id]);
 
   // Category search — primary
   useEffect(() => {

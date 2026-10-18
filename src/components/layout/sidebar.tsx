@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import Image from "next/image";
+import { useEffect } from "react";
 import { usePathname } from "next/navigation";
 import { useSession, signOut } from "next-auth/react";
 import {
@@ -23,7 +24,6 @@ import { X } from "lucide-react";
         { name: "Command Center", href: "/command-center", icon: Zap },
         { name: "Performance", href: "/performance", icon: BarChart3 },
         { name: "Profiles", href: "/profiles", icon: MapPin },
-        { name: "Review Centre", href: "/reviews", icon: MessageSquare },
         { name: "Rank Tracker", href: "/rank-tracker", icon: Globe, superAdminOnly: true },
         { name: "Prompts", href: "/prompts", icon: FileText, aiOnly: true },
       ]
@@ -77,6 +77,13 @@ export function Sidebar() {
   const sidebarTextSize = settings?.sidebarTextSize || 14;
 
   const { mobileOpen, closeMobile } = useMobileLayout();
+
+  useEffect(() => {
+    if (mobileOpen) {
+      closeMobile();
+    }
+  }, [pathname]);
+
   const user = (session as any)?.user;
   const role = user?.role;
   const isSuperAdmin = role === "SUPER_ADMIN" || 

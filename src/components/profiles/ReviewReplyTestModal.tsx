@@ -84,7 +84,7 @@ export function ReviewReplyTestModal({
   initialProfileId,
   onOpenTemplatesModal
 }: ReviewReplyTestModalProps) {
-  const { data: profilesData } = useSWR("/api/profiles", (url: string) => fetch(url).then(r => r.json()));
+  const { data: profilesData } = useSWR(isOpen ? "/api/profiles" : null, (url: string) => fetch(url).then(r => r.json()));
   const profiles = profilesData?.data || profilesData?.profiles || [];
 
   const [selectedProfileId, setSelectedProfileId] = useState<string>(initialProfileId || "mock-custom");

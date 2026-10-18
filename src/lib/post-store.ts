@@ -62,23 +62,35 @@ function mapPost(p: any): PostData {
   };
 }
 
+const POST_INCLUDE = {
+  location: {
+    select: {
+      name: true,
+      client: { select: { name: true } },
+    },
+  },
+  user: {
+    select: {
+      email: true,
+    },
+  },
+} as const;
+
 export async function getAllPosts(userId: string, role: string, ownerId?: string): Promise<PostData[]> {
   const targetUserId = ownerId || userId;
 
   if (role === "SUPER_ADMIN") {
     const posts = await prisma.post.findMany({
       orderBy: { createdAt: "desc" },
-      include: { location: { include: { client: true } }, user: true },
+      include: POST_INCLUDE,
     });
     return posts.map(mapPost);
   } else if (role === "AGENCY_OWNER" || (role === "TEAM_MEMBER" && ownerId)) {
-    // If it's a team member, they should see all posts for the agency owner's client
-    const client = await prisma.client.findFirst({ where: { userId: targetUserId } });
-    if (!client) return [];
+    // If it's a team member, they should see all posts for the agency owner's client(s)
     const posts = await prisma.post.findMany({
-      where: { location: { clientId: client.id } },
+      where: { location: { client: { userId: targetUserId } } },
       orderBy: { createdAt: "desc" },
-      include: { location: { include: { client: true } }, user: true },
+      include: POST_INCLUDE,
     });
     return posts.map(mapPost);
   } else {
@@ -86,7 +98,7 @@ export async function getAllPosts(userId: string, role: string, ownerId?: string
     const posts = await prisma.post.findMany({
       where: { location: { assignedUsers: { some: { id: userId } } } },
       orderBy: { createdAt: "desc" },
-      include: { location: { include: { client: true } }, user: true },
+      include: POST_INCLUDE,
     });
     return posts.map(mapPost);
   }
@@ -95,7 +107,7 @@ export async function getAllPosts(userId: string, role: string, ownerId?: string
 export async function getPostById(id: string): Promise<PostData | undefined> {
   const post = await prisma.post.findUnique({
     where: { id },
-    include: { location: { include: { client: true } }, user: true },
+    include: POST_INCLUDE,
   });
   return post ? mapPost(post) : undefined;
 }
@@ -104,19 +116,20 @@ export async function getPostsByProfile(profileId: string, userId: string, role:
   // Use the ownerId context
   const targetUserId = ownerId || userId;
 
-  // Simple check to ensure they have access to this profile first
+  // Single fast check for access to this profile
   let hasAccess = false;
   if (role === "SUPER_ADMIN") {
     hasAccess = true;
   } else if (role === "AGENCY_OWNER" || (role === "TEAM_MEMBER" && ownerId)) {
-    const client = await prisma.client.findFirst({ where: { userId: targetUserId } });
-    if (client) {
-      const loc = await prisma.location.findUnique({ where: { id: profileId } });
-      if (loc && loc.clientId === client.id) hasAccess = true;
-    }
+    const loc = await prisma.location.findFirst({
+      where: { id: profileId, client: { userId: targetUserId } },
+      select: { id: true },
+    });
+    if (loc) hasAccess = true;
   } else {
     const loc = await prisma.location.findFirst({
-      where: { id: profileId, assignedUsers: { some: { id: userId } } }
+      where: { id: profileId, assignedUsers: { some: { id: userId } } },
+      select: { id: true },
     });
     if (loc) hasAccess = true;
   }
@@ -126,7 +139,7 @@ export async function getPostsByProfile(profileId: string, userId: string, role:
   const posts = await prisma.post.findMany({
     where: { locationId: profileId },
     orderBy: { createdAt: "desc" },
-    include: { location: { include: { client: true } }, user: true },
+    include: POST_INCLUDE,
   });
   return posts.map(mapPost);
 }
@@ -164,7 +177,7 @@ export async function createPost(
       locationId: data.profileId,
       userId,
     },
-    include: { location: { include: { client: true } }, user: true },
+    include: POST_INCLUDE,
   });
   return mapPost(post);
 }
@@ -172,8 +185,8 @@ export async function createPost(
 export async function updatePost(id: string, data: Partial<PostData>): Promise<PostData | null> {
   try {
     let focusKeyword = data.focusKeyword;
-    if (focusKeyword === undefined) {
-      const existing = await prisma.post.findUnique({ where: { id }});
+    if (focusKeyword === undefined && data.imageUrl && !data.imageUrl.startsWith("http")) {
+      const existing = await prisma.post.findUnique({ where: { id }, select: { focusKeyword: true } });
       focusKeyword = existing?.focusKeyword || null;
     }
 
@@ -209,7 +222,7 @@ export async function updatePost(id: string, data: Partial<PostData>): Promise<P
         ...(data.gbpPostName !== undefined && { gbpPostName: data.gbpPostName || null }),
         ...(data.failureReason !== undefined && { failureReason: data.failureReason || null }),
       },
-      include: { location: { include: { client: true } }, user: true },
+      include: POST_INCLUDE,
     });
     return mapPost(post);
   } catch (err: any) {
@@ -237,7 +250,7 @@ export async function checkDuplicateContent(locationId: string, summary: string)
       status: "PUBLISHED",
       publishedAt: { gte: fortyEightHoursAgo }
     },
-    include: { location: { include: { client: true } }, user: true },
+    include: POST_INCLUDE,
   });
 
   return duplicate ? mapPost(duplicate) : null;

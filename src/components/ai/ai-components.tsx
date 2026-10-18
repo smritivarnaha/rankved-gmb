@@ -24,8 +24,11 @@ export function AiSettingsTab({ locationId, profileName }: { locationId: string;
     aiImageInstructions: "",
   });
 
+  const initializedForLocationRef = useRef<string | null>(null);
+
   useEffect(() => {
-    if (settings) {
+    if (settings && initializedForLocationRef.current !== locationId) {
+      initializedForLocationRef.current = locationId;
       setFormData({
         aiInstructions: settings.aiInstructions || "",
         aiKeywords: settings.aiKeywords || "",
@@ -38,7 +41,7 @@ export function AiSettingsTab({ locationId, profileName }: { locationId: string;
         aiImageInstructions: settings.aiImageInstructions || "",
       });
     }
-  }, [settings]);
+  }, [settings, locationId]);
 
   const handleSave = async () => {
     setSaving(true);

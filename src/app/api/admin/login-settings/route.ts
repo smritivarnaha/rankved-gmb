@@ -37,8 +37,10 @@ async function getSettings() {
 }
 
 export async function GET() {
-  const session = await getServerSession(authOptions);
-  const settings = await getSettings() as any;
+  const [session, settings] = (await Promise.all([
+    getServerSession(authOptions),
+    getSettings(),
+  ])) as [any, any];
   
   const isSuperAdmin = session && (session.user as any).role === "SUPER_ADMIN";
   

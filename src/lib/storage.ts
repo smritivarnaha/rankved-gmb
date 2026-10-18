@@ -54,7 +54,8 @@ export async function resolveImageUrl(
     // Limits max dimension to 1800px to prevent server memory exhaustion while preserving crisp quality
     let cleanBuffer: Buffer;
     try {
-      const sharpInstance = sharp(buffer).rotate().resize({
+      const baseSharp = sharp(buffer).rotate();
+      const sharpInstance = (!imageDataUri.startsWith("http") ? baseSharp.withMetadata() : baseSharp).resize({
         width: 1800,
         height: 1800,
         fit: "inside",

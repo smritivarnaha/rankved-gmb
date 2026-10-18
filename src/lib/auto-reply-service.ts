@@ -103,6 +103,13 @@ export async function queueAutoRepliesForLocation(
       return result;
     }
 
+    // Pre-fetch all already-queued/published reviewNames for this location in 1 query
+    const existingScheduled = await prisma.scheduledReviewReply.findMany({
+      where: { locationId },
+      select: { reviewName: true },
+    });
+    const existingReviewNames = new Set(existingScheduled.map(s => s.reviewName));
+
     for (const rev of unrepliedReviews) {
       try {
         const starNumber = rev.rating;
@@ -117,14 +124,12 @@ export async function queueAutoRepliesForLocation(
         const reviewName = rev.reviewName;
         if (!reviewName) continue;
 
-        // 2. Check if already in queue or already published
-        const existing = await prisma.scheduledReviewReply.findFirst({
-          where: { reviewName },
-        });
-        if (existing) {
+        // 2. Check if already in queue or already published (O(1) Set lookup)
+        if (existingReviewNames.has(reviewName)) {
           result.skippedCount++;
           continue;
         }
+        existingReviewNames.add(reviewName);
 
         // 3. Generate Reply
         let replyComment = "";

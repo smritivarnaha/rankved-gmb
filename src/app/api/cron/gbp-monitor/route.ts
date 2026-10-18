@@ -303,11 +303,23 @@ async function checkPerformance({ location, locationPath, accessToken, settings,
   const startDate = new Date();
   startDate.setDate(endDate.getDate() - 7);
 
-  const fmt = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+  // Business Profile Performance API v1 requires "locations/{locationId}" without "accounts/{accountId}/"
+  const cleanLocId = String(location.gbpLocationId || "").replace(/^accounts\/[^/]+\/locations\//, "").replace(/^locations\//, "");
+  if (!cleanLocId) return;
 
-  // Using the Business Profile Performance API
-  const perfUrl = `https://businessprofileperformance.googleapis.com/v1/${locationPath}:fetchMultiDailyMetricsTimeSeries?` +
-    `dailyMetric=CALL_CLICKS&dailyMetric=WEBSITE_CLICKS&dailyMetric=BUSINESS_DIRECTION_REQUESTS` +
+  const metrics = [
+    "CALL_CLICKS",
+    "WEBSITE_CLICKS",
+    "BUSINESS_DIRECTION_REQUESTS",
+    "BUSINESS_IMPRESSIONS_DESKTOP_MAPS",
+    "BUSINESS_IMPRESSIONS_MOBILE_MAPS",
+    "BUSINESS_IMPRESSIONS_DESKTOP_SEARCH",
+    "BUSINESS_IMPRESSIONS_MOBILE_SEARCH",
+  ];
+
+  // Using the Business Profile Performance API (plural dailyMetrics= parameter)
+  const perfUrl = `https://businessprofileperformance.googleapis.com/v1/locations/${cleanLocId}:fetchMultiDailyMetricsTimeSeries?` +
+    metrics.map(m => `dailyMetrics=${m}`).join("&") +
     `&dailyRange.startDate.year=${startDate.getFullYear()}&dailyRange.startDate.month=${startDate.getMonth() + 1}&dailyRange.startDate.day=${startDate.getDate()}` +
     `&dailyRange.endDate.year=${endDate.getFullYear()}&dailyRange.endDate.month=${endDate.getMonth() + 1}&dailyRange.endDate.day=${endDate.getDate()}`;
 
@@ -325,15 +337,46 @@ async function checkPerformance({ location, locationPath, accessToken, settings,
   const multiTimeSeries = data.multiDailyMetricTimeSeries || [];
 
   // Sum up totals for each metric this week
-  const totals: Record<string, number> = { CALL_CLICKS: 0, WEBSITE_CLICKS: 0, BUSINESS_DIRECTION_REQUESTS: 0 };
+  const totals: Record<string, number> = {
+    CALL_CLICKS: 0,
+    WEBSITE_CLICKS: 0,
+    BUSINESS_DIRECTION_REQUESTS: 0,
+    BUSINESS_IMPRESSIONS_DESKTOP_MAPS: 0,
+    BUSINESS_IMPRESSIONS_MOBILE_MAPS: 0,
+    BUSINESS_IMPRESSIONS_DESKTOP_SEARCH: 0,
+    BUSINESS_IMPRESSIONS_MOBILE_SEARCH: 0,
+  };
 
   for (const series of multiTimeSeries) {
-    const metricName: string = series.dailyMetric;
-    const dts = series.dailyMetricTimeSeries?.dailySubEntityData || series.dailyMetricTimeSeries?.timeSeries?.datedValues || [];
-    for (const point of dts) {
-      totals[metricName] = (totals[metricName] || 0) + (parseInt(point.value ?? "0", 10) || 0);
+    const subSeriesList = series.dailyMetricTimeSeries || [];
+    for (const sub of (Array.isArray(subSeriesList) ? subSeriesList : [subSeriesList])) {
+      const metricName: string = sub.dailyMetric || series.dailyMetric;
+      const dts = sub.timeSeries?.datedValues || sub.dailySubEntityData || [];
+      for (const point of dts) {
+        totals[metricName] = (totals[metricName] || 0) + (parseInt(point.value ?? "0", 10) || 0);
+      }
     }
   }
+
+  const totalViews =
+    (totals["BUSINESS_IMPRESSIONS_DESKTOP_MAPS"] || 0) +
+    (totals["BUSINESS_IMPRESSIONS_MOBILE_MAPS"] || 0) +
+    (totals["BUSINESS_IMPRESSIONS_DESKTOP_SEARCH"] || 0) +
+    (totals["BUSINESS_IMPRESSIONS_MOBILE_SEARCH"] || 0);
+  const totalInteractions =
+    (totals["CALL_CLICKS"] || 0) +
+    (totals["WEBSITE_CLICKS"] || 0) +
+    (totals["BUSINESS_DIRECTION_REQUESTS"] || 0);
+
+  // Persist cached stats on Location so /performance cards and WhatsApp reports have real numbers
+  await prisma.location.update({
+    where: { id: location.id },
+    data: {
+      cachedSearchViews: totalViews,
+      cachedInteractions: totalInteractions,
+      statsUpdatedAt: new Date(),
+    },
+  });
 
   const snapshot = await prisma.reviewSnapshot.findUnique({ where: { locationId: location.id } });
   if (!snapshot) return; // snapshot should exist from review check above; skip if not

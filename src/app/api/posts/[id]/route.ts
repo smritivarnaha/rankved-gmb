@@ -1,7 +1,7 @@
 import { NextResponse, NextRequest } from "next/server";
 import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/lib/auth";
-import { getPostById, updatePost } from "@/lib/post-store";
+import { getPostById, updatePost, deletePost } from "@/lib/post-store";
 import { publishToGBP } from "@/lib/gbp-publisher";
 import { getGoogleAccessTokenForLocation } from "@/lib/google-token";
 import { notifyAdmin, getTemplate } from "@/lib/notifications";
@@ -78,7 +78,7 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
           const result = await publishToGBP({
             post,
             accessToken,
-            imageDataUri: body.imageUrl || null,
+            imageDataUri: post.imageUrl || null,
           });
 
           if (result.success) {
@@ -87,13 +87,11 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
               publishedAt: new Date().toISOString(),
               gbpPostName: result.gbpPostName || undefined,
             });
-            const template = await getTemplate("SUCCESS", post);
-            await notifyAdmin(template);
+            getTemplate("SUCCESS", post).then(t => notifyAdmin(t)).catch(console.error);
             return NextResponse.json({ data: updatedPost, message: "Published successfully" });
           } else {
             const updatedPost = await updatePost(id, { status: "FAILED", failureReason: result.error || "GBP publish failed", publishedAt: null });
-            const template = await getTemplate("FAILURE", { ...post, error: result.error });
-            await notifyAdmin(template);
+            getTemplate("FAILURE", { ...post, error: result.error }).then(t => notifyAdmin(t)).catch(console.error);
             return NextResponse.json({ data: updatedPost, message: "Publish failed: " + (result.error || "Unknown error") }, { status: 400 });
           }
         } catch (bgErr) {
@@ -108,4 +106,21 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
   } catch (err: any) {
     return NextResponse.json({ error: err.message }, { status: 400 });
   }
+}
+
+// DELETE /api/posts/[id] — delete a single post by path param
+export async function DELETE(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params;
+  const session = await getServerSession(authOptions);
+  if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+
+  const role = (session as any)?.user?.role;
+  const allowedRoles = ["SUPER_ADMIN", "AGENCY_OWNER", "TEAM_MEMBER"];
+  if (!allowedRoles.includes(role)) {
+    return NextResponse.json({ error: "You do not have permission to delete posts." }, { status: 403 });
+  }
+
+  const success = await deletePost(id);
+  if (!success) return NextResponse.json({ error: "Post not found or already deleted." }, { status: 404 });
+  return NextResponse.json({ success: true });
 }

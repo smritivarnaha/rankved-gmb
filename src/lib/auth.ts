@@ -86,13 +86,6 @@ export const authOptions: NextAuthOptions = {
       return true;
     },
     async jwt({ token, account, user }) {
-      // Check for manual linking cookie
-      let linkUserId: string | undefined;
-      try {
-        const cookieStore = await cookies();
-        linkUserId = cookieStore.get("linkUserId")?.value;
-      } catch (e) {}
-
       // 1. Initial sign-in (Credentials or Google)
       if (user) {
         // If it's a credentials login, user is our DB user object
@@ -102,25 +95,15 @@ export const authOptions: NextAuthOptions = {
           token.username = (user as any).username;
           token.ownerId = (user as any).ownerId;
           token.isApproved = (user as any).isApproved;
-
-          // Fetch linked google account tokens if they exist
-          try {
-            const googleAccount = await prisma.account.findFirst({
-              where: { userId: user.id, provider: "google" }
-            });
-            if (googleAccount) {
-              token.accessToken = googleAccount.access_token;
-              token.refreshToken = googleAccount.refresh_token;
-              token.accessTokenExpires = googleAccount.expires_at 
-                ? googleAccount.expires_at * 1000 
-                : undefined;
-            }
-          } catch (e) {
-            console.error("Failed to fetch linked Google account for credential login:", e);
-          }
         } 
         // If it's a Google login (either first time or linking)
         else if (account?.provider === "google") {
+          let linkUserId: string | undefined;
+          try {
+            const cookieStore = await cookies();
+            linkUserId = cookieStore.get("linkUserId")?.value;
+          } catch (e) {}
+
           // If we have a linking cookie, restore the user's original session details
           if (linkUserId) {
             try {
@@ -159,7 +142,6 @@ export const authOptions: NextAuthOptions = {
         token.isApproved = true;
         if (isEliteEmail) token.role = "SUPER_ADMIN";
       }
-
 
       // 2. Google OAuth linking (Triggered from Settings)
       if (account?.provider === "google") {
@@ -205,38 +187,10 @@ export const authOptions: NextAuthOptions = {
             console.error("Failed to link Google account in DB:", e);
           }
         }
-      } 
-      
-      /* 
-      // 3. Refresh user data from DB periodically (if not a fresh login/linking)
-      // DISABLED: This causes 5+ second navigation lag on every click in serverless/cross-region setups.
-      if (token.userId && !account) {
-        try {
-          const dbUser = await prisma.user.findUnique({ where: { id: token.userId as string } });
-          if (dbUser) {
-            token.isApproved = dbUser.isApproved;
-            token.role = dbUser.role;
-            token.username = dbUser.username;
-            token.ownerId = dbUser.ownerId;
-            // Forced Super Admin check for the specific email
-            if (dbUser.email?.toLowerCase() === "rankved.business@gmail.com") {
-              token.role = "SUPER_ADMIN";
-              token.isApproved = true;
-            }
-          }
-        } catch (e) {}
-      }
-      */
-
-      // 4. Token expiration check and refresh
-      if (token.accessTokenExpires && Date.now() < (token.accessTokenExpires as number)) {
-        return token;
       }
 
-      if (token.refreshToken) {
-        return await refreshAccessToken(token);
-      }
-
+      // Google API tokens are managed and refreshed directly in DB via google-token.ts / google-accounts.ts
+      // Do NOT run live external OAuth HTTP calls inside jwt() on every getServerSession() call.
       return token;
     },
     async session({ session, token }) {

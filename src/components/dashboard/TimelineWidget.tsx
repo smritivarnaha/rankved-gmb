@@ -1,8 +1,11 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { ChevronLeft, ChevronRight, Eye, EyeOff, Loader2 } from "lucide-react";
 import Link from "next/link";
+import useSWR from "swr";
+
+const fetcher = (url: string) => fetch(url).then(r => r.json());
 
 interface Location {
   id: string;
@@ -22,32 +25,17 @@ interface Post {
 export function TimelineWidget() {
   const [currentDate, setCurrentDate] = useState(new Date());
   const [showHidden, setShowHidden] = useState(false);
-  
-  const [locations, setLocations] = useState<Location[]>([]);
-  const [posts, setPosts] = useState<Post[]>([]);
-  const [loading, setLoading] = useState(true);
 
   const year = currentDate.getFullYear();
   const month = currentDate.getMonth() + 1;
   const monthParam = `${year}-${month.toString().padStart(2, "0")}`;
 
-  useEffect(() => {
-    async function fetchData() {
-      setLoading(true);
-      try {
-        const res = await fetch(`/api/dashboard/timeline?month=${monthParam}&showHidden=${showHidden}`);
-        if (res.ok) {
-          const data = await res.json();
-          setLocations(data.locations || []);
-          setPosts(data.posts || []);
-        }
-      } catch (err) {
-        console.error(err);
-      }
-      setLoading(false);
-    }
-    fetchData();
-  }, [monthParam, showHidden]);
+  const { data, isLoading: loading } = useSWR(
+    `/api/dashboard/timeline?month=${monthParam}&showHidden=${showHidden}`,
+    fetcher
+  );
+  const locations: Location[] = data?.locations || [];
+  const posts: Post[] = data?.posts || [];
 
   // Calculate days in the month
   const daysInMonth = new Date(year, month, 0).getDate();

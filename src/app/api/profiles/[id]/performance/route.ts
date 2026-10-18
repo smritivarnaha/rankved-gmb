@@ -11,26 +11,31 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
 
   const userId = (session as any).user.id;
   const role = (session as any).user.role;
+  const ownerId = (session as any).user.ownerId;
 
-  const profile = await getProfileById(id, userId, role);
+  const profile = await getProfileById(id, userId, role, ownerId);
   if (!profile) return NextResponse.json({ error: "Profile not found or access denied" }, { status: 404 });
 
-  const validAccounts = await getValidGoogleAccounts(userId);
-  if (validAccounts.length === 0) {
-    return NextResponse.json({ error: "No valid Google accounts connected. Please reconnect in Settings." }, { status: 400 });
-  }
+  const { getGoogleAccessTokenForLocation } = await import("@/lib/google-token");
+  let accessToken: string | null = await getGoogleAccessTokenForLocation(id);
 
-  let accessToken: string | null = null;
-  if (profile.googleEmail) {
-    const matchedAccount = validAccounts.find(acc => getEmailFromIdToken(acc.id_token) === profile.googleEmail);
-    if (matchedAccount) accessToken = matchedAccount.access_token;
+  if (!accessToken) {
+    const validAccounts = await getValidGoogleAccounts(ownerId || userId);
+    if (validAccounts.length === 0) {
+      return NextResponse.json({ error: "No valid Google accounts connected. Please reconnect in Settings." }, { status: 400 });
+    }
+    if (profile.googleEmail) {
+      const matchedAccount = validAccounts.find(acc => getEmailFromIdToken(acc.id_token) === profile.googleEmail);
+      if (matchedAccount) accessToken = matchedAccount.access_token;
+    }
+    if (!accessToken) accessToken = validAccounts[0].access_token;
   }
-  if (!accessToken) accessToken = validAccounts[0].access_token;
   if (!accessToken) return NextResponse.json({ error: "No valid access token available." }, { status: 400 });
 
   // The Business Profile Performance API strictly requires "locations/{location_id}"
   // It does NOT support the "accounts/{account_id}/locations/{location_id}" format.
-  const resourceName = profile.googleName;
+  const cleanLocId = String(profile.googleName || "").replace(/^accounts\/[^/]+\/locations\//, "").replace(/^locations\//, "");
+  const resourceName = `locations/${cleanLocId}`;
     
   const { searchParams } = new URL(req.url);
   const monthParam = searchParams.get("month");
@@ -102,9 +107,36 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
     }
 
     const data = await response.json();
+    const seriesList = data.multiDailyMetricTimeSeries || [];
+
+    // Update cached stats on Location in background so /performance overview cards load instantaneously
+    try {
+      let views = 0;
+      let interactions = 0;
+      for (const group of seriesList) {
+        for (const sub of group.dailyMetricTimeSeries || []) {
+          const metric = sub.dailyMetric;
+          const vals = sub.timeSeries?.datedValues || [];
+          const sum = vals.reduce((acc: number, v: any) => acc + (parseInt(v.value || "0", 10) || 0), 0);
+          if (metric?.includes("IMPRESSIONS")) views += sum;
+          else interactions += sum;
+        }
+      }
+      const prisma = (await import("@/lib/prisma")).default;
+      prisma.location
+        .update({
+          where: { id },
+          data: {
+            cachedSearchViews: views,
+            cachedInteractions: interactions,
+            statsUpdatedAt: new Date(),
+          },
+        })
+        .catch(() => {});
+    } catch {}
     
     // Return the raw timeseries data so the frontend can build charts AND calculate totals
-    return NextResponse.json({ data: data.multiDailyMetricTimeSeries || [] });
+    return NextResponse.json({ data: seriesList });
   } catch (err: any) {
     console.error("Performance API Catch:", err);
     return NextResponse.json({ error: err.message }, { status: 500 });

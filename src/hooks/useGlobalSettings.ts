@@ -3,7 +3,11 @@ import useSWR from "swr";
 const fetcher = (url: string) => fetch(url).then((res) => res.json());
 
 export function useGlobalSettings() {
-  const { data, error, isLoading, mutate } = useSWR("/api/admin/login-settings", fetcher);
+  const { data, error, isLoading, mutate } = useSWR("/api/admin/login-settings", fetcher, {
+    revalidateOnFocus: false,
+    revalidateIfStale: false,
+    dedupingInterval: 60000,
+  });
 
   return {
     settings: data,

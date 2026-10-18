@@ -16,67 +16,56 @@ export async function getValidGoogleAccounts(userId: string, forceRefresh = fals
     where: { userId, provider: "google" }
   });
 
-  const validAccounts = [];
+  const results = await Promise.all(
+    accounts.map(async (account) => {
+      const isExpired = account.expires_at && (account.expires_at * 1000) < Date.now() + 5 * 60 * 1000;
 
-  for (const account of accounts) {
-    const isExpired = account.expires_at && (account.expires_at * 1000) < Date.now() + 5 * 60 * 1000;
-    
-    if (forceRefresh || isExpired) {
-      if (!account.refresh_token) {
-        console.warn(`[Google Auth] No refresh token for account ${account.providerAccountId}.`);
-        if (!isExpired) {
-          validAccounts.push(account);
+      if (forceRefresh || isExpired) {
+        if (!account.refresh_token) {
+          console.warn(`[Google Auth] No refresh token for account ${account.providerAccountId}.`);
+          return !isExpired ? account : null;
         }
-        continue;
+
+        console.log(`[Google Auth] Refreshing token for account ${account.providerAccountId} (forceRefresh: ${forceRefresh})...`);
+        try {
+          const response = await fetch("https://oauth2.googleapis.com/token", {
+            method: "POST",
+            headers: { "Content-Type": "application/x-www-form-urlencoded" },
+            body: new URLSearchParams({
+              client_id: process.env.GOOGLE_CLIENT_ID || "",
+              client_secret: process.env.GOOGLE_CLIENT_SECRET || "",
+              grant_type: "refresh_token",
+              refresh_token: account.refresh_token,
+            }),
+          });
+
+          const refreshed = await response.json();
+
+          if (!response.ok) {
+            console.error(`[Google Auth] Token refresh failed for ${account.providerAccountId}:`, refreshed);
+            return !isExpired ? account : null;
+          }
+
+          return await prisma.account.update({
+            where: { id: account.id },
+            data: {
+              access_token: refreshed.access_token,
+              expires_at: Math.floor(Date.now() / 1000) + refreshed.expires_in,
+              refresh_token: refreshed.refresh_token ?? account.refresh_token,
+              id_token: refreshed.id_token ?? account.id_token,
+            },
+          });
+        } catch (error) {
+          console.error(`[Google Auth] Exception refreshing token for ${account.providerAccountId}:`, error);
+          return !isExpired ? account : null;
+        }
       }
 
-      console.log(`[Google Auth] Refreshing token for account ${account.providerAccountId} (forceRefresh: ${forceRefresh})...`);
-      try {
-        const response = await fetch("https://oauth2.googleapis.com/token", {
-          method: "POST",
-          headers: { "Content-Type": "application/x-www-form-urlencoded" },
-          body: new URLSearchParams({
-            client_id: process.env.GOOGLE_CLIENT_ID || "",
-            client_secret: process.env.GOOGLE_CLIENT_SECRET || "",
-            grant_type: "refresh_token",
-            refresh_token: account.refresh_token,
-          }),
-        });
+      return account;
+    })
+  );
 
-        const refreshed = await response.json();
-
-        if (!response.ok) {
-          console.error(`[Google Auth] Token refresh failed for ${account.providerAccountId}:`, refreshed);
-          if (!isExpired) {
-            validAccounts.push(account);
-          }
-          continue;
-        }
-
-        const updatedAccount = await prisma.account.update({
-          where: { id: account.id },
-          data: {
-            access_token: refreshed.access_token,
-            expires_at: Math.floor(Date.now() / 1000) + refreshed.expires_in,
-            refresh_token: refreshed.refresh_token ?? account.refresh_token,
-            id_token: refreshed.id_token ?? account.id_token,
-          }
-        });
-        
-        validAccounts.push(updatedAccount);
-      } catch (error) {
-        console.error(`[Google Auth] Exception refreshing token for ${account.providerAccountId}:`, error);
-        if (!isExpired) {
-          validAccounts.push(account);
-        }
-      }
-    } else {
-      // Token is still valid
-      validAccounts.push(account);
-    }
-  }
-
-  return validAccounts;
+  return results.filter((acc): acc is NonNullable<typeof acc> => acc !== null);
 }
 
 /**

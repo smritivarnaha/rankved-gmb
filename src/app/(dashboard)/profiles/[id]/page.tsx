@@ -397,8 +397,6 @@ export default function ProfileDetailPage() {
                      userEmail === "rankved.business@gmail.com" || 
                      userEmail === "praveen261119@gmail.com";
 
-  const [profile, setProfile] = useState<Profile | null>(null);
-  const [profileLoading, setProfileLoading] = useState(true);
   const [statusFilter, setStatusFilter] = useState("ALL");
   const searchParamsHook = useSearchParams();
   const initialTab = searchParamsHook.get("tab") === "ai" ? "AI_SETTINGS" : "POSTS";
@@ -420,6 +418,12 @@ export default function ProfileDetailPage() {
   const [isEditProfileOpen, setIsEditProfileOpen] = useState(false);
   const [editingPost, setEditingPost] = useState<Post | null>(null);
 
+  const { data: profileRes, isLoading: profileLoading, mutate: mutateProfile } = useSWR(
+    params.id ? `/api/profiles/${params.id}` : null,
+    fetcher, { revalidateOnFocus: false }
+  );
+  const profile: Profile | null = profileRes?.data || null;
+
   const { data: postsData, isLoading: postsLoading, mutate: mutatePosts } = useSWR(
     params.id ? `/api/posts?profileId=${params.id}` : null,
     fetcher, { revalidateOnFocus: false }
@@ -429,11 +433,12 @@ export default function ProfileDetailPage() {
 
   const handleApprove = async (post: Post) => {
     const newStatus = (post as any).scheduledAt ? "SCHEDULED" : "PUBLISHED";
+    mutatePosts({ ...postsData, data: posts.map(p => p.id === post.id ? { ...p, status: newStatus } : p) }, false);
     const res = await fetch(`/api/posts/${post.id}`, {
       method: "PUT", headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ ...(post as any), status: newStatus }),
     });
-    if (res.ok) mutatePosts(); else alert("Failed to approve post.");
+    if (res.ok) mutatePosts(); else { mutatePosts(); alert("Failed to approve post."); }
   };
 
   const handleDelete = async (post: Post) => {
@@ -469,17 +474,21 @@ export default function ProfileDetailPage() {
 
   const handleBulkDelete = async () => {
     if (!confirm(`Delete ${selectedPosts.size} posts permanently?`)) return;
+    const idsToDelete = new Set(selectedPosts);
     setBulkActionLoading(true);
-    await Promise.all([...selectedPosts].map(id => fetch(`/api/posts?id=${id}`, { method: "DELETE" })));
+    mutatePosts({ ...postsData, data: posts.filter(p => !idsToDelete.has(p.id)) }, false);
     setSelectedPosts(new Set());
     setSelectMode(false);
+    await Promise.all([...idsToDelete].map(id => fetch(`/api/posts?id=${id}`, { method: "DELETE" })));
     mutatePosts();
     setBulkActionLoading(false);
   };
 
   const handleBulkDraft = async () => {
+    const idsToDraft = new Set(selectedPosts);
     setBulkActionLoading(true);
-    await Promise.all([...selectedPosts].map(id =>
+    mutatePosts({ ...postsData, data: posts.map(p => idsToDraft.has(p.id) ? { ...p, status: "DRAFT" } : p) }, false);
+    await Promise.all([...idsToDraft].map(id =>
       fetch(`/api/posts/${id}`, { method: "PUT", headers: {"Content-Type":"application/json"}, body: JSON.stringify({ status: "DRAFT" }) })
     ));
     setSelectedPosts(new Set());
@@ -520,18 +529,6 @@ export default function ProfileDetailPage() {
     mutatePosts();
     setBulkActionLoading(false);
   };
-
-  useEffect(() => {
-    async function loadProfile() {
-      try {
-        const res = await fetch(`/api/profiles/${params.id}`);
-        const data = await res.json();
-        setProfile(data.data || null);
-      } catch { setProfile(null); }
-      setProfileLoading(false);
-    }
-    loadProfile();
-  }, [params.id]);
 
   if (profileLoading) return (
     <div style={{ padding: "80px 0", display: "flex", justifyContent: "center" }}>
@@ -1106,7 +1103,7 @@ export default function ProfileDetailPage() {
               </button>
             </div>
             <div style={{ padding: 24, overflowY: "auto", flex: 1 }}>
-              <ProfileEditor profile={profile} onUpdate={() => { mutatePosts(); setIsEditProfileOpen(false); }} />
+              <ProfileEditor profile={profile} onUpdate={() => { mutateProfile(); mutatePosts(); setIsEditProfileOpen(false); }} />
             </div>
           </div>
         </div>

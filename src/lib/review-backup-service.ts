@@ -27,7 +27,15 @@ export async function syncAndBackupLocationReviews(
   const now = new Date();
   const liveReviewNames = new Set<string>();
 
-  // 1. Upsert all live reviews into our permanent LocationReview database vault
+  // 1. Pre-fetch all existing backed-up reviews for this location in ONE query
+  const existingReviews = await prisma.locationReview.findMany({
+    where: { locationId },
+  });
+  const existingMap = new Map(existingReviews.map(r => [r.reviewName, r]));
+
+  const toCreate: any[] = [];
+  const toUpdate: Array<{ id: string; data: any }> = [];
+
   for (const r of liveReviews) {
     const reviewName = r.name || r.reviewName;
     if (!reviewName) continue;
@@ -55,14 +63,12 @@ export async function syncAndBackupLocationReviews(
       if (!isNaN(d.getTime())) ownerReplyTime = d;
     }
 
-    await prisma.locationReview.upsert({
-      where: {
-        locationId_reviewName: {
-          locationId,
-          reviewName,
-        },
-      },
-      create: {
+    const existing = existingMap.get(reviewName);
+    const newComment = r.comment || null;
+    const newOwnerReply = r.reviewReply?.comment || null;
+
+    if (!existing) {
+      toCreate.push({
         locationId,
         reviewName,
         reviewId: r.reviewId || reviewName.split("/").pop() || null,
@@ -70,28 +76,65 @@ export async function syncAndBackupLocationReviews(
         reviewerPhotoUrl: r.reviewer?.profilePhotoUrl || null,
         starRating: starRatingStr,
         rating: ratingVal,
-        comment: r.comment || null,
+        comment: newComment,
         reviewCreateTime,
         reviewUpdateTime,
-        ownerReply: r.reviewReply?.comment || null,
+        ownerReply: newOwnerReply,
         ownerReplyTime,
         status: "ACTIVE",
         firstSeenAt: now,
         lastSeenAt: now,
-      },
-      update: {
-        reviewerName: r.reviewer?.displayName || undefined,
-        reviewerPhotoUrl: r.reviewer?.profilePhotoUrl || undefined,
-        starRating: starRatingStr,
-        rating: ratingVal,
-        comment: r.comment || null,
-        reviewUpdateTime: reviewUpdateTime || undefined,
-        ownerReply: r.reviewReply?.comment || null,
-        ownerReplyTime: ownerReplyTime || undefined,
-        status: "ACTIVE", // Re-activates if reinstated by Google!
-        lastSeenAt: now,
-      },
+      });
+    } else {
+      const hasContentChange =
+        existing.status !== "ACTIVE" ||
+        existing.rating !== ratingVal ||
+        existing.comment !== newComment ||
+        existing.ownerReply !== newOwnerReply ||
+        (r.reviewer?.displayName && existing.reviewerName !== r.reviewer.displayName);
+
+      if (hasContentChange) {
+        toUpdate.push({
+          id: existing.id,
+          data: {
+            reviewerName: r.reviewer?.displayName || undefined,
+            reviewerPhotoUrl: r.reviewer?.profilePhotoUrl || undefined,
+            starRating: starRatingStr,
+            rating: ratingVal,
+            comment: newComment,
+            reviewUpdateTime: reviewUpdateTime || undefined,
+            ownerReply: newOwnerReply,
+            ownerReplyTime: ownerReplyTime || undefined,
+            status: "ACTIVE",
+            lastSeenAt: now,
+          },
+        });
+      }
+    }
+  }
+
+  // Batch insert all brand-new reviews in a single query
+  if (toCreate.length > 0) {
+    await prisma.locationReview.createMany({
+      data: toCreate,
+      skipDuplicates: true,
     });
+  }
+
+  // Only update existing reviews whose content/reply/status actually changed (in parallel chunks of 10)
+  if (toUpdate.length > 0) {
+    const chunkSize = 10;
+    for (let i = 0; i < toUpdate.length; i += chunkSize) {
+      const chunk = toUpdate.slice(i, i + chunkSize);
+      await Promise.all(
+        chunk.map(item =>
+          prisma.locationReview.update({
+            where: { id: item.id },
+            data: item.data,
+          })
+        )
+      );
+    }
   }
 
   // 2. Detect missing / deleted reviews
@@ -105,12 +148,7 @@ export async function syncAndBackupLocationReviews(
     };
   }
 
-  const previouslyActiveReviews = await prisma.locationReview.findMany({
-    where: {
-      locationId,
-      status: "ACTIVE",
-    },
-  });
+  const previouslyActiveReviews = existingReviews.filter(r => r.status === "ACTIVE");
 
   // If Google's reported total count has not decreased, no deletion has occurred!
   if (currentTotalCount !== undefined && currentTotalCount >= previouslyActiveReviews.length) {

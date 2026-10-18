@@ -64,14 +64,33 @@ export function ReviewManager({ profileId }: { profileId: string }) {
     setIsTemplateModalOpen(false);
   };
 
-  const handlePostReply = async (reviewId: string) => {
-    setPosting(reviewId);
-    // Logic to post back to Google API
-    setTimeout(() => {
+  const handlePostReply = async (review: any) => {
+    const replyText = replies[review.reviewId];
+    if (!replyText?.trim()) return;
+    setPosting(review.reviewId);
+    try {
+      const res = await fetch("/api/reviews/reply", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          reviewName: review.name,
+          locationId: profileId,
+          replyText: replyText.trim(),
+        }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        alert(data.error || "Failed to post reply to Google.");
+      } else {
+        setReplies(prev => ({ ...prev, [review.reviewId]: "" }));
+        mutate();
+      }
+    } catch (err) {
+      console.error(err);
+      alert("Network error while posting reply.");
+    } finally {
       setPosting(null);
-      alert("Reply posted successfully to Google!");
-      mutate(); // Refresh list
-    }, 1000);
+    }
   };
 
   if (isLoading) return (
@@ -200,7 +219,7 @@ export function ReviewManager({ profileId }: { profileId: string }) {
                            </button>
                          </div>
                          <button
-                          onClick={() => handlePostReply(r.reviewId)}
+                          onClick={() => handlePostReply(r)}
                           disabled={posting === r.reviewId}
                           className="flex items-center gap-2 px-6 py-3 bg-slate-900 text-white rounded-xl text-xs font-black uppercase tracking-widest hover:bg-indigo-600 transition-all shadow-lg"
                          >

@@ -90,7 +90,36 @@ export async function GET(req: NextRequest) {
       return tokens;
     };
 
-    // Helper to fetch reviews for a single location with full pagination
+    // Helper to map a DB LocationReview record to the frontend Google Review format
+    const mapDbReviewToApi = (r: any, loc: any) => {
+      const hasReply = !!(r.ownerReply && r.ownerReply.trim());
+      return {
+        name: r.reviewName,
+        reviewId: r.reviewId || r.reviewName.split("/").pop(),
+        reviewer: {
+          displayName: r.reviewerName || "Customer",
+          profilePhotoUrl: r.reviewerPhotoUrl || null,
+        },
+        starRating: r.starRating || (["ONE", "TWO", "THREE", "FOUR", "FIVE"][(r.rating || 5) - 1] ?? "FIVE"),
+        rating: r.rating || 5,
+        comment: r.comment || "",
+        createTime: r.reviewCreateTime ? r.reviewCreateTime.toISOString() : r.createdAt.toISOString(),
+        updateTime: r.reviewUpdateTime ? r.reviewUpdateTime.toISOString() : r.updatedAt.toISOString(),
+        reviewReply: hasReply
+          ? {
+              comment: r.ownerReply,
+              updateTime: r.ownerReplyTime ? r.ownerReplyTime.toISOString() : r.updatedAt.toISOString(),
+            }
+          : undefined,
+        profileId: loc.id,
+        profileName: loc.name,
+        profileAddress: loc.address || "",
+        profileLogo: loc.logoUrl || null,
+        isReplied: hasReply,
+      };
+    };
+
+    // Helper to fetch reviews for a single location with full pagination (Live Google API)
     const fetchReviewsForLocation = async (loc: any) => {
       const tokens = getTokensForLocation(loc);
       if (tokens.length === 0) return { profile: loc, reviews: [], error: "No access token" };
@@ -144,21 +173,18 @@ export async function GET(req: NextRequest) {
               };
             });
 
-            // Auto-backup reviews to database vault and check for Google spam drops
-            try {
-              const { syncAndBackupLocationReviews } = await import("@/lib/review-backup-service");
-              await syncAndBackupLocationReviews(loc.id, mappedReviews, undefined, undefined, { isFullSync: false });
-            } catch (backupErr) {
-              console.error("[Review Backup] Sync error for location:", loc.name, backupErr);
-            }
+            // Auto-backup reviews to database vault (batched) and queue auto-replies in background
+            import("@/lib/review-backup-service")
+              .then(({ syncAndBackupLocationReviews }) =>
+                syncAndBackupLocationReviews(loc.id, mappedReviews, undefined, undefined, { isFullSync: false })
+              )
+              .catch(backupErr => console.error("[Review Backup] Sync error for location:", loc.name, backupErr));
 
-            // Auto-process auto-replies if enabled for this profile
-            try {
-              const { queueAutoRepliesForLocation } = await import("@/lib/auto-reply-service");
-              await queueAutoRepliesForLocation(loc.id, mappedReviews);
-            } catch (autoErr) {
-              console.error("[Auto-Reply] Live sync queue error for location:", loc.name, autoErr);
-            }
+            import("@/lib/auto-reply-service")
+              .then(({ queueAutoRepliesForLocation }) =>
+                queueAutoRepliesForLocation(loc.id, mappedReviews)
+              )
+              .catch(autoErr => console.error("[Auto-Reply] Live sync queue error for location:", loc.name, autoErr));
 
             return { profile: loc, reviews: mappedReviews, error: null };
           }
@@ -175,31 +201,47 @@ export async function GET(req: NextRequest) {
       const location = await prisma.location.findUnique({ where: { id: profileId } });
       if (!location) return NextResponse.json({ error: "Profile not found" }, { status: 404 });
 
-      const result = await fetchReviewsForLocation(location);
-      let reviews = result.reviews;
-      const pendingCount = result.reviews.filter((r: any) => !r.isReplied).length;
+      let allProfileReviews: any[] = [];
+      let syncError: string | null = null;
 
+      if (!forceRefresh) {
+        const dbReviews = await prisma.locationReview.findMany({
+          where: { locationId: profileId, status: "ACTIVE" },
+          orderBy: { reviewCreateTime: "desc" },
+        });
+        if (dbReviews.length > 0) {
+          allProfileReviews = dbReviews.map(r => mapDbReviewToApi(r, location));
+        }
+      }
+
+      if (forceRefresh || allProfileReviews.length === 0) {
+        const result = await fetchReviewsForLocation(location);
+        allProfileReviews = result.reviews;
+        syncError = result.error;
+      }
+
+      const pendingCount = allProfileReviews.filter((r: any) => !r.isReplied).length;
       const deletedCount = await prisma.locationReview.count({
         where: { locationId: profileId, status: "DELETED_BY_GOOGLE" },
       });
 
-      if (pendingOnly) {
-        reviews = reviews.filter((r: any) => !r.isReplied);
-      }
+      const filteredReviews = pendingOnly
+        ? allProfileReviews.filter((r: any) => !r.isReplied)
+        : allProfileReviews;
 
       return NextResponse.json({
-        data: reviews,
-        allReviews: result.reviews,
+        data: filteredReviews,
+        allReviews: allProfileReviews,
         pendingCount,
-        totalCount: result.reviews.length,
+        totalCount: allProfileReviews.length,
         deletedCount,
         profilePendingCounts: { [location.id]: pendingCount },
         lastSynced: new Date().toISOString(),
-        error: result.error,
+        error: syncError,
       });
     }
 
-    // Case 2: Fetch all profiles in parallel
+    // Case 2: Fetch all profiles
     const allProfiles = (await getAllProfiles(userId, role, ownerId)).filter(p => !p.isHidden);
 
     if (allProfiles.length === 0) {
@@ -215,61 +257,89 @@ export async function GET(req: NextRequest) {
       });
     }
 
-    const results = await Promise.allSettled(
-      allProfiles.map(p => fetchReviewsForLocation(p))
-    );
+    const profileIds = allProfiles.map(p => p.id);
+    const profileById = new Map(allProfiles.map(p => [p.id, p]));
+
+    // Fast path: when forceRefresh is false, load backed-up reviews from Postgres in 1 query (<50ms)!
+    const [dbReviewsAll, totalDeletedCount] = await Promise.all([
+      !forceRefresh
+        ? prisma.locationReview.findMany({
+            where: { locationId: { in: profileIds }, status: "ACTIVE" },
+            orderBy: { reviewCreateTime: "desc" },
+          })
+        : Promise.resolve([]),
+      prisma.locationReview.count({
+        where: {
+          status: "DELETED_BY_GOOGLE",
+          locationId: { in: profileIds },
+        },
+      }),
+    ]);
+
+    const dbReviewsByLoc = new Map<string, any[]>();
+    if (!forceRefresh) {
+      for (const r of dbReviewsAll) {
+        const loc = profileById.get(r.locationId);
+        if (!loc) continue;
+        let arr = dbReviewsByLoc.get(r.locationId);
+        if (!arr) {
+          arr = [];
+          dbReviewsByLoc.set(r.locationId, arr);
+        }
+        arr.push(mapDbReviewToApi(r, loc));
+      }
+    }
+
+    // Only call live Google API for profiles when forceRefresh=true OR when the profile has 0 reviews in DB
+    const profilesNeedingLiveFetch = forceRefresh
+      ? allProfiles
+      : allProfiles.filter(p => !dbReviewsByLoc.has(p.id));
+
+    const liveResultsByLoc = new Map<string, { reviews: any[]; error: string | null }>();
+    if (profilesNeedingLiveFetch.length > 0) {
+      const results = await Promise.allSettled(
+        profilesNeedingLiveFetch.map(p => fetchReviewsForLocation(p))
+      );
+      results.forEach((res, idx) => {
+        const p = profilesNeedingLiveFetch[idx];
+        if (res.status === "fulfilled" && res.value) {
+          liveResultsByLoc.set(p.id, { reviews: res.value.reviews, error: res.value.error });
+        } else {
+          liveResultsByLoc.set(p.id, { reviews: [], error: "Failed to sync" });
+        }
+      });
+    }
 
     let combinedReviews: any[] = [];
     const profilePendingCounts: Record<string, number> = {};
     let totalPendingCount = 0;
     let totalAllCount = 0;
     const errors: string[] = [];
-
     const profileSummaries: any[] = [];
 
-    results.forEach((res, idx) => {
-      const profile = allProfiles[idx];
-      if (res.status === "fulfilled" && res.value) {
-        const { reviews, error } = res.value;
-        if (error) errors.push(`${profile.name}: ${error}`);
+    for (const profile of allProfiles) {
+      const cached = dbReviewsByLoc.get(profile.id);
+      const live = liveResultsByLoc.get(profile.id);
+      const reviews = cached ?? live?.reviews ?? [];
+      if (live?.error) errors.push(`${profile.name}: ${live.error}`);
 
-        const pendingForThis = reviews.filter((r: any) => !r.isReplied).length;
-        profilePendingCounts[profile.id] = pendingForThis;
-        totalPendingCount += pendingForThis;
-        totalAllCount += reviews.length;
+      const pendingForThis = reviews.filter((r: any) => !r.isReplied).length;
+      profilePendingCounts[profile.id] = pendingForThis;
+      totalPendingCount += pendingForThis;
+      totalAllCount += reviews.length;
 
-        profileSummaries.push({
-          id: profile.id,
-          name: profile.name,
-          truncatedName: profile.name.length > 9 ? profile.name.slice(0, 8) + "…" : profile.name,
-          address: profile.address || "",
-          logoUrl: profile.logoUrl || null,
-          pendingCount: pendingForThis,
-          totalCount: reviews.length,
-        });
+      profileSummaries.push({
+        id: profile.id,
+        name: profile.name,
+        truncatedName: profile.name.length > 9 ? profile.name.slice(0, 8) + "…" : profile.name,
+        address: profile.address || "",
+        logoUrl: profile.logoUrl || null,
+        pendingCount: pendingForThis,
+        totalCount: reviews.length,
+      });
 
-        combinedReviews.push(...reviews);
-      } else {
-        profilePendingCounts[profile.id] = 0;
-        profileSummaries.push({
-          id: profile.id,
-          name: profile.name,
-          truncatedName: profile.name.length > 9 ? profile.name.slice(0, 8) + "…" : profile.name,
-          address: profile.address || "",
-          logoUrl: profile.logoUrl || null,
-          pendingCount: 0,
-          totalCount: 0,
-        });
-      }
-    });
-
-    // Count all deleted reviews across profiles
-    const totalDeletedCount = await prisma.locationReview.count({
-      where: {
-        status: "DELETED_BY_GOOGLE",
-        locationId: { in: allProfiles.map(p => p.id) },
-      },
-    });
+      combinedReviews.push(...reviews);
+    }
 
     // Sort all reviews date-wise (newest first)
     combinedReviews.sort((a, b) => {

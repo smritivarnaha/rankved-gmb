@@ -1,7 +1,5 @@
-import { PrismaClient } from "@prisma/client";
+import prisma from "@/lib/prisma";
 import { GBPApiService } from "./gbp-api";
-
-const prisma = new PrismaClient();
 
 export class LocationService {
   /**

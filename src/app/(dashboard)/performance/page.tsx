@@ -11,12 +11,16 @@ import { useEffect } from "react";
 const fetcher = (url: string) => fetch(url).then((res) => res.json());
 
 function ProfileStatCard({ profile, onClick }: { profile: any, onClick: () => void }) {
-  const { data: perfData, isLoading } = useSWR(`/api/profiles/${profile.id}/performance?months=1`, fetcher);
+  const hasCachedStats = (profile.cachedSearchViews || 0) > 0 || (profile.cachedInteractions || 0) > 0;
+  const { data: perfData, isLoading } = useSWR(
+    !hasCachedStats ? `/api/profiles/${profile.id}/performance?months=1` : null,
+    fetcher
+  );
 
-  let views = 0;
-  let interactions = 0;
+  let views = profile.cachedSearchViews || 0;
+  let interactions = profile.cachedInteractions || 0;
 
-  if (perfData?.data && Array.isArray(perfData.data)) {
+  if (!hasCachedStats && perfData?.data && Array.isArray(perfData.data)) {
     perfData.data.forEach((multiSeriesItem: any) => {
       const seriesArray = multiSeriesItem.dailyMetricTimeSeries || [];
       seriesArray.forEach((series: any) => {

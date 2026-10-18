@@ -27,7 +27,16 @@ export async function GET(req: NextRequest) {
   if (locationId) {
     location = await prisma.location.findUnique({
       where: { id: locationId },
-      include: { client: true }
+      select: {
+        name: true,
+        address: true,
+        phone: true,
+        aiPhone: true,
+        googleEmail: true,
+        autoReplyBrandName: true,
+        autoReplyKeywords: true,
+        aiKeywords: true,
+      },
     });
 
     if (location) {
@@ -38,13 +47,11 @@ export async function GET(req: NextRequest) {
       const parts = (location.address || "").split(",").map((p: string) => p.trim()).filter(Boolean);
       cityOrArea = parts.length >= 2 ? (parts[parts.length - 2] || parts[parts.length - 1]) : parts[0] || "";
 
-      try {
-        const userId = (session as any).user?.id;
-        const kws = await fetchLocationPerformanceKeywords(location, userId);
-        if (kws && kws.length > 0) {
-          targetKeyword = kws[0];
-        }
-      } catch {}
+      const rawKw = location.autoReplyKeywords || location.aiKeywords || "";
+      const firstKw = rawKw.split(/[,;\n]/)[0]?.trim();
+      if (firstKw) {
+        targetKeyword = firstKw;
+      }
     }
   }
 

@@ -103,15 +103,20 @@ export async function POST(req: NextRequest) {
     }
 
     // Case 3: Publish Immediately to Google
-    const accounts = await getValidGoogleAccounts(userId);
-    let accessToken: string | null = (session as any)?.accessToken || null;
+    const { getGoogleAccessTokenForLocation } = await import("@/lib/google-token");
+    let accessToken: string | null = await getGoogleAccessTokenForLocation(location.id);
 
-    if (accounts.length > 0) {
-      if (location.googleEmail) {
-        const match = accounts.find(a => getEmailFromIdToken(a.id_token) === location.googleEmail);
-        if (match?.access_token) accessToken = match.access_token;
+    if (!accessToken) {
+      const ownerId = (session as any).user?.ownerId;
+      const accounts = await getValidGoogleAccounts(ownerId || userId);
+      if (accounts.length > 0) {
+        if (location.googleEmail) {
+          const match = accounts.find(a => getEmailFromIdToken(a.id_token) === location.googleEmail);
+          if (match?.access_token) accessToken = match.access_token;
+        }
+        if (!accessToken) accessToken = accounts[0].access_token;
       }
-      if (!accessToken) accessToken = accounts[0].access_token;
+      if (!accessToken) accessToken = (session as any)?.accessToken || null;
     }
 
     if (!accessToken) {
@@ -135,23 +140,33 @@ export async function POST(req: NextRequest) {
     }
 
     const data = await replyRes.json();
+    const now = new Date();
 
-    // Record published reply in DB
-    await prisma.scheduledReviewReply.create({
-      data: {
-        locationId: location.id,
-        userId,
-        reviewName,
-        reviewerName: reviewerName || null,
-        rating: rating || null,
-        reviewComment: reviewComment || null,
-        reviewCreateTime: reviewCreateTime ? new Date(reviewCreateTime) : null,
-        replyComment: comment.trim(),
-        scheduledFor: new Date(),
-        status: "PUBLISHED",
-        publishedAt: new Date(),
-      },
-    });
+    // Record published reply in DB and sync LocationReview backup vault in parallel
+    await Promise.all([
+      prisma.scheduledReviewReply.create({
+        data: {
+          locationId: location.id,
+          userId,
+          reviewName,
+          reviewerName: reviewerName || null,
+          rating: rating || null,
+          reviewComment: reviewComment || null,
+          reviewCreateTime: reviewCreateTime ? new Date(reviewCreateTime) : null,
+          replyComment: comment.trim(),
+          scheduledFor: now,
+          status: "PUBLISHED",
+          publishedAt: now,
+        },
+      }),
+      prisma.locationReview.updateMany({
+        where: { locationId: location.id, reviewName },
+        data: {
+          ownerReply: comment.trim(),
+          ownerReplyTime: now,
+        },
+      }),
+    ]);
 
     return NextResponse.json({
       success: true,

@@ -19,10 +19,17 @@ export async function GET(req: NextRequest) {
 
   const { searchParams } = new URL(req.url);
   const profileId = searchParams.get("profileId") || "all";
+  const userId = (session as any).user?.id;
+  const role = (session as any).user?.role;
+  const ownerId = (session as any).user?.ownerId;
+  const targetUserId = ownerId || userId;
 
   try {
     const whereClause: any = {
       status: "DELETED_BY_GOOGLE",
+      ...(role !== "SUPER_ADMIN" && {
+        location: { client: { userId: targetUserId } },
+      }),
     };
 
     if (profileId !== "all") {

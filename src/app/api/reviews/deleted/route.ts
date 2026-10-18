@@ -14,10 +14,16 @@ export async function GET(req: NextRequest) {
 
   const { searchParams } = new URL(req.url);
   const profileId = searchParams.get("profileId") || "all";
+  const userId = (session as any).user?.id;
+  const role = (session as any).user?.role;
+  const ownerId = (session as any).user?.ownerId;
+  const targetUserId = ownerId || userId;
 
   try {
+    const tenantFilter = role !== "SUPER_ADMIN" ? { location: { client: { userId: targetUserId } } } : {};
     const whereClause: any = {
       status: "DELETED_BY_GOOGLE",
+      ...tenantFilter,
     };
 
     if (profileId !== "all") {
@@ -35,7 +41,10 @@ export async function GET(req: NextRequest) {
         orderBy: { deletedAt: "desc" },
       }),
       prisma.reviewDropIncident.findMany({
-        where: profileId !== "all" ? { locationId: profileId } : {},
+        where: {
+          ...(profileId !== "all" ? { locationId: profileId } : {}),
+          ...tenantFilter,
+        },
         include: {
           location: { select: { id: true, name: true } },
         },

@@ -1,8 +1,11 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useMemo } from "react";
 import { ChevronLeft, ChevronRight, Loader2, AlertTriangle } from "lucide-react";
 import { checkProhibitedContent } from "@/lib/content-validation";
+import useSWR from "swr";
+
+const fetcher = (url: string) => fetch(url).then(r => r.json());
 
 const MONTHS = ["January","February","March","April","May","June","July","August","September","October","November","December"];
 const DAYS = ["Sun","Mon","Tue","Wed","Thu","Fri","Sat"];
@@ -11,39 +14,26 @@ export default function CalendarPage() {
   const now = new Date();
   const [month, setMonth] = useState(now.getMonth());
   const [year, setYear] = useState(now.getFullYear());
-  const [events, setEvents] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
+  const { data: postsRes, isLoading: loading } = useSWR("/api/posts", fetcher);
 
-  useEffect(() => {
-    const load = async () => {
-      setLoading(true);
-      try {
-        const res = await fetch("/api/posts");
-        if (res.ok) {
-          const d = await res.json();
-          const scheduled = (d.data || []).filter((p: any) => p.scheduledAt);
-          setEvents(scheduled.map((p: any) => {
-            // Convert UTC ISO to local date to ensure correct calendar cell
-            const localDate = new Date(p.scheduledAt);
-            const prohibitedIssues = checkProhibitedContent(p.summary);
-            return {
-              id: p.id,
-              day: localDate.getDate(),
-              month: localDate.getMonth(),
-              year: localDate.getFullYear(),
-              title: p.summary || "Post",
-              status: p.status?.toLowerCase() || "scheduled",
-              client: p.clientName || "",
-              hasWarning: prohibitedIssues.length > 0,
-              warningTooltip: prohibitedIssues.join(", ")
-            };
-          }));
-        }
-      } catch {}
-      setLoading(false);
-    };
-    load();
-  }, []);
+  const events: any[] = useMemo(() => {
+    const scheduled = (postsRes?.data || []).filter((p: any) => p.scheduledAt);
+    return scheduled.map((p: any) => {
+      const localDate = new Date(p.scheduledAt);
+      const prohibitedIssues = checkProhibitedContent(p.summary);
+      return {
+        id: p.id,
+        day: localDate.getDate(),
+        month: localDate.getMonth(),
+        year: localDate.getFullYear(),
+        title: p.summary || "Post",
+        status: p.status?.toLowerCase() || "scheduled",
+        client: p.clientName || "",
+        hasWarning: prohibitedIssues.length > 0,
+        warningTooltip: prohibitedIssues.join(", ")
+      };
+    });
+  }, [postsRes]);
 
   const daysInMonth = new Date(year, month + 1, 0).getDate();
   const firstDay = new Date(year, month, 1).getDay();

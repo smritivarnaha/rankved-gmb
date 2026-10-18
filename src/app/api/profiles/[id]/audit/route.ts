@@ -11,73 +11,67 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
 
   const userId = (session as any).user.id;
   const role = (session as any).user.role;
+  const ownerId = (session as any).user.ownerId;
 
-  const profile = await getProfileById(id, userId, role);
+  const profile = await getProfileById(id, userId, role, ownerId);
   if (!profile) return NextResponse.json({ error: "Profile not found" }, { status: 404 });
 
-  const validAccounts = await getValidGoogleAccounts(userId);
-  if (validAccounts.length === 0) return NextResponse.json({ error: "No valid Google accounts connected." }, { status: 400 });
+  const { getGoogleAccessTokenForLocation } = await import("@/lib/google-token");
+  let accessToken: string | null = await getGoogleAccessTokenForLocation(id);
 
-  let accessToken: string | null = null;
-  if (profile.googleEmail) {
-    const matchedAccount = validAccounts.find(acc => getEmailFromIdToken(acc.id_token) === profile.googleEmail);
-    if (matchedAccount) accessToken = matchedAccount.access_token;
+  if (!accessToken) {
+    const validAccounts = await getValidGoogleAccounts(ownerId || userId);
+    if (validAccounts.length === 0) return NextResponse.json({ error: "No valid Google accounts connected." }, { status: 400 });
+    if (profile.googleEmail) {
+      const matchedAccount = validAccounts.find(acc => getEmailFromIdToken(acc.id_token) === profile.googleEmail);
+      if (matchedAccount) accessToken = matchedAccount.access_token;
+    }
+    if (!accessToken) accessToken = validAccounts[0].access_token;
   }
-  if (!accessToken) accessToken = validAccounts[0].access_token;
   if (!accessToken) return NextResponse.json({ error: "No valid access token available." }, { status: 400 });
 
   const resourceName = profile.googleName;
   const accountName = profile.accountId;
 
   try {
-    // 1. Fetch Full Location Details for Completion Score
     const locUrl = `https://mybusinessbusinessinformation.googleapis.com/v1/${resourceName}?readMask=name,title,storefrontAddress,phoneNumbers,websiteUri,regularHours,specialHours,serviceArea,labels,adWordsLocationExtensions,latlng,openInfo,metadata,profile,categories`;
-    const locRes = await fetch(locUrl, { headers: { Authorization: `Bearer ${accessToken}` } });
-    const location = await locRes.json();
-
-    // 2. Fetch Reviews for Review Scores
     const reviewsUrl = `https://mybusiness.googleapis.com/v4/${accountName}/${resourceName}/reviews?pageSize=50`;
-    const reviewsRes = await fetch(reviewsUrl, { headers: { Authorization: `Bearer ${accessToken}` } });
-    const reviewsData = await reviewsRes.json();
+    const mediaUrl = `https://mybusiness.googleapis.com/v4/${accountName}/${resourceName}/media?pageSize=100`;
+    const postsUrl = `https://mybusiness.googleapis.com/v4/${accountName}/${resourceName}/localPosts?pageSize=10`;
+    const headers = { Authorization: `Bearer ${accessToken}` };
+
+    // Execute all 4 independent Google API calls concurrently in parallel
+    const [locRes, reviewsRes, mediaRes, postsRes] = await Promise.all([
+      fetch(locUrl, { headers }),
+      fetch(reviewsUrl, { headers }),
+      fetch(mediaUrl, { headers }).catch(() => null),
+      fetch(postsUrl, { headers }).catch(() => null),
+    ]);
+
+    const [location, reviewsData, mediaData, postsData] = await Promise.all([
+      locRes.json(),
+      reviewsRes.json(),
+      mediaRes && mediaRes.ok ? mediaRes.json().catch(() => ({})) : Promise.resolve({}),
+      postsRes && postsRes.ok ? postsRes.json().catch(() => ({})) : Promise.resolve({}),
+    ]);
+
     const reviews = reviewsData.reviews || [];
+    const photoCount = (mediaData.mediaItems || []).length;
 
-    // 3. Fetch Media Items (Photos Count)
-    let photoCount = 0;
-    try {
-      const mediaUrl = `https://mybusiness.googleapis.com/v4/${accountName}/${resourceName}/media?pageSize=100`;
-      const mediaRes = await fetch(mediaUrl, { headers: { Authorization: `Bearer ${accessToken}` } });
-      if (mediaRes.ok) {
-        const mediaData = await mediaRes.json();
-        photoCount = (mediaData.mediaItems || []).length;
-      }
-    } catch (e) {
-      console.error("Error fetching media for audit:", e);
-    }
-
-    // 4. Fetch Local Posts (Posting Frequency Audit)
     let recentPostCount = 0;
     let lastPostDaysAgo: number | null = null;
-    try {
-      const postsUrl = `https://mybusiness.googleapis.com/v4/${accountName}/${resourceName}/localPosts?pageSize=10`;
-      const postsRes = await fetch(postsUrl, { headers: { Authorization: `Bearer ${accessToken}` } });
-      if (postsRes.ok) {
-        const postsData = await postsRes.json();
-        const posts = postsData.localPosts || [];
-        if (posts.length > 0) {
-          const now = new Date();
-          const thirtyDaysAgo = new Date();
-          thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
-          
-          const recentPosts = posts.filter((p: any) => new Date(p.createTime || p.updateTime) > thirtyDaysAgo);
-          recentPostCount = recentPosts.length;
-          
-          const lastPostTime = new Date(posts[0].createTime || posts[0].updateTime);
-          const diffTime = Math.abs(now.getTime() - lastPostTime.getTime());
-          lastPostDaysAgo = Math.floor(diffTime / (1000 * 60 * 60 * 24));
-        }
-      }
-    } catch (e) {
-      console.error("Error fetching posts for audit:", e);
+    const posts = postsData.localPosts || [];
+    if (posts.length > 0) {
+      const now = new Date();
+      const thirtyDaysAgo = new Date();
+      thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+
+      const recentPosts = posts.filter((p: any) => new Date(p.createTime || p.updateTime) > thirtyDaysAgo);
+      recentPostCount = recentPosts.length;
+
+      const lastPostTime = new Date(posts[0].createTime || posts[0].updateTime);
+      const diffTime = Math.abs(now.getTime() - lastPostTime.getTime());
+      lastPostDaysAgo = Math.floor(diffTime / (1000 * 60 * 60 * 24));
     }
 
     // --- CALCULATIONS ---

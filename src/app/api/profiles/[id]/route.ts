@@ -1,7 +1,7 @@
 import { NextResponse, NextRequest } from "next/server";
 import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/lib/auth";
-import { getAllProfiles } from "@/lib/profile-store";
+import { getProfileById } from "@/lib/profile-store";
 
 // GET /api/profiles/[id] — fetch a single profile by ID
 export async function GET(
@@ -16,9 +16,7 @@ export async function GET(
   const role    = (session as any).user.role;
   const ownerId = (session as any).user.ownerId;
 
-  // Reuse the existing store — filter for this specific profile
-  const all     = await getAllProfiles(userId, role, ownerId);
-  const profile = all.find((p: any) => p.id === id);
+  const profile = await getProfileById(id, userId, role, ownerId);
 
   if (!profile) {
     return NextResponse.json({ error: "Profile not found" }, { status: 404 });
