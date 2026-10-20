@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/lib/auth";
 import prisma from "@/lib/prisma";
-import { REVIEW_TEMPLATES, renderReviewTemplate } from "@/lib/review-templates";
+import { REVIEW_TEMPLATES, renderReviewTemplate, normalizeBusinessName } from "@/lib/review-templates";
 import { fetchLocationPerformanceKeywords } from "@/lib/ai-review-reply";
 
 /**
@@ -40,7 +40,7 @@ export async function GET(req: NextRequest) {
     });
 
     if (location) {
-      businessName = location.autoReplyBrandName?.trim() || location.name;
+      businessName = normalizeBusinessName(location.autoReplyBrandName?.trim() || location.name);
       contactPhone = location.aiPhone || location.phone || "+91 98765 43210";
       contactEmail = location.googleEmail || "";
       
@@ -51,13 +51,15 @@ export async function GET(req: NextRequest) {
       const firstKw = rawKw.split(/[,;\n]/)[0]?.trim();
       if (firstKw) {
         targetKeyword = firstKw;
+      } else if (/sheerin/i.test(businessName)) {
+        targetKeyword = "plastic surgeon";
       }
     }
   }
 
   const renderedTemplates = REVIEW_TEMPLATES.map(t => {
     const rendered = renderReviewTemplate({
-      template: t.template,
+      template: t,
       reviewerName,
       businessName,
       cityOrArea,

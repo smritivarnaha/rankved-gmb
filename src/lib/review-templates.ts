@@ -28,10 +28,50 @@ export interface ReviewTemplate {
   category: string;
   description: string;
   template: string;
+  doctorTemplate: string;
+}
+
+/**
+ * Normalizes a business or doctor name so individual doctors (especially Dr. Sheerin Shah)
+ * never include "Clinic" or long SEO suffixes in review replies.
+ */
+export function normalizeBusinessName(rawName?: string | null): string {
+  if (!rawName) return "our practice";
+  const trimmed = rawName.trim();
+  if (!trimmed) return "our practice";
+
+  // Explicit rule for Dr. Sheerin Shah: never use "Clinic" or long professor/specialty suffixes
+  if (/sheerin/i.test(trimmed)) {
+    return "Dr. Sheerin Shah";
+  }
+
+  // If it's an individual doctor GMB title with SEO suffixes (commas, parentheses, pipes, "Best ...")
+  if (/^(dr\.?|prof\.?)\s+/i.test(trimmed) && !/\b(clinic|hospital|centre|center|institute)\b/i.test(trimmed.split(/[,(|-]/)[0])) {
+    const basePart = trimmed
+      .split(/[,(|-]/)[0]
+      .replace(/\b(best|top|leading)\b.*$/i, "")
+      .trim();
+    if (basePart.length >= 5) {
+      return basePart;
+    }
+  }
+
+  return trimmed;
+}
+
+/**
+ * Detects whether a profile / brand name represents an individual doctor (like Dr. Sheerin Shah)
+ * rather than a multi-doctor hospital or clinic.
+ */
+export function isIndividualDoctorProfile(rawName?: string | null): boolean {
+  if (!rawName) return false;
+  if (/sheerin/i.test(rawName)) return true;
+  const normalized = normalizeBusinessName(rawName);
+  return /^(dr\.?|prof\.?)\s+/i.test(normalized) && !/\b(clinic|hospital|centre|center|institute|care|labs|diagnostics)\b/i.test(normalized);
 }
 
 export const REVIEW_TEMPLATES: ReviewTemplate[] = [
-  // ─── TIER 1: 1-2 STARS (LOW / CRITICAL REVIEWS - 5 TEMPLATES) ─────────────
+  // ─── TIER 1: 1-2 STARS (LOW / CRITICAL REVIEWS - 5 TEMPLATES) — SHORT & CRISP ───
   {
     id: "low_resolution_direct",
     title: "Direct Responsibility & Case Review",
@@ -39,8 +79,9 @@ export const REVIEW_TEMPLATES: ReviewTemplate[] = [
     minRating: 1,
     maxRating: 2,
     category: "General Dissatisfaction",
-    description: "Empathetic acknowledgment taking full clinical responsibility and inviting direct connection via profile number.",
-    template: "Hello {{firstName}}, we take your feedback very seriously and sincerely apologize that your experience at {{businessName}} did not meet our high standards. Providing attentive clinical care and patient comfort is our daily commitment. We would appreciate the opportunity to review your case and resolve this with you directly. Kindly connect with us on the contact number attached to our business profile so our management team can assist you personally."
+    description: "Short, empathetic apology inviting direct resolution via the profile contact number.",
+    template: "Hello {{firstName}}, we sincerely apologize that your experience with {{businessName}} fell short of expectations. Please connect with us via the contact number on our profile so we can resolve this directly.",
+    doctorTemplate: "Hello {{firstName}}, {{businessName}} sincerely apologizes that your consultation fell short of expectations. Please reach out via the contact number on the profile so we can assist you directly."
   },
   {
     id: "low_wait_time",
@@ -49,8 +90,9 @@ export const REVIEW_TEMPLATES: ReviewTemplate[] = [
     minRating: 1,
     maxRating: 2,
     category: "Wait Times / Delays",
-    description: "Addresses wait time concerns with empathy while explaining clinical thoroughness and active scheduling optimization.",
-    template: "Thank you for sharing your feedback, {{reviewerName}}. We apologize for the delay you experienced during your visit to {{businessName}}. While our doctors strive to give every consultation the thorough time and detailed explanation it requires, we understand your time is valuable and we are actively optimizing our patient flow. Please reach out to us using the contact number listed on our Google profile so we can assist you directly."
+    description: "Short, polite acknowledgment of wait times with a direct profile contact invitation.",
+    template: "Thank you for your feedback, {{reviewerName}}. We apologize for the wait time during your visit with {{businessName}} and are working to make scheduling smoother. Please reach out via our profile contact number.",
+    doctorTemplate: "Thank you for your feedback, {{reviewerName}}. {{businessName}} apologizes for the delay during your appointment, as every patient is given thorough consultation time. Please connect via the profile contact number."
   },
   {
     id: "low_communication_clarity",
@@ -59,8 +101,9 @@ export const REVIEW_TEMPLATES: ReviewTemplate[] = [
     minRating: 1,
     maxRating: 2,
     category: "Communication & Guidance",
-    description: "Reassures regarding doctor communication, clear medical explanations, and attentive bedside manner.",
-    template: "Dear {{firstName}}, we are truly sorry to hear that your visit did not reflect the clear and attentive communication our practice strives for. Detailed medical explanations and compassionate guidance are central to our work at {{businessName}}. We want to understand what happened and ensure your concerns are thoroughly addressed. Kindly call or connect with us on the number provided on our business profile at your convenience."
+    description: "Short reassurance regarding clear medical explanations and attentive care.",
+    template: "Dear {{firstName}}, we are sorry your visit with {{businessName}} did not feel clear and attentive. Please contact us using the number on our profile so we can address your concerns personally.",
+    doctorTemplate: "Dear {{firstName}}, {{businessName}} is sorry to hear your consultation did not meet your expectations. Clear guidance is always our priority, so please reach out via the number on our profile."
   },
   {
     id: "low_rating_only",
@@ -69,21 +112,23 @@ export const REVIEW_TEMPLATES: ReviewTemplate[] = [
     minRating: 1,
     maxRating: 2,
     category: "Rating Only",
-    description: "Proactive, dignified inquiry when a user leaves 1-2 stars without written explanation.",
-    template: "Greetings {{reviewerName}}, thank you for rating {{businessName}}. We are concerned to see that your visit fell short of the 5-star standard we strive to deliver. As a dedicated {{targetKeyword}}, our entire team is committed to continuous improvement and attentive patient care. We would value hearing more about your experience, please reach out to our team using the contact number listed on our business profile."
+    description: "Crisp, dignified inquiry when a reviewer leaves 1-2 stars without written text.",
+    template: "Greetings {{reviewerName}}, thank you for your feedback for {{businessName}}. We are sorry your visit fell short of a 5-star experience. Please connect via the contact number on our profile so we can help.",
+    doctorTemplate: "Greetings {{reviewerName}}, thank you for your feedback for {{businessName}}. We are sorry your visit fell short of expectations. Please reach out via the contact number on the profile so we can assist."
   },
   {
     id: "low_admin_service",
-    title: "Front Desk & Coordination Recovery",
+    title: "Appointment & Coordination Recovery",
     tier: "LOW",
     minRating: 1,
     maxRating: 2,
-    category: "Staff / Administration",
-    description: "Apologizes for front desk, reception, or coordination hiccups with a prompt profile resolution route.",
-    template: "Hi {{firstName}}, thank you for bringing this to our attention. We sincerely apologize for any coordination issues or frustration during your recent visit to {{businessName}}. Delivering a respectful, smooth patient experience from reception to consultation is our highest priority. We would like to address this issue directly with you. Kindly connect with us through the phone number attached to our business profile."
+    category: "Staff / Coordination",
+    description: "Crisp apology for coordination hiccups with a direct profile resolution route.",
+    template: "Hi {{firstName}}, we sincerely apologize for the inconvenience during your recent visit with {{businessName}}. Please connect with us via the phone number on our profile so we can make this right.",
+    doctorTemplate: "Hi {{firstName}}, we sincerely apologize for any inconvenience during your appointment with {{businessName}}. Kindly reach out via the contact number on the profile so we can resolve this promptly."
   },
 
-  // ─── TIER 2: 3 STARS (NEUTRAL / CONSTRUCTIVE REVIEWS - 4 TEMPLATES) ────────
+  // ─── TIER 2: 3 STARS (NEUTRAL / CONSTRUCTIVE REVIEWS - 4 TEMPLATES) — SHORT & CRISP ───
   {
     id: "neutral_balanced_care",
     title: "Constructive Feedback & Continuous Care",
@@ -91,8 +136,9 @@ export const REVIEW_TEMPLATES: ReviewTemplate[] = [
     minRating: 3,
     maxRating: 3,
     category: "Balanced Feedback",
-    description: "Constructive appreciation highlighting clinical standards and natural SEO keywords.",
-    template: "Thank you for sharing your balanced perspective, {{reviewerName}}. At {{businessName}}, our team constantly works to combine thorough diagnostic care with a comfortable patient experience. We appreciate your observations and are using them to refine our daily services. As a trusted {{targetKeyword}}, we remain dedicated to supporting your ongoing health and well-being."
+    description: "Short, appreciative reply valuing patient feedback and ongoing care.",
+    template: "Thank you for your feedback, {{reviewerName}}. At {{businessName}}, we value your input to keep improving our patient care. Wishing you continued good health!",
+    doctorTemplate: "Thank you for your feedback, {{reviewerName}}. {{businessName}} values your input and remains committed to attentive, personalized patient care. Wishing you good health!"
   },
   {
     id: "neutral_patient_experience",
@@ -101,8 +147,9 @@ export const REVIEW_TEMPLATES: ReviewTemplate[] = [
     minRating: 3,
     maxRating: 3,
     category: "Service Follow-up",
-    description: "Warm invitation for suggestions to elevate 3-star visits to 5-star clinical standard.",
-    template: "Hello {{firstName}}, we appreciate you taking the time to review {{businessName}}. Your feedback helps our entire clinical team uphold high standards of care and clear medical communication. If there is anything specific we can do to make your next visit a 5-star experience, please feel free to reach out via the contact number listed on our business profile. We wish you good health."
+    description: "Crisp invitation for suggestions to elevate a 3-star visit to 5 stars.",
+    template: "Hello {{firstName}}, thank you for reviewing {{businessName}}. If we can do anything to make your next visit a 5-star experience, please reach out via our profile contact number.",
+    doctorTemplate: "Hello {{firstName}}, thank you for reviewing your consultation with {{businessName}}. Please feel free to reach out via the profile contact number if we can assist you further."
   },
   {
     id: "neutral_concise_thanks",
@@ -111,21 +158,23 @@ export const REVIEW_TEMPLATES: ReviewTemplate[] = [
     minRating: 3,
     maxRating: 3,
     category: "Concise Focus",
-    description: "Direct, professional reply reinforcing practice expertise and constructive care.",
-    template: "Dear {{reviewerName}}, we have carefully noted your constructive feedback. Providing attentive clinical guidance and personalized care as a trusted {{targetKeyword}} is the daily focus of our team at {{businessName}}. We appreciate your review and look forward to serving you with even greater excellence during your next consultation."
+    description: "Direct, short reply reinforcing expertise and constructive care.",
+    template: "Dear {{reviewerName}}, thank you for your constructive feedback for {{businessName}}. We appreciate your review and look forward to serving you even better next time.",
+    doctorTemplate: "Dear {{reviewerName}}, thank you for sharing your feedback for {{businessName}}. Your input is appreciated, and we look forward to serving you even better at your next consultation."
   },
   {
     id: "neutral_consultation_focus",
-    title: "Clinical Quality & Patient Comfort",
+    title: "Consultation Quality & Comfort",
     tier: "NEUTRAL",
     minRating: 3,
     maxRating: 3,
-    category: "Clinical Care",
-    description: "Reaffirms commitment to transparent care and thorough consultation.",
-    template: "Hi {{firstName}}, thank you for sharing your thoughts regarding your visit to {{businessName}}. Our medical team is dedicated to providing comprehensive consultations, transparent advice, and dependable patient support. We value your input and will continue working hard to make every visit seamless. Thank you for your trust in our practice."
+    category: "Consultation Care",
+    description: "Short commitment to transparent advice and thorough consultation.",
+    template: "Hi {{firstName}}, thank you for sharing your thoughts on your visit with {{businessName}}. We remain dedicated to clear medical guidance and attentive patient support.",
+    doctorTemplate: "Hi {{firstName}}, thank you for sharing your thoughts on your consultation with {{businessName}}. Providing clear guidance and attentive care is always our priority."
   },
 
-  // ─── TIER 3: 4-5 STARS (HIGH / POSITIVE REVIEWS - 6 TEMPLATES) ────────────
+  // ─── TIER 3: 4-5 STARS (HIGH / POSITIVE REVIEWS - 6 TEMPLATES) — SHORT & CRISP ───
   {
     id: "high_warm_doctor_guidance",
     title: "Doctor Consultation & Compassionate Care",
@@ -133,28 +182,31 @@ export const REVIEW_TEMPLATES: ReviewTemplate[] = [
     minRating: 4,
     maxRating: 5,
     category: "Doctor Guidance",
-    description: "Warm appreciation focusing on clear doctor consultation, guidance, and patient reassurance.",
-    template: "Hello {{firstName}}, thank you so much for your kind words and 5-star review of {{businessName}}. Our team is delighted to know that you felt well-guided and comfortable during your consultation. As a dedicated {{targetKeyword}}, we are committed to providing personalized treatment and thorough care for every patient. We wish you continued good health!"
+    description: "Short, warm thank-you focusing on clear doctor consultation and patient comfort.",
+    template: "Hello {{firstName}}, thank you for your kind 5-star review of {{businessName}}! We are glad you felt comfortable and well-guided during your consultation. Wishing you great health!",
+    doctorTemplate: "Hello {{firstName}}, thank you for your kind words! {{businessName}} is glad you felt comfortable and well-guided during your consultation. Wishing you continued good health!"
   },
   {
     id: "high_staff_and_clinic",
-    title: "Team Coordination & Clinical Excellence",
+    title: "Supportive Care & Patient Experience",
     tier: "HIGH",
     minRating: 4,
     maxRating: 5,
-    category: "Team & Atmosphere",
-    description: "Celebrates full team coordination, supportive clinic atmosphere, and local authority.",
-    template: "Thank you for your wonderful review, {{reviewerName}}! Our entire staff and clinical team at {{businessName}} strive to make every visit as comfortable, reassuring, and thorough as possible. We are grateful for your recommendation and are honored to serve our community as a trusted {{targetKeyword}}. Please take care and stay healthy!"
+    category: "Care & Support",
+    description: "Crisp appreciation celebrating supportive care and patient trust.",
+    template: "Thank you for your wonderful review, {{reviewerName}}! Everyone at {{businessName}} truly appreciates your trust and kind recommendation. Wishing you great health!",
+    doctorTemplate: "Thank you for your wonderful review, {{reviewerName}}! {{businessName}} truly appreciates your trust and kind recommendation. Wishing you great health!"
   },
   {
     id: "high_short_direct",
-    title: "Concise & Direct Appreciation",
+    title: "Short & Crisp Appreciation",
     tier: "HIGH",
     minRating: 4,
     maxRating: 5,
     category: "Short & Direct",
-    description: "Impactful thank-you focusing on prompt service, medical guidance, and trust.",
-    template: "Dear {{reviewerName}}, we truly appreciate your generous 5-star rating and trust in {{businessName}}. Delivering attentive patient care, clear medical guidance, and prompt service is always our team's highest priority. We look forward to continuing to assist you and wish you great health and happiness."
+    description: "Ultra-crisp thank-you focusing on trust, attentive care, and good wishes.",
+    template: "Dear {{reviewerName}}, thank you for your 5-star rating and trust in {{businessName}}! Providing attentive care and clear guidance is always our priority. Wishing you good health!",
+    doctorTemplate: "Dear {{reviewerName}}, thank you for your 5-star rating and trust in {{businessName}}! Providing attentive care and clear medical guidance is always our priority. Wishing you good health!"
   },
   {
     id: "high_seo_authority",
@@ -163,28 +215,31 @@ export const REVIEW_TEMPLATES: ReviewTemplate[] = [
     minRating: 4,
     maxRating: 5,
     category: "SEO Authority",
-    description: "Positions the clinic as the leading medical authority with seamless keyword blend.",
-    template: "Greetings {{firstName}}, thank you for taking the time to share your positive review of {{businessName}}. As a leading {{targetKeyword}}, our team is deeply committed to combining clinical excellence with attentive, empathetic patient support. Your kind feedback motivates our entire staff to keep delivering top-quality care. We wish you wonderful health and well-being."
+    description: "Crisp specialty & location authority reply with natural keyword integration.",
+    template: "Greetings {{firstName}}, thank you for your positive review of {{businessName}}! As a trusted {{targetKeyword}}, we are committed to delivering attentive, personalized care. Wishing you good health!",
+    doctorTemplate: "Greetings {{firstName}}, thank you for your kind review! As a trusted {{targetKeyword}}, {{businessName}} is committed to delivering attentive, personalized care. Wishing you great health!"
   },
   {
     id: "high_consultation_recovery",
-    title: "Treatment Outcome & Patient Recovery",
+    title: "Treatment Outcome & Smooth Recovery",
     tier: "HIGH",
     minRating: 4,
     maxRating: 5,
     category: "Treatment Outcome",
-    description: "Focuses on successful clinical outcomes, thorough recovery, and ongoing support.",
-    template: "Hi {{reviewerName}}, thank you so much for your heartfelt feedback! It is truly rewarding for our team at {{businessName}} to know that your consultation and treatment went smoothly. Ensuring clear explanations and long-term patient recovery is at the heart of what we do. We are always here whenever you need medical guidance."
+    description: "Short thank-you highlighting smooth treatment and healthy recovery.",
+    template: "Hi {{reviewerName}}, thank you for your heartfelt feedback! We are delighted your treatment with {{businessName}} went smoothly. Wishing you a speedy and healthy recovery!",
+    doctorTemplate: "Hi {{reviewerName}}, thank you for your heartfelt feedback! {{businessName}} is delighted to know your treatment and recovery went smoothly. Wishing you continued good health!"
   },
   {
     id: "high_family_trust",
-    title: "Long-term Trust & Practice Recommendation",
+    title: "Patient Trust & Recommendation",
     tier: "HIGH",
     minRating: 4,
     maxRating: 5,
-    category: "Family & Community",
-    description: "Emphasizes multi-generational patient trust, welcoming environment, and ongoing care.",
-    template: "Dear {{firstName}}, we are truly grateful for your kind review and trust in {{businessName}}. Providing a welcoming atmosphere, transparent medical guidance, and reliable {{targetKeyword}} services is what our practice strives for every single day. Thank you for choosing our clinic, and we wish you and your family excellent health."
+    category: "Trust & Recommendation",
+    description: "Crisp gratitude for patient recommendation and long-term trust.",
+    template: "Dear {{firstName}}, thank you for your kind review and trust in {{businessName}}. We truly appreciate your recommendation and wish you and your family excellent health!",
+    doctorTemplate: "Dear {{firstName}}, thank you for your kind review and trust in {{businessName}}. Your recommendation means a lot, and we wish you and your family excellent health!"
   }
 ];
 
@@ -247,14 +302,37 @@ export function extractValidFullName(fullName?: string | null): string {
  * Handles both named reviewers and anonymous reviews seamlessly without ever outputting "Patient".
  */
 export function renderReviewTemplate(params: RenderTemplateParams): string {
-  const rawTemplate = typeof params.template === "string" ? params.template : params.template.template;
-  
+  const isDoctor = isIndividualDoctorProfile(params.businessName);
+  const businessName = normalizeBusinessName(params.businessName);
+
+  let rawTemplate = "";
+  if (typeof params.template === "string") {
+    if (isDoctor) {
+      const matched = REVIEW_TEMPLATES.find(t => t.template === params.template || t.doctorTemplate === params.template);
+      rawTemplate = matched?.doctorTemplate || params.template;
+    } else {
+      rawTemplate = params.template;
+    }
+  } else {
+    rawTemplate = isDoctor ? (params.template.doctorTemplate || params.template.template) : params.template.template;
+  }
+
   const validFullName = extractValidFullName(params.reviewerName);
   const firstName = extractFirstName(params.reviewerName);
-  const businessName = params.businessName?.trim() || "our clinic";
   const cityOrArea = params.cityOrArea?.trim() || "";
-  
-  let targetKeyword = params.targetKeyword?.trim() || "healthcare provider";
+
+  let defaultKeyword = "specialist";
+  if (/sheerin/i.test(params.businessName || "")) {
+    defaultKeyword = "plastic surgeon";
+  } else if (isDoctor) {
+    defaultKeyword = "specialist doctor";
+  }
+
+  let targetKeyword = params.targetKeyword?.trim() || defaultKeyword;
+  // For Dr. Sheerin or individual doctors, ensure targetKeyword never contains "clinic"
+  if (isDoctor) {
+    targetKeyword = targetKeyword.replace(/\bclinic\b/gi, "").replace(/\s{2,}/g, " ").trim() || defaultKeyword;
+  }
   if (cityOrArea && !targetKeyword.toLowerCase().includes(cityOrArea.toLowerCase())) {
     targetKeyword = `${targetKeyword} in ${cityOrArea}`;
   }
@@ -291,6 +369,15 @@ export function renderReviewTemplate(params: RenderTemplateParams): string {
     .replace(/\{\{businessName\}\}/g, businessName)
     .replace(/\{\{cityOrArea\}\}/g, cityOrArea)
     .replace(/\{\{targetKeyword\}\}/g, targetKeyword);
+
+  // If individual doctor (such as Dr. Sheerin Shah), ensure the word "clinic" never appears
+  if (isDoctor) {
+    rendered = rendered
+      .replace(/\bour clinic\b/gi, businessName)
+      .replace(/\bthe clinic\b/gi, businessName)
+      .replace(/\bclinic\b/gi, "")
+      .replace(/\bat Dr\./gi, "with Dr.");
+  }
 
   // Clean up punctuation, trailing spaces, double commas
   rendered = rendered

@@ -7,6 +7,7 @@ import {
   CheckCircle2, ArrowRight, Zap, Info, Layers, Eye
 } from "lucide-react";
 import useSWR from "swr";
+import { normalizeBusinessName } from "@/lib/review-templates";
 
 interface ReviewReplyTestModalProps {
   isOpen: boolean;
@@ -106,7 +107,8 @@ export function ReviewReplyTestModal({
     if (initialProfileId) {
       setSelectedProfileId(initialProfileId);
     } else if (profiles.length > 0 && selectedProfileId === "mock-custom") {
-      setSelectedProfileId(profiles[0].id);
+      const sheerin = profiles.find((p: any) => /sheerin/i.test(p.name));
+      setSelectedProfileId(sheerin ? sheerin.id : profiles[0].id);
     }
   }, [initialProfileId, profiles]);
 
@@ -159,11 +161,11 @@ export function ReviewReplyTestModal({
           rating: activeRating,
           preferredTone: activeTone,
           engineMode: activeEngine,
-          customBusinessName: selectedLoc?.name || "LifeCare Neurology & Spine Clinic",
-          customCityOrArea: selectedLoc?.address ? selectedLoc.address.split(",")[0] : "Mohali",
-          customTargetKeyword: "neurologist in Mohali",
+          customBusinessName: normalizeBusinessName(selectedLoc?.name || "Dr. Sheerin Shah"),
+          customCityOrArea: selectedLoc?.address ? selectedLoc.address.split(",")[0] : "Ludhiana",
+          customTargetKeyword: "plastic surgeon in Ludhiana",
           customPhone: selectedLoc?.phone || "+91 98765 43210",
-          customEmail: selectedLoc?.googleEmail || "care@lifecareclinic.com",
+          customEmail: selectedLoc?.googleEmail || "care@doctor.com",
         }),
       });
 
@@ -196,7 +198,7 @@ export function ReviewReplyTestModal({
   };
 
   const selectedLoc = profiles.find((p: any) => p.id === selectedProfileId);
-  const currentBusinessName = result?.clinicMeta?.businessName || selectedLoc?.name || "LifeCare Neurology & Spine Clinic";
+  const currentBusinessName = normalizeBusinessName(result?.clinicMeta?.businessName || selectedLoc?.name || "Dr. Sheerin Shah");
 
   return (
     <div style={{
@@ -907,7 +909,7 @@ export function ReviewReplyTestModal({
                     {/* Bottom Action bar */}
                     <div style={{ marginTop: "auto", display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: 8 }}>
                       <span style={{ fontSize: 11, color: "#64748b" }}>
-                        📊 Length: <strong>{wordCount} words</strong> (Google recommended: 30–75 words)
+                        📊 Length: <strong>{wordCount} words</strong> (Short & crisp: 15–32 words)
                       </span>
 
                       <button

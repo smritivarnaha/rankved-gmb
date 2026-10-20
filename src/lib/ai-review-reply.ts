@@ -4,7 +4,7 @@ import { Anthropic } from "@anthropic-ai/sdk";
 import OpenAI from "openai";
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import { getValidGoogleAccounts, getEmailFromIdToken } from "./google-accounts";
-import { selectSmartReviewTemplate, renderReviewTemplate, REVIEW_TEMPLATES } from "./review-templates";
+import { selectSmartReviewTemplate, renderReviewTemplate, REVIEW_TEMPLATES, normalizeBusinessName, isIndividualDoctorProfile } from "./review-templates";
 
 export interface ReviewReplyResult {
   reply: string;
@@ -407,27 +407,19 @@ export function getWordCount(text: string): number {
   return text.trim().split(/\s+/).filter(Boolean).length;
 }
 
-const NATURAL_EXPANSIONS_POSITIVE = [
-  "Our entire team remains dedicated to delivering attentive care, thorough guidance, and the highest standards of service for all your health and wellness needs.",
-  "We truly appreciate your trust in our practice and look forward to continuing to provide you with compassionate, personalized care whenever you visit us.",
-  "Our team is committed to maintaining a supportive environment and ensuring every patient receives clear explanations and dedicated clinical follow-through.",
-  "We are grateful for the opportunity to assist you and wish you continued good health and great mobility."
-];
-
-const NATURAL_EXPANSIONS_NEGATIVE = [
-  "Our team is committed to listening closely to all patient feedback and taking every step necessary to address your concerns with empathy and high medical standards.",
-  "We treat every experience with utmost seriousness and welcome the chance to speak with you directly to ensure your care expectations are fully met."
-];
-
 /**
  * Sanitizes and enforces strict rules:
- * - Minimum 30 words, maximum 80 words
- * - Strictly team pronouns ("We", "our team")
+ * - Short & crisp (15 to 40 words max)
  * - Zero em-dashes / en-dashes
  * - Zero over-excited hype words ("thrilled", "super excited")
- * - Dignified professional clinical tone with natural English sentence flow
+ * - For individual doctors (like Dr. Sheerin Shah), never uses the word "clinic"
  */
-export function sanitizeAndEnforceWordCount(text: string, isNegative = false): string {
+export function sanitizeAndEnforceWordCount(
+  text: string,
+  isNegative = false,
+  isIndividualDoctor = false,
+  businessName = ""
+): string {
   let cleaned = text
     .replace(/["“”]/g, "")           // strip surrounding quotes
     .replace(/[—–]/g, ", ")          // STRICT RULE: No em dashes or en dashes
@@ -440,7 +432,7 @@ export function sanitizeAndEnforceWordCount(text: string, isNegative = false): s
     .replace(/\bI wish\b/gi, "We wish")
     .replace(/\bI want to\b/gi, "We want to")
     .replace(/\bmy team\b/gi, "our team")
-    .replace(/\bmy clinic\b/gi, "our clinic")
+    .replace(/\bmy clinic\b/gi, isIndividualDoctor ? (businessName || "our practice") : "our practice")
     .replace(/\bmy practice\b/gi, "our practice")
     .replace(/\bmy\b/gi, "our")
     .replace(/\bthrilled\b/gi, "very pleased")
@@ -451,34 +443,40 @@ export function sanitizeAndEnforceWordCount(text: string, isNegative = false): s
     .replace(/\n{2,}/g, "\n")
     .trim();
 
-  let words = cleaned.split(/\s+/).filter(Boolean);
-
-  // ── 1. Enforce Minimum 30 Words with Natural Contextual Extension ─────────────
-  if (words.length < 30) {
-    const expansionPool = isNegative ? NATURAL_EXPANSIONS_NEGATIVE : NATURAL_EXPANSIONS_POSITIVE;
-    const randomExtension = expansionPool[Math.floor(Math.random() * expansionPool.length)];
-    cleaned += " " + randomExtension;
-    words = cleaned.split(/\s+/).filter(Boolean);
+  if (isIndividualDoctor) {
+    cleaned = cleaned
+      .replace(/\bour clinic\b/gi, businessName || "our practice")
+      .replace(/\bthe clinic\b/gi, businessName || "our practice")
+      .replace(/\bclinic\b/gi, "")
+      .replace(/\bat Dr\./gi, "with Dr.")
+      .replace(/\s{2,}/g, " ")
+      .replace(/\s+([.,!?])/g, "$1")
+      .trim();
   }
 
-  // ── 2. Enforce Maximum 80 Words ─────────────────────────────
-  if (words.length > 80) {
+  const words = cleaned.split(/\s+/).filter(Boolean);
+
+  // Keep replies short and crisp (cap at 42 words max)
+  if (words.length > 42) {
     const sentences = cleaned.match(/[^.!?]+[.!?]+/g) || [cleaned];
     let accumulated = "";
     for (const sentence of sentences) {
       const prospective = (accumulated ? accumulated + " " : "") + sentence.trim();
       const count = prospective.split(/\s+/).filter(Boolean).length;
-      if (count <= 80 && count >= 25) {
+      if (count <= 42) {
         accumulated = prospective;
       } else if (!accumulated) {
         accumulated = sentence.trim();
+        break;
+      } else {
+        break;
       }
     }
 
-    if (accumulated && accumulated.split(/\s+/).filter(Boolean).length <= 80) {
+    if (accumulated && accumulated.split(/\s+/).filter(Boolean).length <= 42) {
       cleaned = accumulated;
     } else {
-      cleaned = words.slice(0, 75).join(" ") + ".";
+      cleaned = words.slice(0, 36).join(" ") + ".";
     }
   }
 
@@ -486,8 +484,7 @@ export function sanitizeAndEnforceWordCount(text: string, isNegative = false): s
 }
 
 /**
- * Generates a high-precision, sentiment-aware, humanized Google Review Reply
- * integrating performance search keywords and strictly 30 to 80 words.
+ * Generates a short, crisp, sentiment-aware Google Review Reply
  */
 export async function generateSmartReviewReply(params: GenerateReviewReplyParams): Promise<ReviewReplyResult> {
   const { locationId, reviewText, reviewerName, rating = 5, preferredTone = "WARM", userId } = params;
@@ -504,15 +501,31 @@ export async function generateSmartReviewReply(params: GenerateReviewReplyParams
   // 1. Fetch real Google Business Profile search query keywords & performance data
   const performanceKeywords = await fetchLocationPerformanceKeywords(location, userId);
   const cityOrArea = extractCityOrArea(location.address);
-  const categoryName = location.client?.name || "Healthcare & Clinical Care";
+  const categoryName = location.client?.name || "Healthcare & Medical Consultation";
 
-  // 2. Select prime keyword
-  const targetKeyword = pickBestPerformanceKeyword(performanceKeywords, reviewText, categoryName, cityOrArea);
-  const topKeywordsList = performanceKeywords.slice(0, 5).join(", ");
+  // Business Brand Name Override (normalized for individual doctors like Dr. Sheerin Shah)
+  const rawBrandOrName = location.autoReplyBrandName?.trim() || location.name;
+  const isDoctor = isIndividualDoctorProfile(rawBrandOrName) || isIndividualDoctorProfile(location.name);
+  const businessName = normalizeBusinessName(rawBrandOrName);
+
+  // 2. Select prime keyword (strip "clinic" if individual doctor)
+  let targetKeyword = pickBestPerformanceKeyword(performanceKeywords, reviewText, categoryName, cityOrArea);
+  if (isDoctor) {
+    targetKeyword = targetKeyword.replace(/\bclinic\b/gi, "").replace(/\s{2,}/g, " ").trim();
+    if (!targetKeyword || targetKeyword.length < 3) {
+      targetKeyword = /sheerin/i.test(businessName)
+        ? `plastic surgeon${cityOrArea ? ` in ${cityOrArea}` : ""}`
+        : `specialist doctor${cityOrArea ? ` in ${cityOrArea}` : ""}`;
+    }
+  }
+  const topKeywordsList = performanceKeywords
+    .map(k => (isDoctor ? k.replace(/\bclinic\b/gi, "").trim() : k))
+    .filter(Boolean)
+    .slice(0, 5)
+    .join(", ");
 
   const isNegative = rating !== null && rating !== undefined ? rating <= 2 : false;
   const isNeutral = rating === 3;
-  const isPositive = rating !== null && rating !== undefined ? rating >= 4 : true;
 
   const sentiment = isNegative ? "NEGATIVE" : isNeutral ? "NEUTRAL" : "POSITIVE";
 
@@ -521,14 +534,12 @@ export async function generateSmartReviewReply(params: GenerateReviewReplyParams
   const firstName = fullName ? fullName.split(/\s+/)[0] : "";
   const hasValidName = fullName.length > 1 && !fullName.toLowerCase().includes("google user") && !fullName.toLowerCase().includes("anonymous");
 
-  // Business Brand Name Override
-  const businessName = location.autoReplyBrandName?.trim() || location.name;
   const contactPhone = location.aiPhone || location.phone || "";
   const contactEmail = location.googleEmail || "";
   const knowledgeBase = [location.autoReplyInstructions, location.aiInstructions, location.aiCompetitorData].filter(Boolean).join("\n");
 
   const prompt = `
-You are the management and clinical team of "${businessName}" (${categoryName}) writing an official, professional Google Business Profile Review reply.
+You are writing an official, short, crisp Google Business Profile Review reply for "${businessName}" (${categoryName}).
 
 CUSTOMER REVIEW DETAILS:
 - Full Name: ${hasValidName ? fullName : "No name provided"}
@@ -537,85 +548,44 @@ CUSTOMER REVIEW DETAILS:
 - Customer Review Text: "${reviewText || "(The customer left a rating without written comment)"}"
 
 BUSINESS CONTEXT & BRAND IDENTITY:
-- Exact Business Brand Name to Use: "${businessName}"
+- Exact Name to Use: "${businessName}"
+- Profile Type: ${isDoctor ? `INDIVIDUAL DOCTOR (${businessName}) — NEVER use the word "clinic". Refer only to ${businessName} as an individual doctor.` : "Healthcare / Business Profile"}
 - Specialty / Category: ${categoryName}
-- City / Area: ${cityOrArea || "our center"}
-- Address: ${location.address || ""}
-- Phone: ${contactPhone || ""}
-- Email: ${contactEmail || ""}
-- Approved Keyword Pool: ${topKeywordsList || targetKeyword}
+- City / Area: ${cityOrArea || ""}
 - Primary Search Keyword to naturally blend in: "${targetKeyword}"
 ${location.autoReplyStrictKeywords ? "- STRICT RULE: You MUST ONLY use one of the approved keywords above and NO other keywords." : ""}
-- Knowledge Base / Special Instructions:
-${knowledgeBase || "Maintain dignified, patient-first care, clear explanations, and respectful communication."}
+- Special Instructions:
+${knowledgeBase || "Keep the reply short, crisp, warm, and natural."}
 
 ============================================================
 CRITICAL REQUIREMENTS (STRICT COMPLIANCE MANDATORY):
 ============================================================
-1. GREETING & SALUTATION DIVERSITY (NEVER USE "PATIENT" OR "VALUED PATIENT"):
-   - DO NOT use generic placeholders like "Hello Patient" or "Dear Valued Patient" or "there".
-   - If a real customer name is provided, use it naturally (e.g. "Hello ${firstName},", "Dear ${firstName},", "Hi ${firstName},", "Thank you for your feedback, ${fullName}.").
-   - If no name is provided (or name is "Google User" / anonymous), open cleanly and politely (e.g. "Hello, thank you for reviewing ${businessName}." or "We appreciate you sharing your feedback with us.").
-   - Vary the opening style across the three variants:
-     * Variant "warm": Use friendly first-name greeting (e.g. "Hello ${firstName || ''},").
-     * Variant "short": Start with direct, professional gratitude.
-     * Variant "seoFocused": Use full name or inline address naturally.
+1. SHORT & CRISP LENGTH (CRITICAL):
+   - EVERY reply variant MUST be SHORT and CRISP: strictly 15 to 32 words (1 to 2 concise sentences).
+   - Get straight to the point—warm, natural, and polite without long paragraphs.
 
-2. WORD COUNT CONSTRAINT (CRITICAL):
-   - EVERY reply variant MUST be strictly between 30 words and 80 words (2 to 3 substantive sentences).
-   - NEVER output short 10-20 word generic replies.
-   - NEVER exceed 80 words.
+2. ${isDoctor ? `INDIVIDUAL DOCTOR RULE FOR ${businessName} (CRITICAL):
+   - ABSOLUTELY NEVER use the word "clinic" anywhere in the reply.
+   - Refer ONLY to "${businessName}" as an individual doctor (e.g., "${businessName} is glad you had a smooth consultation", "Thank you for your trust in ${businessName}", "your consultation with ${businessName}").
+   - Never say "at ${businessName}"—use "with ${businessName}" or "${businessName} appreciates...".` : `BRAND & PRONOUN RULE:
+   - Use "We" or "${businessName}" naturally.`}
 
-3. NATURAL SENTENCE EXPANSION ON THE BASIS OF THE REVIEW:
-   - Carefully read the customer's comment. If they mention consultation, guidance, doctor's explanation, friendly staff, treatment, or recovery, expand meaningfully on that exact aspect.
-   - The expansion must read like a thoughtful, natural medical/clinical professional speaking, NOT robotic filler.
-   - Articulate our team's commitment to thorough consultations, attentive care, and clear explanations.
+3. GREETING & SALUTATION (NEVER USE "PATIENT" OR "VALUED PATIENT"):
+   - If a real customer name is provided, use it naturally (e.g. "Hello ${firstName},", "Dear ${firstName},", "Thank you, ${fullName}!").
+   - If no name is provided (or "Google User"), start cleanly ("Hello, thank you for your review!").
 
-4. SEAMLESS SPECIALTY + LOCATION KEYWORD INTEGRATION:
-   - Seamlessly blend the specialty and location search query ("${targetKeyword}") into the natural English grammar of a sentence.
-   - NEVER awkwardly stuff keywords. It must sound like an organic, natural statement of our clinical practice and expertise.
-   - Example natural integration: "As a dedicated ${targetKeyword}, our team is committed to providing thorough diagnostic consultations and personalized care for every patient."
+4. CONTACT INSTRUCTIONS FOR LOW REVIEWS:
+   - NEVER print raw phone numbers or raw email addresses.
+   - For 1-2 star reviews, briefly apologize and ask them to reach out via the contact number on the profile.
 
-5. CONTACT INSTRUCTIONS (NO RAW PHONE NUMBERS OR RAW EMAILS IN TEXT):
-   - NEVER print raw phone numbers (e.g. +91...) or raw email addresses in the reply text.
-   - Always phrase contact invitations naturally, such as: "Kindly call or connect with us on the contact number attached to our business profile so our management team can assist you directly."
-
-6. TEAM PRONOUNS ONLY:
-   - Always write as a team using "WE", "OUR TEAM", "OUR CLINIC", or "OUR PRACTICE".
-   - ABSOLUTELY NEVER write in first-person singular ("I", "my", "I am", "I'm", "I appreciate").
-
-7. DIGNIFIED, PROFESSIONAL CLINICAL TONE:
-   - Use calm, grounded, clinical/professional authority and warmth.
-   - ABSOLUTELY NEVER use over-excited marketing hype words like "thrilled", "super excited", "overjoyed", "ecstatic", or exclamation mark spam.
-
-8. PUNCTUATION & CLICHES:
-   - ABSOLUTELY ZERO em dashes (—) or en dashes (–). Use standard commas or periods.
-   - Never use canned robotic lines like "We strive for excellence", "Your feedback is valuable to us", "In today's fast-paced world", or "At our establishment".
-
-9. SENTIMENT HANDLING:
-   ${isNegative ? `
-   - NEGATIVE REVIEW (${rating}★):
-   - Acknowledge their concern with genuine empathy, calm responsibility, and humility.
-   - Apologize sincerely that their experience fell short of our high standards.
-   - Do not make excuses or sound defensive.
-   - Invite them to connect with our management team using the contact number provided on our business profile so we can review their case and resolve this with them directly.
-   ` : isNeutral ? `
-   - NEUTRAL REVIEW (${rating}★):
-   - Thank them for sharing their constructive thoughts.
-   - Reaffirm our dedication to continuous improvement and attentive care.
-   - Naturally reference our specialty and "${targetKeyword}".
-   ` : `
-   - POSITIVE REVIEW (${rating}★):
-   - Thank them warmly and respectfully for reviewing ${businessName}.
-   - Expand on the consultation/treatment they received, emphasizing our focus on clear guidance, patient comfort, and dedicated ${targetKeyword}.
-   - Wish them continued good health and well-being.
-   `}
+5. PUNCTUATION:
+   - Zero em dashes (—) or en dashes (–).
 
 Produce valid JSON with EXACTLY this structure (no surrounding markdown backticks):
 {
-  "warm": "Warm, professional, expanded response of 40 to 65 words using first-name or friendly salutation, naturally integrating '${targetKeyword}'",
-  "short": "Concise yet substantive professional response of 30 to 45 words using a direct no-name opener, naturally integrating '${targetKeyword}'",
-  "seoFocused": "Expanded response of 50 to 75 words highlighting our clinical specialty and '${targetKeyword}'",
+  "warm": "Short, warm 18 to 28 word reply (1-2 crisp sentences)${isDoctor ? ` using only ${businessName} as an individual doctor (NO word 'clinic')` : ""}",
+  "short": "Ultra-crisp 14 to 22 word reply (1-2 short sentences)${isDoctor ? ` using only ${businessName} (NO word 'clinic')` : ""}",
+  "seoFocused": "Short 20 to 32 word reply naturally mentioning '${targetKeyword}'${isDoctor ? ` and ${businessName} without the word 'clinic'` : ""}",
   "keywordUsed": "${targetKeyword}",
   "sentiment": "${sentiment}"
 }
@@ -635,7 +605,7 @@ Produce valid JSON with EXACTLY this structure (no surrounding markdown backtick
 
   const dynamicWarm = renderReviewTemplate({
     ...fallbackParams,
-    template: smartTemplate.template
+    template: smartTemplate,
   });
 
   const numericRating = rating ?? 5;
@@ -647,7 +617,7 @@ Produce valid JSON with EXACTLY this structure (no surrounding markdown backtick
 
   const dynamicShort = renderReviewTemplate({
     ...fallbackParams,
-    template: shortTemplateMatch.template
+    template: shortTemplateMatch,
   });
 
   const seoTemplateMatch = numericRating <= 2
@@ -658,7 +628,7 @@ Produce valid JSON with EXACTLY this structure (no surrounding markdown backtick
 
   const dynamicSeoFocused = renderReviewTemplate({
     ...fallbackParams,
-    template: seoTemplateMatch.template
+    template: seoTemplateMatch,
   });
 
   let rawJson = "";
@@ -698,9 +668,9 @@ Produce valid JSON with EXACTLY this structure (no surrounding markdown backtick
     };
   }
 
-  const warm = sanitizeAndEnforceWordCount(parsed.warm || dynamicWarm, isNegative);
-  const short = sanitizeAndEnforceWordCount(parsed.short || dynamicShort, isNegative);
-  const seoFocused = sanitizeAndEnforceWordCount(parsed.seoFocused || dynamicSeoFocused, isNegative);
+  const warm = sanitizeAndEnforceWordCount(parsed.warm || dynamicWarm, isNegative, isDoctor, businessName);
+  const short = sanitizeAndEnforceWordCount(parsed.short || dynamicShort, isNegative, isDoctor, businessName);
+  const seoFocused = sanitizeAndEnforceWordCount(parsed.seoFocused || dynamicSeoFocused, isNegative, isDoctor, businessName);
 
   let selectedReply = warm;
   if (preferredTone === "SHORT") selectedReply = short;

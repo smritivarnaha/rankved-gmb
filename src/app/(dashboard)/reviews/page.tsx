@@ -1420,7 +1420,7 @@ function ReviewCard({ review, onRepliedSuccess }: ReviewCardProps) {
                       : `📈 Performance Keyword: "${aiResult.keywordUsed || "Local Clinic"}"`}
                   </span>
                   <span style={{ fontSize: 10, fontWeight: 600, color: "#64748b", background: "#f1f5f9", padding: "1px 6px", borderRadius: 4, border: "1px solid #e2e8f0" }}>
-                    {replyText.trim().split(/\s+/).filter(Boolean).length} words (30-80 target)
+                    {replyText.trim().split(/\s+/).filter(Boolean).length} words (15-32 crisp)
                   </span>
                 </div>
                 <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
@@ -1462,7 +1462,7 @@ function ReviewCard({ review, onRepliedSuccess }: ReviewCardProps) {
                       cursor: "pointer",
                     }}
                   >
-                    Short (30+ w)
+                    Short & Crisp
                   </button>
                   <button
                     type="button"
@@ -2572,6 +2572,13 @@ export default function ReviewsPage() {
         <ReviewTemplatesModal
           isOpen={showTemplatesModal}
           onClose={() => setShowTemplatesModal(false)}
+          profiles={profilesList}
+          initialProfileId={selectedTab !== "ALL" ? selectedTab : undefined}
+          currentProfile={
+            profilesList.find((p: any) => p.id === selectedTab) ||
+            profilesList.find((p: any) => /sheerin/i.test(p.name)) ||
+            profilesList[0]
+          }
           onOpenTestModal={() => {
             setShowTemplatesModal(false);
             setShowTestModal(true);
@@ -2583,6 +2590,7 @@ export default function ReviewsPage() {
         <ReviewReplyTestModal
           isOpen={showTestModal}
           onClose={() => setShowTestModal(false)}
+          initialProfileId={selectedTab !== "ALL" ? selectedTab : undefined}
           onOpenTemplatesModal={() => {
             setShowTestModal(false);
             setShowTemplatesModal(true);

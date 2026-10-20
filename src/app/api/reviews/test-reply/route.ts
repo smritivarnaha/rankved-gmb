@@ -14,7 +14,8 @@ import {
   REVIEW_TEMPLATES, 
   selectSmartReviewTemplate, 
   renderReviewTemplate,
-  extractFirstName
+  normalizeBusinessName,
+  isIndividualDoctorProfile
 } from "@/lib/review-templates";
 
 /**
@@ -55,8 +56,13 @@ export async function POST(req: NextRequest) {
       });
     }
 
-    const businessName = location?.autoReplyBrandName?.trim() || location?.name || customBusinessName?.trim() || "LifeCare Neurology & Spine Clinic";
-    const cityOrArea = location?.address ? location.address.split(",")[0].trim() : customCityOrArea?.trim() || "Mohali";
+    const rawName = location?.autoReplyBrandName?.trim() || location?.name || customBusinessName?.trim() || "Dr. Sheerin Shah";
+    const businessName = normalizeBusinessName(rawName);
+    const isDoctor = isIndividualDoctorProfile(rawName);
+    const addrParts = (location?.address || "").split(",").map((p: string) => p.trim()).filter(Boolean);
+    const cityOrArea = addrParts.length >= 2
+      ? (addrParts[addrParts.length - 2] || addrParts[0])
+      : (addrParts[0] || customCityOrArea?.trim() || "Ludhiana");
     
     // Extract target keyword
     let targetKeyword = customTargetKeyword?.trim();
@@ -66,12 +72,14 @@ export async function POST(req: NextRequest) {
     if (!targetKeyword && location?.aiKeywords) {
       targetKeyword = location.aiKeywords.split(/[,;\n]/)[0]?.trim();
     }
-    if (!targetKeyword) {
-      targetKeyword = `${businessName.includes("Clinic") || businessName.includes("Doctor") ? "doctor" : "specialist"} in ${cityOrArea}`;
+    if (!targetKeyword || (isDoctor && /neurolog|clinic/i.test(targetKeyword))) {
+      targetKeyword = /sheerin/i.test(businessName)
+        ? `plastic surgeon in ${cityOrArea}`
+        : `${isDoctor ? "specialist doctor" : "specialist"} in ${cityOrArea}`;
     }
 
     const contactPhone = location?.aiPhone || location?.phone || customPhone?.trim() || "+91 98765 43210";
-    const contactEmail = location?.googleEmail || customEmail?.trim() || "care@lifecareclinic.com";
+    const contactEmail = location?.googleEmail || customEmail?.trim() || "care@practice.com";
 
     // 2. Select Smart Matched Template from the 15 Templates Library
     const smartTemplate = selectSmartReviewTemplate(numericRating, reviewText);
@@ -86,7 +94,7 @@ export async function POST(req: NextRequest) {
 
     const dynamicWarm = renderReviewTemplate({
       ...fallbackParams,
-      template: smartTemplate.template,
+      template: smartTemplate,
     });
 
     const shortTemplateMatch = numericRating <= 2
@@ -97,7 +105,7 @@ export async function POST(req: NextRequest) {
 
     const dynamicShort = renderReviewTemplate({
       ...fallbackParams,
-      template: shortTemplateMatch.template,
+      template: shortTemplateMatch,
     });
 
     const seoTemplateMatch = numericRating <= 2
@@ -108,7 +116,7 @@ export async function POST(req: NextRequest) {
 
     const dynamicSeoFocused = renderReviewTemplate({
       ...fallbackParams,
-      template: seoTemplateMatch.template,
+      template: seoTemplateMatch,
     });
 
     // 3. Determine Execution Path based on engineMode

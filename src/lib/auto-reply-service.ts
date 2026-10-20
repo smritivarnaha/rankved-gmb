@@ -1,5 +1,5 @@
 import prisma from "@/lib/prisma";
-import { selectSmartReviewTemplate, renderReviewTemplate } from "@/lib/review-templates";
+import { selectSmartReviewTemplate, renderReviewTemplate, normalizeBusinessName } from "@/lib/review-templates";
 
 export interface QueueAutoRepliesResult {
   queuedCount: number;
@@ -154,8 +154,9 @@ export async function queueAutoRepliesForLocation(
         // If AI mode returned empty or mode is TEMPLATES (default)
         if (!replyComment) {
           const smartTemplate = selectSmartReviewTemplate(starNumber, rev.comment || "");
-          const businessName = location.autoReplyBrandName?.trim() || location.name;
-          const cityOrArea = location.address ? location.address.split(",")[0].trim() : "";
+          const businessName = normalizeBusinessName(location.autoReplyBrandName?.trim() || location.name);
+          const addrParts = (location.address || "").split(",").map((p: string) => p.trim()).filter(Boolean);
+          const cityOrArea = addrParts.length >= 2 ? (addrParts[addrParts.length - 2] || addrParts[0]) : (addrParts[0] || "");
 
           // Resolve target keyword if available
           let targetKeyword = location.autoReplyKeywords?.split(/[,;\n]/)[0]?.trim();
@@ -164,7 +165,7 @@ export async function queueAutoRepliesForLocation(
           }
 
           replyComment = renderReviewTemplate({
-            template: smartTemplate.template,
+            template: smartTemplate,
             reviewerName: rev.reviewerName,
             businessName,
             cityOrArea,

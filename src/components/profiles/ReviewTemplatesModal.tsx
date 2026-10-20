@@ -5,7 +5,7 @@ import {
   X, Star, Copy, Check, Sparkles, MessageSquare, 
   ShieldAlert, ThumbsUp, AlertCircle, HelpCircle, Filter
 } from "lucide-react";
-import { REVIEW_TEMPLATES, ReviewTemplate, renderReviewTemplate } from "@/lib/review-templates";
+import { REVIEW_TEMPLATES, ReviewTemplate, renderReviewTemplate, normalizeBusinessName, isIndividualDoctorProfile } from "@/lib/review-templates";
 
 interface ReviewTemplatesModalProps {
   isOpen: boolean;
@@ -13,11 +13,20 @@ interface ReviewTemplatesModalProps {
   onSelectTemplate?: (renderedText: string) => void;
   onOpenTestModal?: () => void;
   currentProfile?: {
+    id?: string;
     name: string;
     phone?: string;
     googleEmail?: string;
     address?: string;
   };
+  profiles?: Array<{
+    id: string;
+    name: string;
+    phone?: string;
+    googleEmail?: string;
+    address?: string;
+  }>;
+  initialProfileId?: string;
   reviewerName?: string;
   targetRating?: number;
 }
@@ -28,6 +37,8 @@ export function ReviewTemplatesModal({
   onSelectTemplate,
   onOpenTestModal,
   currentProfile,
+  profiles = [],
+  initialProfileId,
   reviewerName = "Patient",
   targetRating
 }: ReviewTemplatesModalProps) {
@@ -40,14 +51,53 @@ export function ReviewTemplatesModal({
 
   const [activeTier, setActiveTier] = useState<"ALL" | "LOW" | "NEUTRAL" | "HIGH">(getInitialTier(targetRating));
   const [copiedId, setCopiedId] = useState<string | null>(null);
+  const [selectedProfileId, setSelectedProfileId] = useState<string>(
+    initialProfileId || currentProfile?.id || ""
+  );
 
   useEffect(() => {
     if (isOpen) {
       setActiveTier(getInitialTier(targetRating));
+      if (initialProfileId) {
+        setSelectedProfileId(initialProfileId);
+      } else if (currentProfile?.id) {
+        setSelectedProfileId(currentProfile.id);
+      } else if (profiles.length > 0 && !selectedProfileId) {
+        const sheerin = profiles.find(p => /sheerin/i.test(p.name));
+        setSelectedProfileId(sheerin ? sheerin.id : profiles[0].id);
+      }
     }
-  }, [isOpen, targetRating]);
+  }, [isOpen, targetRating, initialProfileId, currentProfile, profiles]);
 
   if (!isOpen) return null;
+
+  const activeProfile =
+    profiles.find(p => p.id === selectedProfileId) ||
+    currentProfile ||
+    profiles.find(p => /sheerin/i.test(p.name)) ||
+    profiles[0];
+
+  const resolvedBusinessName = normalizeBusinessName(activeProfile?.name || "Dr. Sheerin Shah");
+  const isDoctor = isIndividualDoctorProfile(activeProfile?.name || resolvedBusinessName);
+
+  let resolvedCity = "Ludhiana";
+  if (activeProfile?.address) {
+    const addrParts = activeProfile.address
+      .split(",")
+      .map(s => s.trim())
+      .filter(s => s.length > 2 && !/^\d+$/.test(s) && !/^(punjab|india|haryana|delhi|maharashtra|up)$/i.test(s));
+    if (addrParts.length >= 2) {
+      resolvedCity = addrParts[1];
+    } else if (addrParts.length === 1) {
+      resolvedCity = addrParts[0];
+    }
+  }
+
+  const resolvedKeyword = /sheerin|plastic/i.test(activeProfile?.name || "")
+    ? `plastic surgeon in ${resolvedCity}`
+    : isDoctor
+    ? `specialist doctor in ${resolvedCity}`
+    : `healthcare specialist in ${resolvedCity}`;
 
   const filteredTemplates = REVIEW_TEMPLATES.filter(t => {
     if (activeTier === "ALL") return true;
@@ -156,43 +206,73 @@ export function ReviewTemplatesModal({
           </div>
         </div>
 
-        {/* Filter Tabs */}
+        {/* Filter Tabs & Profile Selector */}
         <div style={{
           padding: "12px 24px",
           borderBottom: "1px solid #f1f5f9",
           background: "#fff",
           display: "flex",
           alignItems: "center",
-          gap: 8,
+          justifyContent: "space-between",
+          gap: 10,
           flexWrap: "wrap"
         }}>
-          {[
-            { id: "ALL", label: `All 15 Templates (${REVIEW_TEMPLATES.length})` },
-            { id: "HIGH", label: "⭐⭐⭐⭐⭐ High (4-5★) · 6 Templates" },
-            { id: "NEUTRAL", label: "⭐⭐⭐ Neutral (3★) · 4 Templates" },
-            { id: "LOW", label: "⭐ / ⭐⭐ Low (1-2★) · 5 Templates" },
-          ].map(tab => {
-            const isActive = activeTier === tab.id;
-            return (
-              <button
-                key={tab.id}
-                onClick={() => setActiveTier(tab.id as any)}
+          <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+            {[
+              { id: "ALL", label: `All 15 Templates (${REVIEW_TEMPLATES.length})` },
+              { id: "HIGH", label: "⭐⭐⭐⭐⭐ High (4-5★) · 6 Templates" },
+              { id: "NEUTRAL", label: "⭐⭐⭐ Neutral (3★) · 4 Templates" },
+              { id: "LOW", label: "⭐ / ⭐⭐ Low (1-2★) · 5 Templates" },
+            ].map(tab => {
+              const isActive = activeTier === tab.id;
+              return (
+                <button
+                  key={tab.id}
+                  onClick={() => setActiveTier(tab.id as any)}
+                  style={{
+                    padding: "6px 14px",
+                    borderRadius: 20,
+                    fontSize: 12,
+                    fontWeight: 600,
+                    cursor: "pointer",
+                    border: `1px solid ${isActive ? "#2563eb" : "#e2e8f0"}`,
+                    background: isActive ? "#2563eb" : "#f8fafc",
+                    color: isActive ? "#ffffff" : "#475569",
+                    transition: "all 0.15s"
+                  }}
+                >
+                  {tab.label}
+                </button>
+              );
+            })}
+          </div>
+
+          {profiles.length > 0 && (
+            <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+              <span style={{ fontSize: 11, fontWeight: 700, color: "#64748b" }}>Preview Profile:</span>
+              <select
+                value={activeProfile?.id || ""}
+                onChange={e => setSelectedProfileId(e.target.value)}
                 style={{
-                  padding: "6px 14px",
-                  borderRadius: 20,
+                  padding: "5px 10px",
+                  borderRadius: 8,
+                  border: "1px solid #cbd5e1",
                   fontSize: 12,
                   fontWeight: 600,
-                  cursor: "pointer",
-                  border: `1px solid ${isActive ? "#2563eb" : "#e2e8f0"}`,
-                  background: isActive ? "#2563eb" : "#f8fafc",
-                  color: isActive ? "#ffffff" : "#475569",
-                  transition: "all 0.15s"
+                  color: "#0f172a",
+                  background: "#f8fafc",
+                  outline: "none",
+                  maxWidth: 230
                 }}
               >
-                {tab.label}
-              </button>
-            );
-          })}
+                {profiles.map(p => (
+                  <option key={p.id} value={p.id}>
+                    {normalizeBusinessName(p.name)}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
         </div>
 
         {/* Templates List */}
@@ -207,13 +287,13 @@ export function ReviewTemplatesModal({
           {filteredTemplates.map((item, idx) => {
             const badge = getTierBadge(item.tier);
             const renderedPreview = renderReviewTemplate({
-              template: item.template,
-              reviewerName: reviewerName || "Dr. Sharma",
-              businessName: currentProfile?.name || "LifeCare Neurology & Spine Clinic",
-              cityOrArea: currentProfile?.address ? currentProfile.address.split(",")[0] : "Mohali",
-              targetKeyword: "neurologist in Mohali",
-              contactPhone: currentProfile?.phone || "+91 98765 43210",
-              contactEmail: currentProfile?.googleEmail || "care@clinic.com"
+              template: item,
+              reviewerName: reviewerName || "Rahul Sharma",
+              businessName: resolvedBusinessName,
+              cityOrArea: resolvedCity,
+              targetKeyword: resolvedKeyword,
+              contactPhone: activeProfile?.phone || "+91 98765 43210",
+              contactEmail: activeProfile?.googleEmail || "care@doctor.com"
             });
 
             return (
