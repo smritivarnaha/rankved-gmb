@@ -699,17 +699,30 @@ export default function ProfileDetailPage() {
           >
             Edit Profile
           </button>
-          <button 
-            onClick={() => setActiveTab("REVIEWS")}
+          <Link 
+            href={`/reviews?profileId=${profile.id}`}
             style={{ 
-              padding: "10px 4px", fontSize: 14, fontWeight: 600, border: "none", background: "none", cursor: "pointer",
-              color: activeTab === "REVIEWS" ? "#2563eb" : "#94a3b8",
+              padding: "10px 4px", fontSize: 14, fontWeight: 600, textDecoration: "none",
+              color: activeTab === "REVIEWS" ? "#2563eb" : "#64748b",
               borderBottom: activeTab === "REVIEWS" ? "2px solid #2563eb" : "2px solid transparent",
+              display: "flex", alignItems: "center", gap: 5,
               transition: "all 0.2s"
             }}
           >
-            Reviews
-          </button>
+            Reviews ↗
+          </Link>
+          <Link 
+            href={`/performance?profileId=${profile.id}`}
+            style={{ 
+              padding: "10px 4px", fontSize: 14, fontWeight: 600, textDecoration: "none",
+              color: "#64748b",
+              borderBottom: "2px solid transparent",
+              display: "flex", alignItems: "center", gap: 5,
+              transition: "all 0.2s"
+            }}
+          >
+            Performance ↗
+          </Link>
           <button 
             onClick={() => setActiveTab("WHATSAPP")}
             style={{ 

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useMemo, useEffect, useRef } from "react";
+import { useSearchParams } from "next/navigation";
 import {
   Star, MessageSquare, Search, RefreshCw, AlertCircle, CheckCircle2,
   ExternalLink, Building2, Clock, Loader2, Send, ChevronDown, Check,
@@ -10,6 +11,7 @@ import {
 import useSWR from "swr";
 import { ReviewTemplatesModal } from "@/components/profiles/ReviewTemplatesModal";
 import { ReviewReplyTestModal } from "@/components/profiles/ReviewReplyTestModal";
+import { selectSmartReviewTemplate, renderReviewTemplate, normalizeBusinessName } from "@/lib/review-templates";
 
 const fetcher = (url: string) => fetch(url).then(r => r.json());
 
@@ -1140,9 +1142,15 @@ function AutoReplySettingsModal({
 interface ReviewCardProps {
   review: any;
   onRepliedSuccess: (reviewName: string, newComment: string) => void;
+  onOpenCardTemplatePicker?: (params: {
+    rating: number;
+    reviewerName: string;
+    profileId: string;
+    onSelect: (renderedText: string) => void;
+  }) => void;
 }
 
-function ReviewCard({ review, onRepliedSuccess }: ReviewCardProps) {
+function ReviewCard({ review, onRepliedSuccess, onOpenCardTemplatePicker }: ReviewCardProps) {
   const [replyText, setReplyText] = useState(review.reviewReply?.comment || "");
   const [isEditing, setIsEditing] = useState(!review.isReplied);
   const [isPosting, setIsPosting] = useState(false);
@@ -1159,6 +1167,25 @@ function ReviewCard({ review, onRepliedSuccess }: ReviewCardProps) {
 
   const rating = getRating(review);
   const dateFormatted = formatRelativeTime(review.createTime);
+
+  const handleInstantSmartTemplate = () => {
+    const matchedTemplate = selectSmartReviewTemplate(
+      rating,
+      review.comment || ""
+    );
+    const bName = normalizeBusinessName(review.profileName || "Dr. Sheerin Shah");
+    const isSheerin = /sheerin/i.test(review.profileName || "");
+    const rendered = renderReviewTemplate({
+      template: matchedTemplate,
+      reviewerName: review.reviewer?.displayName || "",
+      businessName: bName,
+      cityOrArea: isSheerin ? "Ludhiana" : "",
+      targetKeyword: isSheerin ? "plastic surgeon in Ludhiana" : "specialist",
+    });
+    setReplyText(rendered);
+    setIsEditing(true);
+    setErrorMsg(null);
+  };
 
   const handleGenerateAiReply = async (preferredTone: "WARM" | "SHORT" | "SEO_FOCUSED" = "WARM") => {
     setIsGeneratingAi(true);
@@ -1352,10 +1379,62 @@ function ReviewCard({ review, onRepliedSuccess }: ReviewCardProps) {
       {isEditing && (
         <div style={{ display: "flex", flexDirection: "column", gap: 8, marginTop: 2 }}>
           <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: 8 }}>
-            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-              <label style={{ fontSize: 11, fontWeight: 700, color: "#475569", textTransform: "uppercase", letterSpacing: "0.04em" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap" }}>
+              <label style={{ fontSize: 11, fontWeight: 700, color: "#475569", textTransform: "uppercase", letterSpacing: "0.04em", marginRight: 2 }}>
                 {review.isReplied ? "Edit Your Reply" : "Write Reply"}
               </label>
+              <button
+                type="button"
+                onClick={handleInstantSmartTemplate}
+                title="Instantly fill a short & crisp sentiment-matched template"
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 4,
+                  padding: "3px 10px",
+                  borderRadius: 20,
+                  background: "#ecfdf5",
+                  border: "1px solid #a7f3d0",
+                  color: "#047857",
+                  fontSize: 11,
+                  fontWeight: 700,
+                  cursor: "pointer",
+                  transition: "all 0.15s ease",
+                }}
+              >
+                <Zap size={11} color="#059669" /> ⚡ 1-Click Crisp Template
+              </button>
+              {onOpenCardTemplatePicker && (
+                <button
+                  type="button"
+                  onClick={() =>
+                    onOpenCardTemplatePicker({
+                      rating,
+                      reviewerName: review.reviewer?.displayName || "",
+                      profileId: review.profileId || "",
+                      onSelect: (text: string) => {
+                        setReplyText(text);
+                        setIsEditing(true);
+                      },
+                    })
+                  }
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 4,
+                    padding: "3px 10px",
+                    borderRadius: 20,
+                    background: "#f8fafc",
+                    border: "1px solid #cbd5e1",
+                    color: "#334155",
+                    fontSize: 11,
+                    fontWeight: 600,
+                    cursor: "pointer",
+                  }}
+                >
+                  <BookOpen size={11} color="#2563eb" /> Pick Template
+                </button>
+              )}
               <button
                 type="button"
                 onClick={() => handleGenerateAiReply(activeTone)}
@@ -1376,7 +1455,7 @@ function ReviewCard({ review, onRepliedSuccess }: ReviewCardProps) {
                 }}
               >
                 {isGeneratingAi ? <Loader2 size={12} className="animate-spin" /> : <Sparkles size={12} color="#2563eb" />}
-                {isGeneratingAi ? "Generating AI Reply..." : "✨ Auto Generate Reply (AI)"}
+                {isGeneratingAi ? "Generating..." : "✨ AI Reply"}
               </button>
             </div>
             <span style={{ fontSize: 11, color: replyText.length > 1400 ? "#ea580c" : "#94a3b8" }}>
@@ -1547,32 +1626,34 @@ function ReviewCard({ review, onRepliedSuccess }: ReviewCardProps) {
             </div>
 
             <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-              {/* Force Post Now (Override 3-per-day throttle) */}
-              <button
-                onClick={() => handlePostReply(true)}
-                disabled={isPosting || !replyText.trim()}
-                title="Publish directly now bypassing the 3-replies/day safe limit"
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  gap: 5,
-                  padding: "8px 12px",
-                  background: "#f8fafc",
-                  color: "#475569",
-                  border: "1px solid #cbd5e1",
-                  borderRadius: 8,
-                  fontSize: 12,
-                  fontWeight: 600,
-                  cursor: isPosting || !replyText.trim() ? "not-allowed" : "pointer",
-                  opacity: isPosting || !replyText.trim() ? 0.5 : 1,
-                }}
-              >
-                <Zap size={13} color="#f59e0b" /> Force Post Now
-              </button>
+              {/* Secondary: Safe Drip Queue */}
+              {!showDatePicker && (
+                <button
+                  onClick={() => handlePostReply(false)}
+                  disabled={isPosting || !replyText.trim()}
+                  title="Add to the safe scheduled drip queue"
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 5,
+                    padding: "8px 12px",
+                    background: "#f8fafc",
+                    color: "#475569",
+                    border: "1px solid #cbd5e1",
+                    borderRadius: 8,
+                    fontSize: 12,
+                    fontWeight: 600,
+                    cursor: isPosting || !replyText.trim() ? "not-allowed" : "pointer",
+                    opacity: isPosting || !replyText.trim() ? 0.5 : 1,
+                  }}
+                >
+                  <Clock size={13} color="#64748b" /> Add to Drip Queue
+                </button>
+              )}
 
-              {/* Standard Safe Post (Follows 3/day auto-drip) */}
+              {/* Primary: Send Reply Now (or Schedule when custom date is picked) */}
               <button
-                onClick={() => handlePostReply(false)}
+                onClick={() => handlePostReply(!showDatePicker)}
                 disabled={isPosting || !replyText.trim()}
                 style={{
                   display: "flex",
@@ -1592,11 +1673,11 @@ function ReviewCard({ review, onRepliedSuccess }: ReviewCardProps) {
               >
                 {isPosting ? (
                   <>
-                    <Loader2 size={13} className="animate-spin" /> Processing...
+                    <Loader2 size={13} className="animate-spin" /> Publishing...
                   </>
                 ) : (
                   <>
-                    <Send size={13} /> {showDatePicker ? "Schedule Reply" : "Post Reply"}
+                    <Send size={13} /> {showDatePicker ? "Schedule Reply" : "Send Reply Now"}
                   </>
                 )}
               </button>
@@ -1925,7 +2006,10 @@ function DeletedReviewsView({ profileId }: { profileId: string }) {
 
 // ── Main Page ─────────────────────────────────────────────────────────────
 export default function ReviewsPage() {
-  const [selectedTab, setSelectedTab] = useState<string>("all"); // "all" | profileId
+  const searchParams = useSearchParams();
+  const urlProfileId = searchParams.get("profileId");
+
+  const [selectedTab, setSelectedTab] = useState<string>(urlProfileId || "all"); // "all" | profileId
   const [statusFilter, setStatusFilter] = useState<"pending" | "all" | "replied" | "queue" | "deleted">("pending");
   const [searchQuery, setSearchQuery] = useState("");
   const [starFilter, setStarFilter] = useState<string>("all");
@@ -1938,6 +2022,32 @@ export default function ReviewsPage() {
   const [showTemplatesModal, setShowTemplatesModal] = useState(false);
   const [showTestModal, setShowTestModal] = useState(false);
   const [showErrors, setShowErrors] = useState(false);
+  const [showToolsMenu, setShowToolsMenu] = useState(false);
+  const toolsMenuRef = useRef<HTMLDivElement>(null);
+
+  // Per-card template picker context
+  const [templatePickerCtx, setTemplatePickerCtx] = useState<{
+    rating: number;
+    reviewerName: string;
+    profileId: string;
+    onSelect: (renderedText: string) => void;
+  } | null>(null);
+
+  useEffect(() => {
+    if (urlProfileId) {
+      setSelectedTab(urlProfileId);
+    }
+  }, [urlProfileId]);
+
+  useEffect(() => {
+    const handleOutsideClick = (e: MouseEvent) => {
+      if (toolsMenuRef.current && !toolsMenuRef.current.contains(e.target as Node)) {
+        setShowToolsMenu(false);
+      }
+    };
+    document.addEventListener("mousedown", handleOutsideClick);
+    return () => document.removeEventListener("mousedown", handleOutsideClick);
+  }, []);
 
   // Local optimistic state of reviews
   const [localReviews, setLocalReviews] = useState<any[]>([]);
@@ -2157,103 +2267,171 @@ export default function ReviewsPage() {
           </div>
         </div>
 
-        {/* Action Buttons: Auto-Reply Settings, Templates, Test Reply, Export, Import, Live Sync */}
+        {/* Streamlined Action Buttons: Auto-Reply Settings, Tools & Templates Dropdown, Live Sync */}
         <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
-          <button
-            onClick={() => setShowTestModal(true)}
-            style={{
-              display: "flex",
-              alignItems: "center",
-              gap: 6,
-              padding: "8px 14px",
-              background: "linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%)",
-              border: "1px solid #93c5fd",
-              borderRadius: 8,
-              fontSize: 12,
-              fontWeight: 800,
-              color: "#1e40af",
-              cursor: "pointer",
-              boxShadow: "0 2px 4px rgba(37, 99, 235, 0.1)",
-            }}
-          >
-            <Zap size={14} color="#2563eb" /> 🧪 Test Reply
-          </button>
-
-          <button
-            onClick={() => setShowTemplatesModal(true)}
-            style={{
-              display: "flex",
-              alignItems: "center",
-              gap: 6,
-              padding: "8px 14px",
-              background: "#ffffff",
-              border: "1px solid #cbd5e1",
-              borderRadius: 8,
-              fontSize: 12,
-              fontWeight: 700,
-              color: "#334155",
-              cursor: "pointer",
-            }}
-          >
-            <BookOpen size={14} color="#2563eb" /> 15 Templates
-          </button>
-
           <button
             onClick={() => setShowAutoReplyModal(true)}
             style={{
               display: "flex",
               alignItems: "center",
-              gap: 6,
+              gap: 7,
               padding: "8px 14px",
-              background: "#ffffff",
-              border: "1px solid #cbd5e1",
+              background: "#f0fdf4",
+              border: "1px solid #86efac",
               borderRadius: 8,
               fontSize: 12,
-              fontWeight: 600,
-              color: "#334155",
+              fontWeight: 700,
+              color: "#15803d",
               cursor: "pointer",
             }}
           >
-            <Sparkles size={14} color="#8b5cf6" /> Auto-Reply Settings
+            <Sparkles size={14} color="#16a34a" /> Auto-Reply Settings
           </button>
 
-          <button
-            onClick={() => setShowExportModal(true)}
-            style={{
-              display: "flex",
-              alignItems: "center",
-              gap: 6,
-              padding: "8px 14px",
-              background: "#ffffff",
-              border: "1px solid #cbd5e1",
-              borderRadius: 8,
-              fontSize: 12,
-              fontWeight: 600,
-              color: "#334155",
-              cursor: "pointer",
-            }}
-          >
-            <Download size={14} color="#2563eb" /> Export Reviews
-          </button>
+          {/* Consolidated Tools & Templates Menu */}
+          <div style={{ position: "relative" }} ref={toolsMenuRef}>
+            <button
+              onClick={() => setShowToolsMenu(!showToolsMenu)}
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: 6,
+                padding: "8px 14px",
+                background: showToolsMenu ? "#eff6ff" : "#ffffff",
+                border: `1px solid ${showToolsMenu ? "#93c5fd" : "#cbd5e1"}`,
+                borderRadius: 8,
+                fontSize: 12,
+                fontWeight: 700,
+                color: "#334155",
+                cursor: "pointer",
+              }}
+            >
+              <BookOpen size={14} color="#2563eb" /> Templates & Tools <ChevronDown size={13} color="#64748b" />
+            </button>
 
-          <button
-            onClick={() => setShowImportModal(true)}
-            style={{
-              display: "flex",
-              alignItems: "center",
-              gap: 6,
-              padding: "8px 14px",
-              background: "#ffffff",
-              border: "1px solid #cbd5e1",
-              borderRadius: 8,
-              fontSize: 12,
-              fontWeight: 600,
-              color: "#334155",
-              cursor: "pointer",
-            }}
-          >
-            <Upload size={14} color="#10b981" /> Import Replies
-          </button>
+            {showToolsMenu && (
+              <div
+                style={{
+                  position: "absolute",
+                  top: "calc(100% + 6px)",
+                  right: 0,
+                  minWidth: 230,
+                  background: "#ffffff",
+                  border: "1px solid #e2e8f0",
+                  borderRadius: 12,
+                  boxShadow: "0 12px 28px -6px rgba(15, 23, 42, 0.16)",
+                  padding: 6,
+                  zIndex: 999,
+                  display: "flex",
+                  flexDirection: "column",
+                  gap: 2,
+                }}
+              >
+                <button
+                  onClick={() => {
+                    setShowToolsMenu(false);
+                    setTemplatePickerCtx(null);
+                    setShowTemplatesModal(true);
+                  }}
+                  style={{
+                    width: "100%",
+                    textAlign: "left",
+                    padding: "9px 12px",
+                    background: "none",
+                    border: "none",
+                    borderRadius: 8,
+                    fontSize: 12.5,
+                    fontWeight: 600,
+                    color: "#0f172a",
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 9,
+                    cursor: "pointer",
+                  }}
+                  onMouseEnter={e => (e.currentTarget.style.background = "#f8fafc")}
+                  onMouseLeave={e => (e.currentTarget.style.background = "none")}
+                >
+                  <BookOpen size={14} color="#2563eb" /> 15 Crisp Reply Templates
+                </button>
+                <button
+                  onClick={() => {
+                    setShowToolsMenu(false);
+                    setShowTestModal(true);
+                  }}
+                  style={{
+                    width: "100%",
+                    textAlign: "left",
+                    padding: "9px 12px",
+                    background: "none",
+                    border: "none",
+                    borderRadius: 8,
+                    fontSize: 12.5,
+                    fontWeight: 600,
+                    color: "#0f172a",
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 9,
+                    cursor: "pointer",
+                  }}
+                  onMouseEnter={e => (e.currentTarget.style.background = "#f8fafc")}
+                  onMouseLeave={e => (e.currentTarget.style.background = "none")}
+                >
+                  <Zap size={14} color="#2563eb" /> 🧪 Test Reply Simulator
+                </button>
+                <div style={{ height: 1, background: "#f1f5f9", margin: "3px 6px" }} />
+                <button
+                  onClick={() => {
+                    setShowToolsMenu(false);
+                    setShowExportModal(true);
+                  }}
+                  style={{
+                    width: "100%",
+                    textAlign: "left",
+                    padding: "9px 12px",
+                    background: "none",
+                    border: "none",
+                    borderRadius: 8,
+                    fontSize: 12.5,
+                    fontWeight: 600,
+                    color: "#334155",
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 9,
+                    cursor: "pointer",
+                  }}
+                  onMouseEnter={e => (e.currentTarget.style.background = "#f8fafc")}
+                  onMouseLeave={e => (e.currentTarget.style.background = "none")}
+                >
+                  <Download size={14} color="#0284c7" /> Export Reviews (CSV/PDF)
+                </button>
+                <button
+                  onClick={() => {
+                    setShowToolsMenu(false);
+                    setShowImportModal(true);
+                  }}
+                  style={{
+                    width: "100%",
+                    textAlign: "left",
+                    padding: "9px 12px",
+                    background: "none",
+                    border: "none",
+                    borderRadius: 8,
+                    fontSize: 12.5,
+                    fontWeight: 600,
+                    color: "#334155",
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 9,
+                    cursor: "pointer",
+                  }}
+                  onMouseEnter={e => (e.currentTarget.style.background = "#f8fafc")}
+                  onMouseLeave={e => (e.currentTarget.style.background = "none")}
+                >
+                  <Upload size={14} color="#10b981" /> Bulk Import Replies
+                </button>
+              </div>
+            )}
+          </div>
 
           <button
             onClick={handleLiveSync}
@@ -2526,6 +2704,10 @@ export default function ReviewsPage() {
                   key={r.name || r.reviewId}
                   review={r}
                   onRepliedSuccess={handleRepliedSuccess}
+                  onOpenCardTemplatePicker={ctx => {
+                    setTemplatePickerCtx(ctx);
+                    setShowTemplatesModal(true);
+                  }}
                 />
               ))}
             </div>
@@ -2571,16 +2753,26 @@ export default function ReviewsPage() {
       {showTemplatesModal && (
         <ReviewTemplatesModal
           isOpen={showTemplatesModal}
-          onClose={() => setShowTemplatesModal(false)}
+          onClose={() => {
+            setShowTemplatesModal(false);
+            setTemplatePickerCtx(null);
+          }}
           profiles={profilesList}
-          initialProfileId={selectedTab !== "ALL" ? selectedTab : undefined}
+          initialProfileId={
+            templatePickerCtx?.profileId ||
+            (selectedTab !== "all" && selectedTab !== "ALL" ? selectedTab : undefined)
+          }
           currentProfile={
-            profilesList.find((p: any) => p.id === selectedTab) ||
+            profilesList.find((p: any) => p.id === (templatePickerCtx?.profileId || selectedTab)) ||
             profilesList.find((p: any) => /sheerin/i.test(p.name)) ||
             profilesList[0]
           }
+          reviewerName={templatePickerCtx?.reviewerName || "Rahul Sharma"}
+          targetRating={templatePickerCtx?.rating}
+          onSelectTemplate={templatePickerCtx?.onSelect}
           onOpenTestModal={() => {
             setShowTemplatesModal(false);
+            setTemplatePickerCtx(null);
             setShowTestModal(true);
           }}
         />

@@ -35,6 +35,9 @@ export interface ProfileData {
     thisMonthPublished: number;
   };
   isHidden?: boolean;
+  autoReplyEnabled?: boolean;
+  autoReplyMode?: string;
+  pendingReviewCount?: number;
   sitemapUrl?: string;
   sitemapUrls?: string[];
   sitemapUpdatedAt?: string;
@@ -70,6 +73,9 @@ function locationToProfile(loc: any): ProfileData {
     statsUpdatedAt: loc.statsUpdatedAt ? loc.statsUpdatedAt.toISOString() : undefined,
     postCounts: loc.postCounts,
     isHidden: loc.isHidden || false,
+    autoReplyEnabled: Boolean(loc.autoReplyEnabled),
+    autoReplyMode: loc.autoReplyMode || "TEMPLATES",
+    pendingReviewCount: loc.pendingReviewCount || 0,
     sitemapUrl: loc.sitemapUrl || undefined,
     sitemapUrls: loc.sitemapUrls ? (loc.sitemapUrls as string[]) : undefined,
     sitemapUpdatedAt: loc.sitemapUpdatedAt ? loc.sitemapUpdatedAt.toISOString() : undefined,
@@ -104,6 +110,8 @@ export async function getAllProfiles(userId: string, role: string, ownerId?: str
       cachedEngagements: true,
       statsUpdatedAt: true,
       isHidden: true,
+      autoReplyEnabled: true,
+      autoReplyMode: true,
       sitemapUrl: true,
       sitemapUpdatedAt: true,
     },
@@ -111,11 +119,11 @@ export async function getAllProfiles(userId: string, role: string, ownerId?: str
 
   if (locations.length === 0) return [];
 
-  // Fetch post counts across all these locations in one query
+  // Fetch post counts and pending review counts across all these locations in parallel
   const locationIds = locations.map(l => l.id);
   const now = new Date();
   
-  const [statusCounts, thisMonthCounts] = await Promise.all([
+  const [statusCounts, thisMonthCounts, pendingReviewsByLoc] = await Promise.all([
     prisma.post.groupBy({
       by: ['locationId', 'status'],
       where: { locationId: { in: locationIds } },
@@ -132,13 +140,24 @@ export async function getAllProfiles(userId: string, role: string, ownerId?: str
         }
       },
       _count: true,
-    })
+    }),
+    prisma.locationReview.groupBy({
+      by: ['locationId'],
+      where: {
+        locationId: { in: locationIds },
+        status: "ACTIVE",
+        OR: [{ ownerReply: null }, { ownerReply: "" }],
+      },
+      _count: true,
+    }).catch(() => [] as any[]),
   ]);
 
   const countsByLocation: Record<string, { published: number; scheduled: number; drafts: number; pending: number; thisMonthPublished: number }> = {};
+  const pendingReviewMap: Record<string, number> = {};
   
   for (const id of locationIds) {
     countsByLocation[id] = { published: 0, scheduled: 0, drafts: 0, pending: 0, thisMonthPublished: 0 };
+    pendingReviewMap[id] = 0;
   }
 
   for (const row of statusCounts) {
@@ -152,7 +171,15 @@ export async function getAllProfiles(userId: string, role: string, ownerId?: str
     countsByLocation[row.locationId].thisMonthPublished = row._count;
   }
 
-  return locations.map(loc => locationToProfile({ ...loc, postCounts: countsByLocation[loc.id] }));
+  for (const row of pendingReviewsByLoc) {
+    pendingReviewMap[row.locationId] = row._count;
+  }
+
+  return locations.map(loc => locationToProfile({
+    ...loc,
+    postCounts: countsByLocation[loc.id],
+    pendingReviewCount: pendingReviewMap[loc.id] || 0,
+  }));
 }
 
 export async function getProfileById(id: string, userId: string, role: string, ownerId?: string): Promise<ProfileData | undefined> {

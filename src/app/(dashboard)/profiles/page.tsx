@@ -7,7 +7,7 @@ import {
   Loader2, X, AlertCircle, CheckCircle2, RefreshCw, Plus, Eye, 
   Trash2, Wand2, Brain, FileDown, Upload, BarChart3, Edit2, Save, 
   Users, FileText, CalendarDays, ArrowRight, MoreVertical, ExternalLink,
-  ShieldAlert
+  ShieldAlert, MessageSquare, Zap, Search
 } from "lucide-react";
 import useSWR from "swr";
 import { AiGenerationModal } from "@/components/ai/ai-components";
@@ -28,6 +28,9 @@ interface Profile {
   googleEmail?: string;
   fetchedAt: string;
   isHidden?: boolean;
+  autoReplyEnabled?: boolean;
+  autoReplyMode?: string;
+  pendingReviewCount?: number;
 }
 
 const fetcher = (url: string) => fetch(url).then((r) => r.json());
@@ -264,12 +267,32 @@ function ProfileCard({
             </div>
 
             <div style={{ minWidth: 0, flex: 1, paddingRight: 64 }}>
-              <Link href={`/profiles/${profile.id}/edit`} title={profile.name} style={{ fontSize: 14, fontWeight: 700, color: "#111827", display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical", overflow: "hidden", lineHeight: 1.3, textDecoration: "none" }}>
+              <Link href={`/profiles/${profile.id}`} title={profile.name} style={{ fontSize: 14, fontWeight: 700, color: "#111827", display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical", overflow: "hidden", lineHeight: 1.3, textDecoration: "none" }}>
                 {profile.name}
               </Link>
-              <div style={{ display: "flex", alignItems: "center", gap: 4, marginTop: 6, background: "#f0fdf4", color: "#16a34a", padding: "2px 6px", borderRadius: 4, width: "fit-content" }}>
-                <CheckCircle2 style={{ width: 10, height: 10 }} />
-                <span style={{ fontSize: 10, fontWeight: 600 }}>Verified</span>
+              <div style={{ display: "flex", alignItems: "center", flexWrap: "wrap", gap: 5, marginTop: 6 }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 4, background: "#f0fdf4", color: "#16a34a", padding: "2px 6px", borderRadius: 4, width: "fit-content" }}>
+                  <CheckCircle2 style={{ width: 10, height: 10 }} />
+                  <span style={{ fontSize: 10, fontWeight: 600 }}>Verified</span>
+                </div>
+                {profile.autoReplyEnabled && (
+                  <Link
+                    href={`/reviews?profileId=${profile.id}`}
+                    title="Auto-Reply is active for this profile"
+                    style={{ display: "flex", alignItems: "center", gap: 3, background: "#eff6ff", color: "#2563eb", border: "1px solid #bfdbfe", padding: "1px 6px", borderRadius: 4, fontSize: 10, fontWeight: 700, textDecoration: "none" }}
+                  >
+                    <Zap size={9} /> Auto-Reply ON
+                  </Link>
+                )}
+                {(profile.pendingReviewCount || 0) > 0 && (
+                  <Link
+                    href={`/reviews?profileId=${profile.id}`}
+                    title={`${profile.pendingReviewCount} pending reviews awaiting reply`}
+                    style={{ display: "flex", alignItems: "center", gap: 3, background: "#fef3c7", color: "#b45309", border: "1px solid #fde68a", padding: "1px 6px", borderRadius: 4, fontSize: 10, fontWeight: 700, textDecoration: "none" }}
+                  >
+                    ⏳ {profile.pendingReviewCount} Review{profile.pendingReviewCount === 1 ? "" : "s"}
+                  </Link>
+                )}
               </div>
             </div>
           </div>
@@ -292,21 +315,33 @@ function ProfileCard({
         </div>
       </div>
 
-      {/* Action Buttons */}
-      <div style={{ padding: "12px 14px 6px" }}>
+      {/* Primary Workspace & Reviews Buttons */}
+      <div style={{ display: "grid", gridTemplateColumns: "1.2fr 1fr", gap: 8, padding: "12px 14px 6px" }}>
         <Link href={`/profiles/${profile.id}`} style={{
           display: "flex", alignItems: "center", justifyContent: "space-between",
-          padding: "10px 14px", background: "#fff", border: `1px solid ${theme.border}30`,
+          padding: "9px 12px", background: "#fff", border: `1px solid ${theme.border}30`,
           borderRadius: 10, textDecoration: "none", transition: "all 0.2s",
         }}
           onMouseEnter={(e) => { e.currentTarget.style.background = theme.bgLight; e.currentTarget.style.borderColor = theme.border; }}
           onMouseLeave={(e) => { e.currentTarget.style.background = "#fff"; e.currentTarget.style.borderColor = `${theme.border}30`; }}
         >
-          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-            <Eye size={14} color={theme.icon} />
-            <span style={{ fontSize: 12, fontWeight: 700, color: theme.text }}>View Posts</span>
+          <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+            <Eye size={13} color={theme.icon} />
+            <span style={{ fontSize: 12, fontWeight: 700, color: theme.text }}>Manage Posts</span>
           </div>
-          <ArrowRight size={14} color={theme.icon} />
+          <ArrowRight size={13} color={theme.icon} />
+        </Link>
+
+        <Link href={`/reviews?profileId=${profile.id}`} style={{
+          display: "flex", alignItems: "center", justifyContent: "center", gap: 6,
+          padding: "9px 10px", background: "#f8fafc", border: "1px solid #e2e8f0",
+          borderRadius: 10, textDecoration: "none", transition: "all 0.2s", color: "#334155", fontSize: 12, fontWeight: 600
+        }}
+          onMouseEnter={(e) => { e.currentTarget.style.background = "#eff6ff"; e.currentTarget.style.borderColor = "#bfdbfe"; e.currentTarget.style.color = "#1d4ed8"; }}
+          onMouseLeave={(e) => { e.currentTarget.style.background = "#f8fafc"; e.currentTarget.style.borderColor = "#e2e8f0"; e.currentTarget.style.color = "#334155"; }}
+        >
+          <MessageSquare size={13} color="#2563eb" />
+          <span>Reviews</span>
         </Link>
       </div>
 
@@ -343,8 +378,19 @@ export default function ProfilesPage() {
   const [bulkLocationId, setBulkLocationId] = useState<string | null>(null);
   const [reportProfile, setReportProfile] = useState<Profile | null>(null);
   const [showHidden, setShowHidden] = useState(false);
+  const [profileSearch, setProfileSearch] = useState("");
 
-  const visibleProfiles = profiles.filter((p: Profile) => showHidden ? p.isHidden : !p.isHidden);
+  const visibleProfiles = profiles.filter((p: Profile) => {
+    const matchesVisibility = showHidden ? p.isHidden : !p.isHidden;
+    if (!matchesVisibility) return false;
+    if (!profileSearch.trim()) return true;
+    const q = profileSearch.toLowerCase();
+    return (
+      p.name?.toLowerCase().includes(q) ||
+      p.address?.toLowerCase().includes(q) ||
+      p.phone?.toLowerCase().includes(q)
+    );
+  });
 
   const [isSyncing, setIsSyncing] = useState(false);
 
@@ -414,15 +460,42 @@ export default function ProfilesPage() {
       )}
 
       {/* Header */}
-      <div className="page-header">
+      <div className="page-header" style={{ flexWrap: "wrap", gap: 12 }}>
         <div>
           <h1 className="page-title">Profiles</h1>
           <p className="page-subtitle">
             Your Google Business Profiles
-            {profiles.length > 0 && <span style={{ color: "var(--text-muted)" }}> · {profiles.length} locations</span>}
+            {profiles.length > 0 && <span style={{ color: "var(--text-muted)" }}> · {visibleProfiles.length} of {profiles.length} locations</span>}
           </p>
         </div>
-        <div className="flex gap-3">
+        <div className="flex gap-3" style={{ flexWrap: "wrap", alignItems: "center" }}>
+          <div style={{ position: "relative", minWidth: 220 }}>
+            <Search size={14} color="#94a3b8" style={{ position: "absolute", left: 11, top: "50%", transform: "translateY(-50%)" }} />
+            <input
+              type="text"
+              value={profileSearch}
+              onChange={(e) => setProfileSearch(e.target.value)}
+              placeholder="Filter profiles..."
+              style={{
+                height: 36,
+                width: "100%",
+                padding: "0 28px 0 32px",
+                borderRadius: 8,
+                border: "1px solid #cbd5e1",
+                fontSize: 13,
+                background: "#fff",
+                outline: "none",
+              }}
+            />
+            {profileSearch && (
+              <button
+                onClick={() => setProfileSearch("")}
+                style={{ position: "absolute", right: 8, top: "50%", transform: "translateY(-50%)", background: "none", border: "none", cursor: "pointer", padding: 2, display: "flex", color: "#64748b" }}
+              >
+                <X size={13} />
+              </button>
+            )}
+          </div>
           <button 
             onClick={() => {
               const url = window.location.origin + "/link";

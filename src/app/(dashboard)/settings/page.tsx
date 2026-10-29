@@ -2,12 +2,13 @@
 
 import { useSession, signIn } from "next-auth/react";
 import { useState, useEffect } from "react";
+import Link from "next/link";
 import {
   Loader2, CheckCircle2, RefreshCw, MapPin, 
   AlertCircle, User, Trash2, Image as ImageIcon, Upload, Save,
   Mail, Bookmark, Palette, Eye, Send, Code, Copy, Users, Globe,
   Bell, Star, Phone, BarChart2, ToggleLeft, ToggleRight, TrendingUp,
-  MessageSquare
+  MessageSquare, Key, Database, Shield, FileText
 } from "lucide-react";
 import { useGlobalSettings } from "@/hooks/useGlobalSettings";
 
@@ -286,6 +287,36 @@ export default function SettingsPage() {
           .sbrand-logo { width: 100% !important; height: auto !important; aspect-ratio: 1 !important; max-height: 160px !important; }
         }
       `}</style>
+
+      {/* ─── Quick Admin & Configuration Shortcuts ─── */}
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: 12, background: "#f8fafc", border: "1px solid #e2e8f0", borderRadius: 12, padding: "12px 18px" }}>
+        <div>
+          <h1 style={{ fontSize: 18, fontWeight: 800, color: "#0f172a", margin: 0 }}>Settings & Administration</h1>
+          <p style={{ fontSize: 12, color: "#64748b", margin: "2px 0 0" }}>Manage Google connections, notifications, AI keys, team access, and backups.</p>
+        </div>
+        <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+          {(isSuperAdmin || isAgencyOwner) && (
+            <>
+              <Link href="/api-keys" style={{ display: "inline-flex", alignItems: "center", gap: 6, padding: "6px 12px", borderRadius: 8, background: "#ffffff", border: "1px solid #cbd5e1", fontSize: 12, fontWeight: 600, color: "#334155", textDecoration: "none" }}>
+                <Key size={13} color="#2563eb" /> AI & API Keys
+              </Link>
+              <Link href="/team" style={{ display: "inline-flex", alignItems: "center", gap: 6, padding: "6px 12px", borderRadius: 8, background: "#ffffff", border: "1px solid #cbd5e1", fontSize: 12, fontWeight: 600, color: "#334155", textDecoration: "none" }}>
+                <Users size={13} color="#2563eb" /> Team Members
+              </Link>
+            </>
+          )}
+          {aiFeaturesEnabled && (
+            <Link href="/prompts" style={{ display: "inline-flex", alignItems: "center", gap: 6, padding: "6px 12px", borderRadius: 8, background: "#ffffff", border: "1px solid #cbd5e1", fontSize: 12, fontWeight: 600, color: "#334155", textDecoration: "none" }}>
+              <FileText size={13} color="#8b5cf6" /> AI Prompts
+            </Link>
+          )}
+          {isSuperAdmin && (
+            <Link href="/settings/backup" style={{ display: "inline-flex", alignItems: "center", gap: 6, padding: "6px 12px", borderRadius: 8, background: "#ffffff", border: "1px solid #cbd5e1", fontSize: 12, fontWeight: 600, color: "#334155", textDecoration: "none" }}>
+              <Database size={13} color="#059669" /> Backup & Restore
+            </Link>
+          )}
+        </div>
+      </div>
 
       {/* ─── Settings Tabs ─── */}
       <div style={{ display: "flex", alignItems: "center", borderBottom: "1px solid #eaeaea", marginBottom: 8 }} className="stabs">
